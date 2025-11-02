@@ -64,6 +64,20 @@ const wage = (r) => { const w = ROLES[r].wage; return `$${w % 1 ? w.toFixed(2) :
 const porterHired = (sim) => sim.s.staff.some((x) => x.role === 'porter');
 // The move-out Beat 8 authors arrives 20 game minutes after the beat starts; the act does not end with it still on the way.
 const moveoutQueued = (sim) => { const u = unitByRole(sim, 'mapleInteriorMoveout'), L = u && u.lease && sim.s.leases[u.lease]; return !!L && sim.s.visits.some((v) => v.kind === 'moveout' && v.tenant === L.tenant); };
+// Act III (campaign Unit 6) reuses real customer movement, complaint, overlay and climate systems.
+const interiorTenant = (sim) => Object.values(sim.s.tenants).find((t) => { const L = sim.s.leases[t.lease], u = L && sim.s.objects[L.unit]; return u && u.access === 'interior'; });
+const interiorUnitFor = (sim, tn = interiorTenant(sim)) => { const L = tn && sim.s.leases[tn.lease]; return L && sim.s.objects[L.unit]; };
+const scheduleInteriorVisit = (sim, delay = 30) => { const tn = interiorTenant(sim), u = interiorUnitFor(sim, tn); if (tn && u) sim.schedule({ kind: 'bigaccess', tenant: tn.id, unit: u.id }, sim.s.t + delay); };
+const feedbackShowing = (ui) => !!ui && ui.tab === 'feedback';
+const darkFeedback = (sim) => { const at = sim.s.tut.enteredAt ?? -Infinity; return sim.s.thoughts.findLast ? sim.s.thoughts.findLast((t) => t.kind === 'bad' && t.text === 'The hallway is dark.' && t.t >= at) : [...sim.s.thoughts].reverse().find((t) => t.kind === 'bad' && t.text === 'The hallway is dark.' && t.t >= at); };
+const feedbackSat = (sim) => { const tn = interiorTenant(sim); return tn ? `${Math.round((tn.sat ?? 0) * 100)}%` : 'not available'; };
+const tutBuiltEver = (sim, tools) => (sim.s.tut.built || []).some((b) => tools.includes(b.tool));
+const securityImproved = (sim) => tutBuiltEver(sim, ['camera', 'light']);
+const securityImprovementDone = (sim) => { const ids = (sim.s.tut.built || []).filter((b) => ['camera', 'light'].includes(b.tool)).map((b) => b.id); return ids.length > 0 && !sim.s.orders.some((o) => ids.includes(o.id) && o.st === 'construction'); };
+const hvacPresent = (sim) => sim.objs('hvac').some((o) => o.cstate === 'operating') || (sim.s.tut.built || []).some((b) => b.tool === 'hvac');
+const westLightPresent = (sim) => sim.objs('light').some((o) => (o.f || 0) === 0 && o.x === 17 && o.y === 8 && o.cstate === 'operating') || (sim.s.tut.built || []).some((b) => b.tool === 'light' && b.f === 0 && b.id >= (sim.s.tut.act3Mark || 0));
+const climatePresent = (sim) => sim.objs('unit').some((u) => u.env === 'climate') || (sim.s.tut.built || []).some((b) => b.tool === 'iu5x5');
+const climateDemandLine = (sim) => { const n = sim.lostRecent(14).noClimate || 0; return n > 0 ? `<b>${n}</b> shopper${n === 1 ? '' : 's'} left in the last 14 days because climate control was unavailable.` : 'Some shoppers specifically ask for climate control. Maple Street does not serve that demand yet.'; };
 const waitBuild = (label, doneFn) => ({ t: label || 'Let construction finish', d: 'Construction takes game hours. Tap <b>4x</b> at the top to speed up. A progress ring shows over the site.', sel: FAST, done: doneFn });
 
 // Generic chapter break: a paused card with a deliberate Continue. Continue (flag = id) releases the owner reviews held
@@ -185,17 +199,87 @@ export const BEATS = [
     button: 'Got it', flag: 'rolesAck', buttonWhen: (sim) => porterHired(sim) && !flag(sim, 'rolesAck') && !sim.s.milestones.first_delegated,
     // A Porter already on staff counts once delegated work happens (never fire and re-hire). The act ends after the authored move-out arrives.
     check: (sim) => !!sim.s.milestones.first_delegated && !moveoutQueued(sim) },
-  // Act II chapter break: paused; Continue releases owner reviews held during Act II (stale ones retired), then graduation.
-  chapterBreak({ id: 'actII_break', act: 'II', chapter: 'Stabilize', next: 'Graduation', title: 'Maple Street is stable again',
-    body: 'The new row is open, the hallway light works and a Porter shares the work with you. <b>Maple Street is paused.</b> This is a good place to stop. Next, you finish the tutorial. After that, lessons show what customers actually experience when they use the property.',
+  // Act II chapter break: paused; Continue releases owner reviews held during Act II, then Act III begins.
+  chapterBreak({ id: 'actII_break', act: 'II', chapter: 'Stabilize', next: 'Act III · Improve', title: 'Maple Street is stable again',
+    body: 'The new row is open, the hallway light works and a Porter shares the work with you. <b>Maple Street is paused.</b> This is a good place to stop. Next, in <b>Act III · Improve</b>, you follow a customer through the property, read real feedback and use diagnostic overlays before investing again.',
     why: 'What you learned in Act II: expansion solves a capacity problem; construction costs cash now and takes time; equipment needs maintenance; the Owner can only do so much each day; staff add capacity for a daily wage; and each role does different work.' }),
+
+  // Act III "Improve" (campaign Unit 6): diagnose the customer experience, then improve what the evidence shows.
+  { id: 'interior_customer', act: 'III', chapter: 'Improve', title: 'Follow an interior customer',
+    body: 'Drive-up customers stop at their doors. Interior customers use the loading area, grab a cart and carry their things through the building.',
+    why: 'The physical route matters: <b>vehicle → loading stall → cart → wide door → hallway → unit</b>. If that chain is awkward, customers feel it even when every unit is rentable.',
+    enter: (sim) => { sim.s.tut.act3Mark ||= sim.s.nextId; scheduleInteriorVisit(sim, 30); },
+    steps: [
+      { t: 'Inspect the <b>Main Loading Corral</b>', d: 'Tap the cart corral below the interior building. Its panel shows how many carts are available and their condition.', obj: (sim) => sim.objs('corral')[0] && sim.objs('corral')[0].id, done: (sim) => flag(sim, 'corralInspected') },
+      { t: 'Close the panel and watch the route', d: 'A tenant is on the way. Keep time running and watch the path from parking to cart to the wide door and the interior unit.', sel: PLAY, run: true, done: (sim) => !!sim.s.milestones.first_cart_trip },
+    ],
+    check: (sim) => flag(sim, 'corralInspected') && !!sim.s.milestones.first_cart_trip },
+
+  { id: 'feedback', act: 'III', chapter: 'Improve', title: 'Customers tell you what the map cannot',
+    body: 'A real customer experience has exposed a service problem. Read the report before deciding what to spend.',
+    why: 'Customer feedback records what happened at that moment. <b>Satisfaction</b> is the broader result of repeated access, convenience, cleanliness, security, climate, service and value experiences.',
+    enter: (sim) => {
+      const L = hallLight(sim);
+      // Author the condition, not the complaint: the normal visitor path must create the dark-hall report itself.
+      if (L && sim.works(L)) { sim.wear(L, Math.max(0, L.cond - 0.19)); sim.ensureRepairTask(L); }
+      scheduleInteriorVisit(sim, 30);
+    },
+    steps: [
+      { t: 'Let the customer experience the property', d: 'Keep time running. The report is created only if the normal customer path actually encounters the problem.', sel: PLAY, run: true, done: darkFeedback },
+      { t: 'Open <b>Operate</b>', d: 'Open <b>Operate</b>, then choose <b>Customer feedback</b>.', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || feedbackShowing(ui) },
+      { t: 'Open <b>Customer feedback</b>', d: 'Tap <b>Customer feedback</b>. The report describes what happened, why it mattered and what to check next.', sel: '[data-a="feedback"]', done: (sim, ui) => feedbackShowing(ui) },
+      { t: 'Read the complaint and the satisfaction dimension', d: 'The report is from the real visit you just watched. This interior tenant is currently at <b>{feedbackSat}</b> satisfaction. Read the complaint before you improve the property, then tap <b>Got it</b>.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => flag(sim, 'feedbackAck') },
+    ],
+    button: 'Got it', flag: 'feedbackAck', buttonWhen: (sim, ui) => !!darkFeedback(sim) && feedbackShowing(ui) && !flag(sim, 'feedbackAck'),
+    check: (sim) => !!darkFeedback(sim) && flag(sim, 'feedbackAck') },
+
+  { id: 'overlays', act: 'III', chapter: 'Improve', title: 'Diagnose before you build',
+    body: 'One complaint is useful. An overlay shows whether the same problem exists elsewhere across the property.',
+    why: 'The <b>Security</b> overlay combines lighting and camera coverage. Red crosses are dark and unwatched; stripes or dots show partial coverage; an unmarked area has both.',
+    ownsRequest: (sim, c) => c && c.key === 'secrisk',
+    steps: [
+      { t: 'Open <b>Operate</b>', d: 'Open Operate and choose <b>Overlays</b>.', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || flag(sim, 'securityOverlaySeen') },
+      { t: 'Turn on the <b>Security</b> overlay', d: 'Use <b>Overlays → Security</b>. Look for red crosses, stripes and dots rather than guessing where coverage is weak.', sel: '[data-a="overlay"][data-v="security"]', done: (sim, ui) => (ui && ui.rend && ui.rend.overlay === 'security') || flag(sim, 'securityOverlaySeen') },
+      { t: 'Inspect the coverage map', d: 'Red cross = dark and unwatched. Stripe = lit only. Dot = camera only. No mark = lit and on camera. Tap <b>Got it</b> after you have inspected the map.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => flag(sim, 'securityOverlaySeen') },
+      { t: 'Turn the <b>Security</b> overlay off', d: 'Tap <b>Security</b> again. The diagnostic layer should disappear and the normal property view should return.', sel: '[data-a="overlay"][data-v="security"]', done: (sim, ui) => flag(sim, 'securityOverlaySeen') && (!ui || !ui.rend || ui.rend.overlay !== 'security') },
+      { t: 'Repair the dark hallway', d: 'The complaint came from the hallway light. Tap that failed light on the map; the wrench pin marks it.', obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => sim.works(hallLight(sim)) || (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || !!(repairTask(sim, hallLight(sim)) || {}).assigned },
+      { t: 'Send the <b>Owner</b>', d: 'Use the light panel to send the Owner. You are fixing the problem the customer actually experienced before adding anything else.', sel: `[data-cmd*='\"ownerTask\"']`, done: (sim) => sim.works(hallLight(sim)) || !!(repairTask(sim, hallLight(sim)) || {}).assigned },
+      { t: 'Let the hallway repair finish', d: 'Run time until the light works again. Then use the overlay evidence to decide whether Maple Street needs more coverage.', sel: PLAY, run: true, done: (sim) => sim.works(hallLight(sim)) },
+      { t: 'Improve one weak spot', d: 'Use <b>Build → Access & Security</b>. Add a Camera or Light where the overlay showed a weakness. If you already added one during the tutorial, that improvement counts; do not build a duplicate.', sel: TAB('build'), done: securityImproved },
+      { t: 'Let the improvement finish', d: 'Run time until the improvement is operating. The goal is evidence → diagnosis → improvement, not building for its own sake.', sel: PLAY, run: true, done: securityImprovementDone },
+    ],
+    button: 'Got it', flag: 'securityOverlaySeen', buttonWhen: (sim, ui) => ui && ui.rend && ui.rend.overlay === 'security' && !flag(sim, 'securityOverlaySeen'),
+    check: (sim) => sim.works(hallLight(sim)) && securityImprovementDone(sim) },
+
+  { id: 'climate', act: 'III', chapter: 'Improve', title: 'Serve a customer need Maple Street misses',
+    body: (sim) => `${climateDemandLine(sim)} The unused west corridor can become climate-controlled space.`,
+    why: 'Climate space earns a premium because it serves a different need. It requires <b>HVAC capacity</b>, a <b>lit interior route</b> and units built with <b>Climate on</b>.',
+    steps: [
+      { t: '12A · Read the climate demand', d: '{climateDemand} Build only because the customer need is real, not because a tool is unlocked. Tap <b>Got it</b>.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => flag(sim, 'climateDemandAck') },
+      ...buildSteps({ cat: 'utilities', catName: 'Utilities', tool: 'hvac', toolName: 'HVAC Plant', cell: { x: 14, y: 8 }, placed: hvacPresent,
+        place: '<b>12B · Add HVAC capacity</b>', placeD: 'Place the HVAC Plant on the grass strip just west of the interior building, touching the building.' }).map((st, i) => i === 0 ? { ...st, t: '12B · Open <b>Build</b> for HVAC' } : st),
+      ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'light', toolName: 'Light', cell: { x: 17, y: 8 }, f: 0, after: hvacPresent, placed: westLightPresent,
+        place: '<b>12C · Light the west corridor</b>', placeD: 'On <b>F1</b>, place a light in the west corridor so customers have a lit route to the new units.' }).map((st, i) => i === 0 ? { ...st, t: '12C · Prepare the climate corridor', done: (sim, ui) => westLightPresent(sim) || (hvacPresent(sim) && tabIs(ui, 'build')) } : st),
+      ...buildSteps({ cat: 'interior', catName: 'Interior', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 5 }, end: { x: 16, y: 11 }, axis: 'y', climate: true, f: 0, after: westLightPresent, placed: climatePresent,
+        place: 'Build climate units along the west corridor', placeD: 'On <b>F1</b>, place the units along the west side of the corridor with their doors facing the hallway.',
+        extra: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || climatePresent(sim) }] })
+        .map((st, i) => i === 0 ? { ...st, t: 'Build the climate units', done: (sim, ui) => climatePresent(sim) || (westLightPresent(sim) && tabIs(ui, 'build')) } : st),
+      waitBuild('Let construction finish and the climate units open', (sim) => !!sim.s.milestones.first_climate || sim.objs('unit').some((u) => u.env === 'climate' && u.cstate === 'operating')),
+    ],
+    button: 'Got it', flag: 'climateDemandAck', buttonWhen: (sim) => !flag(sim, 'climateDemandAck'),
+    check: (sim) => !!sim.s.milestones.first_climate || sim.objs('unit').some((u) => u.env === 'climate' && u.cstate === 'operating') },
+
+  chapterBreak({ id: 'actIII_break', act: 'III', chapter: 'Improve', next: 'Graduation', title: 'Maple Street works better because you listened',
+    body: 'You followed a customer, read what went wrong, diagnosed the property with an overlay and invested in a customer need. <b>Maple Street is paused.</b> This is a good place to stop before graduation.',
+    why: 'What you learned in Act III: customers experience the physical route through the property; feedback records real events; satisfaction summarizes repeated service; overlays turn hidden systems into visible evidence; improvements should answer a diagnosed problem; and different products serve different demand.' }),
 
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
   { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true,
-    body: 'You’ve taken Maple Street from a property you barely knew into one you can operate, improve and grow. You understand how customers, staff, buildings and money fit together. There is still plenty to master, but the property is yours now. <b>Maple Street is paused.</b> Take your time, look around, and start the clock when you’re ready.',
-    why: 'Optional <b>lessons</b> (interior carts, security, climate, building up, collections, loans) are offered when the situation comes up, or anytime from <b>Growth &rarr; Lessons</b>. A <b>report card</b> arrives every 30 days in <b>Business</b>.',
+    body: 'You’ve taken Maple Street from a property you barely knew into one you can operate, diagnose, improve and grow. You understand how customers, staff, buildings and money fit together. There is still plenty to master, but the property is yours now. <b>Maple Street is paused.</b> Take your time, look around, and start the clock when you’re ready.',
+    why: 'Deeper <b>lessons</b> on building up, collections and financing are offered when the situation comes up, or anytime from <b>Growth &rarr; Lessons</b>. A <b>report card</b> arrives every 30 days in <b>Business</b>.',
     steps: [{ t: 'Tap <b>Finish tutorial</b>', d: 'The tutorial closes and every tool is unlocked. Time stays paused until you choose a speed.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.grad }],
     button: 'Finish tutorial', check: (sim) => sim.s.tut.flags.grad },
+
 ];
 
 // Campaign progression is identified by stable beat ids (sim.s.tut.beatId), never by position alone.
@@ -206,8 +290,9 @@ export const BEATS = [
 export const BEAT_ALIASES = {};
 // A save loaded without a beat id predates ids (before campaign Unit 1) and is positioned in the original 8-beat layout.
 // (At run time, a position written without an id is a position in the current layout, as before.)
-export const LEGACY_BEATS = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'grad'];
-const OLD_EXPAND_AT = 4; // `expand` sat here, and began with the Asking rents stop, until Beat 5 took that stop over (Unit 4)
+export const LEGACY_BEATS = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'actII_break'];
+const OLD_EXPAND_AT = 4;
+const PRE_ACT3_GRAD_AT = 10; // Unit 5 ended here; active saves at that old graduation resume from the Act II break (D4). // `expand` sat here, and began with the Asking rents stop, until Beat 5 took that stop over (Unit 4)
 // An `expand` save from before Unit 4: unless the Drive-Up 10x10 row was ordered or the expansion already opened, the
 // player resumes at Beat 5 (`pricing`, short and read-only, so nothing is completed for them); otherwise at `expand`.
 // Needs the whole state (orders, milestones): null when only the tutorial record is at hand (the load-time sync).
@@ -233,6 +318,7 @@ function resolveBeat(s) {
   if (i < 0) return t.beat;
   if (Number.isInteger(t.beat) && t.beat !== t.beatAt) return t.beat; // position changed without the id
   if (t.beatId === 'expand' && t.beatAt === OLD_EXPAND_AT && t.beat === OLD_EXPAND_AT) { const to = oldExpandTarget(s); return to ? beatIndex(to) : null; }
+  if (t.beatId === 'grad' && t.beatAt === PRE_ACT3_GRAD_AT && t.beat === PRE_ACT3_GRAD_AT) return beatIndex('actII_break'); // D4: do not skip Act III
   return i;
 }
 // Mutating sync, used when a game is loaded and on each tutorial tick. Only an active tutorial carries an id.
@@ -248,6 +334,7 @@ export function syncTutBeat(t, s) {
   const i = resolveBeat(s && s.tut === t ? s : { tut: t });
   if (!Number.isInteger(i) || !BEATS[i]) return; // unknown or not yet resolvable: leave untouched
   if (BEATS[i].id === 'pricing' && t.beatId === 'expand') t.entered = false; // an old expand save resumes at Beat 5: enter it
+  if (BEATS[i].id === 'actII_break' && t.beatId === 'grad') t.entered = false; // D4 migration from the old graduation
   t.beat = i; t.beatId = BEATS[i].id; t.beatAt = i;
 }
 
@@ -356,7 +443,7 @@ export function beatHeader(i) {
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
 export function tutorialText(sim, value) {
-  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/Unit (107|203)\b/g, (_, n) => {
+  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/Unit (107|203)\b/g, (_, n) => {
     const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
     return u ? `Unit ${u.num}` : 'the tutorial unit';
   }) : value;
@@ -387,6 +474,8 @@ export function stepState(sim, ui) {
 const UNLOCK = [
   ['expand', ['aisle', 'du5x5', 'du5x10', 'du10x10', 'du10x20', 'demolish', 'walk', 'parking']],
   ['repair', ['light']],
+  ['overlays', ['camera']],
+  ['climate', ['hvac', 'iu5x5', 'iu5x10', 'iu10x10', 'iu10x20']],
 ]; // everything else unlocks at graduation
 export function toolUnlocked(sim, tool) {
   const s = sim.s; if (!s.tut.on) return true;
@@ -409,6 +498,8 @@ export function tutorialTick(sim) {
   if (b.brk && s.tut.flags[b.flag]) sim.releaseHeld({ chapter: true }); // after Continue, still paused: held reviews come out first
   if (!s.tut.entered) { s.tut.entered = true; s.tut.enteredAt = s.t; if (b.enter) b.enter(sim); sim.emit('tut_beat', { beat: s.tut.beat }); }
   if (b.check(sim)) {
+    const lesson = { interior_customer: 'interior', overlays: 'quality', climate: 'climate' }[b.id];
+    if (lesson) { s.lessonsDone ||= {}; s.lessonsDone[lesson] ||= sim.day; }
     sim.emit('tut_done', { beat: s.tut.beat });
     s.tut.beat++; s.tut.entered = false; s.tut.idMark = s.nextId;
     if (s.tut.beat >= BEATS.length) { s.tut.done = true; s.tut.on = false; s.tut.gradDay = sim.day; delete s.tut.beatId; delete s.tut.beatAt; sim.releaseHeld(); sim.milestone('graduated'); }
