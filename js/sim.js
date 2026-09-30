@@ -32,10 +32,10 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     market: { id: market, ask: {} },
     ledger: [], days: [], today: null,
     exp: { access: 0.85, convenience: 0.8, cleanliness: 0.85, security: 0.7, climate: 0.9, service: 0.85, value: 0.8, comfort: 0.8 },
-    powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, mgrLog: [],
+    powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, debt: [], auction: null, mgrLog: [],
     thoughts: [], convos: [], lost: {}, lostToday: {},
     milestones: {}, tut: { on: mode === 'tutorial', beat: 0, flags: {}, done: false },
-    open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true },
+    open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true },
     weather: 'fair', nextId: 1, structV: 1, unitNo: { drive: 101, interior: 201, upper: 301 },
     lastCommit: null,
   };
@@ -55,7 +55,7 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
   s.today = blankDay(1);
   return s;
 }
-function blankDay(day) { return { day, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }
+function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }
 
 // ---------------------------------------------------------------- Sim
 export class Sim {
@@ -66,7 +66,9 @@ export class Sim {
     state.loan ||= { bal: 0, warnT: -1e9 };
     if (state.powerBase == null) state.powerBase = POWER.base[state.market && state.market.id] ?? 30;
     if (state.exp && state.exp.comfort == null) state.exp.comfort = 0.8;
-    state.mgrLog ||= [];
+    state.mgrLog ||= []; state.debt ||= []; if (state.auction === undefined) state.auction = null;
+    const P = state.policies; if (P.lateFee == null) P.lateFee = 20; if (P.autoNotice == null) P.autoNotice = false; if (!P.resolution) P.resolution = 'auction'; if (P.retention == null) P.retention = true; if (P.overlock == null) P.overlock = true;
+    for (const L of Object.values(state.leases || {})) { if (L.fees == null) L.fees = 0; }
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -94,7 +96,9 @@ export class Sim {
     if (s.ledger.length > 250) s.ledger.splice(0, s.ledger.length - 250);
     const d = s.today;
     if (cat === 'rent') d.rent += amt; else if (cat === 'opex') d.opex -= amt; else if (cat === 'payroll') d.payroll -= amt;
-    else if (cat === 'capex') d.capex -= amt; else d.other += amt;
+    else if (cat === 'capex') d.capex -= amt; else if (cat === 'anc') d.anc = (d.anc || 0) + amt; else if (cat === 'service') d.service = (d.service || 0) - amt;
+    else if (cat === 'debt') d.debt = (d.debt || 0) - amt; else if (cat === 'interest') d.interest = (d.interest || 0) - amt; else if (cat === 'loan') d.fin = (d.fin || 0) + amt;
+    else d.other += amt;
     if (amt > 0 && cat === 'rent') this.emit('rent', { amt });
   }
 
@@ -869,7 +873,7 @@ export class Sim {
   rentReviewCands(key) {
     const s = this.s, ask = s.market.ask[key];
     return Object.values(s.leases).filter((L) => {
-      const u = s.objects[L.unit]; if (!u || productKey(u.size, u.env) !== key || L.status !== 'current') return false;
+      const u = s.objects[L.unit]; if (!u || productKey(u.size, u.env) !== key || L.status !== 'current' || (L.holdUntil && L.holdUntil > s.t)) return false;
       const since = Math.max(L.start != null ? (L.start - 1) * MIN_PER_DAY : -1e9, L.incT ?? -1e9);
       return s.t - since >= 180 * MIN_PER_DAY && L.rent < ask;
     });
@@ -884,7 +888,7 @@ export class Sim {
     const c = this.rentReviewCands(a.key); if (!c.length) { this.emit('refuse'); return { ok: false, msg: 'No eligible tenants (need 6+ months tenure and rent below asking)' }; }
     let delta = 0;
     for (const L of c) {
-      const nr = Math.min(Math.round(L.rent * (1 + pct)), ask); delta += nr - L.rent; L.rent = nr; L.incT = s.t;
+      const nr = Math.min(Math.round(L.rent * (1 + pct)), ask); delta += nr - L.rent; L.prevRent = L.rent; L.rent = nr; L.incT = s.t; L.asked = false;
       const tn = s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - pct * 1.6, 0, 1);
     }
     s.exp.value = clamp(s.exp.value - 0.01 * c.length / Math.max(1, Object.keys(s.leases).length) * 10, 0, 1);
@@ -967,7 +971,7 @@ export class Sim {
     const cost = t.need === 'repair_complex' ? 650 : 250;
     if (!s.creative && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     for (const ag of s.agents) { if (ag.task === t.id) { if (ag.cart) this.dropCart(ag); ag.task = null; ag.st = 'idle'; } if (ag.queue) ag.queue = ag.queue.filter((x) => x !== t.id); }
-    if (!s.creative) this.money(-cost, 'other', 'Vendor service: ' + t.label);
+    if (!s.creative) this.money(-cost, 'service', 'Vendor service: ' + t.label);
     t.vendor = s.t + 600; t.assigned = 'vendor'; this.emit('task_assigned');
     return { ok: true, msg: `Vendor booked (~10 hours) - $${cost}` };
   }
@@ -998,6 +1002,8 @@ export class Sim {
     s.t++;
     const mod = this.mod;
     if (mod === 0) this.newDay();
+    this.auctionTick();
+    if (mod % 5 === 0) this.convoTick();
     // construction
     for (const ord of s.orders) if (ord.st === 'construction') {
       if (ord.waitShell && !s.objects[ord.waitShell]) { this.act_cancelOrder({ id: ord.id, cascade: true }); continue; }
@@ -1033,32 +1039,28 @@ export class Sim {
     const ox = this.dailyOpex();
     this.money(-ox.total, 'opex', 'Daily operating cost');
     const pay = s.staff.reduce((a, st) => a + st.wage, 0); if (pay) this.money(-pay, 'payroll', 'Payroll');
-    if (s.loan.bal > 0) { const int = Math.round(s.loan.bal * 0.0004 * 100) / 100; this.money(-int, 'other', 'Credit line interest'); }
+    if (s.loan.bal > 0) { const int = Math.round(s.loan.bal * 0.0004 * 100) / 100; this.money(-int, 'interest', 'Credit line interest'); }
     if (!s.creative) this.cashCheck(ox.total + pay);
-    // billing on anniversary days
-    for (const L of Object.values(s.leases)) {
-      if (L.status === 'current' && day >= L.nextBill) {
-        L.nextBill += BILLING_CYCLE_DAYS;
-        if (this.rnd() < 0.955) this.money(L.rent, 'rent', `Rent - Unit ${s.objects[L.unit].num}`);
-        else { L.status = 'pastdue'; L.balance = L.rent; L.dueSince = day; }
-      } else if (L.status !== 'current') {
-        const late = day - L.dueSince;
-        if (this.rnd() < (L.status === 'pastdue' ? 0.3 : 0.08)) { this.money(L.balance + 20, 'rent', `Late rent + fee - Unit ${s.objects[L.unit].num}`); L.status = 'current'; L.balance = 0; if (day >= L.nextBill) L.nextBill += BILLING_CYCLE_DAYS; }
-        else if (late >= 45) this.lienResolve(L);
-        else if (late >= 15) L.status = 'delinquent';
-        if (day >= L.nextBill && L.status !== 'current') { L.balance += L.rent; L.nextBill += BILLING_CYCLE_DAYS; }
-      }
-    }
+    // billing on anniversary days, then the collections ladder (GDD §36)
+    for (const L of Object.values(s.leases)) this.billLease(L, day);
+    this.debtService(day);
+    // tenants whose rent was just raised sometimes ask about it (GDD §26 pricing question)
+    { const asked = Object.values(s.leases).filter((L) => L.incT != null && !L.asked && s.t - L.incT < 5 * MIN_PER_DAY && s.tenants[L.tenant]);
+      for (const L of asked.slice(0, 2)) { L.asked = true; if (this.rnd() < 0.4) this.pricingConvo(L); } }
     // tenant move-out pressure (accumulated satisfaction, not single trips)
     for (const tn of Object.values(s.tenants)) {
       const L = s.leases[tn.lease]; if (!L || L.status !== 'current' || tn.leaving) continue;
       const u = s.objects[L.unit]; const mk = this.marketRent(u);
       const hazard = (1 / 320) * (1 + clamp(0.72 - tn.sat, 0, 1) * 5) * clamp(L.rent / mk, 0.8, 1.6) ** 2 * (L.incT != null && s.t - L.incT < 60 * MIN_PER_DAY ? 1.5 : 1);
-      if (this.rnd() < hazard) { tn.leaving = true; this.schedule({ kind: 'moveout', tenant: tn.id, unit: u.id }, this.randomAccessTime(day)); }
+      if (this.rnd() < hazard) {
+        tn.leaving = true; const when = this.randomAccessTime(day + 2); this.schedule({ kind: 'moveout', tenant: tn.id, unit: u.id }, when);
+        if (this.rnd() < 0.65) this.moveoutConvo(tn, L, u, L.rent / mk > 1.04);
+      }
     }
     // routine access visits
     for (const tn of Object.values(s.tenants)) {
       const L = s.leases[tn.lease]; if (!L || tn.leaving || !s.objects[L.unit] || s.objects[L.unit].commercial !== 'occupied') continue;
+      if (s.objects[L.unit].overlock) continue; // overlocked for non-payment: no access visits until the account is current
       if (this.rnd() < 1 / 1.8) this.schedule({ kind: this.rnd() < 0.15 ? 'bigaccess' : 'access', tenant: tn.id, unit: L.unit }, this.randomAccessTime(day));
     }
     if (s.open) this.genProspects(day, 1);
@@ -1135,12 +1137,12 @@ export class Sim {
   act_loan(a) {
     const s = this.s, amt = Math.floor(Number(a.amt) || 0); const room = this.creditLimit() - s.loan.bal;
     if (amt <= 0) return { ok: false }; if (amt > room) return { ok: false, msg: `Credit limit reached ($${room.toLocaleString()} available)` };
-    s.loan.bal += amt; this.money(amt, 'other', 'Credit line draw'); this.emit('loan'); return { ok: true, msg: `Borrowed $${amt.toLocaleString()}` };
+    s.loan.bal += amt; this.money(amt, 'loan', 'Credit line draw'); this.emit('loan'); return { ok: true, msg: `Borrowed $${amt.toLocaleString()}` };
   }
   act_repay(a) {
     const s = this.s, amt = Math.min(s.loan.bal, Math.floor(Number(a.amt) || 0)); if (amt <= 0) return { ok: false, msg: 'Nothing to repay' };
     if (s.cash < amt) return { ok: false, msg: 'Not enough cash' };
-    s.loan.bal -= amt; this.money(-amt, 'other', 'Credit line repayment'); return { ok: true, msg: `Repaid $${amt.toLocaleString()}` };
+    s.loan.bal -= amt; this.money(-amt, 'debt', 'Credit line repayment'); return { ok: true, msg: `Repaid $${amt.toLocaleString()}` };
   }
   dailyOpex() {
     const s = this.s, o = { base: OPEX.base, units: 0, lights: 0, security: 0, doors: 0, elevators: 0, hvac: 0, amenities: 0, utilities: 0 };
@@ -1174,19 +1176,228 @@ export class Sim {
   marketRent(u) { const M = MARKETS[this.s.market.id]; return M.rent[u.size] * (u.env === 'climate' ? M.climatePremium : 1); }
   askFor(u) { return this.s.market.ask[productKey(u.size, u.env)]; }
   reputation() { const e = this.s.exp; return (e.access * 1 + e.convenience * 1.3 + e.cleanliness * 0.9 + e.security * 0.9 + e.climate * 0.5 + e.service * 0.7 + e.value * 1.1 + (e.comfort ?? 0.8) * 0.4) / 6.8; }
-  lienResolve(L) {
-    const s = this.s, u = s.objects[L.unit];
-    const rev = Math.round(L.rent * (0.8 + this.rnd() * 1.4));
-    this.money(rev, 'other', `Lien sale - Unit ${u.num}`);
-    this.endLease(L, 'lien');
-    this.emit('lien', { unit: u.id });
+  // ============================================================ COLLECTIONS (GDD §36)
+  // Current -> Past Due -> Delinquent (overlocked) -> Lien eligible -> Lien notice -> Auction / clean-out.
+  // The player sets policy and handles exceptions; the ladder runs itself.
+  stageOf(L) { return L.status === 'current' ? 'Current' : { pastdue: 'Past due', plan: 'Payment plan', delinquent: 'Delinquent', lien: 'Lien eligible', notice: 'Lien notice', auction: 'Auction scheduled' }[L.status] || 'Past due'; }
+  billLease(L, day) {
+    const s = this.s, u = s.objects[L.unit]; if (!u) return;
+    if (L.status === 'current') {
+      if (day < L.nextBill) return;
+      L.nextBill += BILLING_CYCLE_DAYS;
+      if (this.rnd() < 0.955) { this.money(L.rent, 'rent', `Rent - Unit ${u.num}`); return; }
+      L.status = 'pastdue'; L.balance = L.rent; L.fees = 0; L.dueSince = day; L.feeDone = false;
+      this.emit('pastdue', { unit: u.id }); return;
+    }
+    if (day >= L.nextBill && L.status !== 'auction') { L.balance += L.rent; L.nextBill += BILLING_CYCLE_DAYS; }
+    if (L.status === 'auction') return; // waiting for auction day
+    const late = day - L.dueSince;
+    // does the tenant pay today?
+    if (L.status === 'plan') {
+      if (day >= L.planDue) { if (this.rnd() < 0.8) return this.payUp(L, 'Payment plan completed'); L.status = 'delinquent'; this.emit('plan_broken', { unit: u.id }); }
+      return;
+    }
+    const pPay = { pastdue: 0.2, delinquent: 0.05, lien: 0.04, notice: 0.035 }[L.status] ?? 0.05;
+    if (this.rnd() < pPay) return this.payUp(L, L.status === 'notice' ? 'Paid after lien notice' : 'Past-due rent paid');
+    if (!L.feeDone && late >= 5 && s.policies.lateFee > 0) { L.feeDone = true; L.fees = (L.fees || 0) + s.policies.lateFee; }
+    if (L.status === 'pastdue' && late >= 15) {
+      L.status = 'delinquent';
+      if (s.policies.overlock) { u.overlock = true; this.emit('overlock', { unit: u.id, x: u.x, y: u.y, f: u.f || 0 }); }
+    } else if (L.status === 'delinquent' && late >= 30) {
+      L.status = 'lien'; L.lienDay = day; this.emit('lien_eligible', { unit: u.id });
+      if (s.policies.autoNotice || this.hasManager()) { this.startNotice(L); if (this.hasManager()) this.mgr(`Sent a lien notice for Unit ${u.num} (${this.fmtMoney(this.owed(L))} owed)`); }
+      else this.convo({ key: 'lien' + L.id, who: 'Collections', sev: 'critical', obj: u.id, ttl: 3 * MIN_PER_DAY, def: 0,
+        text: `Unit ${u.num} is ${late} days past due and owes ${this.fmtMoney(this.owed(L))}. The account is now lien-eligible.`,
+        actions: [{ label: 'Send lien notice', action: { type: 'collect', op: 'notice', lease: L.id } }, { label: 'Offer a payment plan', action: { type: 'collect', op: 'plan', lease: L.id } }, { label: 'Waive fees, wait 14 days', action: { type: 'collect', op: 'waive', lease: L.id } }] });
+    } else if (L.status === 'lien' && day - (L.lienDay || day) >= 14) this.startNotice(L); // standard procedure if nobody decides
+    else if (L.status === 'notice' && day >= L.noticeUntil) this.scheduleAuction(L);
+  }
+  owed(L) { return Math.round((L.balance || 0) + (L.fees || 0)); }
+  fmtMoney(v) { return '$' + Math.round(v).toLocaleString(); }
+  payUp(L, why) {
+    const s = this.s, u = s.objects[L.unit], amt = this.owed(L);
+    if (amt > 0) { this.money(L.balance, 'rent', `${why} - Unit ${u.num}`); if (L.fees) this.money(L.fees, 'anc', `Late fees - Unit ${u.num}`); }
+    this.dropConvo('lien' + L.id); L.status = 'current'; L.balance = 0; L.fees = 0; L.feeDone = false; L.noticeUntil = null; L.planDue = null; u.overlock = false;
+    const tn = s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.04, 0, 1);
+    this.emit('paid_up', { unit: u.id, amt });
+  }
+  dropConvo(key) { this.s.convos = this.s.convos.filter((c) => c.key !== key); }
+  startNotice(L) { this.dropConvo('lien' + L.id); const u = this.s.objects[L.unit]; L.status = 'notice'; L.noticeUntil = this.day + 14; this.emit('lien_notice', { unit: u.id }); }
+  nextAuctionDay(minDay) { let d = minDay; while (d % 7 !== 6) d++; return d; } // Saturdays
+  scheduleAuction(L) {
+    const s = this.s, u = s.objects[L.unit]; L.status = 'auction'; this.dropConvo('lien' + L.id);
+    if (!s.auction || s.auction.done) s.auction = { day: this.nextAuctionDay(this.day + 2), done: false };
+    L.auctionDay = s.auction.day; this.emit('auction_scheduled', { unit: u.id, day: s.auction.day });
+  }
+  auctionTick() { // runs every minute; cheap
+    const s = this.s, A = s.auction; if (!A || A.done || this.day !== A.day) return;
+    const m = this.mod;
+    if (m === 10 * 60 && !A.live) {
+      const lots = Object.values(s.leases).filter((L) => L.status === 'auction');
+      if (!lots.length) { A.done = true; return; }
+      A.live = { until: s.t + 80, lots: lots.map((L) => L.id) };
+      if (s.policies.resolution === 'auction') this.emit('auction_start', { units: lots.map((L) => L.unit) });
+    }
+    if (A.live && s.t >= A.live.until) {
+      let total = 0; const sold = [];
+      for (const id of A.live.lots) {
+        const L = s.leases[id]; if (!L || L.status !== 'auction') continue; const u = s.objects[L.unit];
+        if (s.policies.resolution === 'auction') {
+          const war = this.rnd() < 0.12; const price = Math.round(L.rent * (war ? 3 + this.rnd() * 3 : 0.4 + this.rnd() * 2.1) / 5) * 5;
+          const credit = Math.min(price, this.owed(L)); total += price;
+          this.money(price, 'anc', `Lien auction - Unit ${u.num}${war ? ' (bidding war)' : ''}`);
+          sold.push({ unit: u.id, num: u.num, price, war, owed: this.owed(L), credit });
+          this.emit('auction_sold', { unit: u.id, price, war, x: u.x, y: u.y, f: u.f || 0 });
+        } else {
+          this.money(-120, 'service', `Clean-out and donation - Unit ${u.num}`);
+          sold.push({ unit: u.id, num: u.num, price: 0 });
+        }
+        this.endLease(L, 'auction');
+      }
+      A.done = true; A.live = null; A.result = { total, sold, mode: s.policies.resolution };
+      const left = Object.values(s.leases).filter((L) => L.status === 'auction'); // lots that arrived during the sale roll to the next one
+      if (left.length) { const nx = { day: this.nextAuctionDay(this.day + 2), done: false, prev: A.result }; s.auction = nx; for (const L of left) L.auctionDay = nx.day; }
+      this.milestone('first_auction');
+      this.emit('auction_end', { total, n: sold.length, mode: s.policies.resolution });
+    }
+  }
+  act_collect(a) {
+    const s = this.s, L = s.leases[a.lease]; if (!L) return { ok: false, msg: 'That account has closed' };
+    const u = s.objects[L.unit], tn = s.tenants[L.tenant];
+    switch (a.op) {
+      case 'notice': if (!['delinquent', 'lien', 'pastdue'].includes(L.status)) return { ok: false, msg: 'Not eligible for a lien notice yet' };
+        if (this.day - L.dueSince < 30) return { ok: false, msg: 'A lien notice needs 30 days of non-payment' };
+        this.startNotice(L); return { ok: true, msg: `Lien notice sent for Unit ${u.num}. Auction in about 2 weeks if unpaid.` };
+      case 'plan': {
+        if (!['pastdue', 'delinquent', 'lien', 'notice'].includes(L.status)) return { ok: false, msg: 'No plan needed' };
+        if (L.planTried) return { ok: false, msg: 'This tenant already had a payment-plan offer' };
+        L.planTried = true;
+        if (this.rnd() < 0.72) {
+          const half = Math.round(L.balance / 2); this.money(half, 'rent', `Payment plan - Unit ${u.num}`); L.balance -= half; L.fees = 0;
+          L.status = 'plan'; L.planDue = this.day + 14; u.overlock = false; if (tn) tn.sat = clamp(tn.sat + 0.05, 0, 1);
+          this.emit('plan_ok', { unit: u.id }); return { ok: true, msg: `${tn ? tn.name : 'Tenant'} paid $${half} now; the rest is due in 14 days. Fees waived, overlock removed.` };
+        }
+        return { ok: false, msg: `${tn ? tn.name : 'The tenant'} didn't respond to the payment-plan offer.` };
+      }
+      case 'waive': L.fees = 0; L.dueSince += 14; if (L.status === 'lien') L.status = 'delinquent'; return { ok: true, msg: `Fees waived for Unit ${u.num}. Lien clock pushed back 14 days.` };
+      case 'unlock': u.overlock = false; return { ok: true, msg: `Overlock removed from Unit ${u.num}` };
+      case 'hold': if (L.status !== 'auction') return { ok: false }; L.status = 'notice'; L.noticeUntil = this.day + 14; return { ok: true, msg: `Unit ${u.num} pulled from the auction for 14 days` };
+    }
+    return { ok: false };
+  }
+
+  // ============================================================ FINANCING (GDD §37)
+  // Term loans: principal, rate, term, monthly payment, approval limit. Nothing more.
+  loanTerms() { return { rate: 0.075, months: 60 }; }
+  loanPmt(P, rate = 0.075, n = 60) { const r = rate / 12; return Math.round(P * r / (1 - Math.pow(1 + r, -n)) * 100) / 100; }
+  loanLimit() {
+    const s = this.s; if (s.creative) return 0;
+    if (s.mode === 'tutorial' && !s.tut.done) return 0;
+    const roll = this.rentRoll(); const pay = s.debt.reduce((a, d) => a + d.pmt, 0);
+    const room = roll * 0.45 - pay; if (room <= 0) return 0;
+    const { rate, months } = this.loanTerms(); const r = rate / 12;
+    const pv = room * (1 - Math.pow(1 + r, -months)) / r;
+    return Math.max(0, Math.min(250000, Math.floor(pv / 5000) * 5000));
+  }
+  act_borrow(a) {
+    const s = this.s, amt = Math.floor(Number(a.amt) || 0), lim = this.loanLimit();
+    if (s.mode === 'tutorial' && !s.tut.done) return { ok: false, msg: 'Term loans open after the tutorial' };
+    if (amt < 5000) return { ok: false, msg: 'Minimum term loan is $5,000' };
+    if (amt > lim) { this.emit('refuse'); return { ok: false, msg: lim ? `The bank approves up to $${lim.toLocaleString()} at this rent roll` : 'Rent roll is too small to support a term loan' }; }
+    const { rate, months } = this.loanTerms(); const pmt = this.loanPmt(amt, rate, months);
+    s.debt.push({ id: this.id(), orig: amt, bal: amt, rate, months, pmt, next: this.day + BILLING_CYCLE_DAYS, start: this.day, paid: 0 });
+    this.money(amt, 'loan', `Term loan (${months} mo @ ${(rate * 100).toFixed(1)}%)`);
+    this.milestone('first_loan'); this.emit('loan');
+    return { ok: true, msg: `Borrowed $${amt.toLocaleString()} · $${Math.round(pmt).toLocaleString()}/mo for ${months} months` };
+  }
+  act_payoff(a) {
+    const s = this.s, d = s.debt.find((x) => x.id === a.id); if (!d) return { ok: false };
+    const amt = Math.round(d.bal * 100) / 100; if (!s.creative && s.cash < amt) { this.emit('refuse'); return { ok: false, msg: 'Not enough cash to pay it off' }; }
+    this.money(-amt, 'debt', 'Term loan payoff'); s.debt = s.debt.filter((x) => x !== d); this.emit('loan_paid');
+    return { ok: true, msg: 'Loan paid off' };
+  }
+  debtService(day) {
+    const s = this.s;
+    for (const d of [...s.debt]) {
+      if (day < d.next) continue; d.next += BILLING_CYCLE_DAYS;
+      const int = Math.round(d.bal * d.rate / 12 * 100) / 100, prin = Math.min(d.bal, Math.round((d.pmt - int) * 100) / 100);
+      this.money(-int, 'interest', 'Term loan interest'); this.money(-prin, 'debt', 'Term loan principal');
+      d.bal = Math.round((d.bal - prin) * 100) / 100; d.paid++;
+      if (d.bal <= 0.5) { s.debt = s.debt.filter((x) => x !== d); this.emit('loan_paid'); }
+    }
+  }
+
+  // ============================================================ CONVERSATIONS (GDD §26)
+  // Every answer maps to real state. Routine ones are answered by a Clerk/Manager per policy; unanswered ones expire to a default.
+  pricingConvo(L) {
+    const s = this.s, u = s.objects[L.unit], tn = s.tenants[L.tenant]; if (!u || !tn || L.prevRent == null) return;
+    this.convo({ key: 'rate' + L.id, who: tn.name, obj: u.id, sev: 'attention', ttl: 8 * 60, def: 2, auto: 0,
+      text: `Why did my rate change? Unit ${u.num} went from ${this.fmtMoney(L.prevRent)} to ${this.fmtMoney(L.rent)}.`,
+      actions: [{ label: 'Explain the market rate', action: { type: 'cv', op: 'rateExplain', lease: L.id } }, { label: `Hold ${this.fmtMoney(L.prevRent)} for 6 months`, action: { type: 'cv', op: 'rateHold', lease: L.id } }, { label: 'Ignore', action: { type: 'cv', op: 'rateIgnore', lease: L.id } }] });
+  }
+  moveoutConvo(tn, L, u, price) {
+    const offer = this.s.policies.retention;
+    this.convo({ key: 'mo' + tn.id, who: tn.name, obj: u.id, sev: 'attention', ttl: 10 * 60, def: 1, auto: offer && price ? 0 : 1,
+      text: price ? `The rent on Unit ${u.num} is more than I want to pay. I'm moving out. What do I need to do?` : `I'm done with Unit ${u.num}. What do I need to do?`,
+      actions: [{ label: `Offer 10% off (${this.fmtMoney(Math.round(L.rent * 0.9))}/mo) to stay`, action: { type: 'cv', op: 'retain', tenant: tn.id } }, { label: 'Explain move-out steps', action: { type: 'cv', op: 'moveoutOk', tenant: tn.id } }] });
+  }
+  act_cv(a) {
+    const s = this.s;
+    switch (a.op) {
+      case 'rateExplain': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.02, 0, 1); return { ok: true, msg: 'Explained: rates follow the local market. The new rate stands.' }; }
+      case 'rateIgnore': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.07, 0, 1); return { ok: true }; }
+      case 'rateHold': {
+        const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (!L || L.prevRent == null) return { ok: false, msg: 'That lease has changed' };
+        const was = L.rent; L.rent = L.prevRent; L.prevRent = null; L.incT = null; L.holdUntil = s.t + 180 * MIN_PER_DAY; if (tn) tn.sat = clamp(tn.sat + 0.08, 0, 1);
+        return { ok: true, msg: `Rate held at ${this.fmtMoney(L.rent)} (−${this.fmtMoney(was - L.rent)}/mo). They're grateful.` };
+      }
+      case 'retain': {
+        const tn = s.tenants[a.tenant], L = tn && s.leases[tn.lease]; if (!tn || !L || !tn.leaving) return { ok: false, msg: 'Too late: they have already moved out' };
+        if (tn.retainTried) return { ok: false, msg: 'Already made them an offer' }; tn.retainTried = true;
+        if (this.rnd() < clamp(0.1 + tn.sat * 0.55, 0.15, 0.7)) {
+          L.rent = Math.round(L.rent * 0.9); tn.leaving = false; tn.sat = clamp(tn.sat + 0.1, 0, 1);
+          s.visits = s.visits.filter((v) => !(v.kind === 'moveout' && v.tenant === tn.id));
+          this.milestone('first_retention'); this.emit('retained', { unit: L.unit });
+          return { ok: true, msg: `${tn.name} is staying at ${this.fmtMoney(L.rent)}/mo.` };
+        }
+        return { ok: false, msg: `${tn.name} thanked you but is still moving out.` };
+      }
+      case 'moveoutOk': return { ok: true, msg: 'Move-out explained: empty the unit, sweep it, and return the lock.' };
+      case 'sizeUp': case 'sizeKeep': {
+        const ag = s.agents.find((x) => x.id === a.ag); if (!ag || ag.st !== 'office') return { ok: false, msg: 'The prospect has already left the counter' };
+        ag.sizeQ = null; ag.keen = true;
+        if (a.op === 'sizeUp') { ag.size = a.size; return { ok: true, msg: `Recommended a ${a.size}. They'll take a look.` }; }
+        ag.cramped = true; return { ok: true, msg: 'Told them a 10x10 will do.' };
+      }
+      case 'vendorFor': { const o = s.objects[a.obj]; if (!o) return { ok: false }; const t = this.ensureRepairTask(o); return this.act_callVendor({ task: t.id }); }
+    }
+    return { ok: false };
+  }
+  convoTick() { // every 5 game minutes: staff answer routine conversations; unanswered ones expire to their default
+    const s = this.s; if (!s.convos.length) return;
+    const h = this.hour, inHours = h >= OFFICE_HOURS[0] && h < OFFICE_HOURS[1];
+    const clerk = inHours && s.agents.some((a) => a.kind === 'staff' && a.role === 'clerk' && a.st === 'office');
+    const mgr = inHours && this.hasManager();
+    for (const c of [...s.convos]) {
+      const age = s.t - c.t;
+      if (c.auto != null && (clerk || mgr) && age >= 15) {
+        const act = c.actions[c.auto]; s.convos = s.convos.filter((x) => x !== c);
+        if (act && act.action) { const r = this.dispatch(act.action); this.mgr(`${clerk ? 'Clerk' : 'Manager'} answered ${c.who}: ${act.label}${r && r.msg ? ' - ' + r.msg : ''}`); }
+        continue;
+      }
+      if (c.ttl && age >= c.ttl) {
+        s.convos = s.convos.filter((x) => x !== c);
+        const act = c.def != null && c.actions[c.def]; if (act && act.action) this.dispatch(act.action);
+        this.emit('convo_expired', { who: c.who });
+      }
+    }
   }
   endLease(L, why) {
     const s = this.s, u = s.objects[L.unit];
-    delete s.leases[L.id]; const tn = s.tenants[L.tenant]; if (tn) delete s.tenants[tn.id];
-    u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t;
+    delete s.leases[L.id]; const tn = s.tenants[L.tenant]; if (tn) { delete s.tenants[tn.id]; this.dropConvo('mo' + tn.id); } this.dropConvo('lien' + L.id); this.dropConvo('rate' + L.id);
+    u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t; u.overlock = false;
     { const fc = this.unitFront(u)[0]; if (fc) s.dirt[u.f || 0][this.idx(fc.x, fc.y)] += 0.25; }
-    this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: `Make-ready ${u.name}`, work: WORK.makeready });
+    this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Make-ready ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) });
     s.today.moveouts++;
     this.emit('moveout', { unit: u.id });
   }
@@ -1221,7 +1432,7 @@ export class Sim {
   signLease(u, v) {
     const s = this.s;
     const tn = { id: this.id(), name: `${this.pick(NAMES_FIRST)} ${this.pick(NAMES_LAST)}`, sat: 0.8, lease: null, since: s.t };
-    const L = { id: this.id(), unit: u.id, tenant: tn.id, rent: this.askFor(u), start: this.day, nextBill: this.day + BILLING_CYCLE_DAYS, status: 'current', balance: 0 };
+    const L = { id: this.id(), unit: u.id, tenant: tn.id, rent: this.askFor(u), start: this.day, nextBill: this.day + BILLING_CYCLE_DAYS, status: 'current', balance: 0, fees: 0 };
     tn.lease = L.id; s.tenants[tn.id] = tn; s.leases[L.id] = L;
     u.lease = L.id; u.commercial = 'reserved';
     this.money(L.rent, 'rent', `First month - ${u.name}`);
@@ -1353,7 +1564,7 @@ export class Sim {
   }
   convo(c) {
     const s = this.s; if (s.convos.some((x) => x.key && x.key === c.key)) return;
-    s.convos.push({ id: this.id(), t: s.t, ...c }); if (s.convos.length > 6) s.convos.shift();
+    s.convos.push({ id: this.id(), t: s.t, ttl: 12 * 60, ...c }); if (s.convos.length > 8) s.convos.shift();
     this.emit('convo', { sev: c.sev || 'attention' });
   }
 
@@ -1428,7 +1639,15 @@ export class Sim {
       }
       case 'toOffice': {
         const r = this.moveAgent(ag, WS);
-        if (r === 'done') { ag.hidden = true; ag.st = 'office'; s.officeQ.push(ag.id); }
+        if (r === 'done') {
+          ag.hidden = true; ag.st = 'office'; s.officeQ.push(ag.id);
+          if (ag.vt === 'prospect' && ag.size === '10x10' && !ag.climate && this.rnd() < 0.3) { // GDD §26 prospect sizing
+            const big = this.objs('unit').some((x) => x.cstate === 'operating' && x.commercial === 'ready' && x.size === '10x20' && !x.blocked);
+            if (big) { ag.sizeQ = true; this.convo({ key: 'size' + ag.id, who: 'A prospect', sev: 'attention', ttl: 40, auto: 0,
+              text: "I'm storing a two-bedroom apartment. Is a 10x10 enough?",
+              actions: [{ label: `Recommend a 10x20 (${this.fmtMoney(s.market.ask[productKey('10x20', 'std')])}/mo)`, action: { type: 'cv', op: 'sizeUp', ag: ag.id, size: '10x20' } }, { label: 'A 10x10 will do', action: { type: 'cv', op: 'sizeKeep', ag: ag.id } }] }); }
+          }
+        }
         break;
       }
       case 'office': {
@@ -1437,8 +1656,9 @@ export class Sim {
           if (ag.serveT === 0) {
             s.officeQ = s.officeQ.filter((x) => x !== ag.id);
             ag.hidden = false;
+            s.convos = s.convos.filter((c) => c.key !== 'size' + ag.id);
             const L = this.decideLease({ size: ag.size, climate: ag.climate, keen: ag.keen }, ag);
-            if (L) this.thought(ag, `Signed for a ${ag.size}. Moving in soon.`, 'good');
+            if (L) { this.thought(ag, `Signed for a ${ag.size}. Moving in soon.`, 'good'); if (ag.cramped || ag.sizeQ) { const tn = s.tenants[L.tenant]; if (tn) { tn.sat = 0.64; tn.cramped = true; } } }
             this.goToVehicle(ag);
           }
         } else {
@@ -1634,6 +1854,11 @@ export class Sim {
       if (rr) { ag.rrUse = long || this.rnd() < 0.15; if (ag.rrUse) ag.rrWant = rr.id; }
     }
     if (ag.vt === 'moveout') { const L = s.leases[u.lease]; if (L) this.endLease(L, 'moveout'); }
+    if ((ag.vt === 'access' || ag.vt === 'bigaccess') && this.rnd() < 0.5) { // GDD §26 maintenance complaint
+      const lt = this.objs('light').find((l) => (l.f || 0) === (u.f || 0) && l.cstate === 'operating' && !this.works(l) && Math.abs(l.x - u.x) + Math.abs(l.y - u.y) <= 7);
+      if (lt) { this.ensureRepairTask(lt); this.convo({ key: 'light' + lt.id, who: this.custName(ag), sev: 'attention', obj: lt.id, ttl: 10 * 60,
+        text: `The light near my unit is out.`, actions: [{ label: 'Send Owner to fix it', action: { type: 'ownerTaskFor', obj: lt.id } }, { label: 'Call an electrician ($250)', action: { type: 'cv', op: 'vendorFor', obj: lt.id } }, { label: 'Log it for later' }] }); }
+    }
     if (u.access === 'drive') { this.depart(ag); return; }
     if (ag.cart) {
       const corrals = this.objs('corral').filter((c) => c.cstate === 'operating');

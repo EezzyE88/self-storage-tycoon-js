@@ -8,6 +8,8 @@ const PIN = {
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-8.3 8.3a2 2 0 0 1-2.8-2.8l8.3-8.3"/><path d="M14.5 5.5 17 3"/></svg>',
   makeready: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v9"/><path d="M6 21l2-9h8l2 9"/><path d="M9 16v5M12 16v5M15 16v5"/></svg>',
   clean: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  auction: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6"/><path d="M11 7l6 6"/><path d="M12.5 5.5l-4 4 6 6 4-4"/><path d="M10 12l-7 7"/><path d="M3 21h8"/></svg>',
   late: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v18"/><path d="M16.5 7.5c-.7-1.2-2.3-2-4.5-2-2.8 0-4.5 1.4-4.5 3.2 0 4.3 9 2.5 9 6.8 0 1.8-1.8 3.2-4.5 3.2-2.3 0-4-.9-4.7-2.2"/></svg>',
   blocked: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M7 12h10"/></svg>',
   power: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
@@ -35,7 +37,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const pct = (v) => Math.round(v * 100) + '%';
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control', noReady: 'Nothing rent-ready', price: 'Rent too high', convenience: 'Not convenient enough', shopping: 'Kept shopping', service: 'No one at the office' };
-export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion commissioned', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate' };
+export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion commissioned', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate', first_retention: 'Kept a tenant from leaving', first_auction: 'First lien auction', first_loan: 'Financed growth' };
 const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanliness', security: 'Security', climate: 'Climate', service: 'Service', value: 'Value', comfort: 'Comfort' };
 
 export class UI {
@@ -112,7 +114,7 @@ export class UI {
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); break;
       case 'close': this.select(null); this.setTab(null); break;
-      case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (act.type === 'commission' || act.type === 'ownerTask' || act.type === 'ownerMakeReady') this.renderSheet(true); break; }
+      case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (['commission', 'ownerTask', 'ownerMakeReady', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
       case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); break;
       case 'tutNext': { const b = BEATS[this.sim.s.tut.beat]; if (b && b.id === 'welcome') this.do({ type: 'tutFlag', flag: 'welcome' }); if (b && b.id === 'grad') this.do({ type: 'tutFlag', flag: 'grad' }); this.sim.poll(); this.sfx('confirm'); break; }
@@ -337,13 +339,19 @@ export class UI {
       case 'unit': {
         const L = o.lease && s.leases[o.lease], tn = L && s.tenants[L.tenant];
         const state = o.cstate === 'built' ? '<span class="pill a">Built · not ready</span>' : o.cstate === 'ready' ? '<span class="pill b">Ready to commission</span>' :
-          o.commercial === 'occupied' ? (L && L.status !== 'current' ? '<span class="pill r">Rent past due</span>' : '<span class="pill g">Occupied</span>') : o.commercial === 'ready' ? '<span class="pill g">Rent-ready</span>' : o.commercial === 'reserved' ? '<span class="pill b">Reserved · move-in pending</span>' : o.commercial === 'unready' ? '<span class="pill a">Needs make-ready</span>' : '<span class="pill">—</span>';
+          o.commercial === 'occupied' ? (L && L.status !== 'current' ? this.stagePill(L) + (o.overlock ? '<span class="pill r">Overlocked</span>' : '') : '<span class="pill g">Occupied</span>') : o.commercial === 'ready' ? '<span class="pill g">Rent-ready</span>' : o.commercial === 'reserved' ? '<span class="pill b">Reserved · move-in pending</span>' : o.commercial === 'unready' ? '<span class="pill a">Needs make-ready</span>' : '<span class="pill">—</span>';
         const key = productKey(o.size, o.env), ask = s.market.ask[key];
         let h = `<div class="row wrap">${state}<span class="pill">${o.access === 'drive' ? 'Drive-up' : 'Interior'}</span>${o.env === 'climate' ? '<span class="pill b">Climate</span>' : ''}${o.f ? '<span class="pill">Floor 2</span>' : ''}</div>`;
         h += `<div class="kv"><span>Size</span><span>${o.size} (${SIZES[o.size].sqft} sq ft)</span><span>Asking rent</span><span>${money(ask)}/mo</span><span>Market rent</span><span>${money(Math.round(sim.marketRent(o)))}/mo</span>`;
         if (o.access === 'interior' && o.cstate === 'operating') h += `<span>Convenience</span><span>${pct(o.conv ?? 1)}</span>`;
         h += `<span>Security</span><span>${pct(sim.unitSecurity(o))}</span></div>`;
-        if (L) h += `<h3>Tenant</h3><div class="kv"><span>Name</span><span>${esc(tn ? tn.name : '—')}</span><span>Rent</span><span>${money(L.rent)}/mo</span><span>Next bill</span><span>Day ${L.nextBill}</span><span>Satisfaction</span><span>${tn ? pct(tn.sat) : '—'}</span>${tn && tn.leaving ? '<span>Status</span><span>Moving out</span>' : ''}</div>`;
+        if (L) h += `<h3>Tenant</h3><div class="kv"><span>Name</span><span>${esc(tn ? tn.name : '—')}</span><span>Rent</span><span>${money(L.rent)}/mo</span><span>Next bill</span><span>Day ${L.nextBill}</span><span>Satisfaction</span><span>${tn ? pct(tn.sat) : '—'}</span>${tn && tn.leaving ? '<span>Status</span><span>Moving out</span>' : ''}${L.status !== 'current' ? `<span>Owes</span><span>${money(sim.owed(L))} · ${sim.day - L.dueSince} days late</span>` : ''}${tn && tn.cramped ? '<span>Note</span><span>Feels cramped in this size</span>' : ''}</div>`;
+        if (L && L.status !== 'current') { const b = []; const d = sim.day - L.dueSince;
+          if (['pastdue', 'delinquent', 'lien'].includes(L.status) && d >= 30) b.push(this.cmdBtn('Send lien notice', { type: 'collect', op: 'notice', lease: L.id }, 'pri'));
+          if (!L.planTried && L.status !== 'auction' && L.status !== 'plan') b.push(this.cmdBtn('Offer payment plan', { type: 'collect', op: 'plan', lease: L.id }));
+          if (L.fees > 0) b.push(this.cmdBtn('Waive fees', { type: 'collect', op: 'waive', lease: L.id }));
+          if (L.status === 'auction') b.push(this.cmdBtn('Pull from auction', { type: 'collect', op: 'hold', lease: L.id }));
+          if (b.length) h += `<div class="row wrap" style="margin-top:6px">${b.join('')}</div>`; }
         if (o.blocked) h += `<div class="miss"><b>Customers can't reach this unit</b><ul>${(o.missing || []).map((m) => `<li>${esc(m)}</li>`).join('')}</ul><small>It won't rent until access is restored.</small></div>`;
         if ((o.cstate === 'built' || o.cstate === 'ready') && o.missing && o.missing.length) h += `<div class="miss"><b>Why it can't open yet</b><ul>${o.missing.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>`;
         const acts = [];
@@ -458,24 +466,89 @@ export class UI {
   }
 
   // ------------------------------------------------------------ BUSINESS
+  cmdBtn(label, cmd, cls = '', dis = false) { return `<button class="btn sm ${cls}" data-a="cmd" data-cmd='${JSON.stringify(cmd).replace(/'/g, '&#39;')}' ${dis ? 'disabled' : ''}>${label}</button>`; }
+  stagePill(L) {
+    const st = this.sim.stageOf(L), cls = { current: 'g', pastdue: 'a', plan: 'b', delinquent: 'r', lien: 'r', notice: 'r', auction: 'r' }[L.status] || 'a';
+    return `<span class="pill ${cls}">${st}</span>`;
+  }
+  collectionsHtml() { // GDD §36
+    const sim = this.sim, s = sim.s, P = s.policies, day = sim.day;
+    const late = Object.values(s.leases).filter((L) => L.status !== 'current').sort((a, b) => a.dueSince - b.dueSince);
+    const order = ['pastdue', 'plan', 'delinquent', 'lien', 'notice', 'auction'];
+    const counts = order.map((k) => [k, late.filter((L) => L.status === k).length]).filter(([, n]) => n);
+    let h = `<h3>Collections</h3>`;
+    h += `<div class="ladder">${order.map((k) => { const n = late.filter((L) => L.status === k).length; return `<div class="rung ${n ? 'on' : ''}"><b>${n}</b><small>${sim.stageOf({ status: k })}</small></div>`; }).join('')}</div>`;
+    if (!late.length) h += `<p class="note">Every tenant is current. Missed payments move through past due, delinquent (overlocked at 15 days), lien-eligible (30 days), a 14-day lien notice, then the Saturday auction.</p>`;
+    else {
+      h += `<div class="list">`;
+      for (const L of late.slice(0, 8)) {
+        const u = s.objects[L.unit], tn = s.tenants[L.tenant]; if (!u) continue;
+        const d = day - L.dueSince, acts = [];
+        if (['pastdue', 'delinquent', 'lien'].includes(L.status) && d >= 30) acts.push(this.cmdBtn('Lien notice', { type: 'collect', op: 'notice', lease: L.id }, 'pri'));
+        if (['pastdue', 'delinquent', 'lien', 'notice'].includes(L.status) && !L.planTried) acts.push(this.cmdBtn('Offer plan', { type: 'collect', op: 'plan', lease: L.id }));
+        if (L.fees > 0) acts.push(this.cmdBtn('Waive fees', { type: 'collect', op: 'waive', lease: L.id }));
+        if (u.overlock && L.status !== 'auction') acts.push(this.cmdBtn('Remove overlock', { type: 'collect', op: 'unlock', lease: L.id }));
+        if (L.status === 'auction') acts.push(this.cmdBtn('Pull from auction', { type: 'collect', op: 'hold', lease: L.id }));
+        const when = L.status === 'notice' ? ` · auction eligible Day ${L.noticeUntil}` : L.status === 'auction' ? ` · auction Day ${L.auctionDay}, 10 AM` : L.status === 'plan' ? ` · balance due Day ${L.planDue}` : '';
+        h += `<div class="item stack"><div class="grow"><div class="acct"><b>${esc(u.name)} · ${esc(tn ? tn.name : 'Tenant')}</b>${this.stagePill(L)}${u.overlock ? '<span class="pill r">Overlocked</span>' : ''}</div><small>${d} days late · owes ${money(sim.owed(L))}${when}</small></div><div class="row wrap acts">${acts.join('')}<button class="btn sm" data-a="sel" data-v="${u.id}">View</button></div></div>`;
+      }
+      h += `</div>`;
+    }
+    const A = s.auction; const res = A && (A.result || A.prev);
+    if (A && !A.done) h += `<p class="note"><b>Next auction:</b> Day ${A.day}, 10 AM at the office · ${late.filter((L) => L.status === 'auction').length} lot(s)</p>`;
+    if (res && res.sold && res.sold.length) h += `<p class="note">Last ${res.mode === 'auction' ? 'auction' : 'clean-out'}: ${res.sold.map((x) => `Unit ${x.num}${res.mode === 'auction' ? ' ' + money(x.price) : ''}`).join(', ')}${res.mode === 'auction' ? ` · total ${money(res.total)}` : ''}</p>`;
+    h += `<div class="list">
+      <div class="item"><div class="grow"><b>Late fee</b><small>Added once, 5 days after a missed payment</small></div><div class="row">${[0, 20, 40].map((v) => this.cmdBtn(v ? money(v) : 'None', { type: 'policy', key: 'lateFee', v }, P.lateFee === v ? 'pri' : '')).join('')}</div></div>
+      <div class="item"><div class="grow"><b>Overlock at 15 days</b><small>Delinquent tenants can't access their unit until they pay</small></div><button class="toggle ${P.overlock ? 'on' : ''}" data-a="policy" data-v="overlock" aria-label="Toggle overlock"></button></div>
+      <div class="item"><div class="grow"><b>Automatic lien notices</b><small>Send the notice at 30 days without asking. A Manager does this anyway.</small></div><button class="toggle ${P.autoNotice ? 'on' : ''}" data-a="policy" data-v="autoNotice" aria-label="Toggle automatic notices"></button></div>
+      <div class="item"><div class="grow"><b>Resolution</b><small>Auction recovers money; clean-out and donate costs $120 but is quieter</small></div><div class="row">${this.cmdBtn('Auction', { type: 'policy', key: 'resolution', v: 'auction' }, P.resolution === 'auction' ? 'pri' : '')}${this.cmdBtn('Clean-out', { type: 'policy', key: 'resolution', v: 'clearout' }, P.resolution === 'clearout' ? 'pri' : '')}</div></div>
+      <div class="item"><div class="grow"><b>Retention offers</b><small>Staff offer 10% off to tenants leaving over price</small></div><button class="toggle ${P.retention ? 'on' : ''}" data-a="policy" data-v="retention" aria-label="Toggle retention offers"></button></div></div>`;
+    return h;
+  }
+  financingHtml() { // GDD §37: a simple, readable loan model
+    const sim = this.sim, s = sim.s, ox = sim.dailyOpex(), pay = s.staff.reduce((a, st) => a + st.wage, 0);
+    const burn = ox.total + pay, lim = sim.loanLimit(), { rate, months } = sim.loanTerms();
+    let h = `<h3>Financing</h3><div class="list">`;
+    for (const d of s.debt) {
+      h += `<div class="item"><div class="grow"><b>Term loan · ${money(d.bal)} left</b><small>${money(d.orig)} at ${(d.rate * 100).toFixed(1)}% · ${money(d.pmt)}/mo · ${d.months - d.paid} payments left · next Day ${d.next}</small></div>${this.cmdBtn('Pay off', { type: 'payoff', id: d.id }, '', s.cash < d.bal)}</div>`;
+    }
+    const tut = s.mode === 'tutorial' && !s.tut.done;
+    const opts = [10000, 25000, 50000, 100000].filter((v) => v <= lim);
+    h += `<div class="item"><div class="grow"><b>Expansion loan</b><small>${tut ? 'Opens after the tutorial: early growth is cash-funded.' : lim ? `Approved up to ${money(lim)} · ${(rate * 100).toFixed(1)}% · ${months} months. Payments are capped at 45% of your rent roll.` : 'Your rent roll is too small to support loan payments yet.'}</small></div></div>`;
+    if (opts.length) h += `<div class="loanopts">${opts.map((v) => { const pm = sim.loanPmt(v, rate, months); return `<button class="loanopt" data-a="cmd" data-cmd='${JSON.stringify({ type: 'borrow', amt: v })}'><b>${money(v)}</b><small>${money(pm)}/mo · cash after ${money(s.cash + v)}</small></button>`; }).join('')}</div>`;
+    const room = sim.creditLimit() - s.loan.bal;
+    h += `<div class="item"><div class="grow"><b>Credit line · ${s.loan.bal > 0 ? money(s.loan.bal) + ' owed' : 'not in use'}</b><small>${money(room)} available · ~1.2%/month · for short cash gaps${burn > 0 ? ` · cash covers ~${Math.max(0, Math.floor(s.cash / burn))} days of costs` : ''}</small></div>
+      ${room >= 1000 ? this.cmdBtn(`Borrow ${money(Math.min(room, 5000))}`, { type: 'loan', amt: Math.min(room, 5000) }) : ''}
+      ${s.loan.bal > 0 ? this.cmdBtn(`Repay ${money(Math.min(s.loan.bal, 5000))}`, { type: 'repay', amt: Math.min(s.loan.bal, 5000) }, '', s.cash < Math.min(s.loan.bal, 5000)) : ''}</div></div>`;
+    h += `<p class="note">Loans show exactly what you commit to each month. Nothing here forecasts future rent: build previews show cash before and after.</p>`;
+    return h;
+  }
   businessSheet() {
     const sim = this.sim, s = sim.s; const occ = sim.occupancy(), roll = sim.rentRoll(), ox = sim.dailyOpex();
     const pay = s.staff.reduce((a, st) => a + st.wage, 0);
-    const last = s.days.slice(-30); const sum = (k) => last.reduce((a, d) => a + d[k], 0) + s.today[k];
+    const last = s.days.slice(-30); const sum = (k) => last.reduce((a, d) => a + (d[k] || 0), 0) + (s.today[k] || 0);
     const collected = sum('rent'), costs = sum('opex') + sum('payroll'), capex = sum('capex');
     let h = `<div class="stats">
       <div class="stat"><small>Cash</small><b class="${s.cash < 0 ? 'neg' : ''}">${money(s.cash)}</b></div>
       <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
-      <div class="stat"><small>Rent collected (30 days)</small><b>${money(collected)}</b><div class="n">Bills on each lease anniversary</div></div>
-      <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops + ${money(pay)} payroll</div></div>
-      <div class="stat"><small>Operating costs (30 days)</small><b>${money(costs)}</b></div>
-      <div class="stat"><small>Construction (30 days)</small><b>${money(capex)}</b><div class="n">One-time spending</div></div></div>`;
-    if (!s.creative) {
-      const room = sim.creditLimit() - s.loan.bal, burn = ox.total + pay;
-      h += `<h3>Credit line</h3><div class="list"><div class="item"><div class="grow"><b>${s.loan.bal > 0 ? money(s.loan.bal) + ' owed' : 'Not in use'}</b><small>${money(room)} available · ~1.2%/month interest${burn > 0 ? ` · cash covers ~${Math.max(0, Math.floor(s.cash / burn))} days of costs` : ''}</small></div>
-        ${room >= 1000 ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'loan', amt: Math.min(room, 5000) })}'>Borrow ${money(Math.min(room, 5000))}</button>` : ''}
-        ${s.loan.bal > 0 ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'repay', amt: Math.min(s.loan.bal, 5000) })}' ${s.cash < Math.min(s.loan.bal, 5000) ? 'disabled' : ''}>Repay ${money(Math.min(s.loan.bal, 5000))}</button>` : ''}</div></div>`;
-    }
+      <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops + ${money(pay)} payroll</div></div></div>`;
+    // GDD §63.1–63.2: operating contribution, with capital and financing shown separately
+    const anc = sum('anc'), svc = sum('service'), contrib = collected + anc - costs - svc, debtSvc = sum('debt') + sum('interest'), fin = sum('fin');
+    const net = contrib - capex - debtSvc + fin + sum('other');
+    h += `<h3>Operating statement · last 30 days</h3><div class="kv stmt">
+      <span>Collected rent</span><span>${money(collected)}</span>
+      <span>Ancillary (late fees, auctions)</span><span>${money(anc)}</span>
+      <span>Operating costs</span><span>${money(-sum('opex'))}</span>
+      <span>Payroll</span><span>${money(-sum('payroll'))}</span>
+      <span>Vendor service</span><span>${money(-svc)}</span>
+      <span class="tot">Operating contribution</span><span class="tot ${contrib < 0 ? 'neg' : ''}">${money(contrib)}</span>
+      <span>Construction (capital)</span><span>${money(-capex)}</span>
+      <span>Debt service</span><span>${money(-debtSvc)}</span>
+      ${fin ? `<span>Loan proceeds</span><span>${money(fin)}</span>` : ''}
+      <span class="tot">Net cash change</span><span class="tot ${net < 0 ? 'neg' : ''}">${money(net)}</span></div>
+      <p class="note">Construction is capital spending, so a profitable property doesn't look unprofitable just because you built a new wing.</p>`;
+    h += this.collectionsHtml();
+    if (!s.creative) h += this.financingHtml();
     h += `
       <h3>Last 14 days</h3><canvas class="chart" width="520" height="120"></canvas><p class="note">Green: rent collected. Red: operating + payroll. Grey: construction. A monthly-billing business looks lumpy day to day.</p>`;
     h += `<h3>Asking rents</h3><div class="list">`;
@@ -561,14 +634,15 @@ export class UI {
     while (this.toasts.length > (this.phone() ? 2 : 3)) { const o = this.toasts.shift(); o.el.remove(); }
   }
   renderFeed(force = false) {
-    const s = this.sim.s; const key = s.convos.map((c) => c.id).join(',');
+    const s = this.sim.s; const key = s.convos.map((c) => c.id).join(',') + ':' + (s.convos.length ? Math.floor(s.t / 15) : 0);
     if (!force && key === this.convoKey) return; this.convoKey = key;
     const feed = this.$('feed');
     for (const el of feed.querySelectorAll('.convo')) el.remove();
     const frag = document.createDocumentFragment();
     for (const c of s.convos.slice(-3)) {
       const el = document.createElement('div'); el.className = 'convo ' + (c.sev || 'attention');
-      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}">View</button>` : ''}</div>`;
+      const left = c.ttl ? Math.max(0, c.ttl - (s.t - c.t)) : null;
+      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}${left != null ? `<span class="ttl">${left >= 120 ? Math.round(left / 60) + 'h' : left + 'm'} to answer</span>` : ''}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}">View</button>` : ''}</div>`;
       frag.appendChild(el);
     }
     feed.prepend(frag);
@@ -626,7 +700,20 @@ export class UI {
       case 'power_restored': break;
       case 'scenario_end': this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
       case 'rent_review': this.sfx('rent'); break;
-      case 'manager': if (s.speed <= 2) this.toast('Manager: ' + e.msg); break;
+      case 'manager': if (s.speed <= 2) this.toast(/^(Clerk|Manager) /.test(e.msg) ? e.msg : 'Manager: ' + e.msg); this.renderFeed(true); break;
+      case 'pastdue': { const u = s.objects[e.unit]; if (s.speed <= 2) this.toast(`${u ? u.name : 'A unit'} missed its rent payment`); break; }
+      case 'overlock': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A unit'} overlocked for non-payment`, 'bad'); break; }
+      case 'lien_notice': { const u = s.objects[e.unit]; this.toast(`Lien notice sent - ${u ? u.name : 'unit'}`); break; }
+      case 'auction_scheduled': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A unit'} goes to auction on Day ${e.day} at 10 AM`, 'bad'); this.sfx('attention'); break; }
+      case 'auction_start': this.toast(`Auction day: ${e.units.length} unit${e.units.length > 1 ? 's' : ''} up for bid`, 'good'); this.sfx('attention'); break;
+      case 'auction_sold': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'Unit'} sold for ${money(e.price)}${e.war ? ' after a bidding war' : ''}`, 'good'); this.sfx('rent'); break; }
+      case 'auction_end': if (e.mode !== 'auction') this.toast(`${e.n} delinquent unit${e.n > 1 ? 's' : ''} cleared out and donated`); break;
+      case 'paid_up': { const u = s.objects[e.unit]; if (s.speed <= 2) this.toast(`${u ? u.name : 'A tenant'} paid ${money(e.amt)} and is current again`, 'good'); break; }
+      case 'plan_broken': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A tenant'} missed their payment plan`, 'bad'); break; }
+      case 'retained': { const u = s.objects[e.unit]; this.sfx('confirm'); break; }
+      case 'loan': this.sfx('confirm'); break;
+      case 'loan_paid': this.toast('A loan is paid off', 'good'); this.sfx('milestone'); break;
+      case 'convo_expired': this.renderFeed(true); break;
     }
   }
 
@@ -807,6 +894,8 @@ export class UI {
       if (o.type === 'unit') {
         if (o.blocked) add('blocked', o);
         else if (o.cstate === 'ready') add('ready', o);
+        else if (o.lease && s.leases[o.lease] && s.leases[o.lease].status === 'auction') add('auction', o);
+        else if (o.overlock) add('lock', o);
         else if (o.lease && s.leases[o.lease] && s.leases[o.lease].status !== 'current') add('late', o);
       }
       if (o.unpowered) add('power', o);
@@ -823,7 +912,7 @@ export class UI {
       const pr = R.project(p.x, p.y, p.f * 1.9 + 2.3); if (!pr.vis || pr.x < -20 || pr.y < -20 || pr.x > innerWidth + 20 || pr.y > innerHeight + 20) continue;
       let el = pool.get(p.key);
       if (!el) { el = document.createElement('button'); el.className = 'pin'; el.dataset.a = 'pin'; pool.set(p.key, el); root.appendChild(el); }
-      const sig = p.k + p.who; if (el.dataset.sig !== sig) { el.dataset.sig = sig; el.className = 'pin ' + p.k; el.innerHTML = PIN[p.k] + (p.who ? `<span class="who">${PIN.person}</span>` : ''); el.setAttribute('aria-label', { repair: 'Needs repair', makeready: 'Needs make-ready', clean: 'Needs cleaning', late: 'Rent past due', blocked: 'No customer access', power: 'No power', cart: 'Stranded cart', ready: 'Ready to commission' }[p.k]); }
+      const sig = p.k + p.who; if (el.dataset.sig !== sig) { el.dataset.sig = sig; el.className = 'pin ' + p.k; el.innerHTML = PIN[p.k] + (p.who ? `<span class="who">${PIN.person}</span>` : ''); el.setAttribute('aria-label', { repair: 'Needs repair', makeready: 'Needs make-ready', clean: 'Needs cleaning', late: 'Rent past due', lock: 'Overlocked for non-payment', auction: 'Scheduled for auction', blocked: 'No customer access', power: 'No power', cart: 'Stranded cart', ready: 'Ready to commission' }[p.k]); }
       el.dataset.k = p.cart ? 'cart' : p.dirt ? 'dirt' : 'obj'; el.dataset.id = p.cart ? p.id : p.id; if (p.dirt) { el.dataset.f = p.f; el.dataset.x = p.x - 0.5; el.dataset.y = p.y - 0.5; }
       el.style.transform = `translate(${Math.round(pr.x - 17)}px, ${Math.round(pr.y - 40)}px)`; live.add(p.key); placed.push({ x: pr.x - 17, y: pr.y - 40, w: 34, h: 40 });
     }

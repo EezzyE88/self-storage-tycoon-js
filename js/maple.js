@@ -60,7 +60,7 @@ function buildMaple(s, seed) {
     if (u.num === 107) { u.commercial = 'unready'; u.vacatedAt = s.t - 900; continue; }
     const tn = { id: s.nextId++, name: `${NAMES_FIRST[Math.floor(rnd() * NAMES_FIRST.length)]} ${NAMES_LAST[Math.floor(rnd() * NAMES_LAST.length)]}`, sat: 0.74 + rnd() * 0.12, lease: null, since: -Math.floor(rnd() * 400) * 1440 };
     const legacy = rnd() < 0.4 ? 0.9 : 1;
-    const L = { id: s.nextId++, unit: u.id, tenant: tn.id, rent: Math.round(M.rent[u.size] * legacy), start: 1 - Math.floor(rnd() * 400), nextBill: 1 + Math.floor(rnd() * BILLING_CYCLE_DAYS), status: 'current', balance: 0 };
+    const L = { id: s.nextId++, unit: u.id, tenant: tn.id, rent: Math.round(M.rent[u.size] * legacy), start: 1 - Math.floor(rnd() * 400), nextBill: 1 + Math.floor(rnd() * BILLING_CYCLE_DAYS), status: 'current', balance: 0, fees: 0 };
     tn.lease = L.id; s.tenants[tn.id] = tn; s.leases[L.id] = L; u.lease = L.id; u.commercial = 'occupied';
   }
   const sim = new Sim(s);

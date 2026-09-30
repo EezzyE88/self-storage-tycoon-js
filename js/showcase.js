@@ -42,6 +42,10 @@ export function installShowcase(game) {
   layer.innerHTML = `<div id="pops" aria-hidden="true"></div><div id="celebrate" aria-live="polite"></div><div id="followCard" hidden></div>
     <div id="photoBar" hidden></div><div id="flash"></div><div id="shot" hidden></div><div id="reticle"></div><div id="tourChip" hidden></div>`;
   const $ = (id) => document.getElementById(id);
+  { // money pops live in the world layer: under the HUD, sheets and dialogs, above the map pins
+    const uiRoot = document.getElementById('ui'), pins = document.getElementById('pins');
+    if (uiRoot) { const pp = $('pops'); if (pins && pins.parentNode === uiRoot) pins.after(pp); else uiRoot.prepend(pp); }
+  }
 
   const sc = {
     mode: null, // null | 'attract' | 'tour' | 'follow'
@@ -229,7 +233,7 @@ export function installShowcase(game) {
   };
   function reticle(x, y) { const r = $('reticle'); r.style.left = x + 'px'; r.style.top = y + 'px'; r.classList.remove('on'); void r.offsetWidth; r.classList.add('on'); }
   const origAttach = game.attach.bind(game);
-  game.attach = (sim, kind) => { if (sc.mode === 'attract') stopAttract(); stopFollow(true); if (sc.mode === 'tour') stopTour(); sc.pops.length = 0; $('pops').innerHTML = ''; const r = origAttach(sim, kind); const o = sim.occupancy(); sc.seenFull.set(sim, o.n > 0 && o.occ >= o.n); return r; };
+  game.attach = (sim, kind) => { clearCrowd(); if (sc.mode === 'attract') stopAttract(); stopFollow(true); if (sc.mode === 'tour') stopTour(); sc.pops.length = 0; $('pops').innerHTML = ''; const r = origAttach(sim, kind); const o = sim.occupancy(); sc.seenFull.set(sim, o.n > 0 && o.occ >= o.n); return r; };
   const origEvent = ui.onEvent.bind(ui);
   ui.onEvent = (e) => { origEvent(e); onEvent(e); };
 
@@ -266,10 +270,45 @@ export function installShowcase(game) {
       case 'scenario_end': if (e.won) celebrate('Scenario complete', s.scenario ? s.scenario.name || 'Goals met' : 'Goals met', `Finished on day ${game.sim.day}`, officeAt()); break;
       case 'tut_done': celebrate('Graduated', 'Maple Street is yours', 'The full game is unlocked. Build whatever you like.', officeAt()); break;
       case 'moveout': checkFull(); break;
+      case 'auction_start': auctionCrowd(e.units); { const u = s.objects[e.units[0]]; celebrate('Auction day', `${e.units.length} unit${e.units.length > 1 ? 's' : ''} up for bid`, 'Bidders are gathering at the doors. Sales close in about an hour.', u ? { x: u.x + 0.5, z: u.y + 0.5, f: u.f || 0 } : officeAt()); } break;
+      case 'auction_sold': pop(e.x + 0.5, e.y + 0.5, e.f, `Sold ${money(e.price)}`, 'lease'); fx.burst(e.x + 0.5, e.y + 0.5, e.f || 0); cheer(e.unit); break;
+      case 'auction_end': setTimeout(clearCrowd, 2500); if (e.mode === 'auction' && e.n) celebrate('Auction closed', `${e.n} lot${e.n > 1 ? 's' : ''} sold for ${money(e.total)}`, 'Units need a clean-out before they rent again.', officeAt()); break;
+      case 'retained': { const u = s.objects[e.unit]; if (u) pop(u.x + 0.5, u.y + 0.5, u.f || 0, 'Staying', 'fix'); break; }
+      case 'paid_up': { const u = s.objects[e.unit]; if (u && e.amt > 0) pop(u.x + 0.5, u.y + 0.5, u.f || 0, `+${money(e.amt)}`, 'rent'); break; }
     }
   }
+  // ---------------------------------------------------------------- auction set piece (GDD §36): a visible crowd of bidders
+  sc.crowd = [];
+  function auctionCrowd(units) {
+    clearCrowd(); const sim = game.sim;
+    for (const id of units.slice(0, 4)) {
+      const u = sim.s.objects[id]; if (!u) continue; const fc = sim.unitFront(u)[0]; if (!fc) continue;
+      const f = u.f || 0, cx = fc.x + 0.5, cz = fc.y + 0.5, ux = u.x + (u.w || 1) / 2, uz = u.y + (u.h || 1) / 2;
+      const ang = Math.atan2(cx - ux, cz - uz); const n = 4 + (id % 3);
+      for (let k = 0; k < n; k++) {
+        const m = rend.personMesh({ id: 9000 + id * 10 + k, look: id * 31 + k * 7 });
+        const a = ang + (k - (n - 1) / 2) * 0.42, r = 1.15 + (k % 2) * 0.45;
+        m.position.set(cx + Math.sin(a) * r * 0.9, f * FLOOR_H, cz + Math.cos(a) * r * 0.9);
+        m.rotation.y = Math.atan2(ux - m.position.x, uz - m.position.z);
+        m.userData.base = m.position.y; m.userData.ph = k * 1.7; m.userData.unit = id; m.userData.f = f;
+        rend.scene.add(m); sc.crowd.push(m);
+      }
+    }
+  }
+  function cheer(unit) { for (const m of sc.crowd) if (m.userData.unit === unit) m.userData.jump = 0.6; }
+  function clearCrowd() { for (const m of sc.crowd) { rend.scene.remove(m); rend.disposeTree(m); } sc.crowd = []; }
+  function updateCrowd(dt) {
+    if (!sc.crowd.length) return;
+    const t = performance.now() / 1000;
+    for (const m of sc.crowd) {
+      const d = m.userData; let y = d.base + Math.max(0, Math.sin(t * 2.2 + d.ph)) * 0.025;
+      if (d.jump > 0) { d.jump -= dt; y += Math.sin((0.6 - d.jump) / 0.6 * Math.PI * 2) ** 2 * 0.22; }
+      m.position.y = y; m.visible = rend.view === 'ext' || rend.view === d.f;
+    }
+  }
+  sc.auctionCrowd = auctionCrowd; sc.clearCrowd = clearCrowd;
   function milestoneSub(k) {
-    return { first_makeready: 'A vacant unit is clean and back on the market.', first_lease_after_turnover: 'Turnover to new lease: the core loop works.', first_expansion: 'More doors, more rent.', first_cart_trip: 'Carts are moving goods indoors.', first_repair: 'Broken equipment is back in service.', first_delegated: 'Your staff finished a job without you.', first_climate: 'Climate-controlled storage is open.', first_upper: 'Your first upper floor is open.' }[k] || '';
+    return { first_retention: 'A tenant who was leaving decided to stay.', first_auction: 'A delinquent account resolved through a lien sale.', first_loan: 'Borrowed capital is working for the property.', first_makeready: 'A vacant unit is clean and back on the market.', first_lease_after_turnover: 'Turnover to new lease: the core loop works.', first_expansion: 'More doors, more rent.', first_cart_trip: 'Carts are moving goods indoors.', first_repair: 'Broken equipment is back in service.', first_delegated: 'Your staff finished a job without you.', first_climate: 'Climate-controlled storage is open.', first_upper: 'Your first upper floor is open.' }[k] || '';
   }
   function checkFull() {
     const sim = game.sim, o = sim.occupancy(); const full = o.n > 0 && o.occ >= o.n;
@@ -379,7 +418,7 @@ export function installShowcase(game) {
     } else if (sc.mode === 'tour' || sc.mode === 'follow') cinematic(dt);
     if (sc.elevBack) { rend.camElev = lerp(rend.camElev || 0.72, 0.72, 1 - Math.exp(-dt * 4)); if (Math.abs(rend.camElev - 0.72) < 0.002) { rend.camElev = 0.72; sc.elevBack = false; } rend.updateCamera(); }
     if (sc.mode === 'follow') renderFollow(false);
-    updatePops(dt);
+    updatePops(dt); updateCrowd(dt);
   };
   // initial state
   { const o = game.sim.occupancy(); sc.seenFull.set(game.sim, o.n > 0 && o.occ >= o.n); }

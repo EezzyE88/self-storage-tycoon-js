@@ -335,7 +335,7 @@ body.attract .title h1 { text-shadow: 0 2px 24px rgba(0,0,0,0.35); }
 
 #showcase { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
 #showcase > * { pointer-events: auto; }
-#pops { position: absolute; inset: 0; pointer-events: none !important; overflow: hidden; }
+#pops { position: fixed; inset: 0; pointer-events: none !important; overflow: hidden; }
 .mpop { position: absolute; left: 0; top: 0; font-weight: 900; font-size: 15px; letter-spacing: -0.01em; color: #fff; padding: 3px 9px; border-radius: 999px; background: rgba(22,32,43,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.25); white-space: nowrap; will-change: transform, opacity; opacity: 0; }
 .mpop.lease { background: #1f7a4c; } .mpop.rent { background: rgba(22,32,43,0.85); color: var(--yellow); font-size: 13px; } .mpop.fix { background: #2f5e8e; font-size: 12px; font-weight: 700; }
 body.photo-mode #pops, body.attract #pops { display: none; }
@@ -411,3 +411,24 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .sh-card img { display: block; width: 100%; max-height: 62vh; object-fit: contain; border-radius: 10px; background: #111; }
 .sh-row { display: flex; gap: 8px; margin-top: 10px; } .sh-row .btn { flex: 1; height: 46px; justify-content: center; gap: 8px; } .sh-row .btn svg { width: 18px; height: 18px; }
 @keyframes shotin { 0% { transform: scale(0.92) rotate(-1.5deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* ================================================================ ROUND 9: collections, financing, conversations */
+.pin.lock { --pc: #8e2716; } .pin.auction { --pc: var(--navy); } .pin.auction > svg { color: var(--yellow); }
+.ladder { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin: 6px 0 10px; }
+.ladder .rung { background: var(--paper2); border-radius: 10px; padding: 7px 4px 6px; text-align: center; position: relative; min-width: 0; }
+.ladder .rung:not(:last-child)::after { content: ''; position: absolute; right: -4px; top: 50%; width: 4px; height: 2px; background: var(--line); }
+.ladder .rung b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.ladder .rung small { display: block; font-size: 10px; line-height: 1.15; color: var(--muted); overflow-wrap: anywhere; }
+.ladder .rung.on { background: #f5d6d0; } .ladder .rung.on b { color: #8e2716; } .ladder .rung.on small { color: #8e2716; }
+.kv.stmt span.tot { border-top: 1px solid var(--line); padding-top: 5px; font-weight: 800; color: var(--ink) !important; }
+.kv.stmt span.tot.neg, .neg { color: var(--red) !important; }
+.loanopts { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 6px; margin: 2px 0 8px; }
+.loanopt { text-align: left; padding: 9px 10px; border-radius: 12px; background: var(--paper2); border: 1px solid var(--line); font: inherit; color: var(--ink); cursor: pointer; }
+.loanopt b { display: block; font-size: 15px; font-variant-numeric: tabular-nums; } .loanopt small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.loanopt:hover { border-color: var(--ink2); } .loanopt:active { transform: scale(.98); }
+.convo .ttl { margin-left: auto; font-size: 11px; font-weight: 600; opacity: .7; font-variant-numeric: tabular-nums; }
+.convo .who { display: flex; align-items: center; gap: 6px; }
+@media (max-width: 420px) { .ladder { grid-template-columns: repeat(3, 1fr); } .ladder .rung::after { display: none; } }
+.item.stack { flex-wrap: wrap; } .item.stack > .grow { flex: 1 1 100%; } .item.stack > .acts { flex: 1 1 100%; gap: 6px; }
+.item .acct { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; } .item .acct b { margin-right: 2px; }
+@media (max-width: 600px) and (orientation: portrait) { #celebrate { top: 36%; } }

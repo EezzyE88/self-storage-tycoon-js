@@ -60,6 +60,10 @@ export function makeScenario(id) {
     for (let i = 0; i < s.ground.length; i++) if (s.hall[0][i]) s.dirt[0][i] = 0.4 + rnd() * 0.4;
     Object.assign(s.exp, { access: 0.62, convenience: 0.7, cleanliness: 0.5, security: 0.5, service: 0.72 });
     for (const tn of Object.values(s.tenants)) tn.sat = Math.min(tn.sat, 0.62 + rnd() * 0.1);
+    // the previous owner let collections slide: three accounts are behind (GDD §36)
+    { const Ls = Object.values(s.leases).sort((a, b) => a.id - b.id); const day = Math.floor(s.t / 1440) + 1;
+      [[27, 'delinquent'], [18, 'delinquent'], [8, 'pastdue']].forEach(([late, st], k) => { const L = Ls[k * 3 + 1]; if (!L) return;
+        L.status = st; L.dueSince = day - late; L.balance = L.rent * (late > 25 ? 2 : 1); L.fees = 20; L.feeDone = true; if (st === 'delinquent') s.objects[L.unit].overlock = true; }); }
     s.scenario = scenarioState(id); freshBooks(s);
     sim.markDirty(); sim.rebuild(); sim.generateTasks();
     return sim;
