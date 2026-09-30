@@ -1,0 +1,10 @@
+{
+  "name": "Self Storage Tycoon",
+  "short_name": "Storage Tycoon",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#16202b",
+  "theme_color": "#16202b",
+  "icons": [{ "src": "icon-180.png", "sizes": "180x180", "type": "image/png" }, { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }]
+}

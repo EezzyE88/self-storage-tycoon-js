@@ -1,0 +1,894 @@
+// HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
+import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS } from './data.js';
+import { fmtTime, dayOf, productKey } from './sim.js';
+import { BEATS, toolUnlocked, unlockBeat } from './tutorial.js';
+import { SCENARIOS, scenarioProgress } from './scenarios.js';
+
+const PIN = {
+  repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-8.3 8.3a2 2 0 0 1-2.8-2.8l8.3-8.3"/><path d="M14.5 5.5 17 3"/></svg>',
+  makeready: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v9"/><path d="M6 21l2-9h8l2 9"/><path d="M9 16v5M12 16v5M15 16v5"/></svg>',
+  clean: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z"/></svg>',
+  late: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v18"/><path d="M16.5 7.5c-.7-1.2-2.3-2-4.5-2-2.8 0-4.5 1.4-4.5 3.2 0 4.3 9 2.5 9 6.8 0 1.8-1.8 3.2-4.5 3.2-2.3 0-4-.9-4.7-2.2"/></svg>',
+  blocked: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M7 12h10"/></svg>',
+  power: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  cart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h10.2L20 7H6.3"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>',
+  ready: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  person: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>',
+  fit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+};
+const I = {
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  build: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/></svg>',
+  operate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/></svg>',
+  business: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  growth: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
+  rotL: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v5h5"/></svg>',
+  rotR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  logo: '<svg viewBox="0 0 48 48" fill="none" aria-label="Self Storage Tycoon"><path d="M6 20 24 8l18 12" stroke="#f5c542" stroke-width="4" stroke-linejoin="round"/><rect x="9" y="21" width="30" height="21" rx="2" fill="currentColor"/><path d="M13 26h22M13 30.5h22M13 35h22" stroke="#16202b" stroke-width="2.2" opacity=".55"/></svg>',
+};
+const money = (v, dec = false) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: dec ? 2 : 0, minimumFractionDigits: dec ? 2 : 0 });
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const pct = (v) => Math.round(v * 100) + '%';
+const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control', noReady: 'Nothing rent-ready', price: 'Rent too high', convenience: 'Not convenient enough', shopping: 'Kept shopping', service: 'No one at the office' };
+const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion commissioned', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate' };
+const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanliness', security: 'Security', climate: 'Climate', service: 'Service', value: 'Value', comfort: 'Comfort' };
+
+export class UI {
+  constructor(game) {
+    this.g = game; this.root = document.getElementById('ui'); this.bubRoot = document.getElementById('bubbles');
+    this.tab = null; this.cat = 'units'; this.tool = null; this.plan = null; this.planArgs = null; this.climate = false; this.flip = false;
+    this.sel = null; this.toasts = []; this.bubbles = []; this.lastSheet = 0; this.tutMin = false; this.modal = null; this.title = true;
+    this.root.innerHTML = `
+      <div id="pins"></div>
+      <div class="hud">
+        <div class="chip brand">${I.logo}<div class="nm" id="pname">Maple Street Storage<small id="pmode">Tutorial</small></div></div>
+        <div class="chip"><div class="cash num" id="cash">$0<small>Cash</small></div></div>
+        <div class="chip clock"><b class="num" id="clock">7:00 AM</b><span id="date">Day 1</span></div>
+        <div class="spacer"></div>
+        <div class="chip speed" id="speed"><button data-a="speed" data-v="0" aria-label="Pause">${I.pause}</button><button data-a="speed" data-v="1">1x</button><button data-a="speed" data-v="2">2x</button><button data-a="speed" data-v="4">4x</button></div>
+        <button class="iconbtn" data-a="menu" aria-label="Menu">${I.menu}</button>
+      </div>
+      <div class="viewctl">
+        <div class="seg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="view" data-v="1">F2</button></div>
+        <div class="seg"><button data-a="rot" data-v="-1" aria-label="Rotate left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate right">${I.rotR}</button></div>
+        <div class="seg"><button data-a="zoom" data-v="1.25" aria-label="Zoom in">${I.plus}</button><button data-a="zoom" data-v="0.8" aria-label="Zoom out">${I.minus}</button><button data-a="fit" aria-label="Fit property">${PIN.fit}</button></div>
+      </div>
+      <button class="coach" id="coach" data-a="coach" hidden><span class="ct" id="coachT"></span><span class="co" id="coachO"></span></button>
+      <div class="feed" id="feed"></div>
+      <div id="tut"></div>
+      <div id="sheet"></div>
+      <div id="abar"></div>
+      <nav class="tabs" id="tabs">
+        <button data-a="tab" data-v="build">${I.build}Build</button>
+        <button data-a="tab" data-v="operate">${I.operate}Operate<span class="badge" id="taskBadge" hidden>0</span></button>
+        <button data-a="tab" data-v="business">${I.business}Business</button>
+        <button data-a="tab" data-v="growth">${I.growth}Growth</button>
+      </nav>
+      <div id="modal"></div>`;
+    this.$ = (id) => document.getElementById(id);
+    this.root.addEventListener('click', (e) => this.onClick(e));
+    // phone sheets: swipe the grab bar / header up to expand, down to shrink or close
+    let sw = null;
+    this.root.addEventListener('pointerdown', (e) => { const h = e.target.closest('.sheet .grab, .sheet header'); if (!h || e.target.closest('button.x')) return; sw = { y: e.clientY, id: e.pointerId }; }, true);
+    this.root.addEventListener('pointerup', (e) => {
+      if (!sw || sw.id !== e.pointerId) return; const dy = e.clientY - sw.y; sw = null; if (Math.abs(dy) < 28) return;
+      this.swipedAt = performance.now();
+      if (dy < 0) this.sheetTall = true; else if (this.sheetTall) this.sheetTall = false; else { this.select(null); this.setTab(null); return; }
+      this.applySheetSize();
+    }, true);
+    this.root.addEventListener('input', (e) => this.onInput(e));
+    this.showTitle();
+  }
+  get sim() { return this.g.sim; }
+  get rend() { return this.g.rend; }
+  sfx(k) { this.g.audio.play(k); }
+
+  // ------------------------------------------------------------ clicks
+  onClick(e) {
+    const el = e.target.closest('[data-a]'); if (!el) return;
+    this.g.audio.unlock();
+    const a = el.dataset.a, v = el.dataset.v;
+    switch (a) {
+      case 'speed': this.do({ type: 'speed', v: +v }); this.sfx('click'); break;
+      case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
+      case 'cat': this.cat = v; this.renderSheet(true); this.sfx('click'); break;
+      case 'tool': this.pickTool(v); break;
+      case 'cancelTool': this.pickTool(null); break;
+      case 'confirm': this.confirmPlan(); break;
+      case 'flip': this.flip = !this.flip; this.replan(); break;
+      case 'climate': this.climate = !this.climate; this.replan(); break;
+      case 'view': this.setView(v === 'ext' ? 'ext' : +v); this.sfx('click'); break;
+      case 'rot': this.rend.rotate(+v); this.sfx('click'); break;
+      case 'zoom': this.rend.zoomBy(+v); break;
+      case 'fit': this.rend.fitProperty(this.safeRect()); this.sfx('click'); break;
+      case 'coach': this.runCoach(); break;
+      case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
+      case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
+      case 'overlay': this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); break;
+      case 'close': this.select(null); this.setTab(null); break;
+      case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (act.type === 'commission' || act.type === 'ownerTask' || act.type === 'ownerMakeReady') this.renderSheet(true); break; }
+      case 'sel': this.select(+v, true); break;
+      case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); break;
+      case 'tutNext': { const b = BEATS[this.sim.s.tut.beat]; if (b && b.id === 'welcome') this.do({ type: 'tutFlag', flag: 'welcome' }); if (b && b.id === 'grad') this.do({ type: 'tutFlag', flag: 'grad' }); this.sim.poll(); this.sfx('confirm'); break; }
+      case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
+      case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
+      case 'menu': this.showMenu(); break;
+      case 'modalClose': this.closeModal(); break;
+      case 'new': this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); break;
+      case 'scenarios': this.showScenarios(); this.sfx('click'); break;
+      case 'sandboxSetup': this.showSandbox(); this.sfx('click'); break;
+      case 'sbOpt': { this.sb[el.dataset.k] = JSON.parse(v); this.showSandbox(); this.sfx('click'); break; }
+      case 'sbStart': this.closeModal(); this.g.newGame('custom', { ...this.sb }); this.title = false; this.sfx('confirm'); break;
+      case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
+      case 'acquire': { const r = this.g.acquire(v, el.dataset.m); this.toast(r.msg, r.ok ? 'good' : 'bad'); this.renderSheet(true); break; }
+      case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
+      case 'scenMin': this.scMin = !this.scMin; this.renderTut(true); break;
+      case 'saveCode': this.showSave(); break;
+      case 'saveFile': this.g.saveFile(); break;
+      case 'loadOpen': this.showLoad(); break;
+      case 'gfx': { const g = this.g; if (g.autoQ) { g.autoQ = false; g.rend.setQuality(2); } else if (g.rend.quality > 0) g.rend.setQuality(g.rend.quality - 1); else { g.autoQ = true; g.rend.setQuality(2); } this.showMenu(); break; }
+      case 'battery': this.g.battery = !this.g.battery; this.showMenu(); break;
+      case 'continue': { const d = this.contSave; if (!d) break; this.g.loadCode(d.code).then((ok) => { if (ok) { this.closeModal(); this.toast('Welcome back', 'good'); this.sfx('confirm'); } else { this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded', 'bad'); } }); break; }
+      case 'loadCode': this.g.loadCode(this.root.querySelector('#loadTa').value).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else { this.toast('That save code could not be read', 'bad'); const ta = this.root.querySelector('#loadTa'); if (ta) { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); } } }); break;
+      case 'loadFile': this.root.querySelector('#loadFile').click(); break;
+      case 'copy': { const ta = this.root.querySelector('#saveTa'); ta.select(); try { navigator.clipboard.writeText(ta.value); this.toast('Save code copied', 'good'); } catch (err) { document.execCommand && document.execCommand('copy'); } break; }
+      case 'music': this.g.audio.musicOn = !this.g.audio.musicOn; this.g.audio.applyVol(); this.showMenu(); break;
+      case 'fps': this.g.showFps = !this.g.showFps; document.getElementById('fps').hidden = !this.g.showFps; this.showMenu(); break;
+      case 'focus': this.rend.lookAt(+el.dataset.x, +el.dataset.y); break;
+      case 'rent': { const k = el.dataset.k; const cur = this.sim.s.market.ask[k]; this.do({ type: 'setRent', key: k, v: cur + (+v) }); this.renderSheet(true); this.sfx('click'); break; }
+      case 'policy': this.do({ type: 'policy', key: v, v: !this.sim.s.policies[v] }); this.renderSheet(true); this.sfx('click'); break;
+    }
+  }
+  onInput(e) {
+    const el = e.target; if (el.dataset.vol) this.g.audio.setVol(el.dataset.vol, +el.value);
+    if (el.id === 'loadFile' && el.files[0]) { el.files[0].text().then((t) => this.g.loadCode(t)).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else this.toast('That file is not a valid save', 'bad'); }); }
+  }
+  do(action, feedback = false) {
+    const r = this.sim.dispatch(action) || {};
+    if (feedback && r.msg) this.toast(r.msg, r.ok ? 'good' : 'bad');
+    if (feedback) this.sfx(r.ok ? 'click' : 'refuse');
+    return r;
+  }
+
+  // ------------------------------------------------------------ tabs / sheets
+  setTab(t) {
+    this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
+    if (t) this.sel = null, this.rend.setSelection(null);
+    if (t === 'business') this.do({ type: 'tutFlag', flag: 'businessOpened' });
+    for (const b of this.root.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.v === t);
+    this.renderSheet(true);
+  }
+  setView(v) {
+    this.rend.setView(v);
+    for (const b of this.root.querySelectorAll('#floors button')) b.classList.toggle('on', String(b.dataset.v) === String(v));
+    if (this.tool) this.replan();
+  }
+  select(id, keepTab = false) {
+    this.sel = id; this.rend.setSelection(typeof id === 'number' ? id : null);
+    if (id == null && !this.tab) this.sheetTall = false;
+    if (id != null && !keepTab) { this.tab = null; for (const b of this.root.querySelectorAll('#tabs button')) b.classList.remove('on'); }
+    const o = typeof id === 'number' && this.sim.s.objects[id];
+    if (o && o.type === 'corral') this.do({ type: 'tutFlag', flag: 'corralInspected' });
+    this.renderSheet(true);
+    if (id != null) requestAnimationFrame(() => this.keepSelVisible());
+  }
+  renderSheet(force = false) {
+    const box = this.$('sheet');
+    if (this.tool) { box.innerHTML = ''; return; }
+    let html = '';
+    if (this.sel != null) html = this.inspector();
+    else if (this.tab === 'build') html = this.buildSheet();
+    else if (this.tab === 'operate') html = this.operateSheet();
+    else if (this.tab === 'business') html = this.businessSheet();
+    else if (this.tab === 'growth') html = this.growthSheet();
+    if (!html) { box.innerHTML = ''; return; }
+    const body = box.querySelector('.body'); const st = body ? body.scrollTop : 0;
+    const cats = box.querySelector('.cats'); const cs = cats ? cats.scrollLeft : 0;
+    if (!force && this.sheetHtml === html) return;
+    const wasOpen = !!box.firstChild; this.sheetHtml = html; box.innerHTML = html;
+    if (!wasOpen && box.firstChild) box.firstChild.classList.add('enter');
+    const nb = box.querySelector('.body'); if (nb) nb.scrollTop = st;
+    const nc = box.querySelector('.cats'); if (nc) { nc.scrollLeft = cs; const on = nc.querySelector('button.on'); if (on) { const r = on.getBoundingClientRect(), cr = nc.getBoundingClientRect(); if (r.left < cr.left || r.right > cr.right) nc.scrollLeft += r.left - cr.left - 14; } }
+    const cv = box.querySelector('canvas.chart'); if (cv) this.drawChart(cv);
+    if (this.sel != null && nb) { // lead every inspector with its single most useful action
+      const btn = nb.querySelector('.btn.go, .btn.pri, button.btn[data-a="cmd"]:not(.danger)');
+      if (btn && !btn.closest('.primary')) { const w = document.createElement('div'); w.className = 'primary'; const row = btn.parentElement; w.appendChild(btn); nb.prepend(w); if (row && row.classList.contains('row') && !row.children.length) row.remove(); }
+    }
+  }
+  sheet(title, sub, body, extra = '') {
+    return `<div class="sheet${this.sheetTall ? ' tall' : ''}"><button class="grab" data-a="sheetGrow" aria-label="Expand or shrink panel"><i></i></button><header><h2>${esc(title)}${sub ? `<span class="sub">${sub}</span>` : ''}</h2><button class="x" data-a="close" aria-label="Close">${I.x}</button></header>${extra}<div class="body">${body}</div></div>`;
+  }
+
+  // ------------------------------------------------------------ BUILD
+  buildSheet() {
+    const s = this.sim.s; const cats = CATEGORIES.filter((c) => Object.values(TOOLS).some((t) => t.cat === c.id));
+    const catHtml = `<div class="cats">${cats.map((c) => `<button data-a="cat" data-v="${c.id}" class="${c.id === this.cat ? 'on' : ''}">${c.name}</button>`).join('')}</div>`;
+    const tools = Object.entries(TOOLS).filter(([, t]) => t.cat === this.cat);
+    const focus = this.tutFocus();
+    const cards = tools.map(([k, t]) => {
+      const locked = !toolUnlocked(this.sim, k);
+      const cost = t.cost != null ? money(t.cost * (1)) : t.costPerCell != null ? `${money(t.costPerCell)} / cell` : 'Free';
+      return `<button class="tool ${locked ? 'locked' : ''} ${focus && focus.tool === k ? 'pulse' : ''}" data-a="tool" data-v="${k}"><b>${t.name}</b><span class="c">${locked ? (s.tut.on && (k === 'office' || k === 'gate') ? 'Built' : 'Unlocks: ' + ((BEATS[unlockBeat(k)] || {}).chapter || 'later')) : cost}</span><span class="d">${t.desc}</span></button>`;
+    }).join('');
+    return this.sheet('Build', s.creative ? 'Creative mode: instant and free' : 'Place, preview, then confirm', `<div class="tools">${cards}</div>`, catHtml);
+  }
+  pickTool(k) {
+    if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : `Unlocks in the tutorial's "${(BEATS[unlockBeat(k)] || {}).chapter || 'later'}" chapter`, 'bad'); this.sfx('refuse'); return; }
+    this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
+    if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
+    this.renderSheet(true); this.renderActionBar();
+  }
+  toolFloor() { const v = this.rend.view; return v === 1 ? 1 : 0; }
+  placeStart(cell) { if (!this.tool || !cell) return; this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
+  placeMove(cell) {
+    if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { this.planArgs.a = this.planArgs.b = { x: cell.x, y: cell.y }; this.replan(); return; }
+    if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
+    this.planArgs.b = { x: cell.x, y: cell.y }; this.replan();
+  }
+  replan() {
+    if (!this.tool || !this.planArgs) { this.renderActionBar(); return; }
+    const T = TOOLS[this.tool];
+    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, f: this.toolFloor(), climate: this.climate, flip: this.flip };
+    if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
+    if (this.tool.startsWith('du')) a.f = 0;
+    this.plan = this.sim.plan(a); this.plan.args = a;
+    this.rend.setPreview(this.plan); this.renderActionBar();
+  }
+  confirmPlan() {
+    if (!this.plan) return;
+    const r = this.sim.dispatch({ type: 'build', ...this.plan.args });
+    if (r.ok) { this.sfx('confirm'); this.toast(r.msg + (this.sim.s.creative ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); }
+    else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); }
+    this.renderActionBar();
+  }
+  renderActionBar() {
+    const box = this.$('abar'); if (!this.tool) { box.innerHTML = ''; return; }
+    const T = TOOLS[this.tool], R = this.plan;
+    let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Tap the map to place.' : 'Drag on the map to size it. Two fingers pan.'}${this.toolFloor() ? ' Placing on Floor 2.' : ''}</span></div>`;
+    if (R) {
+      const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
+      const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Valid - ready to confirm') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
+      status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
+      if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
+      if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
+        const after = this.sim.s.cash - R.cost, burn = this.sim.dailyOpex().total + this.sim.s.staff.reduce((a, st) => a + st.wage, 0) + (R.opex || 0);
+        status += `<div class="refund-note">Cash ${money(this.sim.s.cash)} → <b class="${after < 0 ? 'neg' : ''}">${money(after)}</b> after build${burn > 0 ? ` · covers ~${Math.max(0, Math.floor(after / burn))} days of costs` : ''}${R.power ? ` · Power ${R.power.demand.toFixed(1)} / ${R.power.cap} kW` : ''}</div>`;
+      }
+      if (R.status !== 'invalid' && R.dur && !this.sim.s.creative) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
+    }
+    const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
+    const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
+    const wasOpen = !!box.firstChild;
+    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>${status}
+      <div class="bot"><div class="cost">${costTxt}</div>
+      ${isUnit ? `<button class="btn sm" data-a="flip">Flip doors</button>` : ''}
+      ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
+      <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' ? 'disabled' : ''}>Confirm</button></div></div>`;
+  }
+
+  // ------------------------------------------------------------ INSPECTOR
+  condBar(c) { const cl = c < 0.2 ? 'r' : c < 0.45 ? 'a' : ''; return `<div class="row"><div class="bar"><i class="${cl}" style="width:${Math.round(c * 100)}%"></i></div><span class="pill ${c < 0.2 ? 'r' : c < 0.45 ? 'a' : 'g'}">${c < 0.2 ? 'Failed' : c < 0.45 ? 'Needs repair' : 'Good'} · ${pct(c)}</span></div>`; }
+  taskActions(o) {
+    const s = this.sim.s; const t = s.tasks.find((x) => x.obj === o.id);
+    const ownerCan = t ? ROLES.owner.can.includes(t.need) : !(o.type === 'elevator' || o.type === 'hvac');
+    let h = '';
+    if (t) {
+      const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? (s.staff.find((x) => x.id === t.assigned) || {}).name || 'Assigned' : 'Waiting in queue';
+      h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''}</small></div></div><div class="row wrap" style="margin-top:6px">`;
+      if (!t.assigned && ownerCan) h += `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Send Owner</button>`;
+      if (!t.assigned || (t.assigned !== 'vendor' && !ownerCan)) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Call vendor (${money(t.need === 'repair_complex' ? 650 : 250)})</button>`;
+      h += `</div>`;
+      if (!ownerCan) h += `<p class="note">The Owner can't service this equipment. Hire a Tech or call a vendor.</p>`;
+    } else if (o.cond != null && o.cond < 0.8 && ownerCan) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTaskFor', obj: o.id })}'>Owner: service now</button>`;
+    return h;
+  }
+  inspector() {
+    const sim = this.sim, s = sim.s, D = sim.D;
+    if (typeof this.sel === 'object' && this.sel && this.sel.kind === 'cart') {
+      const c = s.carts.find((x) => x.id === this.sel.id); if (!c) return '';
+      const t = s.tasks.find((x) => x.type === 'carts' && x.cart === c.id);
+      return this.sheet(c.st === 'damaged' ? 'Damaged cart' : 'Stranded cart', `Floor ${c.f + 1} · left ${Math.round((s.t - (c.since || s.t)) / 60)}h ago`,
+        `<p class="note">Carts left away from a corral aren't available to the next customer. Porters recover them automatically when "Porters recover carts" is on.</p>
+        ${t ? `<div class="row wrap">${!t.assigned ? `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Owner: return it</button>` : `<span class="pill b">${t.assigned === 'vendor' ? 'Vendor' : 'Assigned'}</span>`}</div>` : '<p class="note">A recovery task will be created if it stays out.</p>'}`);
+    }
+    if (typeof this.sel === 'object' && this.sel && this.sel.kind === 'dirt') {
+      const c = this.sel; const d = s.dirt[c.f][c.y * s.W + c.x];
+      const t = s.tasks.find((x) => x.type === 'clean' && x.f === c.f && Math.abs(x.x - c.x) + Math.abs(x.y - c.y) < 6);
+      return this.sheet('Dirty area', `Dirt ${pct(d)}`, `<p class="note">Customers notice dirty loading areas and hallways (Cleanliness).</p><div class="row wrap">${t ? (t.assigned ? `<span class="pill b">Cleaning assigned</span>` : `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Send Owner to clean</button>`) : `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerClean', f: c.f, x: c.x, y: c.y })}'>Send Owner to clean</button>`}</div>`);
+    }
+    const o = s.objects[this.sel]; if (!o) { this.sel = null; return ''; }
+    const nm = sim.objName(o);
+    if (o.cstate === 'construction') {
+      const ord = s.orders.find((q) => q.id === o.order);
+      if (!ord) return this.sheet(nm, 'Under construction', '');
+      const { undo, refund } = sim.cancelRefund(ord);
+      return this.sheet(nm, 'Under construction', `<div class="kv"><span>Order</span><span>${esc(ord.label)}</span><span>Progress</span><span>${ord.waiting ? 'Waiting for building shell' : pct(ord.prog)}</span><span>Cost</span><span>${money(ord.cost)}</span></div>
+        <div class="bar"><i style="width:${Math.round(ord.prog * 100)}%"></i></div>
+        <div class="row" style="margin-top:10px"><button class="btn danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'cancelOrder', id: ord.id })}'>${undo ? 'Undo' : 'Cancel'} (refund ${money(refund)})</button></div>
+        <p class="note">${undo ? 'Undo refunds everything within 30 game-minutes of committing.' : 'Cancelling mid-build refunds 60% of the unbuilt share.'}</p>`);
+    }
+    const html = this.objSheet(o, nm);
+    if (!o.unpowered) return html;
+    const P = D.power; const warnBox = `<div class="status invalid" style="margin-bottom:10px"><span class="ic">!</span><span>No power - demand ${P ? P.demand.toFixed(1) + ' kW exceeds ' + P.cap + ' kW' : 'exceeds'} service. Add an Electrical Service Upgrade or remove other loads.</span></div>`;
+    return html.replace('<div class="body">', '<div class="body">' + warnBox);
+  }
+  objSheet(o, nm) {
+    const sim = this.sim, s = sim.s, D = sim.D;
+    switch (o.type) {
+      case 'stairs': return this.sheet('Stairwell', 'Floors 1-2', `<p class="note">People walk between floors here. Carts cannot use stairs, so upper-floor units still need a working elevator to rent. During an elevator outage, tenants without carts take the stairs.</p>`);
+      case 'power': { const P = D.power; return this.sheet('Electrical Service', `+${TOOLS.power.kw} kW`, `<div class="kv"><span>Property capacity</span><span>${P.cap} kW</span><span>Demand</span><span>${P.demand.toFixed(1)} kW</span><span>Shut off</span><span>${P.shed.length}</span></div><p class="note">Utility capacity is shared by the whole property.</p>`); }
+      case 'water': { const sh = s.objects[o.serves]; const n = sim.objs('restroom').concat(sim.objs('fountain')).filter((r) => D.shellAt[r.y * s.W + r.x] === o.serves).length; return this.sheet('Water Service', sh ? 'Serves adjacent building' : '', `<div class="kv"><span>Fixtures served</span><span>${n}</span></div><p class="note">Restrooms and fountains in this building run on this hookup.</p>`); }
+      case 'restroom': {
+        const ok = sim.amenityWorks(o), dirt = o.dirt || 0;
+        return this.sheet('Restroom', ok ? (dirt > 0.6 ? 'Needs cleaning' : 'Open') : 'Closed', `<div class="kv"><span>Status</span><span>${ok ? 'Open' : !sim.hasWater(D.shellAt[o.y * s.W + o.x]) ? 'No water service' : 'No power'}</span><span>Cleanliness</span><span>${pct(1 - dirt)}</span><span>Uses</span><span>${o.uses || 0}</span><span>Comfort score</span><span>${pct(s.exp.comfort)}</span></div>
+          ${dirt > 0.3 ? `<div class="row" style="margin-top:10px"><button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerRoom', obj: o.id })}'>Owner: clean now</button></div>` : ''}
+          <p class="note">Long visits (move-ins, move-outs, big loads) use it most. Porters clean it once it gets dirty; a dirty restroom hurts comfort.</p>`);
+      }
+      case 'fountain': return this.sheet('Water Fountain', sim.amenityWorks(o) ? 'Working' : 'Not working', `${this.condBar(o.cond)}${this.taskActions(o)}<p class="note">${sim.hasWater(D.shellAt[o.y * s.W + o.x]) ? 'A small comfort boost for tenants in this building.' : 'This building needs a Water Service hookup.'}</p>`);
+      case 'unit': {
+        const L = o.lease && s.leases[o.lease], tn = L && s.tenants[L.tenant];
+        const state = o.cstate === 'built' ? '<span class="pill a">Built · not ready</span>' : o.cstate === 'ready' ? '<span class="pill b">Ready to commission</span>' :
+          o.commercial === 'occupied' ? (L && L.status !== 'current' ? '<span class="pill r">Rent past due</span>' : '<span class="pill g">Occupied</span>') : o.commercial === 'ready' ? '<span class="pill g">Rent-ready</span>' : o.commercial === 'reserved' ? '<span class="pill b">Reserved · move-in pending</span>' : o.commercial === 'unready' ? '<span class="pill a">Needs make-ready</span>' : '<span class="pill">—</span>';
+        const key = productKey(o.size, o.env), ask = s.market.ask[key];
+        let h = `<div class="row wrap">${state}<span class="pill">${o.access === 'drive' ? 'Drive-up' : 'Interior'}</span>${o.env === 'climate' ? '<span class="pill b">Climate</span>' : ''}${o.f ? '<span class="pill">Floor 2</span>' : ''}</div>`;
+        h += `<div class="kv"><span>Size</span><span>${o.size} (${SIZES[o.size].sqft} sq ft)</span><span>Asking rent</span><span>${money(ask)}/mo</span><span>Market rent</span><span>${money(Math.round(sim.marketRent(o)))}/mo</span>`;
+        if (o.access === 'interior' && o.cstate === 'operating') h += `<span>Convenience</span><span>${pct(o.conv ?? 1)}</span>`;
+        h += `<span>Security</span><span>${pct(sim.unitSecurity(o))}</span></div>`;
+        if (L) h += `<h3>Tenant</h3><div class="kv"><span>Name</span><span>${esc(tn ? tn.name : '—')}</span><span>Rent</span><span>${money(L.rent)}/mo</span><span>Next bill</span><span>Day ${L.nextBill}</span><span>Satisfaction</span><span>${tn ? pct(tn.sat) : '—'}</span>${tn && tn.leaving ? '<span>Status</span><span>Moving out</span>' : ''}</div>`;
+        if (o.blocked) h += `<div class="miss"><b>Customers can't reach this unit</b><ul>${(o.missing || []).map((m) => `<li>${esc(m)}</li>`).join('')}</ul><small>It won't rent until access is restored.</small></div>`;
+        if ((o.cstate === 'built' || o.cstate === 'ready') && o.missing && o.missing.length) h += `<div class="miss"><b>Why it can't open yet</b><ul>${o.missing.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>`;
+        const acts = [];
+        if (o.cstate === 'ready') acts.push(`<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', unit: o.id })}'>Commission unit</button>`);
+        if (o.cstate === 'ready' && o.order) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: o.order })}'>Commission whole order</button>`);
+        const mr = s.tasks.find((t) => t.type === 'makeready' && t.obj === o.id);
+        if (mr) acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id })}'>Start Owner Make-Ready</button>`);
+        if (acts.length) h += `<div class="row wrap" style="margin-top:8px">${acts.join('')}</div>`;
+        return this.sheet(nm, `${o.access === 'drive' ? 'Drive-up' : 'Interior'} ${o.size}`, h);
+      }
+      case 'light': case 'camera': {
+        const inside = !!D.shellAt[o.y * s.W + o.x];
+        return this.sheet(nm, inside ? 'Interior' : 'Exterior', `${this.condBar(o.cond)}<div class="kv"><span>Coverage radius</span><span>${TOOLS[o.type].radius} cells</span><span>Daily cost</span><span>${money(o.type === 'light' ? 0.5 : 0.35, true)}</span></div>${this.taskActions(o)}<p class="note">${o.type === 'light' ? 'Dark hallways block new interior units and hurt security.' : 'Visible camera coverage lifts security quality.'}</p>`);
+      }
+      case 'gate': {
+        const q = s.gateQ.length;
+        return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class="kv"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}`);
+      }
+      case 'door': {
+        return this.sheet(nm, o.keypad ? 'With keypad' : 'No keypad', `${o.kind === 'auto' ? this.condBar(o.cond) : ''}<div class="kv"><span>Cart speed</span><span>${o.kind === 'std' ? 'Slow' : o.kind === 'wide' ? 'Good' : 'Fast'}</span>${o.keypad ? `<span>Keypad</span><span>${o.keypad === 'operating' ? pct(o.kcond ?? 1) : 'Installing'}</span>` : ''}</div>${o.kind === 'auto' ? this.taskActions(o) : ''}`);
+      }
+      case 'elevator': {
+        const waiting = o.q.reduce((a, q) => a + q.length, 0);
+        return this.sheet('Freight Elevator', o.cond < 0.2 ? 'Out of service' : `Floor ${Math.round(o.pos) + 1}`, `${this.condBar(o.cond)}<div class="kv"><span>Waiting</span><span>${waiting}</span><span>Riding</span><span>${o.riders.length}</span><span>Average wait</span><span>${Math.round(o.avgWait || 0)} min</span><span>Trips</span><span>${o.trips}</span><span>Capacity</span><span>4 people · a cart takes 2</span></div>${this.taskActions(o)}`);
+      }
+      case 'hvac': {
+        const hv = D.hvac[o.serves]; return this.sheet('HVAC Plant', 'Climate control', `${this.condBar(o.cond)}<div class="kv"><span>Zone capacity</span><span>${hv ? Math.round(hv.cap) : 0} cells</span><span>Climate load</span><span>${hv ? Math.round(hv.load) : 0} cells</span></div>${this.taskActions(o)}<p class="note">Each climate unit loads the plant by its area. Over capacity, climate customers are unhappy.</p>`);
+      }
+      case 'corral': {
+        const at = sim.cartsAt(o.id).length, all = s.carts.filter((c) => c.home === o.id).length, stranded = s.carts.filter((c) => (c.st === 'stranded' || c.st === 'damaged')).length, inuse = s.carts.filter((c) => c.st === 'inuse').length;
+        return this.sheet(o.name, `Floor ${(o.f || 0) + 1}`, `<div class="stats"><div class="stat"><small>At corral</small><b>${at}</b></div><div class="stat"><small>In use</small><b>${inuse}</b></div><div class="stat"><small>Stranded (all)</small><b>${stranded}</b></div><div class="stat"><small>Homed here</small><b>${all}</b></div></div>
+          <div class="row wrap" style="margin-top:10px"><button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'buyCarts', corral: o.id, n: 1 })}'>Buy 1 cart (${money(CART_COST)})</button><button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'buyCarts', corral: o.id, n: 2 })}'>Buy 2 (${money(CART_COST * 2)})</button></div>
+          <p class="note">Interior customers park at loading, take a cart here, go through the wide door and down the hallway. Empty corral = waiting or carrying by hand.</p>`);
+      }
+      case 'office': {
+        const staff = esc(s.staff.map((st) => ROLES[st.role].name + ' ' + st.name).join(', '));
+        return this.sheet('Office', `Open ${OFFICE_HOURS[0]} AM - ${OFFICE_HOURS[1] - 12} PM`, `<div class="kv"><span>Waiting customers</span><span>${s.officeQ.length}</span><span>Staff</span><span>${esc(staff)}</span><span>Service quality</span><span>${pct(s.exp.service)}</span></div><p class="note">Walk-in prospects need someone at the office. The Owner serves when not out on a task; a Clerk covers office hours.</p>`);
+      }
+      case 'shell': {
+        const units = sim.objs('unit').filter((u) => D.shellAt[u.y * s.W + u.x] === o.id);
+        const hv = D.hvac[o.id];
+        return this.sheet(nm, `${o.w}x${o.h} cells`, `<div class="kv"><span>Units</span><span>${units.length}</span><span>Occupied</span><span>${units.filter((u) => u.lease).length}</span><span>HVAC</span><span>${hv && hv.cap ? Math.round(hv.load) + ' / ' + Math.round(hv.cap) : 'None'}</span></div><p class="note">Use the floor selector (F1/F2) to see inside. Interiors need hallways, a door to the outside, lights, and for Floor 2 an elevator.</p>`);
+      }
+      case 'canopy': return this.sheet('Covered Canopy', '', '<p class="note">Loading under cover keeps interior customers dry on rainy days.</p>');
+      default: return this.sheet(nm, '', '');
+    }
+  }
+  pickAt(cell) {
+    const sim = this.sim, s = sim.s, D = sim.D; if (!cell || !sim.inb(cell.x, cell.y)) return null;
+    const f = this.rend.view === 1 ? 1 : 0, i = cell.y * s.W + cell.x, WH = s.W * s.H;
+    const at = (D.at.get(f * WH + i) || []).map((id) => s.objects[id]).filter(Boolean);
+    const order = ['light', 'camera', 'elevator', 'corral', 'door', 'hvac', 'gate', 'unit', 'office', 'canopy'];
+    at.sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
+    const cart = s.carts.find((c) => (c.st === 'stranded' || c.st === 'damaged') && (c.f || 0) === f && Math.floor(c.x) === cell.x && Math.floor(c.y) === cell.y);
+    if (cart) return { kind: 'cart', id: cart.id };
+    if (this.rend.view === 'ext') { // exterior: roofs hide interiors, pick the shell
+      const ext = at.filter((o) => !D.shellAt[i] || o.type === 'shell');
+      if (ext.length) return ext[0].id;
+      if (D.shellAt[i]) return D.shellAt[i];
+    }
+    if (at.length) return at[0].id;
+    if (D.unitAt[f][i]) return D.unitAt[f][i];
+    if (s.dirt[f][i] > 0.3) return { kind: 'dirt', f, x: cell.x, y: cell.y };
+    if (D.shellAt[i]) return D.shellAt[i];
+    return null;
+  }
+  tapMap(cell) {
+    const p = this.pickAt(cell);
+    if (p == null) { if (this.sel != null) this.select(null); return; }
+    this.sfx('click'); this.select(p);
+  }
+
+  // ------------------------------------------------------------ OPERATE
+  operateSheet() {
+    const sim = this.sim, s = sim.s;
+    const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
+    const tasks = [...s.tasks].sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
+    let h = `<h3>Work queue (${tasks.length})</h3><div class="list">`;
+    if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
+    for (const t of tasks.slice(0, 14)) {
+      const ownerCan = ROLES.owner.can.includes(t.need);
+      const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? staffName(t.assigned) + (t.queued ? ' (queued)' : '') : t.unreachable ? 'Unreachable - check routes' : 'Unassigned';
+      const loc = t.obj && s.objects[t.obj] ? s.objects[t.obj] : t.x != null ? t : null;
+      h += `<div class="item"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''}</small></div>
+        ${loc ? `<button class="btn sm" data-a="focus" data-x="${loc.x}" data-y="${loc.y}">View</button>` : ''}
+        ${!t.assigned && ownerCan ? `<button class="btn sm pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Owner</button>` : ''}
+        ${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Vendor</button>` : ''}
+        <button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'taskPri', task: t.id, pri: t.pri >= 2 ? 0 : 2 })}'>${t.pri >= 2 ? 'Normal' : 'Urgent'}</button></div>`;
+    }
+    h += `</div><h3>Staff</h3><div class="list">`;
+    for (const st of s.staff) {
+      const ag = s.agents.find((a) => a.sid === st.id); const t = ag && ag.task && s.tasks.find((x) => x.id === ag.task);
+      const doing = !ag ? 'Needs an office' : t ? esc(t.label) : ag.st === 'office' ? 'At the office' : ag.st === 'home' ? 'Returning to office' : ag.st;
+      h += `<div class="item"><div class="grow"><b>${ROLES[st.role].name} · ${esc(st.name)}</b><small>${doing}${ag && ag.queue && ag.queue.length ? ` · ${ag.queue.length} queued` : ''} · ${st.wage ? money(st.wage) + '/day' : 'unpaid'}</small></div>${st.role !== 'owner' ? `<button class="btn sm danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'fire', id: st.id })}'>Let go</button>` : ''}</div>`;
+    }
+    const focus = this.tutFocus();
+    h += `</div><div class="row wrap" style="margin-top:8px">${['porter', 'tech', 'clerk', 'manager'].map((r) => `<button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire ${ROLES[r].name} · ${money(ROLES[r].wage)}/day</button>`).join('')}</div>
+      <p class="note">Porter: make-ready, cleaning, carts. Tech: repairs incl. elevators and HVAC. Clerk: office service during office hours. Manager: opens ready units, escalates stalled repairs to vendors, restocks carts and adjusts asking rents monthly.</p>`;
+    if (sim.hasManager() || s.mgrLog.length) h += `<h3>Manager log</h3><div class="kv">${s.mgrLog.length ? s.mgrLog.slice(0, 8).map((l) => `<span>Day ${dayOf(l.t)} ${fmtTime(l.t)}</span><span>${esc(l.msg)}</span>`).join('') : '<span>No decisions yet</span><span></span>'}</div>`;
+    h += `<h3>Overlays</h3><div class="row wrap">${[['security', 'Security'], ['carts', 'Carts'], ['hvac', 'HVAC'], ['clean', 'Cleanliness'], ['power', 'Power']].map(([k, n]) => `<button class="btn sm ${this.rend.overlay === k ? 'pri' : ''}" data-a="overlay" data-v="${k}">${n}</button>`).join('')}</div>`;
+    if (this.rend.overlay === 'security') h += `<p class="note">Green: lit + camera. Blue: camera only. Yellow: lit only. Red: dark, no camera.</p>`;
+    if (this.rend.overlay === 'power') h += `<p class="note">Green: powered equipment. Red: shut off because demand exceeds electrical service.</p>`;
+    h += `<h3>Carts</h3><div class="list">`;
+    for (const c of sim.objs('corral')) h += `<div class="item"><div class="grow"><b>${esc(c.name)}</b><small>${sim.cartsAt(c.id).length} available · target ${c.target || 2}</small></div><button class="btn sm" data-a="sel" data-v="${c.id}">Inspect</button></div>`;
+    const str = s.carts.filter((c) => c.st === 'stranded' || c.st === 'damaged').length;
+    h += `</div><p class="note">${s.carts.length} carts total · ${str} stranded or damaged.</p>`;
+    h += `<h3>Policies</h3><div class="list">
+      <div class="item"><div class="grow"><b>Porters recover carts</b><small>Porters return stranded carts to their corral</small></div><button class="toggle ${s.policies.porterCarts ? 'on' : ''}" data-a="policy" data-v="porterCarts" aria-label="Toggle"></button></div>
+      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, the Owner does make-readies, cleaning and cart runs</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
+      <div class="item"><div class="grow"><b>Preventive maintenance</b><small>Techs service equipment before it fails</small></div><button class="toggle ${s.policies.preventive ? 'on' : ''}" data-a="policy" data-v="preventive" aria-label="Toggle"></button></div></div>`;
+    return this.sheet('Operate', `${s.staff.length} staff · ${tasks.length} tasks`, h);
+  }
+
+  // ------------------------------------------------------------ BUSINESS
+  businessSheet() {
+    const sim = this.sim, s = sim.s; const occ = sim.occupancy(), roll = sim.rentRoll(), ox = sim.dailyOpex();
+    const pay = s.staff.reduce((a, st) => a + st.wage, 0);
+    const last = s.days.slice(-30); const sum = (k) => last.reduce((a, d) => a + d[k], 0) + s.today[k];
+    const collected = sum('rent'), costs = sum('opex') + sum('payroll'), capex = sum('capex');
+    let h = `<div class="stats">
+      <div class="stat"><small>Cash</small><b class="${s.cash < 0 ? 'neg' : ''}">${money(s.cash)}</b></div>
+      <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
+      <div class="stat"><small>Rent collected (30 days)</small><b>${money(collected)}</b><div class="n">Bills on each lease anniversary</div></div>
+      <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops + ${money(pay)} payroll</div></div>
+      <div class="stat"><small>Operating costs (30 days)</small><b>${money(costs)}</b></div>
+      <div class="stat"><small>Construction (30 days)</small><b>${money(capex)}</b><div class="n">One-time spending</div></div></div>`;
+    if (!s.creative) {
+      const room = sim.creditLimit() - s.loan.bal, burn = ox.total + pay;
+      h += `<h3>Credit line</h3><div class="list"><div class="item"><div class="grow"><b>${s.loan.bal > 0 ? money(s.loan.bal) + ' owed' : 'Not in use'}</b><small>${money(room)} available · ~1.2%/month interest${burn > 0 ? ` · cash covers ~${Math.max(0, Math.floor(s.cash / burn))} days of costs` : ''}</small></div>
+        ${room >= 1000 ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'loan', amt: Math.min(room, 5000) })}'>Borrow ${money(Math.min(room, 5000))}</button>` : ''}
+        ${s.loan.bal > 0 ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'repay', amt: Math.min(s.loan.bal, 5000) })}' ${s.cash < Math.min(s.loan.bal, 5000) ? 'disabled' : ''}>Repay ${money(Math.min(s.loan.bal, 5000))}</button>` : ''}</div></div>`;
+    }
+    h += `
+      <h3>Last 14 days</h3><canvas class="chart" width="520" height="120"></canvas><p class="note">Green: rent collected. Red: operating + payroll. Grey: construction. A monthly-billing business looks lumpy day to day.</p>`;
+    h += `<h3>Asking rents</h3><div class="list">`;
+    const M = MARKETS[s.market.id];
+    const products = new Set(sim.objs('unit').map((u) => productKey(u.size, u.env)));
+    for (const k of Object.keys(s.market.ask)) {
+      if (!products.has(k) && !k.endsWith('std')) continue;
+      const [sz, env] = k.split('|'); const mk = Math.round(M.rent[sz] * (env === 'climate' ? M.climatePremium : 1)); const ask = s.market.ask[k];
+      const units = sim.objs('unit').filter((u) => productKey(u.size, u.env) === k && u.cstate === 'operating'); const vac = units.filter((u) => !u.lease).length;
+      const d = ask / mk - 1;
+      h += `<div class="item"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>Market ${money(mk)} · ${units.length} units · ${vac} vacant ${Math.abs(d) > 0.02 ? `· <span class="pill ${d > 0 ? 'a' : 'b'}">${d > 0 ? '+' : ''}${Math.round(d * 100)}%</span>` : ''}</small></div>
+        <div class="stepper"><button data-a="rent" data-k="${k}" data-v="-5" aria-label="Lower rent">-</button><b class="num" style="min-width:48px;text-align:center">${money(ask)}</b><button data-a="rent" data-k="${k}" data-v="5" aria-label="Raise rent">+</button></div></div>`;
+    }
+    h += `</div><p class="note">Asking rent affects how strongly the market responds. Existing leases keep their rent unless you run a rent review.</p>`;
+    const rv = [...products].map((k) => ({ k, p5: sim.rentReviewPreview(k, 0.05), p10: sim.rentReviewPreview(k, 0.1) })).filter((r) => r.p5.n);
+    h += `<h3>Existing-tenant rent review</h3>`;
+    if (!rv.length) h += `<p class="note">No tenants are eligible. Tenants qualify after 6 months without an increase, when they pay below your asking rent.</p>`;
+    else {
+      h += `<div class="list">${rv.map(({ k, p5, p10 }) => { const [sz, env] = k.split('|'); return `<div class="item"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>${p5.n} eligible tenant${p5.n > 1 ? 's' : ''} below asking</small></div>
+        <button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.05 })}'>+5% (+${money(p5.delta)}/mo)</button><button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.1 })}'>+10% (+${money(p10.delta)}/mo)</button></div>`; }).join('')}</div>
+        <p class="note">Increases never exceed your current asking rent. Tenants notice: satisfaction drops and move-out risk is higher for 60 days.</p>`;
+    }
+    const P = sim.D.power;
+    if (P) {
+      const shells = sim.objs('shell').filter((o) => o.cstate === 'operating');
+      h += `<h3>Utilities</h3><div class="kv"><span>Electrical service</span><span class="${P.demand > P.cap ? 'neg' : ''}">${P.demand.toFixed(1)} / ${P.cap} kW${P.shed.length ? ` · ${P.shed.length} shut off` : P.demand > P.cap * 0.85 ? ' · near limit' : ''}</span>
+        ${shells.map((sh, k) => `<span>Water · Building ${k + 1}</span><span>${sim.D.water.has(sh.id) ? 'Connected' : 'None'}</span>`).join('')}</div>
+        <p class="note">Elevators and HVAC plants draw the most power. When demand exceeds service, amenities shut off first, then HVAC, then elevators.</p>`;
+    }
+    const lost = Object.entries(s.lost).sort((a, b) => b[1] - a[1]);
+    if (lost.length) h += `<h3>Lost demand</h3><div class="kv">${lost.map(([k, v]) => `<span>${LOST[k] || k}</span><span>${v}</span>`).join('')}</div>`;
+    h += `<h3>Recent ledger</h3><div class="kv">${s.ledger.slice(-8).reverse().map((l) => `<span>Day ${dayOf(l.t)} · ${esc(l.note || l.cat)}</span><span style="color:${l.amt < 0 ? 'var(--red)' : 'var(--green)'}">${money(l.amt)}</span>`).join('')}</div>`;
+    return this.sheet('Business', `${MARKETS[s.market.id].name}`, h);
+  }
+  drawChart(cv) {
+    const s = this.sim.s, g = cv.getContext('2d'), W = cv.width, H = cv.height; g.clearRect(0, 0, W, H);
+    const days = [...s.days.slice(-13), s.today]; const n = 14;
+    const max = Math.max(50, ...days.map((d) => Math.max(d.rent, d.opex + d.payroll + d.capex)));
+    const mid = H * 0.55, bw = W / n;
+    g.fillStyle = '#d6cfc0'; g.fillRect(0, mid, W, 1);
+    days.forEach((d, k) => {
+      const x = (n - days.length + k) * bw + bw * 0.18, w = bw * 0.64;
+      const up = (d.rent / max) * (mid - 12); g.fillStyle = '#2f8f5b'; g.fillRect(x, mid - up, w, up);
+      const c1 = ((d.opex + d.payroll) / max) * (H - mid - 14); g.fillStyle = '#c8412f'; g.fillRect(x, mid + 1, w, c1);
+      const c2 = (d.capex / max) * (H - mid - 14); g.fillStyle = '#9aa1a8'; g.fillRect(x, mid + 1 + c1, w, c2);
+      g.fillStyle = '#6c737b'; g.font = '10px system-ui'; g.textAlign = 'center'; if (k % 2 === 0 || days.length < 8) g.fillText(String(d.day), x + w / 2, H - 2);
+    });
+    g.fillStyle = '#6c737b'; g.textAlign = 'left'; g.font = '10px system-ui'; g.fillText(money(Math.round(max)), 4, 11);
+  }
+
+  // ------------------------------------------------------------ GROWTH
+  growthSheet() {
+    const sim = this.sim, s = sim.s;
+    let h = '';
+    if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>Deadline</span><span>Day ${s.scenario.deadline} (${s.scenario.status})</span></div>`; }
+    if (!s.open) {
+      const iss = sim.openingIssues();
+      h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
+    }
+    h += `<h3>Customer experience</h3><div class="list">${Object.entries(EXP).map(([k, n]) => { const v = s.exp[k]; return `<div class="row" style="font-size:13px"><span style="width:92px;color:var(--muted)">${n}</span><div class="bar"><i class="${v < 0.5 ? 'r' : v < 0.7 ? 'a' : ''}" style="width:${Math.round(v * 100)}%"></i></div><b class="num" style="width:38px;text-align:right">${pct(v)}</b></div>`; }).join('')}</div>
+      <p class="note">Reputation ${pct(sim.reputation())}. Built from what customers actually experienced on the property, not from what you built.</p>`;
+    const tips = [];
+    if (s.lost.noClimate) tips.push('Prospects keep asking for climate control. An HVAC plant and climate units would capture them.');
+    if (s.lost.noSize || s.lost.noReady) tips.push('Demand is going unmet because nothing suitable is rent-ready. Consider expanding.');
+    if (s.lost.price) tips.push('Some prospects found rents too high for them.');
+    if (s.exp.convenience < 0.7) tips.push('Interior convenience is suffering. Check carts, elevator waits and walking distance.');
+    if (s.exp.security < 0.6) tips.push('Security is weak. The Security overlay shows dark, unwatched areas.');
+    if (s.exp.cleanliness < 0.7) tips.push('Loading areas and hallways need cleaning more often.');
+    if (tips.length) h += `<h3>Opportunities</h3><div class="list">${tips.map((t) => `<div class="item"><div class="grow">${t}</div></div>`).join('')}</div>`;
+    h += `<h3>Milestones</h3><div class="list">${Object.entries(MILESTONES).map(([k, n]) => `<div class="item"><div class="grow"><b>${n}</b>${s.milestones[k] != null ? `<small>Day ${dayOf(s.milestones[k])}</small>` : ''}</div><span class="pill ${s.milestones[k] != null ? 'g' : ''}">${s.milestones[k] != null ? 'Done' : '—'}</span></div>`).join('')}</div>`;
+    if (s.mode === 'tutorial') {
+      const chapters = [...new Set(BEATS.map((b) => b.chapter))];
+      h += `<h3>Tutorial</h3><div class="list">${chapters.map((c) => { const idx = BEATS.map((b, i) => b.chapter === c ? i : -1).filter((i) => i >= 0); const done = s.tut.done || idx.every((i) => i < s.tut.beat); const cur = !done && idx.includes(s.tut.beat); return `<div class="item"><div class="grow"><b>${c}</b></div><span class="pill ${done ? 'g' : cur ? 'a' : ''}">${done ? 'Done' : cur ? 'Now' : 'Later'}</span></div>`; }).join('')}</div>`;
+    }
+    h += this.portfolioHtml();
+    return this.sheet('Growth', `Reputation ${pct(sim.reputation())}`, h);
+  }
+
+  // ------------------------------------------------------------ FEED / TOASTS / BUBBLES
+  toast(text, kind = '') {
+    const feed = this.$('feed'); const el = document.createElement('div'); el.className = 'toast ' + kind; el.innerHTML = `<span class="dot"></span><span>${esc(text)}</span>`;
+    feed.appendChild(el); this.toasts.push({ el, t: performance.now() });
+    while (this.toasts.length > (this.phone() ? 2 : 3)) { const o = this.toasts.shift(); o.el.remove(); }
+  }
+  renderFeed(force = false) {
+    const s = this.sim.s; const key = s.convos.map((c) => c.id).join(',');
+    if (!force && key === this.convoKey) return; this.convoKey = key;
+    const feed = this.$('feed');
+    for (const el of feed.querySelectorAll('.convo')) el.remove();
+    const frag = document.createDocumentFragment();
+    for (const c of s.convos.slice(-3)) {
+      const el = document.createElement('div'); el.className = 'convo ' + (c.sev || 'attention');
+      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}">View</button>` : ''}</div>`;
+      frag.appendChild(el);
+    }
+    feed.prepend(frag);
+  }
+  addBubble(th) {
+    if (this.bubbles.length > 7) { const o = this.bubbles.shift(); o.el.remove(); }
+    const el = document.createElement('div'); el.className = 'bub ' + th.kind;
+    el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)}`;
+    this.bubRoot.appendChild(el); this.bubbles.push({ el, th, t: performance.now(), ag: th.ag });
+  }
+  updateBubbles() {
+    const now = performance.now(), s = this.sim.s; const placed = [];
+    for (const b of [...this.bubbles].reverse()) {
+      const age = (now - b.t) / 1000;
+      if (age > 4.5) { b.el.remove(); this.bubbles = this.bubbles.filter((x) => x !== b); continue; }
+      const ag = s.agents.find((a) => a.id === b.ag); const m = ag && this.rend.pool.ppl.get(ag.id);
+      const x = m ? m.position.x : b.th.x, z = m ? m.position.z : b.th.y, y = m ? m.position.y : (b.th.f || 0) * 1.9;
+      const p = this.rend.project(x, z, y + 1.1);
+      const hide = (this.rend.view === 0 && y > 1) || (m && !m.visible && this.rend.view !== 'ext');
+      let py = p.y; for (const q of placed) if (Math.abs(q.x - p.x) < 120 && Math.abs(q.y - py) < 26) py = q.y - 28;
+      placed.push({ x: p.x, y: py });
+      b.el.style.left = p.x + 'px'; b.el.style.top = py + 'px'; b.el.style.opacity = hide || !p.vis ? 0 : age > 3.8 ? 0 : 1;
+    }
+    for (const t of [...this.toasts]) if (now - t.t > 4200) { t.el.classList.add('out'); if (now - t.t > 4600) { t.el.remove(); this.toasts = this.toasts.filter((x) => x !== t); } }
+  }
+  onEvent(e) {
+    const s = this.sim.s;
+    switch (e.type) {
+      case 'thought': this.addBubble(e); break;
+      case 'complete': this.toast(`${e.label} finished${e.units ? ` - ${e.ready}/${e.units} units ready to commission` : ''}`, 'good'); this.sfx('complete'); break;
+      case 'commissioned': this.sfx('confirm'); break;
+      case 'lease': { const u = s.objects[e.unit]; this.toast(`New lease: ${u ? u.name : 'unit'} at ${money(e.rent)}/mo`, 'good'); this.sfx('lease'); break; }
+      case 'moveout': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A unit'} moved out - needs make-ready`); break; }
+      case 'fault': { const o = s.objects[e.obj]; if (!o && s.carts.some((c) => c.id === e.obj)) { this.toast('A cart was damaged - it needs repair'); break; } this.toast(`${o ? this.sim.objName(o) : 'Equipment'} has failed`, 'bad'); this.sfx('fault'); break; }
+      case 'repaired': this.sfx('repair'); break;
+      case 'rentready': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'Unit'} is rent-ready`, 'good'); this.sfx('complete'); break; }
+      case 'rent': if (s.speed <= 2) this.sfx('rent'); break;
+      case 'refuse': break;
+      case 'gate': this.sfx('gate'); break;
+      case 'keypad': this.sfx('keypad'); break;
+      case 'rollup': if (this.rend.view !== 'ext' || !(e.f > 0)) this.sfx('rollup'); break;
+      case 'cart_take': case 'cart_return': this.sfx('cart'); break;
+      case 'elevator': this.sfx('chime'); break;
+      case 'work_start': case 'work_tick': this.sfx('work'); break;
+      case 'convo': this.sfx('attention'); this.renderFeed(true); break;
+      case 'milestone': if (MILESTONES[e.k]) { this.toast('Milestone: ' + MILESTONES[e.k], 'good'); this.sfx('milestone'); } break;
+      case 'hire': this.sfx('confirm'); break;
+      case 'weather': if (e.w === 'rain') this.toast('Rain rolling in'); break;
+      case 'tut_beat': { const b = BEATS[s.tut.beat]; this.tutMin = false; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.renderTut(true); break; }
+      case 'tut_done': this.sfx('milestone'); this.renderTut(true); break;
+      case 'lost': break;
+      case 'access_lost': this.toast(`${e.n > 1 ? e.n + ' units' : e.name} lost customer access - ${e.why}`, 'bad'); this.sfx('fault'); break;
+      case 'cash_warn': this.toast(e.msg, 'bad'); this.sfx('attention'); break;
+      case 'power_shed': this.toast(`Power capacity exceeded - ${e.name} shut off`, 'bad'); this.sfx('attention'); break;
+      case 'power_restored': break;
+      case 'scenario_end': this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
+      case 'rent_review': this.sfx('rent'); break;
+      case 'manager': if (s.speed <= 2) this.toast('Manager: ' + e.msg); break;
+    }
+  }
+
+  // ------------------------------------------------------------ TUTORIAL CARD
+  tutFocus() { const s = this.sim.s; if (!s.tut.on) return null; const b = BEATS[s.tut.beat]; return b && b.focus ? b.focus(this.sim) : null; }
+  renderTut(force = false) {
+    const s = this.sim.s, box = this.$('tut');
+    if (s.scenario && !this.title) { this.renderScenario(force); return; }
+    if (!s.tut.on || this.title) { box.innerHTML = ''; this.rend.setFocus(null); return; }
+    const b = BEATS[s.tut.beat]; if (!b) { box.innerHTML = ''; return; }
+    const key = s.tut.beat + ':' + this.tutMin; if (!force && key === this.tutKey) return; this.tutKey = key;
+    const f = this.tutFocus(); this.rend.setFocus(f);
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''}"><div class="ch"><span>${b.chapter} · ${s.tut.beat + 1}/${BEATS.length}</span><button class="mini" data-a="tutMin">${this.tutMin ? 'Show' : 'Hide'}</button></div><h4>${b.title}</h4><p>${b.body}</p>
+      <div class="row">${b.button ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : '<span class="mini">Do it on the property to continue</span>'}<button class="skip" data-a="tutSkip">Skip tutorial</button></div></div>`;
+    for (const t of this.root.querySelectorAll('#tabs button')) t.classList.toggle('pulse', !!(f && f.tab === t.dataset.v) || !!(f && f.tool && t.dataset.v === 'build' && this.tab !== 'build'));
+  }
+
+  fmtGoal(g, v) { return g.fmt === 'pct' ? pct(v) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
+  renderScenario(force) {
+    const sim = this.sim, s = sim.s, sc = s.scenario, box = this.$('tut');
+    const prog = scenarioProgress(sim);
+    const key = JSON.stringify([sc.status, this.scMin, sim.day, prog.map((g) => [g.met, this.fmtGoal(g, g.cur)]), sc.badDays]);
+    if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
+    const left = sc.deadline - sim.day + 1;
+    const again = this.scShown === sc.id + sc.status; this.scShown = sc.id + sc.status;
+    box.innerHTML = `<div class="tut scen ${this.scMin ? 'min' : ''} ${again && box.firstChild ? 'noanim' : ''}"><div class="ch"><span>Scenario · ${esc(sc.name)}</span><button class="mini" data-a="scenMin">${this.scMin ? 'Show' : 'Hide'}</button></div>
+      <h4>${sc.status === 'won' ? 'Scenario complete' : sc.status === 'lost' ? 'Scenario failed' : `Day ${sim.day} of ${sc.deadline} · ${left} left`}</h4>
+      <ul class="goals">${prog.map((g) => `<li class="${g.met ? 'met' : ''}"><span class="ck">${g.met ? '&#10003;' : ''}</span><span>${esc(g.label)}</span><b>${this.fmtGoal(g, g.cur)}</b></li>`).join('')}</ul>
+      <p class="fail ${sc.badDays ? 'on' : ''}">Fail: net cash (cash minus credit line) below ${money(sc.fail.cashBelow)} for ${sc.fail.cashDays} days${sc.badDays ? ` · ${sc.badDays} so far` : ''}, or the deadline passes.</p>
+      ${sc.status !== 'active' ? `<p>${sc.status === 'won' ? `Finished on day ${sc.endDay}. Keep playing this property as a sandbox if you like.` : esc(sc.why || '')}</p><div class="row"><button class="btn pri" data-a="scenarios">Scenarios</button></div>` : ''}</div>`;
+  }
+  showScenarios() {
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Scenarios</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
+      <p class="note">Each scenario starts with its goals and fail condition in view. Goals are checked every morning.</p>
+      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map((g) => `<li>${esc(g.label)}</li>`).join('')}<li>Deadline: day ${S.deadline}</li><li class="f">Fail: net cash below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li></ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
+    const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
+  }
+  showSandbox() {
+    this.sb ||= { market: 'blank', cash: 60000, demand: 1, wear: 1 };
+    const opt = (k, v, label) => `<button class="btn sm ${JSON.stringify(this.sb[k]) === JSON.stringify(v) ? 'pri' : ''}" data-a="sbOpt" data-k="${k}" data-v='${JSON.stringify(v)}'>${label}</button>`;
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Custom sandbox</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
+      <h3>Market</h3><div class="row wrap">${opt('market', 'blank', 'Suburban')}${opt('market', 'urban', 'Urban infill')}${opt('market', 'rural', 'Rural highway')}</div>
+      <p class="note">${esc(MARKETS[this.sb.market].name)}: ${Object.entries(MARKETS[this.sb.market].rent).map(([k, v]) => `${k} ${money(v)}`).join(' · ')}</p>
+      <h3>Starting capital</h3><div class="row wrap">${opt('cash', 30000, '$30,000')}${opt('cash', 60000, '$60,000')}${opt('cash', 120000, '$120,000')}${opt('cash', 250000, '$250,000')}</div>
+      <h3>Demand</h3><div class="row wrap">${opt('demand', 0.6, 'Low')}${opt('demand', 1, 'Normal')}${opt('demand', 1.6, 'High')}</div>
+      <h3>Equipment wear and incidents</h3><div class="row wrap">${opt('wear', 0, 'Off')}${opt('wear', 0.5, 'Gentle')}${opt('wear', 1, 'Normal')}${opt('wear', 1.6, 'Harsh')}</div>
+      <div class="row" style="margin-top:14px"><button class="btn pri" data-a="sbStart">Start sandbox</button></div></div></div>`;
+    const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
+  }
+  portfolioHtml() {
+    const C = this.g.company; if (!C) return '';
+    const cur = C.active; let h = `<h3>Portfolio</h3><div class="list">`;
+    C.props.forEach((p, k) => {
+      const sm = p.sim, o = sm.occupancy();
+      h += `<div class="item"><div class="grow"><b>${esc(p.name)}${k === cur ? ' <span class="pill b">Here</span>' : ''}</b><small>${money(sm.s.cash)} cash · ${o.occ}/${o.n} leased · ${money(sm.rentRoll())}/mo · rep ${pct(sm.reputation())}</small></div>
+        ${k !== cur ? `<button class="btn sm pri" data-a="switchProp" data-v="${k}">Go</button>` : ''}
+        ${k !== cur && this.sim.s.cash >= 10000 ? `<button class="btn sm" data-a="transfer" data-from="${cur}" data-to="${k}" data-v="10000">Send $10k</button>` : ''}</div>`;
+    });
+    const total = C.props.reduce((a, p) => a + p.sim.s.cash, 0), roll = C.props.reduce((a, p) => a + p.sim.rentRoll(), 0);
+    h += `</div><p class="note">Company: ${C.props.length} propert${C.props.length > 1 ? 'ies' : 'y'} · ${money(total)} total cash · ${money(roll)}/mo rent roll. All properties run on the same clock; each keeps its own books.</p>`;
+    if (C.feed.length) h += `<h3>Company attention</h3><div class="list">${C.feed.slice(0, 6).map((e) => `<div class="item"><div class="grow"><b>${esc(e.prop)}</b><small>Day ${dayOf(e.t)} · ${esc(e.msg)}</small></div>${C.props[e.k] && e.k !== cur ? `<button class="btn sm" data-a="switchProp" data-v="${e.k}">Go</button>` : ''}</div>`).join('')}</div>`;
+    if (!this.sim.s.creative && (this.sim.s.mode !== 'tutorial' || this.sim.s.tut.done)) {
+      const offers = this.g.offers();
+      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small></div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Buy ${money(of.price)}</button></div>`).join('')}</div>
+        <p class="note">Paid from this property's cash. Prices include $5,000 of opening working cash for the new property; send more from here to fund construction.</p>`;
+    } else if (this.sim.s.mode === 'tutorial' && !this.sim.s.tut.done) h += `<p class="note">Finish the tutorial to unlock acquisitions and a multi-property company.</p>`;
+    return h;
+  }
+
+  // ------------------------------------------------------------ HUD (per frame, cheap)
+  update(dt) {
+    const s = this.sim.s; const now = performance.now();
+    const cash = Math.round(s.cash);
+    const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small>${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }
+    const tm = fmtTime(s.t); if (tm !== this.hTime) { this.hTime = tm; this.$('clock').textContent = tm; const d = dayOf(s.t); this.$('date').textContent = `Day ${d} · ${DOW[(d - 1) % 7]}${s.weather === 'rain' ? ' · Rain' : ''}`; }
+    if (s.speed !== this.hSpeed) { this.hSpeed = s.speed; for (const b of this.root.querySelectorAll('#speed button')) b.classList.toggle('on', +b.dataset.v === s.speed); }
+    const hasF2 = this.sim.objs('shell').some((x) => x.floors > 1);
+    if (hasF2 !== this.hF2) { this.hF2 = hasF2; this.root.querySelector('#floors [data-v="1"]').disabled = !hasF2; if (!hasF2 && this.rend.view === 1) this.setView(0); }
+    const open = s.tasks.filter((t) => !t.assigned).length; if (open !== this.hTasks) { this.hTasks = open; const b = this.$('taskBadge'); b.hidden = !open; b.textContent = open; }
+    this.root.classList.toggle('has-sheet', !!(this.$('sheet').firstChild || this.$('abar').firstChild));
+    if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
+    if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
+    this.updateBubbles(); this.updatePins();
+  }
+  setMeta(name, mode) { this.$('pname').innerHTML = `${esc(name)}<small>${esc(mode)}</small>`; }
+
+  // ------------------------------------------------------------ PHONE-FIRST HUD: coach line, pins, labels, fit
+  phone() { return innerWidth <= 700 || innerHeight <= 520; }
+  safeRect() { // screen area not covered by HUD, tabs, open sheet
+    const W = innerWidth, H = innerHeight, land = innerHeight <= 520 && innerWidth > innerHeight;
+    const hud = this.root.querySelector('.hud').getBoundingClientRect().bottom + 8;
+    const tabs = this.$('tabs').getBoundingClientRect();
+    const sh = this.$('sheet').firstElementChild || this.$('abar').firstElementChild; const sr = sh && sh.getBoundingClientRect();
+    let top = hud + (this.$('coach').hidden ? 0 : 40), bottom = land ? H - 8 : tabs.top - 8, left = land ? tabs.right + 8 : 8, right = W - 64;
+    if (sr) { if (land) right = Math.min(right, sr.left - 8); else bottom = Math.min(bottom, sr.top - 8); }
+    return { top, bottom, left, right };
+  }
+  keepSelVisible() {
+    const sl = this.sel; const o = typeof sl === 'number' ? this.sim.s.objects[sl] : sl && sl.kind === 'cart' ? this.sim.s.carts.find((c) => c.id === sl.id) : sl; if (!o || o.x == null) return;
+    const r = this.safeRect(), p = this.rend.project(o.x + (o.w || 1) / 2, o.y + (o.h || 1) / 2, (o.f || 0) * 1.9 + 1);
+    let dx = 0, dy = 0; const mx = (r.left + r.right) / 2, my = (r.top + r.bottom) / 2;
+    if (p.y > r.bottom - 20 || p.y < r.top + 20) dy = my - p.y; if (p.x > r.right - 20 || p.x < r.left + 20) dx = mx - p.x;
+    if (dx || dy) this.rend.pan(dx, dy);
+  }
+  applySheetSize() { const el = this.$('sheet').firstElementChild; if (el) el.classList.toggle('tall', !!this.sheetTall); }
+  slowHud() {
+    const sim = this.sim, s = sim.s; const oc = sim.occupancy();
+    if (!oc.n || s.creative) { this.cashSub = null; return; }
+    const pay = s.staff.reduce((a, st) => a + (st.wage || 0), 0);
+    const net = Math.round(sim.rentRoll() * 12 / 365 - sim.dailyOpex().total - pay);
+    this.cashSub = `${oc.occ}/${oc.n} · ${net >= 0 ? '+' : '-'}$${Math.abs(net).toLocaleString()}${this.phone() ? '/d' : '/day'}`;
+  }
+  ownerStatus() {
+    const s = this.sim.s, owner = s.staff.find((x) => x.role === 'owner'); if (!owner) return '';
+    const ag = s.agents.find((g) => g.sid === owner.id); const h = (s.t % 1440) / 60;
+    const busy = ag && (ag.task || (ag.queue && ag.queue.length));
+    if (h < 7) return `You: off until 7 AM`;
+    if (h >= 20) return `You: off for the night`;
+    const left = Math.max(0, Math.floor(20 - h));
+    return `You: ${busy ? 'working' : 'free'} · ${left}h left`;
+  }
+  coachHint() {
+    const sim = this.sim, s = sim.s, D = sim.D; const objs = Object.values(s.objects);
+    const T = (text, act, kind = 'warn') => ({ text, act, kind });
+    if (!D) return null;
+    if (D.power && D.power.shed && D.power.shed.length) return T(`Power overloaded: ${D.power.shed.length} ${D.power.shed.length === 1 ? 'thing is' : 'things are'} shut off. Add an Electrical Service.`, { tab: 'build', cat: 'utilities' }, 'bad');
+    const blocked = objs.filter((o) => o.type === 'unit' && o.blocked);
+    if (blocked.length) return T(`${blocked.length > 1 ? blocked.length + ' units' : sim.objName(blocked[0])} can't be reached by customers. Tap to see why.`, { sel: blocked[0].id }, 'bad');
+    const el = objs.find((o) => o.type === 'elevator' && o.cstate === 'operating' && o.cond < 0.2);
+    if (el) return T('The freight elevator is out of service. Upper units cannot rent.', { sel: el.id }, 'bad');
+    const open = s.tasks.filter((t) => !t.assigned);
+    const rep = open.filter((t) => (t.type === 'repair') && s.objects[t.obj]).sort((a, b) => b.pri - a.pri)[0];
+    if (rep) return T(`${sim.objName(s.objects[rep.obj])} needs repair. Tap it to fix it.`, { sel: rep.obj });
+    const mr = open.find((t) => t.type === 'makeready' && s.objects[t.obj]);
+    if (mr) return T(`${sim.objName(s.objects[mr.obj])} needs a make-ready before it can rent again.`, { sel: mr.obj });
+    const ready = objs.filter((o) => o.type === 'unit' && o.cstate === 'ready');
+    if (ready.length) return T(`${ready.length} new ${ready.length === 1 ? 'unit is' : 'units are'} ready to commission.`, { sel: ready[0].id }, 'good');
+    if (!s.open && s.mode !== 'tutorial') return T('Not open for business yet. See what is missing.', { tab: 'growth' });
+    const late = Object.values(s.leases).filter((L) => L.status !== 'current');
+    if (late.length) { const u = objs.find((o) => o.lease === late[0].id); return T(`${late.length} ${late.length === 1 ? 'tenant is' : 'tenants are'} past due on rent.`, u ? { sel: u.id } : { tab: 'business' }); }
+    const room = open.find((t) => t.type === 'cleanroom' && s.objects[t.obj]); if (room) return T('A restroom needs cleaning.', { sel: room.obj });
+    const cl = open.find((t) => t.type === 'clean'); if (cl) return T(`The ${cl.label.replace(/^Clean /, '').toLowerCase()} needs cleaning.`, { dirt: { kind: 'dirt', f: cl.f || 0, x: cl.x, y: cl.y } });
+    const cart = open.find((t) => t.type === 'carts'); if (cart) return T('A cart was left away from its corral.', { sel: { kind: 'cart', id: cart.cart } });
+    if (s.cash < 0 && !s.creative) return T('Cash is negative. Check Business for the credit line and costs.', { tab: 'business' }, 'bad');
+    const oc = sim.occupancy();
+    if (oc.n >= 4 && oc.pct >= 0.95) { const lost = s.lostToday || {}; return T(lost.noSize ? 'You are full and turning customers away. Build more units.' : 'You are full. Demand remains - consider adding units.', { tab: 'build', cat: 'units' }, 'good'); }
+    return T('All caught up.', null, 'ok');
+  }
+  renderCoach() {
+    const s = this.sim.s, el = this.$('coach');
+    const hide = this.title || this.modalOpen() || (s.tut && s.tut.on && !s.tut.done) || this.root.classList.contains('has-sheet');
+    const h = hide ? null : this.coachHint(); this.coachAct = h && h.act;
+    if (!h) { if (!el.hidden) { el.hidden = true; this.root.classList.remove('has-coach'); } return; }
+    const key = h.text + '|' + h.kind + '|' + this.ownerStatus();
+    if (key !== this.coachKey || el.hidden) { this.coachKey = key; el.className = 'coach ' + h.kind + (h.act ? ' act' : ''); this.$('coachT').textContent = h.text; this.$('coachO').textContent = this.ownerStatus(); }
+    if (el.hidden) { el.hidden = false; this.root.classList.add('has-coach'); }
+  }
+  runCoach() {
+    const a = this.coachAct; if (!a) return; this.sfx('click');
+    if (a.tab) { if (a.cat) this.cat = a.cat; this.select(null); this.setTab(a.tab); return; }
+    const sel = a.sel ?? a.dirt; this.select(sel);
+    const o = typeof sel === 'number' ? this.sim.s.objects[sel] : sel.kind === 'cart' ? this.sim.s.carts.find((c) => c.id === sel.id) : sel;
+    if (o && (o.f || 0) === 1 && this.rend.view !== 1 && this.sim.objs('shell').some((x) => x.floors > 1)) this.setView(1);
+  }
+  computePins() {
+    const sim = this.sim, s = sim.s, pins = [], seen = new Set();
+    const add = (k, o, extra = {}) => { const key = k + ':' + (extra.key || o.id); if (seen.has(key)) return; seen.add(key); pins.push({ k, key, x: o.x + (o.w || 1) / 2, y: o.y + (o.h || 1) / 2, f: o.f || 0, id: o.id, ...extra }); };
+    for (const t of s.tasks) {
+      const o = t.obj != null && s.objects[t.obj];
+      const who = t.assigned ? 1 : 0;
+      if (t.type === 'repair' || t.type === 'pm') { if (o) add('repair', o, { who }); }
+      else if (t.type === 'makeready') { if (o) add('makeready', o, { who }); }
+      else if (t.type === 'cleanroom') { if (o) add('clean', o, { who }); }
+      else if (t.type === 'clean') add('clean', { x: t.x, y: t.y, f: t.f || 0, id: 'd' + t.id }, { who, dirt: 1, key: 'c' + t.id });
+      else if (t.type === 'carts') { const c = s.carts.find((q) => q.id === t.cart); if (c) add('cart', { x: Math.floor(c.x), y: Math.floor(c.y), f: c.f || 0, id: c.id }, { who, cart: 1 }); }
+    }
+    for (const o of Object.values(s.objects)) {
+      if (o.type === 'unit') {
+        if (o.blocked) add('blocked', o);
+        else if (o.cstate === 'ready') add('ready', o);
+        else if (o.lease && s.leases[o.lease] && s.leases[o.lease].status !== 'current') add('late', o);
+      }
+      if (o.unpowered) add('power', o);
+    }
+    this.pinList = pins.slice(0, 40);
+  }
+  updatePins() {
+    const root = this.$('pins'); if (!root) return;
+    const R = this.rend, list = this.title ? [] : (this.pinList || []); const pool = (this.pinPool ||= new Map()); const live = new Set();
+    const placed = [];
+    const viewOk = (f) => R.view === 'ext' || R.view === 1 || f === 0;
+    for (const p of list) {
+      if (!viewOk(p.f)) continue;
+      const pr = R.project(p.x, p.y, p.f * 1.9 + 2.3); if (!pr.vis || pr.x < -20 || pr.y < -20 || pr.x > innerWidth + 20 || pr.y > innerHeight + 20) continue;
+      let el = pool.get(p.key);
+      if (!el) { el = document.createElement('button'); el.className = 'pin'; el.dataset.a = 'pin'; pool.set(p.key, el); root.appendChild(el); }
+      const sig = p.k + p.who; if (el.dataset.sig !== sig) { el.dataset.sig = sig; el.className = 'pin ' + p.k; el.innerHTML = PIN[p.k] + (p.who ? `<span class="who">${PIN.person}</span>` : ''); el.setAttribute('aria-label', { repair: 'Needs repair', makeready: 'Needs make-ready', clean: 'Needs cleaning', late: 'Rent past due', blocked: 'No customer access', power: 'No power', cart: 'Stranded cart', ready: 'Ready to commission' }[p.k]); }
+      el.dataset.k = p.cart ? 'cart' : p.dirt ? 'dirt' : 'obj'; el.dataset.id = p.cart ? p.id : p.id; if (p.dirt) { el.dataset.f = p.f; el.dataset.x = p.x - 0.5; el.dataset.y = p.y - 0.5; }
+      el.style.transform = `translate(${Math.round(pr.x - 17)}px, ${Math.round(pr.y - 40)}px)`; live.add(p.key); placed.push({ x: pr.x - 17, y: pr.y - 40, w: 34, h: 40 });
+    }
+    for (const [k, el] of pool) if (!live.has(k)) { el.remove(); pool.delete(k); }
+    this.updateLabels(placed);
+  }
+  updateLabels(placed) {
+    const root = this.$('pins'), R = this.rend, s = this.sim.s;
+    const pool = (this.lblPool ||= []); let n = 0;
+    const px = (R.canvas.clientHeight || 800) / (R.frustum / R.zoom); // screen px per world unit
+    const show = !this.title && px >= 24 && !this.tool;
+    if (show) {
+      for (const o of Object.values(s.objects)) {
+        if (o.type !== 'unit' || o.cstate === 'construction' || n >= 90) continue;
+        const f = o.f || 0; if (!(R.view === 'ext' ? (o.access === 'drive' && f === 0) : R.view === f)) continue;
+        const w0 = o.w || 1, h0 = o.h || 1, dr = o.dir || [0, 0]; const cx = o.x + w0 / 2 + dr[0] * (w0 / 2 + 0.15), cy = o.y + h0 / 2 + dr[1] * (h0 / 2 + 0.15);
+        const pr = R.project(cx, cy, f * 1.9 + 0.95); if (!pr.vis || pr.x < 0 || pr.y < 0 || pr.x > innerWidth || pr.y > innerHeight) continue;
+        const txt = String(o.num ?? String(o.name || '').replace(/^Unit\s*/, '')); const w = 8 + txt.length * 7.5, r = { x: pr.x - w / 2, y: pr.y - 9, w, h: 18 };
+        if (placed.some((q) => r.x < q.x + q.w + 2 && r.x + r.w + 2 > q.x && r.y < q.y + q.h + 1 && r.y + r.h + 1 > q.y)) continue;
+        placed.push(r);
+        let el = pool[n]; if (!el) { el = document.createElement('span'); el.className = 'ulbl'; pool.push(el); root.appendChild(el); }
+        if (el.textContent !== txt) el.textContent = txt;
+        const st = o.commercial === 'occupied' ? 'occ' : o.commercial === 'ready' ? 'vac' : 'wip'; if (el.dataset.st !== st) { el.dataset.st = st; el.className = 'ulbl ' + st; }
+        el.style.transform = `translate(${Math.round(r.x)}px, ${Math.round(r.y)}px)`; el.hidden = false; n++;
+      }
+    }
+    for (let k = n; k < pool.length; k++) if (!pool[k].hidden) pool[k].hidden = true;
+  }
+
+  // ------------------------------------------------------------ TITLE / MENU / SAVE
+  showTitle() {
+    this.title = true;
+    this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
+      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
+      <button class="btn" data-a="scenarios">Scenarios <small>Turnaround, Go Vertical, Climate Boom</small></button>
+      <button class="btn" data-a="new" data-v="empty">Empty Lot <small>Sandbox · $60,000</small></button>
+      <button class="btn" data-a="sandboxSetup">Custom sandbox <small>Market, capital, demand, wear</small></button>
+      <button class="btn" data-a="new" data-v="creative">Creative <small>Instant, free building</small></button>
+      <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div></div>`;
+  }
+  ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
+  autosaveNote() {
+    const c = this.g.cloud;
+    if (c.ok === false) return 'Autosave is offline right now. Save with a code or a file to keep your progress.';
+    if (c.lastAt) return `Autosave is on (${this.ago(c.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave. Codes and files are backups you can move between devices.`;
+    return 'Autosave is on. It saves each in-game day and when you leave. Codes and files are backups you can move between devices.';
+  }
+  modalOpen() { return !!this.$('modal').firstChild; }
+  closeModal() { this.$('modal').innerHTML = ''; this.title = false; this.renderTut(true); }
+  showMenu() {
+    const a = this.g.audio;
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
+      <div class="menu-list"><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button></div>
+      <h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
+      <div class="row wrap"><button class="btn sm" data-a="music">Music ${a.musicOn ? 'on' : 'off'}</button><button class="btn sm" data-a="fps">FPS meter ${this.g.showFps ? 'on' : 'off'}</button></div>
+      <h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button></div>
+      <h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="new" data-v="empty">Empty Lot sandbox</button><button class="btn" data-a="sandboxSetup">Custom sandbox</button><button class="btn" data-a="new" data-v="creative">Creative lot</button></div>
+      <h3>Controls</h3><p class="note">Drag to pan, pinch or scroll to zoom, rotate with the side buttons (Q/E). While building, drag to place and use two fingers (or right-drag) to pan. Space pauses, 1-3 set speed, Esc cancels.</p>
+      <p class="note" id="autosaveNote">${this.autosaveNote()}</p></div></div>`;
+  }
+  async showSave() {
+    const code = await this.g.saveCode();
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Save code</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
+      <p class="note">Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p><textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
+  }
+  showLoad() {
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Load game</h2><button class="x" data-a="${this.title ? 'showTitle' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
+      <p class="note">Paste a save code, or open a .sst save file.</p><textarea id="loadTa" placeholder="Paste save code"></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn pri" data-a="loadCode">Load code</button><button class="btn" data-a="loadFile">Open file</button><input type="file" id="loadFile" hidden></div></div></div>`;
+    const x = this.root.querySelector('[data-a="showTitle"]'); if (x) x.onclick = () => this.showTitle();
+  }
+}
