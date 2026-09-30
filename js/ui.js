@@ -35,7 +35,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const pct = (v) => Math.round(v * 100) + '%';
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control', noReady: 'Nothing rent-ready', price: 'Rent too high', convenience: 'Not convenient enough', shopping: 'Kept shopping', service: 'No one at the office' };
-const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion commissioned', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate' };
+export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion commissioned', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate' };
 const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanliness', security: 'Security', climate: 'Climate', service: 'Service', value: 'Value', comfort: 'Comfort' };
 
 export class UI {
@@ -57,6 +57,7 @@ export class UI {
         <div class="seg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="view" data-v="1">F2</button></div>
         <div class="seg"><button data-a="rot" data-v="-1" aria-label="Rotate left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate right">${I.rotR}</button></div>
         <div class="seg"><button data-a="zoom" data-v="1.25" aria-label="Zoom in">${I.plus}</button><button data-a="zoom" data-v="0.8" aria-label="Zoom out">${I.minus}</button><button data-a="fit" aria-label="Fit property">${PIN.fit}</button></div>
+        <div class="seg"><button data-a="photo" aria-label="Photo mode" title="Photo mode (P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.6"/></svg></button></div>
       </div>
       <button class="coach" id="coach" data-a="coach" hidden><span class="ct" id="coachT"></span><span class="co" id="coachO"></span></button>
       <div class="feed" id="feed"></div>
@@ -133,6 +134,9 @@ export class UI {
       case 'loadOpen': this.showLoad(); break;
       case 'gfx': { const g = this.g; if (g.autoQ) { g.autoQ = false; g.rend.setQuality(2); } else if (g.rend.quality > 0) g.rend.setQuality(g.rend.quality - 1); else { g.autoQ = true; g.rend.setQuality(2); } this.showMenu(); break; }
       case 'battery': this.g.battery = !this.g.battery; this.showMenu(); break;
+      case 'photo': this.closeModal(); this.g.showcase.enterPhoto(); break;
+      case 'tour': this.closeModal(); this.g.showcase.startTour(); if (!this.sim.s.speed) this.do({ type: 'speed', v: 1 }); break;
+      case 'lens': this.g.showcase.setLens(!this.g.showcase.lensPref); this.showMenu(); break;
       case 'continue': { const d = this.contSave; if (!d) break; this.g.loadCode(d.code).then((ok) => { if (ok) { this.closeModal(); this.toast('Welcome back', 'good'); this.sfx('confirm'); } else { this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded', 'bad'); } }); break; }
       case 'loadCode': this.g.loadCode(this.root.querySelector('#loadTa').value).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else { this.toast('That save code could not be read', 'bad'); const ta = this.root.querySelector('#loadTa'); if (ta) { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); } } }); break;
       case 'loadFile': this.root.querySelector('#loadFile').click(); break;
@@ -610,7 +614,7 @@ export class UI {
       case 'elevator': this.sfx('chime'); break;
       case 'work_start': case 'work_tick': this.sfx('work'); break;
       case 'convo': this.sfx('attention'); this.renderFeed(true); break;
-      case 'milestone': if (MILESTONES[e.k]) { this.toast('Milestone: ' + MILESTONES[e.k], 'good'); this.sfx('milestone'); } break;
+      case 'milestone': if (MILESTONES[e.k]) { if (!this.g.showcase) this.toast('Milestone: ' + MILESTONES[e.k], 'good'); this.sfx('milestone'); } break;
       case 'hire': this.sfx('confirm'); break;
       case 'weather': if (e.w === 'rain') this.toast('Rain rolling in'); break;
       case 'tut_beat': { const b = BEATS[s.tut.beat]; this.tutMin = false; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.renderTut(true); break; }
@@ -858,7 +862,8 @@ export class UI {
       <button class="btn" data-a="new" data-v="empty">Empty Lot <small>Sandbox · $60,000</small></button>
       <button class="btn" data-a="sandboxSetup">Custom sandbox <small>Market, capital, demand, wear</small></button>
       <button class="btn" data-a="new" data-v="creative">Creative <small>Instant, free building</small></button>
-      <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div></div>`;
+      <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>
+      <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div></div>`;
   }
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
   autosaveNote() {
@@ -875,7 +880,9 @@ export class UI {
       <div class="menu-list"><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button></div>
       <h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
       <div class="row wrap"><button class="btn sm" data-a="music">Music ${a.musicOn ? 'on' : 'off'}</button><button class="btn sm" data-a="fps">FPS meter ${this.g.showFps ? 'on' : 'off'}</button></div>
-      <h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button></div>
+      <h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button><button class="btn sm" data-a="lens">Miniature lens ${this.g.showcase && this.g.showcase.lensPref ? 'on' : 'off'}</button></div>
+      <h3>Showcase</h3><div class="menu-list"><button class="btn" data-a="photo">Photo mode <small>Light, looks, lens and a shutter (P)</small></button><button class="btn" data-a="tour">Cinematic tour <small>The camera wanders your property. Tap to stop.</small></button></div>
+      <p class="note">Tip: tap any customer, car or staff member to follow them and read their story.</p>
       <h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="new" data-v="empty">Empty Lot sandbox</button><button class="btn" data-a="sandboxSetup">Custom sandbox</button><button class="btn" data-a="new" data-v="creative">Creative lot</button></div>
       <h3>Controls</h3><p class="note">Drag to pan, pinch or scroll to zoom, rotate with the side buttons (Q/E). While building, drag to place and use two fingers (or right-drag) to pan. Space pauses, 1-3 set speed, Esc cancels.</p>
       <p class="note" id="autosaveNote">${this.autosaveNote()}</p></div></div>`;

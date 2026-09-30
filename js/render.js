@@ -219,13 +219,13 @@ export class Renderer {
   }
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth, h = this.canvas.clientHeight || window.innerHeight;
-    this.r.setSize(w, h, false); this.aspect = w / h; this.updateCamera();
+    this.r.setSize(w, h, false); this.aspect = w / h; this.updateCamera(); if (this.post) this.post.resize();
   }
   updateCamera() {
     this.camV = (this.camV || 0) + 1;
     const f = this.frustum / this.zoom, a = this.aspect || 1;
     const c = this.camera; c.left = -f * a / 2; c.right = f * a / 2; c.top = f / 2; c.bottom = -f / 2; c.updateProjectionMatrix();
-    const el = 0.72, d = 80;
+    const el = this.camElev || 0.72, d = 80;
     c.position.set(this.center.x + Math.sin(this.azimuth) * Math.cos(el) * d, Math.sin(el) * d, this.center.z + Math.cos(this.azimuth) * Math.cos(el) * d);
     c.lookAt(this.center);
   }
@@ -233,7 +233,7 @@ export class Renderer {
     const f = this.frustum / this.zoom, h = this.canvas.clientHeight || 1; const k = f / h;
     const right = new THREE.Vector3(Math.cos(this.azimuth), 0, -Math.sin(this.azimuth));
     const fwd = new THREE.Vector3(-Math.sin(this.azimuth), 0, -Math.cos(this.azimuth));
-    this.center.addScaledVector(right, -dx * k).addScaledVector(fwd, dy * k / Math.sin(0.72));
+    this.center.addScaledVector(right, -dx * k).addScaledVector(fwd, dy * k / Math.sin(this.camElev || 0.72));
     const s = this.sim.s; this.center.x = Math.max(-4, Math.min(s.W + 4, this.center.x)); this.center.z = Math.max(-4, Math.min(s.H + 4, this.center.z));
     this.updateCamera();
   }
@@ -749,11 +749,11 @@ export class Renderer {
   }
   // day/night + weather
   updateSky(dt) {
-    const s = this.sim.s, h = (s.t % 1440) / 60;
+    const s = this.sim.s, h = this.todOverride != null ? this.todOverride : (s.t % 1440) / 60;
     const dayK = Math.max(0, Math.min(1, (h < 12 ? (h - 5.8) / 1.6 : (19.6 - h) / 1.6)));
     const golden = Math.max(0, 1 - Math.abs(h - 18.4) / 1.2) + Math.max(0, 1 - Math.abs(h - 6.8) / 1.0);
-    const rain = s.weather === 'rain' ? 1 : 0;
-    const night = 1 - dayK;
+    const rain = (this.weatherOverride || s.weather) === 'rain' ? 1 : 0;
+    const night = 1 - dayK; this.nightK = night; this.rainK = rain; this.goldenK = golden;
     const sunA = ((h - 6) / 13) * Math.PI;
     const sx = Math.cos(sunA) * 40, sy = Math.max(8, Math.sin(sunA) * 50);
     this.sun.position.set(this.center.x + sx, sy, this.center.z + 22); this.sun.target.position.copy(this.center);
@@ -775,6 +775,7 @@ export class Renderer {
       this.rain.visible = !!rain;
       if (rain) { const a = this.rain.geometry.attributes.position; for (let i = 0; i < a.count; i++) { let y = a.getY(i) - dt * 16; if (y < 0) y += 14; a.setY(i, y); } a.needsUpdate = true; }
     }
+    if (this.fx) this.fx.sky(dt, night, rain, golden);
     return night;
   }
 
@@ -854,6 +855,7 @@ export class Renderer {
   // ================================================================ FRAME
   frame(dt) {
     const sim = this.sim, s = sim.s; this.time += dt;
+    if (this.onFrame) this.onFrame(dt);
     if (Math.abs(this.targetAz - this.azimuth) > 1e-3) { this.azimuth += (this.targetAz - this.azimuth) * Math.min(1, dt * 8); this.updateCamera(); }
     if (s.structV !== this.lastStruct) { this.lastStruct = s.structV; sim.ensure(); this.rebuildStatic(); }
     else if (s.t - this.lastGroundT >= 60) { this.lastGroundT = s.t; this.drawGround(); }
@@ -870,6 +872,7 @@ export class Renderer {
     const so = this.sel && s.objects[this.sel]; const sb = so && this.boundsOf(so);
     if (sb) { this.selMesh.visible = true; this.selMesh.scale.set(sb.w + 0.08, sb.H + 0.08, sb.h + 0.08); this.selMesh.position.set(sb.x + sb.w / 2, sb.f * FLOOR_H + sb.H / 2, sb.y + sb.h / 2); }
     else this.selMesh.visible = false;
-    this.r.render(this.scene, this.camera);
+    if (this.fx) this.fx.update(dt);
+    if (this.post && this.post.active()) this.post.render(this.scene, this.camera); else this.r.render(this.scene, this.camera);
   }
 }

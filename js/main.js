@@ -9,6 +9,7 @@ import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { cloud } from './cloud.js';
+import { installShowcase } from './showcase.js';
 
 Renderer.prototype.setSim = function (sim) {
   this.sim = sim; this.resizeWorld();
@@ -93,7 +94,7 @@ const game = {
     if (this.ui && this.ui.phone()) { this.rend.fitProperty(this.ui.safeRect()); setTimeout(() => this.rend.fitProperty(this.ui.safeRect()), 60); }
     sim.events.length = 0; sim.poll(); this.drain();
   },
-  drain() { const ev = this.sim.events; if (!ev.length) return; this.sim.events = []; for (const e of ev) this.ui.onEvent(e); },
+  drain() { const ev = this.sim.events; if (!ev.length) return; this.sim.events = []; if (this.sim === this.demo && this.ui && this.ui.title) return; /* the living title screen stays quiet */ for (const e of ev) this.ui.onEvent(e); },
   async saveCode() {
     const C = this.company;
     const json = C && C.props.length > 1 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: p.sim.s })) }) : JSON.stringify(this.sim.s);
@@ -147,8 +148,14 @@ const game = {
   },
 };
 
-// initial world behind the title screen: Maple Street, paused
-game.sim = makeMaple(); installTutorial(game.sim);
+// initial world behind the title screen: a live, already-running Maple Street (not the tutorial copy the player gets)
+function makeDemo() {
+  const sim = makeMaple(4242); const s = sim.s;
+  s.mode = 'sandbox'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true; s.speed = 0;
+  for (let i = 0; i < 200; i++) { sim.step(); sim.events.length = 0; } // warm up: morning traffic already on the lot
+  return sim;
+}
+game.sim = game.demo = makeDemo();
 game.company = { props: [{ name: 'Maple Street Storage', sim: game.sim }], active: 0, feed: [] };
 const WORKING_FLOAT = 5000;
 const FACILITY_NAMES = ['Oak Ridge Storage', 'Cedar Point Storage', 'Willow Creek Storage', 'Pine Hollow Storage'];
@@ -182,6 +189,7 @@ function makeMapleSeedPrice(day) { return 95000 + (day % 7) * 1500; }
 game.rend = new Renderer(canvas, game.sim);
 game.ui = new UI(game);
 game.attach(game.sim, 'maple');
+installShowcase(game);
 window.__game = game;
 
 
@@ -218,12 +226,15 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 function tick(now) {
+  if (window.__qaHold) { last = now; return; } // test hook: automated screenshots drive frames manually
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   const s = game.sim.s;
   if (s.speed > 0 && !game.ui.title && !game.ui.modalOpen()) {
     game.acc += dt * TICKS_PER_SEC_1X * s.speed;
     const n = Math.min(Math.floor(game.acc), 240); game.acc -= n; if (game.acc > 20) game.acc = 0;
     if (n) stepTicks(n);
+  } else if (game.ui.title && game.sim === game.demo && !document.hidden) { // living title screen: the demo property keeps operating
+    game.acc += dt * TICKS_PER_SEC_1X; const n = Math.min(Math.floor(game.acc), 40); game.acc -= n; if (n) stepTicks(n);
   } else { game.sim.poll(); game.drain(); }
   if (!game.ui.title) { // autosave each in-game day and at least once a minute of play
     if (game.lastAutoDay == null) { game.lastAutoDay = game.sim.day; game.lastAuto = now; }
@@ -240,7 +251,8 @@ function tick(now) {
   game.ui.update(rdt);
   perfWatch(rdt, idle || minGap > 0);
   const night = game.rend.ambient.intensity / 0.9;
-  game.audio.update({ night, rain: s.weather === 'rain', hvac: game.sim.objs('hvac').filter((h) => game.sim.works(h)).length, speed: s.speed });
+  const sc = game.showcase, amode = game.ui.title ? 'title' : sc && sc.photo ? 'photo' : (s.speed === 0 || game.ui.modalOpen()) ? 'quiet' : game.ui.tool ? 'build' : night > 0.6 ? 'night' : 'day';
+  game.audio.update({ night, rain: (game.rend.weatherOverride || s.weather) === 'rain', hvac: game.sim.objs('hvac').filter((h) => game.sim.works(h)).length, speed: s.speed, mode: amode });
   fpsN++; fpsT += dt; if (fpsT > 0.5) { if (game.showFps) document.getElementById('fps').textContent = `${Math.round(fpsN / fpsT)} fps · ${game.sim.s.agents.length} agents`; fpsN = 0; fpsT = 0; }
 }
 requestAnimationFrame(loop);
@@ -277,7 +289,7 @@ function up(e) {
   const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
   if (ptrs.size === 0) game.ui.pointerBusy = false;
   if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
-  if (drag && drag.mode === 'pan' && !drag.moved && p && e.type === 'pointerup') game.ui.tapMap(game.rend.cellAt(e.clientX, e.clientY));
+  if (drag && drag.mode === 'pan' && !drag.moved && p && e.type === 'pointerup') game.ui.tapMap(game.rend.cellAt(e.clientX, e.clientY), e.clientX, e.clientY);
   drag = null;
 }
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
@@ -303,6 +315,9 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === '1' || e.key === '2' || e.key === '3') ui.do({ type: 'speed', v: [1, 2, 4][+e.key - 1] });
   else if (e.key === 'q' || e.key === 'Q') game.rend.rotate(-1);
   else if (e.key === 'e' || e.key === 'E') game.rend.rotate(1);
+  else if ((e.key === 'p' || e.key === 'P') && !ui.title) { const sc = game.showcase; if (sc.photo) sc.exitPhoto(); else sc.enterPhoto(); }
+  else if (e.key === 'Escape' && game.showcase && game.showcase.photo) game.showcase.exitPhoto();
+  else if (e.key === 'Escape' && game.showcase && (game.showcase.mode === 'tour' || game.showcase.mode === 'follow')) { game.showcase.stopTour(); game.showcase.stopFollow(); }
   else if (e.key === 'Escape') { if (ui.tool) ui.pickTool(null); else ui.select(null); }
   else if (e.key === 'Enter' && ui.plan) ui.confirmPlan();
   else if (e.key === 'f' || e.key === 'F') { game.showFps = !game.showFps; document.getElementById('fps').hidden = !game.showFps; }

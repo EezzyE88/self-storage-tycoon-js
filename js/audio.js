@@ -54,6 +54,8 @@ export class Audio {
       case 'work': if (this.throttle(k, 1200)) { this.noise(0.05, { gain: 0.05, freq: 2200 }); this.noise(0.05, { gain: 0.05, freq: 2600, delay: 0.14 }); } break;
       case 'attention': if (this.throttle(k, 2000)) { this.tone(740, 0.14, { gain: 0.06 }); this.tone(988, 0.2, { gain: 0.05, delay: 0.12, rev: 0.3 }); } break;
       case 'milestone': [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.5, { type: 'triangle', gain: 0.07, delay: i * 0.1, rev: 0.6 })); break;
+      case 'flourish': if (this.throttle(k, 1500)) { [1175, 1480, 1760, 2349, 2960].forEach((f, i) => { this.tone(f, 1.4, { gain: 0.03, delay: 0.35 + i * 0.07, rev: 0.9 }); this.tone(f * 2.01, 0.5, { gain: 0.008, delay: 0.35 + i * 0.07 }); }); this.lift = 1; } break;
+      case 'shutter': this.noise(0.035, { gain: 0.14, freq: 3200, q: 0.7, type: 'highpass' }); this.tone(1800, 0.03, { type: 'square', gain: 0.03 }); this.noise(0.05, { gain: 0.1, freq: 1400, q: 1.2, delay: 0.085 }); this.tone(900, 0.04, { type: 'square', gain: 0.02, delay: 0.09 }); break;
     }
   }
   startAmbience() {
@@ -66,21 +68,69 @@ export class Audio {
     this.rainG = c.createGain(); this.rainG.gain.value = 0; rs.connect(rf); rf.connect(this.rainG); this.rainG.connect(this.amb); rs.start();
   }
   // called each frame with coarse world state
-  update({ night = 0, rain = false, hvac = 0, speed = 1 }) {
+  update({ night = 0, rain = false, hvac = 0, speed = 1, mode = 'day' }) {
     const c = this.ctx; if (!c) return; const t = c.currentTime;
-    this.ambG.gain.setTargetAtTime(0.12 + (1 - night) * 0.1, t, 0.5);
-    this.humG.gain.setTargetAtTime(Math.min(0.08, hvac * 0.03), t, 0.5);
-    this.rainG.gain.setTargetAtTime(rain ? 0.12 : 0, t, 1);
+    // automation events pile up if re-issued every frame: only touch a param when its target moves
+    this.ramp(this.ambG.gain, 0.12 + (1 - night) * 0.1, t, 0.5);
+    this.ramp(this.humG.gain, Math.min(0.08, hvac * 0.03), t, 0.5);
+    this.ramp(this.rainG.gain, rain ? 0.12 : 0, t, 1);
     if (!this.musicOn || this.vol.music <= 0) return;
-    // generative calm music: pentatonic, slow chord pads + sparse plucks
-    const scale = [0, 2, 4, 7, 9, 12, 14, 16];
-    const chords = [[0, 4, 7], [-3, 0, 4], [5, 9, 12], [2, 5, 9]];
-    while (this.nextNote < t + 0.5) {
-      const beat = this.beat = (this.beat || 0) + 1;
-      const root = 220 * (night > 0.5 ? 0.84 : 1);
-      if (beat % 8 === 1) { const ch = chords[Math.floor(beat / 8) % 4]; ch.forEach((n) => this.tone(root * Math.pow(2, n / 12), 4.2, { type: 'sine', gain: 0.035, attack: 0.9, dest: this.mus, delay: this.nextNote - t, rev: 0.6 })); }
-      if (Math.random() < 0.42) { const n = scale[Math.floor(Math.random() * scale.length)]; this.tone(root * 2 * Math.pow(2, n / 12), 0.9, { type: 'triangle', gain: 0.03, dest: this.mus, delay: this.nextNote - t, rev: 0.7 }); }
-      this.nextNote += 0.55;
+    this.music(t, night, mode);
+  }
+  ramp(param, v, t, tc) { if (param._tgt != null && Math.abs(param._tgt - v) < 0.004) return; param._tgt = v; if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(t); else param.cancelScheduledValues(t); param.setTargetAtTime(v, t, tc); }
+  // ---------------------------------------------------------------- adaptive score (GDD 50.16-50.18)
+  // Warm, optimistic, loop-friendly: soft pads, electric-piano chords, round bass, marimba phrases and brushed
+  // shaker at 84 BPM. Layers fade in and out with the game state instead of switching tracks.
+  music(t, night, mode) {
+    const c = this.ctx;
+    if (!this.lay) {
+      this.lay = {}; this.layT = {};
+      for (const k of ['pad', 'keys', 'bass', 'mel', 'perc']) { const g = c.createGain(); g.gain.value = 0; g.connect(this.mus); this.lay[k] = g; }
+      this.padF = c.createBiquadFilter(); this.padF.type = 'lowpass'; this.padF.frequency.value = 1400; this.padF.connect(this.lay.pad);
+      this.bassF = c.createBiquadFilter(); this.bassF.type = 'lowpass'; this.bassF.frequency.value = 420; this.bassF.connect(this.lay.bass);
+      this.step = 0; this.nextNote = Math.max(this.nextNote || 0, t + 0.1);
+    }
+    const MIX = {
+      title: { pad: 1, keys: 1, bass: 1, mel: 1, perc: 0.9 }, day: { pad: 0.9, keys: 0.9, bass: 0.85, mel: 0.7, perc: 0.55 },
+      build: { pad: 1, keys: 0.8, bass: 0.9, mel: 0.35, perc: 0.7 }, night: { pad: 1, keys: 0.6, bass: 0.55, mel: 0.35, perc: 0 },
+      photo: { pad: 1, keys: 0.7, bass: 0.4, mel: 0.9, perc: 0 }, quiet: { pad: 0.8, keys: 0.35, bass: 0.2, mel: 0.15, perc: 0 },
+    }[mode] || { pad: 1, keys: 0.8, bass: 0.8, mel: 0.6, perc: 0.5 };
+    this.lift = Math.max(0, (this.lift || 0) - 0.004); // milestone: arrangement briefly fills out
+    for (const k in MIX) { const v = Math.min(1, MIX[k] + (this.lift > 0 ? 0.25 : 0)); this.layT[k] = v; this.ramp(this.lay[k].gain, v, t, 1.8); }
+    this.ramp(this.padF.frequency, night > 0.5 ? 850 : 1500, t, 2);
+    const E = 60 / 84 / 2; // eighth note
+    // D major: Dmaj9 Bm9 Gmaj7 A7sus4 | Em9 Gmaj9 F#m7 A7sus4 (semitones from D)
+    const PROG = [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 11], [-7, -3, 0, 4, 7], [-5, 0, 2, 5, 7], [2, 5, 9, 12, 14], [-7, -3, 2, 4, 9], [4, 7, 11, 14, 16], [-5, 0, 2, 5, 7]];
+    const root = 146.83, hz = (n, o = 0) => root * Math.pow(2, n / 12 + o);
+    const rnd = (n) => { let x = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b); x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35); x ^= x >>> 16; return (x >>> 0) / 4294967296; };
+    while (this.nextNote < t + 0.6) {
+      const st = this.step++, e8 = st % 8, bar = Math.floor(st / 8), ch = PROG[bar % 8];
+      const swing = e8 % 2 ? E * 0.14 : 0, d = Math.max(0, this.nextNote + swing - t);
+      const L = this.layT;
+      if (e8 === 0 && L.pad > 0.02) { // pad: whole bar, slow swell
+        for (const n of ch.slice(0, 4)) { this.tone(hz(n), E * 8.6, { type: 'sine', gain: 0.022, attack: 1.1, dest: this.padF, delay: d, rev: 0.5 }); this.tone(hz(n) * 1.004, E * 8.6, { type: 'triangle', gain: 0.008, attack: 1.3, dest: this.padF, delay: d }); }
+      }
+      if (L.keys > 0.02 && (e8 === 0 || e8 === 3 || (e8 === 6 && rnd(bar) < 0.5))) { // electric piano stabs
+        const soft = e8 === 0 ? 1 : 0.7;
+        for (const n of ch.slice(1)) { this.tone(hz(n, 1), 1.3, { type: 'sine', gain: 0.018 * soft, attack: 0.008, dest: this.lay.keys, delay: d, rev: 0.35 }); this.tone(hz(n, 3), 0.25, { type: 'sine', gain: 0.003 * soft, attack: 0.003, dest: this.lay.keys, delay: d }); }
+      }
+      if (L.bass > 0.02 && (e8 === 0 || e8 === 3 || e8 === 5)) { // round bass
+        const n = e8 === 5 ? ch[0] + 7 : ch[0]; const f = hz(n, n > 6 ? -2 : -1);
+        this.tone(f, e8 === 0 ? E * 2.6 : E * 1.4, { type: 'triangle', gain: e8 === 0 ? 0.11 : 0.075, attack: 0.012, dest: this.bassF, delay: d });
+      }
+      if (L.mel > 0.02) { // marimba phrases from chord tones, denser on the title and in daytime
+        const dens = mode === 'title' ? 0.42 : mode === 'night' ? 0.12 : mode === 'photo' ? 0.3 : 0.24;
+        if (rnd(st * 7 + 3) < dens && !(e8 === 7 && rnd(st) < 0.6)) {
+          const pool = [ch[1], ch[2], ch[3], ch[4], ch[1] + 12]; const n = pool[Math.floor(rnd(st * 13 + bar) * pool.length)];
+          const f = hz(n, 1); this.tone(f, 0.55, { type: 'sine', gain: 0.034, attack: 0.003, dest: this.lay.mel, delay: d, rev: 0.45 }); this.tone(f * 3.98, 0.09, { type: 'sine', gain: 0.007, attack: 0.002, dest: this.lay.mel, delay: d });
+        }
+      }
+      if (L.perc > 0.02) { // brushed shaker, soft kick, rim
+        this.noise(0.05, { gain: e8 % 2 ? 0.014 : 0.022, freq: 7000, q: 0.6, type: 'highpass', delay: d, dest: this.lay.perc });
+        if (e8 === 0 || (e8 === 4 && mode === 'title')) this.tone(95, 0.2, { type: 'sine', gain: 0.07, attack: 0.004, slide: -50, dest: this.lay.perc, delay: d });
+        if (e8 === 2 || e8 === 6) this.noise(0.03, { gain: 0.018, freq: 1900, q: 5, delay: d, dest: this.lay.perc });
+      }
+      this.nextNote += E;
     }
   }
 }
