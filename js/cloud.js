@@ -1,6 +1,6 @@
 // Autosave to the save server (one slot per browser). The hosting proxy identifies the browser with
 // an X-Visitor-Id header; browser storage is unavailable in the sandboxed preview, so saves live server-side.
-const RAW = 'port/8000';
+const RAW = '__PORT_8000__';
 const BASE = RAW.startsWith('__') ? 'http://localhost:8000' : RAW; // rewritten to the proxy path when deployed
 const q = new URLSearchParams(location.search);
 const CID = (q.get('cid') || ('t' + Math.random().toString(36).slice(2) + Date.now().toString(36))).replace(/[^A-Za-z0-9._:-]/g, '').slice(0, 64);
