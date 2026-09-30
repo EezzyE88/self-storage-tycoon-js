@@ -1,7 +1,7 @@
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
-import { BEATS, toolUnlocked, unlockBeat } from './tutorial.js';
+import { BEATS, toolUnlocked, unlockBeat, stepState } from './tutorial.js';
 import { SCENARIOS, scenarioProgress } from './scenarios.js';
 
 const PIN = {
@@ -64,6 +64,7 @@ export class UI {
       <button class="coach" id="coach" data-a="coach" hidden><span class="ct" id="coachT"></span><span class="co" id="coachO"></span></button>
       <div class="feed" id="feed"></div>
       <div id="tut"></div>
+      <div id="guide" hidden><i class="gring"></i><span class="glbl"></span></div>
       <div id="sheet"></div>
       <div id="abar"></div>
       <nav class="tabs" id="tabs">
@@ -117,9 +118,10 @@ export class UI {
       case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (['commission', 'ownerTask', 'ownerMakeReady', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
       case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); break;
-      case 'tutNext': { const b = BEATS[this.sim.s.tut.beat]; if (b && b.id === 'welcome') this.do({ type: 'tutFlag', flag: 'welcome' }); if (b && b.id === 'grad') this.do({ type: 'tutFlag', flag: 'grad' }); this.sim.poll(); this.sfx('confirm'); break; }
+      case 'tutNext': { const b = BEATS[this.sim.s.tut.beat]; if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
       case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
+      case 'tutWhy': this.tutWhy = !this.tutWhy; this.renderTut(true); break;
       case 'menu': this.showMenu(); break;
       case 'modalClose': this.closeModal(); break;
       case 'new': this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); break;
@@ -691,7 +693,7 @@ export class UI {
       case 'milestone': if (MILESTONES[e.k]) { if (!this.g.showcase) this.toast('Milestone: ' + MILESTONES[e.k], 'good'); this.sfx('milestone'); } break;
       case 'hire': this.sfx('confirm'); break;
       case 'weather': if (e.w === 'rain') this.toast('Rain rolling in'); break;
-      case 'tut_beat': { const b = BEATS[s.tut.beat]; this.tutMin = false; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.renderTut(true); break; }
+      case 'tut_beat': { const b = BEATS[s.tut.beat]; this.tutMin = false; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
       case 'tut_done': this.sfx('milestone'); this.renderTut(true); break;
       case 'lost': break;
       case 'access_lost': this.toast(`${e.n > 1 ? e.n + ' units' : e.name} lost customer access - ${e.why}`, 'bad'); this.sfx('fault'); break;
@@ -722,13 +724,92 @@ export class UI {
   renderTut(force = false) {
     const s = this.sim.s, box = this.$('tut');
     if (s.scenario && !this.title) { this.renderScenario(force); return; }
-    if (!s.tut.on || this.title) { box.innerHTML = ''; this.rend.setFocus(null); return; }
+    if (!s.tut.on || this.title) { box.innerHTML = ''; this.rend.setFocus(null); this.guideStep = null; return; }
     const b = BEATS[s.tut.beat]; if (!b) { box.innerHTML = ''; return; }
-    const key = s.tut.beat + ':' + this.tutMin; if (!force && key === this.tutKey) return; this.tutKey = key;
-    const f = this.tutFocus(); this.rend.setFocus(f);
-    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''}"><div class="ch"><span>${b.chapter} · ${s.tut.beat + 1}/${BEATS.length}</span><button class="mini" data-a="tutMin">${this.tutMin ? 'Show' : 'Hide'}</button></div><h4>${b.title}</h4><p>${b.body}</p>
-      <div class="row">${b.button ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : '<span class="mini">Do it on the property to continue</span>'}<button class="skip" data-a="tutSkip">Skip tutorial</button></div></div>`;
-    for (const t of this.root.querySelectorAll('#tabs button')) t.classList.toggle('pulse', !!(f && f.tab === t.dataset.v) || !!(f && f.tool && t.dataset.v === 'build' && this.tab !== 'build'));
+    const st = stepState(this.sim, this); const cur = st.cur, step = b.steps[cur];
+    const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim));
+    const key = [s.tut.beat, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy].join(':');
+    this.guideStep = step; this.guideKey = s.tut.beat + ':' + cur;
+    if (!force && key === this.tutKey) return; this.tutKey = key;
+    // map focus follows the current step
+    const oid = step && step.obj ? step.obj(this.sim) : null;
+    const f = oid ? { obj: oid } : step && step.cell ? { cell: step.cell, f: step.f || 0 } : this.tutFocus();
+    this.rend.setFocus(f);
+    const n = b.steps.length, doneN = st.done.filter((x, i) => x || i < cur).length;
+    const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<span class="how">${x.d}</span>` : ''}</span></li>`;
+    let items = '';
+    if (cur >= 2) items += `<li class="done more"><span class="ck">&#10003;</span><span class="tx">${cur - 1} step${cur > 2 ? 's' : ''} done</span></li>`;
+    b.steps.forEach((x, i) => { if (i === cur - 1) items += li(x, i, 'done'); else if (i === cur) items += li(x, i, 'cur'); else if (i > cur && i <= cur + 2) items += li(x, i, 'todo'); });
+    if (n - cur - 3 > 0) items += `<li class="todo more"><span class="ck"></span><span class="tx">+${n - cur - 3} more step${n - cur - 3 > 1 ? 's' : ''}</span></li>`;
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}"><div class="ch"><span>${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}</span><button class="mini" data-a="tutMin">${this.tutMin ? 'Show' : 'Hide'}</button></div>
+      <h4>${b.title}</h4><p class="intro">${b.body}</p>
+      <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
+      <ol class="steps">${items}</ol>
+      ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
+      <div class="row">${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : '<span class="mini">Follow the steps - the ring shows where to tap</span>'}<button class="skip" data-a="tutSkip">Skip tutorial</button></div></div>`;
+  }
+  // Coach ring: points at the current step's DOM control, or the control that leads to it, or its map spot.
+  guideTarget() {
+    const step = this.guideStep; if (!step || this.title || this.modalOpen()) return null;
+    const vis = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight ? el : null; };
+    const q = (sel) => vis(this.root.querySelector(sel));
+    let sel = step.sel;
+    if (sel) {
+      let el = q(sel);
+      const tm = /data-a="tool"\]\[data-v="(\w+)"/.exec(sel);
+      if (!el && tm) { // walk the menu path: Build tab -> category -> tool
+        const T = TOOLS[tm[1]];
+        if (this.tool === tm[1]) el = null; else if (this.tab !== 'build') el = q('#tabs [data-v="build"]'); else el = q(`.cats [data-v="${T.cat}"]`);
+        if (el) return { el, lbl: this.tab !== 'build' ? 'Open Build' : 'Tap ' + CATEGORIES.find((c) => c.id === T.cat).name };
+      }
+      if (!el && /^\.cats/.test(sel) && this.tab !== 'build') { el = q('#tabs [data-v="build"]'); if (el) return { el, lbl: 'Open Build' }; }
+      if (!el && /data-cmd\*='"role"/.test(sel) && this.tab !== 'operate') { el = q('#tabs [data-v="operate"]'); if (el) return { el, lbl: 'Open Operate' }; }
+      if (!el && /overlay/.test(sel) && this.tab !== 'operate') { el = q('#tabs [data-v="operate"]'); if (el) return { el, lbl: 'Open Operate' }; }
+      if (el) return { el, lbl: step.lbl || (sel === '#speed [data-v="4"]' ? 'Speed up' : 'Tap here') };
+    }
+    const oid = step.obj && step.obj(this.sim); const o = oid && this.sim.s.objects[oid];
+    const c = o ? { x: o.x + (o.w || 1) / 2, y: o.y + (o.h || 1) / 2, f: o.f || 0 } : step.cell ? { x: step.cell.x + 0.5, y: step.cell.y + 0.5, f: step.f || 0 } : null;
+    if (c) {
+      let p = this.rend.project(c.x, c.y, c.f * 3);
+      if (this.autoPanKey !== this.guideKey && !this.pointerBusy) { this.autoPanKey = this.guideKey; if (this.panClear(p, c)) p = this.rend.project(c.x, c.y, c.f * 3); }
+      if (p.vis) return { x: p.x, y: p.y, lbl: step.lbl || (/drag/i.test(step.t) ? 'Drag here' : 'Tap here'), map: true };
+    }
+    return null;
+  }
+  // Once per step: if the map target sits under the tutorial card, a sheet or off-screen, pan it into the clear area.
+  panClear(p, c) {
+    const W = innerWidth, H = innerHeight;
+    const els = [this.root.querySelector('.tut'), this.$('sheet').firstChild, this.$('abar').firstChild].filter(Boolean);
+    const rs = els.map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
+    const hit = rs.some((r) => p.x > r.left - 24 && p.x < r.right + 24 && p.y > r.top - 40 && p.y < r.bottom + 24);
+    const off = !p.vis || p.y < 70 || p.y > H - 100 || p.x < 20 || p.x > W - 70;
+    if (!hit && !off) return false;
+    let top = 64, bot = H - 96, left = 8, right = W - 64;
+    for (const r of rs) {
+      if (r.width > W * 0.6) { if ((r.top + r.bottom) / 2 > H / 2) bot = Math.min(bot, r.top); else top = Math.max(top, r.bottom); }
+      else if (r.left < W / 2 && r.right < W * 0.6) left = Math.max(left, r.right);
+      else if (r.bottom > H * 0.45 && r.top > H * 0.3) bot = Math.min(bot, r.top);
+    }
+    if (bot - top < 80) { top = 64; bot = H - 96; }
+    if (!p.vis) { this.rend.lookAt(c.x - 0.5, c.y - 0.5); p = this.rend.project(c.x, c.y, c.f * 3); }
+    this.rend.pan((left + right) / 2 - p.x, (top + bot) / 2 - p.y);
+    return true;
+  }
+  updateGuide() {
+    const g = this.$('guide'); if (!g) return;
+    const s = this.sim.s;
+    if (s.tut && s.tut.on && s.tut.beat === 0 && !this.title) { const sig = [this.rend.zoom.toFixed(3), this.rend.rot, this.rend.center.x.toFixed(2), this.rend.center.z.toFixed(2)].join(','); if (this.lookSig == null) this.lookSig = sig; else if (performance.now() - (this.lookT0 || (this.lookT0 = performance.now())) < 2500) this.lookSig = sig; else if (sig !== this.lookSig) this.tutLooked = true; }
+    const t = s.tut && s.tut.on ? this.guideTarget() : null;
+    if (!t) { if (!g.hidden) g.hidden = true; return; }
+    let x, y, w, h;
+    if (t.el) {
+      if (this.guideScrolled !== this.guideKey && t.el.closest('.sheet .body, .sheet')) { this.guideScrolled = this.guideKey; try { t.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+      const r = t.el.getBoundingClientRect(); x = r.left - 4; y = r.top - 4; w = r.width + 8; h = r.height + 8;
+    } else { w = h = 46; x = t.x - 23; y = t.y - 23; }
+    g.hidden = false; g.classList.toggle('map', !!t.map);
+    g.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; g.style.width = Math.round(w) + 'px'; g.style.height = Math.round(h) + 'px';
+    const lb = g.lastChild; if (lb.textContent !== t.lbl) lb.textContent = t.lbl;
+    g.classList.toggle('below', y < 120);
   }
 
   fmtGoal(g, v) { return g.fmt === 'pct' ? pct(v) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
@@ -795,8 +876,9 @@ export class UI {
     const open = s.tasks.filter((t) => !t.assigned).length; if (open !== this.hTasks) { this.hTasks = open; const b = this.$('taskBadge'); b.hidden = !open; b.textContent = open; }
     this.root.classList.toggle('has-sheet', !!(this.$('sheet').firstChild || this.$('abar').firstChild));
     if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
+    if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.renderTut(); }
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
-    this.updateBubbles(); this.updatePins();
+    this.updateBubbles(); this.updatePins(); this.updateGuide();
   }
   setMeta(name, mode) { this.$('pname').innerHTML = `${esc(name)}<small>${esc(mode)}</small>`; }
 

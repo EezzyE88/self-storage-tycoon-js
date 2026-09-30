@@ -866,7 +866,7 @@ export class Renderer {
     // focus ring
     const fc = this.focusT;
     if (fc && (fc.obj || fc.cell)) {
-      const o = fc.obj && s.objects[fc.obj]; const b = o ? this.boundsOf(o) : { x: fc.cell.x, y: fc.cell.y, w: 1, h: 1, f: 0 };
+      const o = fc.obj && s.objects[fc.obj]; const b = o ? this.boundsOf(o) : { x: fc.cell.x, y: fc.cell.y, w: 1, h: 1, f: fc.f || 0 };
       if (b) { const sz = Math.max(b.w, b.h) + 0.8 + Math.sin(this.time * 4) * 0.15; this.focus.visible = true; this.focus.scale.set(sz, sz, 1); this.focus.position.set(b.x + b.w / 2, (b.f || 0) * FLOOR_H + 0.08, b.y + b.h / 2); }
     } else this.focus.visible = false;
     const so = this.sel && s.objects[this.sel]; const sb = so && this.boundsOf(so);

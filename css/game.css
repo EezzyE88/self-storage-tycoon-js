@@ -432,3 +432,55 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .item.stack { flex-wrap: wrap; } .item.stack > .grow { flex: 1 1 100%; } .item.stack > .acts { flex: 1 1 100%; gap: 6px; }
 .item .acct { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; } .item .acct b { margin-right: 2px; }
 @media (max-width: 600px) and (orientation: portrait) { #celebrate { top: 36%; } }
+/* ---- Round 10: guided tutorial ---- */
+.tut .intro { margin-bottom: 8px; }
+.tut .prog { position: relative; height: 18px; display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }
+.tut .prog::before { content: ''; flex: 1; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.14); order: 1; }
+.tut .prog i { position: absolute; left: 0; top: 7px; height: 4px; border-radius: 3px; background: var(--yellow); max-width: calc(100% - 78px); transition: width .4s ease; }
+.tut .prog span { order: 2; font-size: 11px; color: #b9b3a6; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tut .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.tut .steps li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; font-size: 13px; line-height: 1.4; color: #b9b3a6; }
+.tut .steps .ck { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #6f6a60; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; color: #b9b3a6; }
+.tut .steps li.done .ck { background: #2f8f5b; border-color: #2f8f5b; color: #fff; }
+.tut .steps li.done .tx { text-decoration: line-through; text-decoration-color: rgba(185,179,166,0.5); }
+.tut .steps li.more .tx { text-decoration: none; font-size: 12px; }
+.tut .steps li.cur { background: rgba(245,197,66,0.1); border: 1px solid rgba(245,197,66,0.35); border-radius: 10px; padding: 7px 8px; color: #fff; margin: 1px -9px; }
+.tut .steps li.cur .ck { background: var(--yellow); border-color: var(--yellow); color: #16202b; }
+.tut .steps li.cur .tx { font-weight: 700; font-size: 14px; }
+.tut .steps li.cur b, .tut .steps .how b { color: var(--yellow); }
+.tut .steps .how { display: block; font-weight: 500; font-size: 12.5px; color: #d9d4c8; margin-top: 3px; }
+.tut .why { margin-top: 8px; }
+.tut .why .mini { padding: 0; min-height: 0; text-decoration: underline; }
+.tut .why p { margin-top: 4px; font-size: 12.5px; }
+.tut.min .intro, .tut.min .steps li:not(.cur), .tut.min .why, .tut.min .prog, .tut.min .steps .how { display: none; }
+.tut { max-height: calc(100dvh - 180px); overflow-y: auto; }
+#guide { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; border-radius: 12px; transition: transform .18s ease, width .18s ease, height .18s ease; }
+#guide[hidden] { display: none; }
+#guide .gring { position: absolute; inset: 0; border-radius: inherit; border: 3px solid var(--yellow); box-shadow: 0 0 0 4px rgba(245,197,66,0.25), 0 0 22px rgba(245,197,66,0.6); animation: gpulse 1.2s ease-in-out infinite; }
+#guide.map { border-radius: 50%; }
+#guide .glbl { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); background: var(--yellow); color: #16202b; font-size: 12px; font-weight: 800; padding: 4px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+#guide .glbl::after { content: ''; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--yellow); }
+#guide.below .glbl { bottom: auto; top: calc(100% + 8px); }
+#guide.below .glbl::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: var(--yellow); }
+@keyframes gpulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.06); opacity: .75; } }
+@media (prefers-reduced-motion: reduce) { #guide .gring { animation: none; } #guide { transition: none; } }
+@media (max-width: 700px) {
+  #ui.has-sheet .tut .intro, #ui.has-sheet .tut .prog, #ui.has-sheet .tut .why, #ui.has-sheet .tut .steps li:not(.cur) { display: none; }
+  #ui.has-sheet .tut .steps li.cur { margin: 4px 0 0; padding: 6px 8px; }
+  #ui.has-sheet .tut.has-btn .row { display: flex; }
+  #ui.has-sheet .tut h4 { display: none; }
+  .tut { max-height: 46dvh; }
+}
+@media (min-width: 701px) and (min-height: 521px) {
+  #ui.has-sheet .tut { width: max(280px, min(400px, calc(50vw - 300px))); }
+  #ui.has-sheet .tut .intro { display: none; }
+}
+@media (min-width: 701px) and (max-width: 1180px) and (min-height: 521px) {
+  #ui.has-sheet .tut .why, #ui.has-sheet .tut .steps li:not(.cur), #ui.has-sheet .tut .prog { display: none; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .tut { max-height: calc(100dvh - 74px); }
+  #ui.has-sheet .tut .prog, #ui.has-sheet .tut .why, #ui.has-sheet .tut .steps li:not(.cur), #ui.has-sheet .tut h4 { display: none; }
+  #ui.has-sheet .tut .steps li.cur { margin: 4px 0 0; }
+  #ui.has-sheet .tut.has-btn .row { display: flex; }
+}

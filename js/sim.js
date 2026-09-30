@@ -773,6 +773,7 @@ export class Sim {
     }
     for (const tl of R.tiles) if (tl.k === 'hall') s.hall[tl.f][tl.i] = 2;
     s.orders.push(ord);
+    if (s.tut && s.tut.on) (s.tut.built || (s.tut.built = [])).push({ tool: a.tool, f: a.f || 0, id: ord.id });
     s.lastCommit = { order: ord.id, t: s.t };
     this.markDirty();
     this.emit('commit', { order: ord.id, cells: ord.cells });
