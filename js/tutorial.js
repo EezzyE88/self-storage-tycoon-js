@@ -17,7 +17,7 @@ const newUnits = (sim, pred = () => true) => sim.objs('unit').filter((u) => u.id
 const tabIs = (ui, t) => ui && ui.tab === t;
 const toolIs = (ui, k) => ui && ui.tool === k;
 const catIs = (ui, c) => ui && ui.tab === 'build' && ui.cat === c;
-const planOk = (ui, k) => ui && ui.tool === k && ui.plan && ui.plan.status !== 'invalid';
+const planOk = (ui, k) => ui && ui.tool === k && ui.plan && ui.plan.status === 'valid';
 const running = (sim) => sim.s.speed > 0;
 const hallLight = (sim) => sim.objs('light').find((l) => l.x === 20 && l.y === 8);
 const repairTask = (sim, o) => o && sim.s.tasks.find((t) => t.obj === o.id && t.type !== 'makeready');

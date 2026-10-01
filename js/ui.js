@@ -255,6 +255,12 @@ export class UI {
   canRush() { const s = this.sim.s; return !s.creative && (s.coTier || 1) >= 2; }
   confirmPlan() {
     if (!this.plan) return;
+    const tutorialNeedsLiveFrontage = this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && this.plan.status !== 'valid';
+    if (tutorialNeedsLiveFrontage) {
+      this.sfx('refuse');
+      this.toast('For this lesson, face the unit doors toward the connected drive aisle until the preview turns green.', 'bad');
+      return;
+    }
     const r = this.sim.dispatch({ type: 'build', ...this.plan.args });
     if (r.ok) { this.sfx('confirm'); this.toast(r.msg + (this.sim.s.creative ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); }
@@ -284,7 +290,7 @@ export class UI {
       ${isUnit ? `<button class="btn sm" data-a="flip">Flip doors</button>` : ''}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
-      <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' ? 'disabled' : ''}>Confirm</button></div></div>`;
+      <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
   }
 
   // ------------------------------------------------------------ INSPECTOR
