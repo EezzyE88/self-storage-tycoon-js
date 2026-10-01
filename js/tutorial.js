@@ -3,16 +3,17 @@
 import { TOOLS } from './data.js';
 
 const unitByNum = (sim, n) => sim.objs('unit').find((u) => u.num === n);
-const createdSince = (sim, type, t) => sim.objs(type).some((o) => o.cstate === 'operating' && o.id > (sim.s.tut.idMark || 0));
+const createdSince = (sim, type, t) => sim.objs(type).some((o) => o.cstate === 'operating' && o.id > (ctx(sim).idMark || 0));
 
 // Each beat has an intro, a "why" note, and an ordered checklist of steps. Steps are UI guidance only:
 // they read sim + UI state (never write), so determinism rests on beat.check alone. The first step whose
 // `done` is false (after the last done one) is current: the coach ring points at its `sel` (DOM), `obj` or
 // `cell` (map), and its `d` text says exactly where to tap.
-const since = (sim, pred) => Object.values(sim.s.objects).some((o) => o.id > (sim.s.tut.idMark || 0) && pred(o));
-const built = (sim, tool, f) => (sim.s.tut.built || []).some((b) => b.id >= (sim.s.tut.idMark || 0) && b.tool === tool && (f == null || b.f === f));
+export const ctx = (sim) => sim.s.lesson || sim.s.tut; // a running lesson has its own marks/flags
+const since = (sim, pred) => Object.values(sim.s.objects).some((o) => o.id > (ctx(sim).idMark || 0) && pred(o));
+const built = (sim, tool, f) => (ctx(sim).built || []).some((b) => b.id >= (ctx(sim).idMark || 0) && b.tool === tool && (f == null || b.f === f));
 const ordered = (sim, tool) => built(sim, tool);
-const newUnits = (sim, pred = () => true) => sim.objs('unit').filter((u) => u.id > (sim.s.tut.idMark || 0) && pred(u));
+const newUnits = (sim, pred = () => true) => sim.objs('unit').filter((u) => u.id > (ctx(sim).idMark || 0) && pred(u));
 const tabIs = (ui, t) => ui && ui.tab === t;
 const toolIs = (ui, k) => ui && ui.tool === k;
 const catIs = (ui, c) => ui && ui.tab === 'build' && ui.cat === c;
@@ -94,17 +95,6 @@ export const BEATS = [
       commissionStep(() => true, (sim) => !!sim.s.milestones.first_expansion),
     ],
     check: (sim) => !!sim.s.milestones.first_expansion },
-  { id: 'interior', chapter: 'Make Interior Storage Work', title: 'How interior customers move',
-    body: 'Interior customers can\'t drive to their door. They park at the loading stalls and bring a <b>cart</b> inside.',
-    why: 'The path is <b>vehicle &rarr; loading stall &rarr; cart &rarr; wide door &rarr; hallway &rarr; unit</b>. If the corral runs out of carts, customers wait or carry by hand, and satisfaction drops.',
-    enter: (sim) => { const tn = Object.values(sim.s.tenants).find((t) => { const u = sim.s.objects[sim.s.leases[t.lease].unit]; return u.access === 'interior'; }); if (tn) sim.schedule({ kind: 'bigaccess', tenant: tn.id, unit: sim.s.leases[tn.lease].unit }, sim.s.t + 30); },
-    focus: (sim) => ({ obj: sim.objs('corral')[0] && sim.objs('corral')[0].id }),
-    steps: [
-      { t: 'Tap the <b>Main Loading Corral</b>', d: 'It\'s the yellow cart rack just below the interior building\'s wide door (the ring marks it). Close any open panel first with the <b>×</b>.', obj: (sim) => sim.objs('corral')[0] && sim.objs('corral')[0].id, done: (sim) => sim.s.tut.flags.corralInspected },
-      { t: 'Read the corral panel', d: 'It shows carts parked, the target stock, and cart condition. Close it with <b>×</b> when done.', done: (sim, ui) => sim.s.tut.flags.corralInspected && (!ui || ui.sel == null) || !!sim.s.milestones.first_cart_trip },
-      { t: 'Watch a customer use a cart', d: 'A tenant arrives in about 30 minutes. Keep time running (<b>2x</b> helps) and watch them grab a cart and roll it through the wide door.', sel: PLAY, done: (sim) => !!sim.s.milestones.first_cart_trip },
-    ],
-    check: (sim) => sim.s.tut.flags.corralInspected && !!sim.s.milestones.first_cart_trip },
   { id: 'repair', chapter: 'Keep the Property Working', title: 'A hallway light has failed',
     body: 'The main hallway in the interior building just went dark. Dark hallways feel unsafe and customers notice.',
     why: 'Equipment wears out over time. Failures create jobs in the queue (<b>Operate &rarr; Jobs</b>). The Owner can fix simple things; a Tech or vendor handles the rest.',
@@ -128,7 +118,28 @@ export const BEATS = [
       { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', sel: PLAY, done: (sim) => !!sim.s.milestones.first_delegated },
     ],
     check: (sim) => !!sim.s.milestones.first_delegated },
-  { id: 'quality', chapter: 'Improve Quality', title: 'Coverage you can see',
+  { id: 'grad', chapter: 'Graduation', title: 'Maple Street graduates',
+    body: 'You turned over a unit, leased it, read the money, expanded, fixed a failure and hired help. Maple Street is yours now. From here the market pushes back: seasons, competitors and reviews.',
+    why: 'Optional <b>lessons</b> (interior carts, security, climate, building up, collections, loans) are offered when the situation comes up, or anytime from <b>Growth &rarr; Lessons</b>. A <b>report card</b> arrives every 30 days in <b>Business</b>.',
+    steps: [{ t: 'Tap <b>Keep playing</b>', d: 'The tutorial closes and every tool is unlocked.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.grad }],
+    button: 'Keep playing', check: (sim) => sim.s.tut.flags.grad },
+];
+
+// Optional lessons: offered when the situation comes up (or anytime from Growth -> Lessons) after graduation.
+// Maple-specific lessons (coordinates) run only on the original Maple Street layout.
+export const LESSONS = [
+  { id: 'interior', chapter: 'Lesson', offer: (sim) => sim.day >= (sim.s.tut.gradDay || 0) + 2, title: 'How interior customers move',
+    body: 'Interior customers can\'t drive to their door. They park at the loading stalls and bring a <b>cart</b> inside.',
+    why: 'The path is <b>vehicle &rarr; loading stall &rarr; cart &rarr; wide door &rarr; hallway &rarr; unit</b>. If the corral runs out of carts, customers wait or carry by hand, and satisfaction drops.',
+    enter: (sim) => { const tn = Object.values(sim.s.tenants).find((t) => { const u = sim.s.objects[sim.s.leases[t.lease].unit]; return u.access === 'interior'; }); if (tn) sim.schedule({ kind: 'bigaccess', tenant: tn.id, unit: sim.s.leases[tn.lease].unit }, sim.s.t + 30); },
+    focus: (sim) => ({ obj: sim.objs('corral')[0] && sim.objs('corral')[0].id }),
+    steps: [
+      { t: 'Tap the <b>Main Loading Corral</b>', d: 'It\'s the yellow cart rack just below the interior building\'s wide door (the ring marks it). Close any open panel first with the <b>×</b>.', obj: (sim) => sim.objs('corral')[0] && sim.objs('corral')[0].id, done: (sim) => ctx(sim).flags.corralInspected },
+      { t: 'Read the corral panel', d: 'It shows carts parked, the target stock, and cart condition. Close it with <b>×</b> when done.', done: (sim, ui) => ctx(sim).flags.corralInspected && (!ui || ui.sel == null) || !!sim.s.milestones.first_cart_trip },
+      { t: 'Watch a customer use a cart', d: 'A tenant arrives in about 30 minutes. Keep time running (<b>2x</b> helps) and watch them grab a cart and roll it through the wide door.', sel: PLAY, done: (sim) => !!sim.s.milestones.first_cart_trip },
+    ],
+    check: (sim) => ctx(sim).flags.corralInspected && !!sim.s.milestones.first_cart_trip },
+  { id: 'quality', chapter: 'Lesson', offer: (sim) => sim.s.exp.security < 0.66 || sim.day >= (sim.s.tut.gradDay || 0) + 6, title: 'Coverage you can see',
     body: 'Customers rate you on lighting and cameras. Find the blind spots, then cover one.',
     why: 'Security coverage feeds your <b>Reputation</b>, which affects how many prospects sign. Overlays show hidden systems: security, carts, HVAC, cleanliness and power.',
     steps: [
@@ -139,7 +150,7 @@ export const BEATS = [
       waitBuild('Let the installer finish', (sim) => since(sim, (o) => (o.type === 'camera' || o.type === 'light') && o.cstate === 'operating')),
     ],
     check: (sim) => createdSince(sim, 'camera') || createdSince(sim, 'light') },
-  { id: 'climate', chapter: 'Add Climate', title: 'Climate demand is worth serving',
+  { id: 'climate', chapter: 'Lesson', offer: (sim) => (sim.lostRecent(14).noClimate || 0) >= 2, title: 'Climate demand is worth serving',
     body: 'About a third of prospects want climate control and you have none. The interior building has an unused <b>west corridor</b>: fill it with climate units.',
     why: 'Climate units rent for more but need three things: an <b>HVAC Plant</b> beside the building (capacity), a <b>light</b> in the hallway, and units built with <b>Climate on</b>.',
     focus: () => ({ cell: { x: 16, y: 8 }, view: 0 }),
@@ -156,7 +167,7 @@ export const BEATS = [
       commissionStep((u) => u.env === 'climate', (sim) => !!sim.s.milestones.first_climate),
     ],
     check: (sim) => !!sim.s.milestones.first_climate },
-  { id: 'up', chapter: 'Build Up', title: 'Land pressure: build vertically',
+  { id: 'up', chapter: 'Lesson', offer: (sim) => ((sim.lostRecent(30).noReady || 0) + (sim.lostRecent(30).noSize || 0)) >= 8 && sim.objs('unit').length > 26, title: 'Land pressure: build vertically',
     body: 'Build a <b>two-floor</b> building on the empty land to the east. Each piece is one step; the rings show where.',
     why: 'Two floors double the rentable area per cell of land. Floor 2 customers need an <b>elevator</b>, and carts take elevator space, so place it next to the hallway near the door.',
     focus: () => ({ cell: { x: 33, y: 11 } }),
@@ -174,16 +185,34 @@ export const BEATS = [
       commissionStep((u) => (u.f || 0) > 0, (sim) => !!sim.s.milestones.first_upper),
     ],
     check: (sim) => !!sim.s.milestones.first_upper },
-  { id: 'grad', chapter: 'Graduation', title: 'Maple Street graduates',
-    body: 'You built, leased, maintained, delegated, diagnosed and expanded. Maple Street is yours now.',
-    why: 'Next ideas: hire a <b>Tech</b> for preventive maintenance, set policies in <b>Business</b>, take an expansion loan, or start an <b>Empty Lot</b> or scenario from the menu (top right).',
-    steps: [{ t: 'Tap <b>Keep playing</b>', d: 'The tutorial closes and every tool is unlocked.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.grad }],
-    button: 'Keep playing', check: (sim) => sim.s.tut.flags.grad },
+
+  { id: 'collections', chapter: 'Lesson', title: 'When rent goes unpaid', generic: true,
+    body: 'An account is falling behind. Unpaid rent climbs a ladder: past due, delinquent (locked out), lien, notice, then auction.',
+    why: 'You set the policies (late fee, overlocks, automatic notices, auction or clean-out) and handle the exceptions. A payment plan often saves the tenant and the money.',
+    offer: (sim) => Object.values(sim.s.leases).some((L) => ['delinquent', 'lien'].includes(L.status)),
+    steps: [
+      { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || ctx(sim).flags.collAck },
+      { t: 'Find <b>Collections</b>', d: 'Scroll down to the <b>Collections</b> ladder. Each rung counts accounts at that stage; the list below has actions for each account (notice, plan, waive, unlock).', sel: '.ladder', done: (sim) => ctx(sim).flags.collAck },
+      { t: 'Tap <b>Got it</b>', d: 'Or act on an account first. The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => ctx(sim).flags.collAck },
+    ],
+    button: 'Got it', flag: 'collAck', check: (sim) => ctx(sim).flags.collAck },
+  { id: 'financing', chapter: 'Lesson', title: 'Paying for growth', generic: true,
+    body: 'Expansion costs more than a month of rent. A term loan spreads it over 60 months; the credit line covers short gaps.',
+    why: 'The bank approves loans whose payments stay under 45% of your rent roll. Loan buttons show the monthly payment and your cash after, before you commit. Borrow when new units will earn more than the payment.',
+    offer: (sim) => sim.day >= (ctx(sim).gradDay || 0) + 12 || sim.s.cash < 3000,
+    steps: [
+      { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || ctx(sim).flags.finAck },
+      { t: 'Find <b>Financing</b>', d: 'Scroll to <b>Financing</b>. Each loan option shows the amount, the monthly payment and your cash after. Borrowing is optional.', sel: '.loanopts', done: (sim) => ctx(sim).flags.finAck },
+      { t: 'Tap <b>Got it</b>', d: 'The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => ctx(sim).flags.finAck },
+    ],
+    button: 'Got it', flag: 'finAck', check: (sim) => ctx(sim).flags.finAck },
 ];
+export const lessonById = (id) => LESSONS.find((l) => l.id === id);
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
+export function curBeat(sim) { return sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[sim.s.tut.beat] : null; }
 export function stepState(sim, ui) {
-  const b = BEATS[sim.s.tut.beat]; if (!b || !b.steps) return { b, cur: -1, done: [] };
+  const b = curBeat(sim); if (!b || !b.steps) return { b, cur: -1, done: [] };
   const done = b.steps.map((st) => { try { return !!st.done(sim, ui); } catch (e) { return false; } });
   let last = -1; for (let i = 0; i < done.length; i++) if (done[i]) last = i;
   return { b, cur: Math.min(last + 1, b.steps.length - 1), done, all: last === b.steps.length - 1 };
@@ -192,22 +221,18 @@ export function stepState(sim, ui) {
 // Tool unlocks are problem-earned in the tutorial (GDD §42). Sandbox: everything.
 const UNLOCK = [
   [4, ['aisle', 'du5x5', 'du5x10', 'du10x10', 'du10x20', 'demolish', 'walk', 'parking']],
-  [5, ['corral', 'loading', 'canopy', 'hall', 'doorStd', 'doorWide', 'iu5x5', 'iu5x10', 'iu10x10', 'iu10x20']],
-  [6, ['light']],
-  [8, ['camera', 'keypad', 'doorAuto']],
-  [9, ['hvac', 'shell1', 'power']],
-  [10, ['shell2', 'elevator', 'stairs', 'water', 'restroom', 'fountain']],
-];
+  [5, ['light']],
+]; // everything else unlocks at graduation
 export function toolUnlocked(sim, tool) {
   const s = sim.s; if (!s.tut.on) return true;
   if (tool === 'office' || tool === 'gate') return false;
   for (const [beat, tools] of UNLOCK) if (tools.includes(tool)) return s.tut.beat >= beat;
-  return true;
+  return false;
 }
-export function unlockBeat(tool) { for (const [beat, tools] of UNLOCK) if (tools.includes(tool)) return beat; return 0; }
+export function unlockBeat(tool) { for (const [beat, tools] of UNLOCK) if (tools.includes(tool)) return beat; return BEATS.length - 1; }
 
 export function installTutorial(sim) {
-  sim.onTick = (S) => tutorialTick(S);
+  sim.onTick = (S) => { tutorialTick(S); lessonTick(S); };
 }
 export function tutorialTick(sim) {
   const s = sim.s; if (!s.tut.on || s.tut.done) return;
@@ -216,6 +241,24 @@ export function tutorialTick(sim) {
   if (b.check(sim)) {
     sim.emit('tut_done', { beat: s.tut.beat });
     s.tut.beat++; s.tut.entered = false; s.tut.idMark = s.nextId;
-    if (s.tut.beat >= BEATS.length) { s.tut.done = true; s.tut.on = false; sim.milestone('graduated'); }
+    if (s.tut.beat >= BEATS.length) { s.tut.done = true; s.tut.on = false; s.tut.gradDay = sim.day; sim.milestone('graduated'); }
   }
+}
+
+export const lessonAllowed = (sim, L) => L && (L.generic || (sim.s.market.id === 'maple' && !sim.s.mirror && sim.s.tut && sim.s.tut.done && sim.s.mode === 'tutorial'));
+export function lessonTick(sim) {
+  const s = sim.s; if ((s.tut && s.tut.on) || s.scenario) return;
+  const ls = s.lesson;
+  if (ls) {
+    const b = lessonById(ls.id); if (!b) { s.lesson = null; return; }
+    if (!ls.entered) { ls.entered = true; if (b.enter) b.enter(sim); sim.emit('tut_beat', { lesson: ls.id }); }
+    if (b.check(sim)) { s.lessonsDone = s.lessonsDone || {}; s.lessonsDone[ls.id] = sim.day; s.lesson = null; sim.emit('lesson_done', { id: ls.id, title: b.title }); }
+    return;
+  }
+  // offers: at most one at a time, checked hourly, never during tutorial
+  if (sim.mod % 60 !== 0 || s.creative) return;
+  if (s.mode === 'tutorial' && !(s.tut && s.tut.done)) return;
+  s.lessonsDone = s.lessonsDone || {}; s.lessonsSeen = s.lessonsSeen || {};
+  if (s.lessonOffer) return;
+  for (const L of LESSONS) if (!s.lessonsDone[L.id] && !s.lessonsSeen[L.id] && lessonAllowed(sim, L) && L.offer && L.offer(sim)) { s.lessonOffer = L.id; sim.emit('lesson_offer', { id: L.id }); break; }
 }

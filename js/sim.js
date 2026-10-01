@@ -33,7 +33,7 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     ledger: [], days: [], today: null,
     exp: { access: 0.85, convenience: 0.8, cleanliness: 0.85, security: 0.7, climate: 0.9, service: 0.85, value: 0.8, comfort: 0.8 },
     powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, debt: [], auction: null, mgrLog: [],
-    thoughts: [], convos: [], lost: {}, lostToday: {},
+    thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] },
     milestones: {}, tut: { on: mode === 'tutorial', beat: 0, flags: {}, done: false },
     open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true },
     weather: 'fair', nextId: 1, structV: 1, unitNo: { drive: 101, interior: 201, upper: 301 },
@@ -55,6 +55,8 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
   s.today = blankDay(1);
   return s;
 }
+const COMP_NAMES = ['StorQuik Self Storage', 'Carlsbad Box & Lock', 'SecureSpace on 5th', 'Coastline Storage Co.', 'Depot Self Storage'];
+const M_open_comps = (sim) => sim.openComps().length > 0;
 function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }
 
 // ---------------------------------------------------------------- Sim
@@ -69,6 +71,7 @@ export class Sim {
     state.mgrLog ||= []; state.debt ||= []; if (state.auction === undefined) state.auction = null;
     const P = state.policies; if (P.lateFee == null) P.lateFee = 20; if (P.autoNotice == null) P.autoNotice = false; if (!P.resolution) P.resolution = 'auction'; if (P.retention == null) P.retention = true; if (P.overlock == null) P.overlock = true;
     for (const L of Object.values(state.leases || {})) { if (L.fees == null) L.fees = 0; }
+    state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; if (state.coTier == null) state.coTier = 1;
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -754,6 +757,7 @@ export class Sim {
     const s = this.s, R = this.plan(a);
     if (R.status === 'invalid') { this.emit('refuse'); return { ok: false, msg: R.reasons[0] }; }
     if (a.tool === 'demolish') return this.demolish(R);
+    const rush = !!a.rush && (s.coTier || 1) >= 2 && !s.creative; if (rush) { R.cost = Math.round(R.cost * 1.25); R.dur = R.dur * 0.5; }
     if (!s.creative && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }
     const ord = { id: this.id(), label: R.label, tool: a.tool, cost: R.cost, dur: Math.max(30, Math.round(R.dur)), prog: 0, st: 'construction', objs: [], tiles: R.tiles, t0: s.t, cells: R.items.filter((it) => !it.skip).map((it) => ({ x: it.x, y: it.y, f: it.f })) };
     if (!s.creative) this.money(-R.cost, 'capex', R.label);
@@ -773,7 +777,7 @@ export class Sim {
     }
     for (const tl of R.tiles) if (tl.k === 'hall') s.hall[tl.f][tl.i] = 2;
     s.orders.push(ord);
-    if (s.tut && s.tut.on) (s.tut.built || (s.tut.built = [])).push({ tool: a.tool, f: a.f || 0, id: ord.id });
+    if (s.lesson) s.lesson.built.push({ tool: a.tool, f: a.f || 0, id: ord.id }); else if (s.tut && s.tut.on) (s.tut.built || (s.tut.built = [])).push({ tool: a.tool, f: a.f || 0, id: ord.id });
     s.lastCommit = { order: ord.id, t: s.t };
     this.markDirty();
     this.emit('commit', { order: ord.id, cells: ord.cells });
@@ -928,7 +932,7 @@ export class Sim {
       const by = {}; for (const u of this.objs('unit')) if (u.cstate === 'operating') { const k = productKey(u.size, u.env); (by[k] ||= { n: 0, occ: 0 }).n++; if (u.lease) by[k].occ++; }
       for (const [k, v] of Object.entries(by)) {
         if (v.n < 2) continue; const occ = v.occ / v.n, [sz, env] = k.split('|');
-        const mk = M.rent[sz] * (env === 'climate' ? M.climatePremium : 1), cur = s.market.ask[k];
+        const mk = this.marketRent({ size: sz, env }), cur = s.market.ask[k];
         let nv = cur;
         if (occ >= 0.92) nv = Math.min(Math.round(cur * 1.03 / 5) * 5, Math.round(mk * 1.3));
         else if (occ < 0.75) nv = Math.max(Math.round(cur * 0.97 / 5) * 5, Math.round(mk * 0.8));
@@ -973,8 +977,8 @@ export class Sim {
     if (!s.creative && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     for (const ag of s.agents) { if (ag.task === t.id) { if (ag.cart) this.dropCart(ag); ag.task = null; ag.st = 'idle'; } if (ag.queue) ag.queue = ag.queue.filter((x) => x !== t.id); }
     if (!s.creative) this.money(-cost, 'service', 'Vendor service: ' + t.label);
-    t.vendor = s.t + 600; t.assigned = 'vendor'; this.emit('task_assigned');
-    return { ok: true, msg: `Vendor booked (~10 hours) - $${cost}` };
+    const pri = (s.coTier || 1) >= 2; t.vendor = s.t + (pri ? 300 : 600); t.assigned = 'vendor'; this.emit('task_assigned');
+    return { ok: true, msg: `Vendor booked (~${pri ? 5 : 10} hours) - $${cost}` };
   }
   act_buyCarts(a) {
     const s = this.s, c = s.objects[a.corral]; if (!c || c.cstate !== 'operating') return { ok: false, msg: 'Corral not ready' };
@@ -992,7 +996,42 @@ export class Sim {
     const act = c.actions[a.i]; if (act && act.action) return this.dispatch(act.action);
     return { ok: true };
   }
-  act_tutFlag(a) { this.s.tut.flags[a.flag] = true; return { ok: true }; }
+  renovateOptions(u) { // what a vacant unit can be turned into (after the tutorial)
+    const s = this.s, out = [];
+    if (!u || u.type !== 'unit' || u.cstate !== 'operating' || u.lease || u.commercial === 'reserved' || s.scenario && s.scenario.noReno || (s.tut && s.tut.on)) return out;
+    if (u.access === 'interior' && u.env === 'std') {
+      const hv = this.D.hvac[this.D.shellAt[this.idx(u.x, u.y)]], need = SIZES[u.size].sqft / 25;
+      out.push({ kind: 'climate', label: 'Convert to climate', cost: 300 + SIZES[u.size].sqft * 6, ok: !!hv && hv.cap - hv.load >= need, why: !hv ? 'Needs an HVAC plant serving this building' : 'HVAC is at capacity; add another plant' });
+    }
+    if (u.access === 'drive' && u.size === '10x10') out.push({ kind: 'split', label: 'Split into two 5x10', cost: 450, ok: true });
+    return out;
+  }
+  act_renovate(a) {
+    const s = this.s, u = s.objects[a.unit]; this.ensure();
+    const op = this.renovateOptions(u).find((x) => x.kind === a.kind); if (!op) return { ok: false, msg: 'Only vacant units can be renovated' };
+    if (!op.ok) return { ok: false, msg: op.why };
+    if (!s.creative && s.cash < op.cost) return { ok: false, msg: 'Not enough cash' };
+    if (!s.creative) this.money(-op.cost, 'capex', `${op.label} - ${u.name}`);
+    s.tasks = s.tasks.filter((t) => !(t.obj === u.id && t.type === 'makeready'));
+    const ready = (o) => { o.commercial = 'unready'; o.vacatedAt = s.t; this.addTask({ type: 'makeready', need: 'makeready', obj: o.id, label: `Make-ready ${o.name}`, work: WORK.makeready }); };
+    if (a.kind === 'climate') { u.env = 'climate'; ready(u); }
+    else {
+      const dx = u.dir && u.dir[0] !== 0; const parts = dx ? [{ x: u.x, y: u.y, w: 2, h: 1 }, { x: u.x, y: u.y + 1, w: 2, h: 1 }] : [{ x: u.x, y: u.y, w: 1, h: 2 }, { x: u.x + 1, y: u.y, w: 1, h: 2 }];
+      delete s.objects[u.id];
+      parts.forEach((p, k) => { const o = { ...u, ...p, id: this.id(), size: '5x10', lease: null }; if (k) { const key = 'drive'; const base = 100, n = s.unitNo[key]++ - base - 1; o.num = base + Math.floor(n / 99) * 1000 + (n % 99) + 1; o.name = 'Unit ' + o.num; } s.objects[o.id] = o; ready(o); });
+    }
+    this.markDirty(); this.emit('renovated', { unit: u.id, kind: a.kind });
+    return { ok: true, msg: `${op.label}: done. Make-ready queued.` };
+  }
+  act_coTier(a) { const s = this.s; const was = s.coTier || 1; s.coTier = a.tier; if (a.tier > was) this.emit('tier_up', { tier: a.tier }); return { ok: true }; }
+  act_tutFlag(a) { this.s.tut.flags[a.flag] = true; if (this.s.lesson) this.s.lesson.flags[a.flag] = true; return { ok: true }; }
+  act_lesson(a) { // optional lessons after graduation (tutorial.js LESSONS)
+    const s = this.s;
+    if (a.op === 'start') { if (s.tut && s.tut.on) return { ok: false, msg: 'Finish the tutorial first' }; s.lesson = { id: a.id, idMark: s.nextId, built: [], flags: {}, entered: false }; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
+    if (a.op === 'end') { s.lesson = null; return { ok: true }; }
+    if (a.op === 'dismiss') { s.lessonsSeen = s.lessonsSeen || {}; s.lessonsSeen[a.id] = this.day; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
+    return { ok: false };
+  }
   poll() { this.ensure(); if (this.onTick) this.onTick(this); if (this.dirty) this.rebuild(); }
   act_tutSkip() { this.s.tut.on = false; this.s.tut.done = true; return { ok: true }; }
   milestone(k) { if (!this.s.milestones[k]) { this.s.milestones[k] = this.s.t; this.emit('milestone', { k }); } }
@@ -1052,9 +1091,10 @@ export class Sim {
     for (const tn of Object.values(s.tenants)) {
       const L = s.leases[tn.lease]; if (!L || L.status !== 'current' || tn.leaving) continue;
       const u = s.objects[L.unit]; const mk = this.marketRent(u);
-      const hazard = (1 / 320) * (1 + clamp(0.72 - tn.sat, 0, 1) * 5) * clamp(L.rent / mk, 0.8, 1.6) ** 2 * (L.incT != null && s.t - L.incT < 60 * MIN_PER_DAY ? 1.5 : 1);
+      const cpx = this.compPrice(); const hazard = (1 / 320) * (1 + clamp(0.72 - tn.sat, 0, 1) * 5) * clamp(L.rent / mk, 0.8, 1.6) ** 2 * (L.incT != null && s.t - L.incT < 60 * MIN_PER_DAY ? 1.5 : 1) * (cpx != null && L.rent / mk > cpx + 0.05 ? 1 + this.compShare() * 2 : 1) * (0.85 + 0.15 * this.season(day));
       if (this.rnd() < hazard) {
         tn.leaving = true; const when = this.randomAccessTime(day + 2); this.schedule({ kind: 'moveout', tenant: tn.id, unit: u.id }, when);
+        if (this.rnd() < 0.5) this.postReview(tn, true);
         if (this.rnd() < 0.65) this.moveoutConvo(tn, L, u, L.rent / mk > 1.04);
       }
     }
@@ -1064,6 +1104,8 @@ export class Sim {
       if (s.objects[L.unit].overlock) continue; // overlocked for non-payment: no access visits until the account is current
       if (this.rnd() < 1 / 1.8) this.schedule({ kind: this.rnd() < 0.15 ? 'bigaccess' : 'access', tenant: tn.id, unit: L.unit }, this.randomAccessTime(day));
     }
+    this.marketDay(day);
+    if (day > 1 && (day - 1) % 30 === 0 && !s.creative && !(s.mode === 'tutorial' && !s.tut.done)) this.monthReport(day);
     if (s.open) this.genProspects(day, 1);
     // equipment wear
     for (const o of Object.values(s.objects)) if (o.cstate === 'operating') {
@@ -1108,8 +1150,9 @@ export class Sim {
   }
   genProspects(day, frac) {
     const s = this.s, M = MARKETS[s.market.id]; const rep = this.reputation();
+    const press = this.season(day) * (1 - this.compShare()) * this.reviewFactor() * (this.pressureOn() && M.settled ? M.settled : 1) * ((s.coTier || 1) >= 4 ? 1.1 : 1);
     for (const sz of Object.keys(M.demand)) {
-      const lam = M.demand[sz] * (s.opts && s.opts.demand || 1) * frac * (0.7 + 0.5 * rep) * (s.mode === 'tutorial' && !s.tut.done ? 0.75 : 1);
+      const lam = M.demand[sz] * (s.opts && s.opts.demand || 1) * frac * (0.7 + 0.5 * rep) * (s.mode === 'tutorial' && !s.tut.done ? 0.75 : 1) * press;
       let k = 0; const L = Math.exp(-lam); let p = 1; do { k++; p *= this.rnd(); } while (p > L); k--;
       for (let j = 0; j < k; j++) {
         const needsClimate = this.rnd() < (s.opts && s.opts.climateShare != null ? s.opts.climateShare : M.climateShare);
@@ -1161,6 +1204,7 @@ export class Sim {
       else if (x.type === 'power') o.utilities += OPEX.power;
     }
     for (const e of Object.values(this.D.hvac)) o.hvac += e.load * OPEX.hvacPerClimateCell;
+    if (this.pressureOn()) { o.tax = 4 + 0.25 * this.objs('unit').filter((u) => u.cstate === 'operating').length; const k = this.costIdx() * ((s.coTier || 1) >= 4 ? 0.92 : 1); for (const key of Object.keys(o)) o[key] = Math.round(o[key] * k * 100) / 100; }
     o.total = Object.values(o).reduce((a, b) => a + b, 0);
     o.payroll = s.staff.reduce((a, st) => a + st.wage, 0);
     return o;
@@ -1174,9 +1218,83 @@ export class Sim {
   randomTime(day, h0, h1) { return (day - 1) * MIN_PER_DAY + Math.floor((h0 + this.rnd() * (h1 - h0)) * 60); }
   randomAccessTime(day) { return this.randomTime(day, ACCESS_HOURS[0] + 0.5, ACCESS_HOURS[1] - 1.5); }
   schedule(v, t) { this.s.visits.push({ ...v, t: Math.max(this.s.t + 1, t) }); }
-  marketRent(u) { const M = MARKETS[this.s.market.id]; return M.rent[u.size] * (u.env === 'climate' ? M.climatePremium : 1); }
+  marketRent(u) { const M = MARKETS[this.s.market.id]; return M.rent[u.size] * (u.env === 'climate' ? M.climatePremium : 1) * this.rentIdx(); }
   askFor(u) { return this.s.market.ask[productKey(u.size, u.env)]; }
   reputation() { const e = this.s.exp; return (e.access * 1 + e.convenience * 1.3 + e.cleanliness * 0.9 + e.security * 0.9 + e.climate * 0.5 + e.service * 0.7 + e.value * 1.1 + (e.comfort ?? 0.8) * 0.4) / 6.8; }
+  // ============================================================ MARKET PRESSURE
+  // Competitors, seasons, reviews and rising costs. An ignored property levels off and slips;
+  // a well-run one (fair prices, fixed equipment, clean, staffed) keeps pulling ahead.
+  // Off in the tutorial (until graduation), creative mode and authored scenarios.
+  pressureOn() { const s = this.s; return !s.creative && !s.scenario && !(s.mode === 'tutorial' && !s.tut.done) && !(s.opts && s.opts.competition === false); }
+  costIdx() { return this.pressureOn() ? 1.04 ** ((this.day - 1) / 365) : 1; }
+  rentIdx() { return this.pressureOn() ? 1.03 ** ((this.day - 1) / 365) : 1; }
+  season(day = this.day) { return this.pressureOn() ? 1 + 0.2 * Math.sin(2 * Math.PI * (day - 80) / 365) : 1; } // moving season peaks in early summer
+  seasonName(day = this.day) { const v = Math.sin(2 * Math.PI * (day - 80) / 365); return v > 0.5 ? 'Peak moving season' : v < -0.5 ? 'Winter slowdown' : v > 0 ? 'Busy season building' : 'Shoulder season'; }
+  openComps() { return (this.s.mkt.comp || []).filter((c) => this.day >= c.opens); }
+  compShare() {
+    if (!this.pressureOn()) return 0; const rep = this.reputation(); let sh = 0;
+    for (const c of this.openComps()) { const ramp = clamp((this.day - c.opens) / 60, 0, 1); sh += c.strength * (0.4 + 0.6 * ramp) * clamp(1.45 - rep, 0.45, 1.1); }
+    return clamp(sh, 0, 0.5);
+  }
+  compPrice() { const cs = this.openComps(); return cs.length ? Math.min(...cs.map((c) => c.price)) : null; }
+  rating() { const r = (this.s.mkt.reviews || []).slice(-25); return r.length < 3 ? null : r.reduce((a, x) => a + x.stars, 0) / r.length; }
+  reviewFactor() { const r = this.rating(); return r == null || !this.pressureOn() ? 1 : clamp(0.7 + 0.075 * r, 0.78, 1.08); }
+  postReview(tn, leaving) {
+    const s = this.s; if (!this.pressureOn()) return;
+    const stars = clamp(Math.round(1 + 4 * clamp((tn.sat - 0.35) / 0.55, 0, 1) + (this.rnd() - 0.5)), 1, 5);
+    const e = s.exp; const dims = [['security', 'dark, unwatched corners'], ['cleanliness', 'dirty loading area and halls'], ['convenience', 'waiting for carts and the elevator'], ['service', 'slow help at the office'], ['value', 'the rent for what you get'], ['access', 'gate and door problems']];
+    const worst = dims.slice().sort((a, b) => e[a[0]] - e[b[0]])[0];
+    const text = stars >= 4 ? this.pick(['Clean, easy and well kept.', 'Staff were helpful and the place feels safe.', 'Fair price, no hassles.', 'Easy in and out. Would recommend.'])
+      : stars === 3 ? `Fine overall, but ${worst[1]} could be better.` : `Disappointed: ${worst[1]}.${leaving ? ' Moving out.' : ''}`;
+    s.mkt.reviews.push({ t: s.t, name: tn.name.split(' ')[0], stars, text, dim: stars <= 3 ? worst[0] : null }); if (s.mkt.reviews.length > 40) s.mkt.reviews.shift();
+    this.emit('review', { stars, text, name: tn.name });
+  }
+  marketDay(day) {
+    const s = this.s, M = s.mkt; if (!this.pressureOn()) return;
+    if (M.nextComp == null) M.nextComp = day + 45 + Math.floor(this.rnd() * 30);
+    if (day >= M.nextComp && M.comp.length < 3) {
+      const used = new Set(M.comp.map((c) => c.name)); const name = COMP_NAMES.find((n) => !used.has(n)) || 'Another facility';
+      const c = { id: this.id(), name, announced: day, opens: day + 30, strength: Math.round((0.16 + this.rnd() * 0.1) * 100) / 100, price: Math.round((0.88 + this.rnd() * 0.06) * 100) / 100, dist: Math.round((1.2 + this.rnd() * 2.3) * 10) / 10 };
+      M.comp.push(c); M.nextComp = day + 200 + Math.floor(this.rnd() * 120);
+      this.emit('comp_announce', { name: c.name, opens: c.opens, dist: c.dist, price: c.price });
+    }
+    for (const c of M.comp) if (day === c.opens) this.emit('comp_open', { name: c.name, price: c.price });
+    for (const tn of Object.values(s.tenants)) if (!tn.leaving && this.rnd() < 1 / 150) this.postReview(tn, false);
+  }
+  lostRecent(days = 30) { const d0 = this.day - days; const out = {}; for (const x of this.s.mkt.lostLog) if (x.d > d0) out[x.r] = (out[x.r] || 0) + 1; return out; }
+  monthReport(day) {
+    const s = this.s, last = s.days.slice(-30); if (last.length < 20) return;
+    const sum = (k) => last.reduce((a, d) => a + (d[k] || 0), 0);
+    const collected = sum('rent') + sum('anc'), contrib = collected - sum('opex') - sum('payroll') - sum('service');
+    const oc = this.occupancy(), roll = this.rentRoll(), rep = this.reputation(), rating = this.rating(), lost = this.lostRecent(30);
+    const prev = s.mkt.reports[s.mkt.reports.length - 1];
+    const sug = [];
+    const lostN = (k) => lost[k] || 0;
+    const sizeLost = {}; for (const x of s.mkt.lostLog) if (x.d > day - 30 && (x.r === 'noSize' || x.r === 'noReady')) sizeLost[x.sz] = (sizeLost[x.sz] || 0) + 1;
+    const topSize = Object.entries(sizeLost).sort((a, b) => b[1] - a[1])[0];
+    if (topSize && topSize[1] >= 3) sug.push({ w: topSize[1] * 3, k: 'build', text: `${topSize[1]} shoppers wanted a ${topSize[0]} and found none available. Build more ${topSize[0]} units or turn vacant ones over faster.` });
+    if (lostN('noClimate') >= 2) sug.push({ w: lostN('noClimate') * 3, k: 'climate', text: `${lostN('noClimate')} shoppers needed climate control. An HVAC plant plus climate units would capture them.` });
+    const cp = this.compPrice();
+    if (lostN('price') + lostN('competitor') >= 3) sug.push({ w: (lostN('price') + lostN('competitor')) * 2.5, k: 'price', text: `${lostN('price') + lostN('competitor')} shoppers left over price${cp ? `; ${this.openComps()[0].name} charges about ${Math.round((1 - cp) * 100)}% under market` : ''}. Trim asking rents in Business, or win on quality.` });
+    const waiting = s.tasks.filter((t) => !t.assigned).length;
+    if (waiting >= 3) sug.push({ w: waiting * 2, k: 'staff', text: `${waiting} jobs are waiting in Operate. Hire a Porter or Tech, or call vendors, before customers notice.` });
+    const dims = [['security', 'Security is weak. Add lights or cameras where the Security overlay is dark.'], ['cleanliness', 'Cleanliness is slipping. A Porter keeps loading areas and halls clean.'], ['convenience', 'Interior convenience is low. Check cart stock and elevator waits.'], ['access', 'Access problems (gate, doors). Repair worn equipment.']];
+    for (const [k, t] of dims) if (s.exp[k] < 0.62) sug.push({ w: (0.62 - s.exp[k]) * 40, k, text: t });
+    if (rating != null && rating < 3.6) { const ds = {}; for (const r of s.mkt.reviews.slice(-25)) if (r.dim) ds[r.dim] = (ds[r.dim] || 0) + 1; const top = Object.entries(ds).sort((a, b) => b[1] - a[1])[0]; sug.push({ w: (3.6 - rating) * 8, k: 'reviews', text: `Reviews average ${rating.toFixed(1)} stars${top ? `, mostly about ${top[0]}` : ''}. Online shoppers read them.` }); }
+    const legacy = Object.values(s.leases).filter((L) => s.objects[L.unit] && L.rent < 0.9 * this.marketRent(s.objects[L.unit]) && L.status === 'current');
+    if (legacy.length >= 3) { const gain = Math.round(legacy.reduce((a, L) => a + this.marketRent(s.objects[L.unit]) * 0.97 - L.rent, 0)); sug.push({ w: legacy.length * 1.5, k: 'rent', text: `${legacy.length} tenants pay well under market. A rent review could add about $${gain.toLocaleString()}/mo (some may move out).` }); }
+    const behind = Object.values(s.leases).filter((L) => ['delinquent', 'lien', 'notice'].includes(L.status)).length;
+    if (behind >= 2) sug.push({ w: behind * 2, k: 'collect', text: `${behind} accounts are seriously behind. Work them in Business → Collections.` });
+    if (M_open_comps(this) && !sug.length) sug.push({ w: 1, k: 'comp', text: 'A competitor is open nearby. Keep quality high: strong reputation limits how many shoppers they take.' });
+    sug.sort((a, b) => b.w - a.w);
+    const Ls = Object.values(s.leases).filter((L) => s.objects[L.unit]); const priceR = Ls.length ? Ls.reduce((a, L) => a + L.rent / this.marketRent(s.objects[L.unit]), 0) / Ls.length : 1;
+    const ref = s.mkt.reports.length >= 3 ? s.mkt.reports[s.mkt.reports.length - 3].roll : null; const growth = ref ? roll / Math.max(1, ref) - 1 : 0;
+    const score = oc.pct * 30 + clamp(contrib / Math.max(1, roll), 0, 0.7) / 0.7 * 20 + rep * 20 + (rating != null ? (rating - 1) / 4 * 10 : 7) + clamp((priceR - 0.8) / 0.2, 0, 1) * 10 + clamp(5 + growth * 50, 0, 10);
+    const grade = score >= 88 ? 'A' : score >= 76 ? 'B' : score >= 64 ? 'C' : score >= 52 ? 'D' : 'F';
+    const R = { day, month: s.mkt.reports.length + 1, grade, score: Math.round(score), priceR, growth, occ: oc.pct, occN: oc.occ, units: oc.n, roll, rollPrev: prev ? prev.roll : null, collected, contrib, rep, repPrev: prev ? prev.rep : null, rating, leases: sum('leases'), moveouts: sum('moveouts'), lost, sug: sug.slice(0, 3).map((x) => x.text), season: this.seasonName(day), comps: this.openComps().map((c) => c.name) };
+    s.mkt.reports.push(R); if (s.mkt.reports.length > 12) s.mkt.reports.shift();
+    this.emit('report', { month: R.month, grade });
+  }
   // ============================================================ COLLECTIONS (GDD §36)
   // Current -> Past Due -> Delinquent (overlocked) -> Lien eligible -> Lien notice -> Auction / clean-out.
   // The player sets policy and handles exceptions; the ladder runs itself.
@@ -1289,7 +1407,7 @@ export class Sim {
 
   // ============================================================ FINANCING (GDD §37)
   // Term loans: principal, rate, term, monthly payment, approval limit. Nothing more.
-  loanTerms() { return { rate: 0.075, months: 60 }; }
+  loanTerms() { return { rate: (this.s.coTier || 1) >= 3 ? 0.065 : 0.075, months: 60 }; }
   loanPmt(P, rate = 0.075, n = 60) { const r = rate / 12; return Math.round(P * r / (1 - Math.pow(1 + r, -n)) * 100) / 100; }
   loanLimit() {
     const s = this.s; if (s.creative) return 0;
@@ -1413,9 +1531,9 @@ export class Sim {
     let settling = false;
     if (!cands.length && v.climate) { cands = ready.filter((u) => u.env === 'std'); settling = true; }
     if (!cands.length && !v.climate) { cands = ready.filter((u) => u.env === 'climate'); }
-    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.' }[reason], 'bad'); return null; };
+    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size }); if (s.mkt.lostLog.length > 200) s.mkt.lostLog.shift(); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: 'Nothing ready to rent today.' }[reason] || 'I\'ll keep shopping.', 'bad'); return null; };
     if (!cands.length) return lose(all.length ? (v.climate ? 'noClimate' : 'noReady') : v.climate && this.objs('unit').some((u) => u.size === v.size) ? 'noClimate' : 'noSize');
-    const rep = this.reputation();
+    const rep = this.reputation(); const cp = this.compPrice();
     let best = null, bestP = -1;
     for (const u of cands) {
       const ratio = this.askFor(u) / this.marketRent(u);
@@ -1423,11 +1541,12 @@ export class Sim {
       if (v.keen) pPrice = ratio > 1.25 ? pPrice : 0.97;
       const conv = v.keen ? 1 : u.conv * (u.f > 0 ? this.elevatorFactor(u) : 1);
       let p = pPrice * clamp(conv, 0.4, 1) * (v.keen ? 1 : 0.72 + 0.35 * rep) * (settling ? 0.35 : 1);
+      if (cp != null && !v.keen && ratio > cp + 0.04) p *= clamp(1 - (ratio - cp) * 2.2, 0.35, 1);
       if (p > bestP) { bestP = p; best = u; }
     }
     if (this.rnd() < bestP) return this.signLease(best, v);
     const ratio = this.askFor(best) / this.marketRent(best);
-    return lose(ratio > 1.08 ? 'price' : best.conv < 0.82 ? 'convenience' : 'shopping');
+    return lose(cp != null && ratio > cp + 0.04 && this.rnd() < 0.6 ? 'competitor' : ratio > 1.08 ? 'price' : best.conv < 0.82 ? 'convenience' : rep < 0.68 ? 'reputation' : 'shopping');
   }
   elevatorFactor(u) { const e = this.objs('elevator').find((e) => this.D.shellAt[this.idx(e.x, e.y)] === this.D.shellAt[this.idx(u.x, u.y)]); if (!e) return 0.5; return e.cond < 0.2 ? 0.55 : clamp(1 - (e.avgWait || 0) / 90, 0.7, 1); }
   signLease(u, v) {

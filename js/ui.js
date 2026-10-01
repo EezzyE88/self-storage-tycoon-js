@@ -1,7 +1,7 @@
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
-import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS } from './data.js';
+import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
-import { BEATS, toolUnlocked, unlockBeat, stepState } from './tutorial.js';
+import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
 import { SCENARIOS, scenarioProgress } from './scenarios.js';
 
 const PIN = {
@@ -115,11 +115,16 @@ export class UI {
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); break;
       case 'close': this.select(null); this.setTab(null); break;
-      case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (['commission', 'ownerTask', 'ownerMakeReady', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay'].includes(act.type)) this.renderSheet(true); break; }
+      case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
       case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); break;
-      case 'tutNext': { const b = BEATS[this.sim.s.tut.beat]; if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
+      case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
+      case 'lessonStart': this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = false; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
+      case 'rush': this.rush = !this.rush; this.replan(); this.sfx('click'); break;
+      case 'convoAll': this.convoAll = !this.convoAll; this.renderFeed(true); break;
+      case 'lessonEnd': this.do({ type: 'lesson', op: 'end' }); this.renderTut(true); break;
+      case 'lessonLater': this.do({ type: 'lesson', op: 'dismiss', id: v }); this.renderTut(true); break;
       case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
       case 'tutWhy': this.tutWhy = !this.tutWhy; this.renderTut(true); break;
       case 'menu': this.showMenu(); break;
@@ -221,12 +226,12 @@ export class UI {
     const cards = tools.map(([k, t]) => {
       const locked = !toolUnlocked(this.sim, k);
       const cost = t.cost != null ? money(t.cost * (1)) : t.costPerCell != null ? `${money(t.costPerCell)} / cell` : 'Free';
-      return `<button class="tool ${locked ? 'locked' : ''} ${focus && focus.tool === k ? 'pulse' : ''}" data-a="tool" data-v="${k}"><b>${t.name}</b><span class="c">${locked ? (s.tut.on && (k === 'office' || k === 'gate') ? 'Built' : 'Unlocks: ' + ((BEATS[unlockBeat(k)] || {}).chapter || 'later')) : cost}</span><span class="d">${t.desc}</span></button>`;
+      return `<button class="tool ${locked ? 'locked' : ''} ${focus && focus.tool === k ? 'pulse' : ''}" data-a="tool" data-v="${k}"><b>${t.name}</b><span class="c">${locked ? (s.tut.on && (k === 'office' || k === 'gate') ? 'Built' : 'Unlocks after the tutorial') : cost}</span><span class="d">${t.desc}</span></button>`;
     }).join('');
     return this.sheet('Build', s.creative ? 'Creative mode: instant and free' : 'Place, preview, then confirm', `<div class="tools">${cards}</div>`, catHtml);
   }
   pickTool(k) {
-    if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : `Unlocks in the tutorial's "${(BEATS[unlockBeat(k)] || {}).chapter || 'later'}" chapter`, 'bad'); this.sfx('refuse'); return; }
+    if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
     this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
@@ -241,12 +246,13 @@ export class UI {
   replan() {
     if (!this.tool || !this.planArgs) { this.renderActionBar(); return; }
     const T = TOOLS[this.tool];
-    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, f: this.toolFloor(), climate: this.climate, flip: this.flip };
+    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush };
     if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
     if (this.tool.startsWith('du')) a.f = 0;
     this.plan = this.sim.plan(a); this.plan.args = a;
     this.rend.setPreview(this.plan); this.renderActionBar();
   }
+  canRush() { const s = this.sim.s; return !s.creative && (s.coTier || 1) >= 2; }
   confirmPlan() {
     if (!this.plan) return;
     const r = this.sim.dispatch({ type: 'build', ...this.plan.args });
@@ -256,7 +262,8 @@ export class UI {
   }
   renderActionBar() {
     const box = this.$('abar'); if (!this.tool) { box.innerHTML = ''; return; }
-    const T = TOOLS[this.tool], R = this.plan;
+    const T = TOOLS[this.tool], R0 = this.plan; const rush = this.canRush() && this.rush && R0 && R0.dur;
+    const R = R0 && rush ? { ...R0, cost: Math.round(R0.cost * 1.25), dur: R0.dur * 0.5 } : R0;
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Tap the map to place.' : 'Drag on the map to size it. Two fingers pan.'}${this.toolFloor() ? ' Placing on Floor 2.' : ''}</span></div>`;
     if (R) {
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
@@ -275,6 +282,7 @@ export class UI {
     box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>${status}
       <div class="bot"><div class="cost">${costTxt}</div>
       ${isUnit ? `<button class="btn sm" data-a="flip">Flip doors</button>` : ''}
+      ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
       <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' ? 'disabled' : ''}>Confirm</button></div></div>`;
   }
@@ -361,6 +369,7 @@ export class UI {
         if (o.cstate === 'ready' && o.order) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: o.order })}'>Commission whole order</button>`);
         const mr = s.tasks.find((t) => t.type === 'makeready' && t.obj === o.id);
         if (mr) acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id })}'>Start Owner Make-Ready</button>`);
+        for (const op of sim.renovateOptions ? sim.renovateOptions(o) : []) acts.push(op.ok ? `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'renovate', unit: o.id, kind: op.kind })}'>${op.label} · ${money(op.cost)}</button>` : `<button class="btn" disabled title="${esc(op.why)}">${op.label} · ${esc(op.why)}</button>`);
         if (acts.length) h += `<div class="row wrap" style="margin-top:8px">${acts.join('')}</div>`;
         return this.sheet(nm, `${o.access === 'drive' ? 'Drive-up' : 'Interior'} ${o.size}`, h);
       }
@@ -473,6 +482,38 @@ export class UI {
     const st = this.sim.stageOf(L), cls = { current: 'g', pastdue: 'a', plan: 'b', delinquent: 'r', lien: 'r', notice: 'r', auction: 'r' }[L.status] || 'a';
     return `<span class="pill ${cls}">${st}</span>`;
   }
+  reportHtml() {
+    const sim = this.sim, s = sim.s, R = s.mkt && s.mkt.reports[s.mkt.reports.length - 1];
+    if (!R) return sim.pressureOn() || s.mode !== 'tutorial' ? `<h3>Monthly report</h3><p class="note">Your first report card arrives on Day ${Math.max(31, Math.ceil((sim.day - 1) / 30) * 30 + 1)}: a grade, what changed, and the top things to fix.</p>` : '';
+    const chg = (a, b, f) => b == null ? '' : ` <span class="${a >= b ? 'up' : 'down'}">${a >= b ? '▲' : '▼'} ${f(Math.abs(a - b))}</span>`;
+    const L = R.lost || {}; const lostN = Object.values(L).reduce((a, b) => a + b, 0);
+    return `<h3>Monthly report · Month ${R.month}</h3><div class="report"><div class="grade g${R.grade}">${R.grade}</div><div class="rgrow">
+      <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span><span>Shoppers who didn't sign</span><span>${lostN}</span></div>
+      <small class="note">${esc(R.season)}${R.comps.length ? ' · Competing with ' + esc(R.comps.join(', ')) : ''}</small></div></div>
+      ${R.sug.length ? `<div class="list sug">${R.sug.map((t, i) => `<div class="item"><span class="num">${i + 1}</span><div class="grow">${esc(t)}</div></div>`).join('')}</div>` : '<p class="note">Nothing urgent. Keep it up.</p>'}`;
+  }
+  marketHtml() {
+    const sim = this.sim, s = sim.s; if (!sim.pressureOn()) return '';
+    let h = `<h3>Your market</h3><div class="list">`;
+    const sv = sim.season(); h += `<div class="item"><div class="grow"><b>${esc(sim.seasonName())}</b><small>Shopper traffic is ${sv >= 1 ? 'up' : 'down'} ${Math.round(Math.abs(sv - 1) * 100)}% vs. an average month. Costs have risen ${Math.round((sim.costIdx() - 1) * 1000) / 10}% and market rents ${Math.round((sim.rentIdx() - 1) * 1000) / 10}% since Day 1.</small></div></div>`;
+    for (const c of s.mkt.comp) {
+      const open = sim.day >= c.opens;
+      h += `<div class="item"><div class="grow"><b>${esc(c.name)} · ${c.dist} mi away</b><small>${open ? `Open since Day ${c.opens}. Charges about ${Math.round((1 - c.price) * 100)}% under market and is taking ~${Math.round(sim.compShare() * 100 / Math.max(1, sim.openComps().length))}% of local shoppers. A strong reputation limits that; tenants paying well above their price are more likely to leave.` : `Under construction, opens Day ${c.opens}. Expect it to undercut market rents by ~${Math.round((1 - c.price) * 100)}%.`}</small></div><span class="pill ${open ? 'r' : 'y'}">${open ? 'Open' : 'Coming'}</span></div>`;
+    }
+    if (!s.mkt.comp.length) h += `<div class="item"><div class="grow"><b>No direct competitors yet</b><small>Developers watch busy markets. A new facility nearby would take shoppers and push prices down.</small></div></div>`;
+    h += `</div>`;
+    // why shoppers didn't sign
+    const lost = sim.lostRecent(30); const tot = Object.values(lost).reduce((a, b) => a + b, 0);
+    const WHY = { noReady: ['Nothing ready to rent', 'Turn vacant units over faster, or build more of what sells out.'], noSize: ['Size not offered', 'You have no units of the size they wanted. Build some.'], noClimate: ['Needed climate control', 'Add an HVAC plant and climate units.'], price: ['Too expensive', 'Your asking rent is well above market for them.'], competitor: ['Went to a competitor', 'A cheaper facility nearby. Close the price gap or out-compete on quality.'], convenience: ['Inconvenient', 'Long walks, cart shortages or elevator waits.'], reputation: ['Put off by reputation', 'Low reputation and reviews. Fix what customers complain about.'], shopping: ['Kept shopping', 'Normal: some shoppers always compare.'], service: ['Gave up waiting', 'Nobody at the counter. A Clerk keeps the office covered.'] };
+    h += `<h3>Why shoppers didn't sign · 30 days</h3>`;
+    if (!tot) h += `<p class="note">No lost shoppers in the last 30 days.</p>`;
+    else h += `<div class="list">${Object.entries(lost).sort((a, b) => b[1] - a[1]).map(([k, n]) => { const w = WHY[k] || [k, '']; return `<div class="item"><div class="grow"><b>${w[0]}</b><small>${w[1]}</small></div><b class="num">${n}</b></div>`; }).join('')}</div>`;
+    // reviews
+    const rv = (s.mkt.reviews || []).slice(-3).reverse(); const r = sim.rating();
+    h += `<h3>Reviews${r != null ? ` · ${r.toFixed(1)} ★` : ''}</h3>`;
+    h += rv.length ? `<div class="list">${rv.map((x) => `<div class="item"><div class="grow"><b class="stars">${'★'.repeat(x.stars)}<i>${'★'.repeat(5 - x.stars)}</i></b><small>"${esc(x.text)}" · ${esc(x.name)}, Day ${dayOf(x.t)}</small></div></div>`).join('')}</div><p class="note">About 40% of shoppers look online first. Good reviews bring more of them in; bad ones turn them away.</p>` : `<p class="note">Tenants post reviews over time. They reflect what they actually experienced on the property.</p>`;
+    return h;
+  }
   collectionsHtml() { // GDD §36
     const sim = this.sim, s = sim.s, P = s.policies, day = sim.day;
     const late = Object.values(s.leases).filter((L) => L.status !== 'current').sort((a, b) => a.dueSince - b.dueSince);
@@ -533,7 +574,8 @@ export class UI {
     let h = `<div class="stats">
       <div class="stat"><small>Cash</small><b class="${s.cash < 0 ? 'neg' : ''}">${money(s.cash)}</b></div>
       <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
-      <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops + ${money(pay)} payroll</div></div></div>`;
+      <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops${ox.tax ? ` (incl. ${money(ox.tax, true)} tax & insurance)` : ''} + ${money(pay)} payroll</div></div></div>`;
+    h += this.reportHtml() + this.marketHtml();
     // GDD §63.1–63.2: operating contribution, with capital and financing shown separately
     const anc = sum('anc'), svc = sum('service'), contrib = collected + anc - costs - svc, debtSvc = sum('debt') + sum('interest'), fin = sum('fin');
     const net = contrib - capex - debtSvc + fin + sum('other');
@@ -558,7 +600,7 @@ export class UI {
     const products = new Set(sim.objs('unit').map((u) => productKey(u.size, u.env)));
     for (const k of Object.keys(s.market.ask)) {
       if (!products.has(k) && !k.endsWith('std')) continue;
-      const [sz, env] = k.split('|'); const mk = Math.round(M.rent[sz] * (env === 'climate' ? M.climatePremium : 1)); const ask = s.market.ask[k];
+      const [sz, env] = k.split('|'); const mk = Math.round(sim.marketRent({ size: sz, env })); const ask = s.market.ask[k];
       const units = sim.objs('unit').filter((u) => productKey(u.size, u.env) === k && u.cstate === 'operating'); const vac = units.filter((u) => !u.lease).length;
       const d = ask / mk - 1;
       h += `<div class="item"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>Market ${money(mk)} · ${units.length} units · ${vac} vacant ${Math.abs(d) > 0.02 ? `· <span class="pill ${d > 0 ? 'a' : 'b'}">${d > 0 ? '+' : ''}${Math.round(d * 100)}%</span>` : ''}</small></div>
@@ -606,6 +648,13 @@ export class UI {
     const sim = this.sim, s = sim.s;
     let h = '';
     if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>Deadline</span><span>Day ${s.scenario.deadline} (${s.scenario.status})</span></div>`; }
+    if (this.g.tierInfo && !s.creative && !s.scenario && !(s.mode === 'tutorial' && !s.tut.done)) {
+      const ti = this.g.tierInfo(), nx = ti.next;
+      h += `<h3>Operator career</h3><div class="career"><div class="tier"><small>Level ${ti.cur.n} of ${TIERS.length}</small><b>${ti.cur.name}</b></div>`;
+      if (nx) { const pr = Math.min(1, ti.roll / nx.roll), pp = Math.min(1, ti.n / nx.props);
+        h += `<div class="goal"><span>Next: <b>${nx.name}</b></span><div class="bar"><i style="width:${Math.round(pr * 100)}%"></i></div><small>Portfolio rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? ` · Properties ${ti.n} of ${nx.props}` : ''}</small>${nx.props > 1 ? `<div class="bar"><i style="width:${Math.round(pp * 100)}%"></i></div>` : ''}<small class="perks">Unlocks: ${nx.perks.map(esc).join(' · ')}</small></div>`; }
+      h += `<small class="perks">Your perks: ${TIERS.filter((T) => T.n <= ti.cur.n).flatMap((T) => T.perks).map(esc).join(' · ')}</small></div>`;
+    }
     if (!s.open) {
       const iss = sim.openingIssues();
       h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
@@ -625,6 +674,10 @@ export class UI {
       const chapters = [...new Set(BEATS.map((b) => b.chapter))];
       h += `<h3>Tutorial</h3><div class="list">${chapters.map((c) => { const idx = BEATS.map((b, i) => b.chapter === c ? i : -1).filter((i) => i >= 0); const done = s.tut.done || idx.every((i) => i < s.tut.beat); const cur = !done && idx.includes(s.tut.beat); return `<div class="item"><div class="grow"><b>${c}</b></div><span class="pill ${done ? 'g' : cur ? 'a' : ''}">${done ? 'Done' : cur ? 'Now' : 'Later'}</span></div>`; }).join('')}</div>`;
     }
+    if (!s.scenario && !(s.tut && s.tut.on)) {
+      const avail = LESSONS.filter((L) => lessonAllowed(sim, L)); s.lessonsDone = s.lessonsDone || {};
+      if (avail.length) h += `<h3>Lessons</h3><div class="list">${avail.map((L) => `<div class="item"><div class="grow"><b>${L.title}</b><small>${L.steps.length} steps${s.lessonsDone[L.id] ? ` · done Day ${s.lessonsDone[L.id]}` : ''}</small></div>${s.lesson && s.lesson.id === L.id ? '<span class="pill b">In progress</span>' : `<button class="btn sm ${s.lessonsDone[L.id] ? '' : 'pri'}" data-a="lessonStart" data-v="${L.id}" ${s.lesson ? 'disabled' : ''}>${s.lessonsDone[L.id] ? 'Replay' : 'Start'}</button>`}</div>`).join('')}</div>`;
+    }
     h += this.portfolioHtml();
     return this.sheet('Growth', `Reputation ${pct(sim.reputation())}`, h);
   }
@@ -636,12 +689,17 @@ export class UI {
     while (this.toasts.length > (this.phone() ? 2 : 3)) { const o = this.toasts.shift(); o.el.remove(); }
   }
   renderFeed(force = false) {
-    const s = this.sim.s; const key = s.convos.map((c) => c.id).join(',') + ':' + (s.convos.length ? Math.floor(s.t / 15) : 0);
+    const s = this.sim.s; const key = s.convos.map((c) => c.id).join(',') + ':' + (s.convos.length ? Math.floor(s.t / 15) : 0) + ':' + !!this.convoAll;
     if (!force && key === this.convoKey) return; this.convoKey = key;
     const feed = this.$('feed');
     for (const el of feed.querySelectorAll('.convo')) el.remove();
     const frag = document.createDocumentFragment();
-    for (const c of s.convos.slice(-3)) {
+    // phone declutter: one request at a time, most urgent first (critical, then soonest to expire)
+    const urg = (c) => (c.sev === 'critical' ? 0 : 1e6) + (c.ttl ? Math.max(0, c.ttl - (s.t - c.t)) : 5e5);
+    const order = s.convos.slice().sort((a, b) => urg(a) - urg(b)); const cap = this.convoAll ? 3 : 1;
+    if (order.length > cap) { const m = document.createElement('button'); m.className = 'convo more'; m.dataset.a = 'convoAll'; m.textContent = this.convoAll ? 'Show fewer' : `+${order.length - cap} more request${order.length - cap > 1 ? 's' : ''} waiting`; frag.appendChild(m); }
+    else if (this.convoAll && order.length <= 1) this.convoAll = false;
+    for (const c of order.slice(0, cap).reverse()) {
       const el = document.createElement('div'); el.className = 'convo ' + (c.sev || 'attention');
       const left = c.ttl ? Math.max(0, c.ttl - (s.t - c.t)) : null;
       el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}${left != null ? `<span class="ttl">${left >= 120 ? Math.round(left / 60) + 'h' : left + 'm'} to answer</span>` : ''}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}">View</button>` : ''}</div>`;
@@ -693,8 +751,15 @@ export class UI {
       case 'milestone': if (MILESTONES[e.k]) { if (!this.g.showcase) this.toast('Milestone: ' + MILESTONES[e.k], 'good'); this.sfx('milestone'); } break;
       case 'hire': this.sfx('confirm'); break;
       case 'weather': if (e.w === 'rain') this.toast('Rain rolling in'); break;
-      case 'tut_beat': { const b = BEATS[s.tut.beat]; this.tutMin = false; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
+      case 'tier_up': { const T = TIERS[e.tier - 1]; if (T) { this.toast(`Promoted: ${T.name}. Unlocked ${T.perks.join('; ')}`, 'good'); this.sfx('milestone'); } break; }
+      case 'lesson_offer': this.sfx('attention'); this.renderTut(true); break;
+      case 'lesson_done': this.toast(`Lesson complete: ${e.title}`, 'good'); this.sfx('milestone'); this.renderTut(true); break;
+      case 'tut_beat': { const b = curBeat(this.sim); this.tutMin = false; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
       case 'tut_done': this.sfx('milestone'); this.renderTut(true); break;
+      case 'comp_announce': this.toast(`Competitor: ${e.name} is being built ${e.dist} mi away and opens Day ${e.opens}. See Business → Your market.`, 'bad'); this.sfx('attention'); break;
+      case 'comp_open': this.toast(`${e.name} opened, pricing about ${Math.round((1 - e.price) * 100)}% under market`, 'bad'); break;
+      case 'review': if (e.stars <= 2 || e.stars === 5) this.toast(`${e.stars}-star review: "${e.text}"`, e.stars <= 2 ? 'bad' : 'good'); break;
+      case 'report': this.toast(`Month ${e.month} report card: grade ${e.grade}. Open Business to read it.`, e.grade <= 'B' ? 'good' : 'bad'); this.sfx('milestone'); break;
       case 'lost': break;
       case 'access_lost': this.toast(`${e.n > 1 ? e.n + ' units' : e.name} lost customer access - ${e.why}`, 'bad'); this.sfx('fault'); break;
       case 'cash_warn': this.toast(e.msg, 'bad'); this.sfx('attention'); break;
@@ -720,16 +785,25 @@ export class UI {
   }
 
   // ------------------------------------------------------------ TUTORIAL CARD
-  tutFocus() { const s = this.sim.s; if (!s.tut.on) return null; const b = BEATS[s.tut.beat]; return b && b.focus ? b.focus(this.sim) : null; }
+  tutFocus() { const b = curBeat(this.sim); return b && b.focus ? b.focus(this.sim) : null; }
   renderTut(force = false) {
     const s = this.sim.s, box = this.$('tut');
     if (s.scenario && !this.title) { this.renderScenario(force); return; }
-    if (!s.tut.on || this.title) { box.innerHTML = ''; this.rend.setFocus(null); this.guideStep = null; return; }
-    const b = BEATS[s.tut.beat]; if (!b) { box.innerHTML = ''; return; }
+    const b = this.title ? null : curBeat(this.sim);
+    if (!b) {
+      this.guideStep = null;
+      const off = !this.title && s.lessonOffer && lessonById(s.lessonOffer);
+      const key = 'offer:' + (off ? off.id : '');
+      if (!force && key === this.tutKey) return; this.tutKey = key; this.rend.setFocus(null);
+      box.innerHTML = off ? `<div class="tut offer"><div class="ch"><span>Optional lesson</span></div><h4>${off.title}</h4><p class="intro">${off.body}</p><div class="row"><button class="btn pri" data-a="lessonStart" data-v="${off.id}">Start lesson</button><button class="skip" data-a="lessonLater" data-v="${off.id}">Not now</button></div></div>` : '';
+      return;
+    }
+    const isLesson = !!s.lesson;
     const st = stepState(this.sim, this); const cur = st.cur, step = b.steps[cur];
     const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim));
-    const key = [s.tut.beat, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy].join(':');
-    this.guideStep = step; this.guideKey = s.tut.beat + ':' + cur;
+    const bk = isLesson ? 'L' + s.lesson.id : s.tut.beat;
+    const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy].join(':');
+    this.guideStep = step; this.guideKey = bk + ':' + cur;
     if (!force && key === this.tutKey) return; this.tutKey = key;
     // map focus follows the current step
     const oid = step && step.obj ? step.obj(this.sim) : null;
@@ -741,12 +815,12 @@ export class UI {
     if (cur >= 2) items += `<li class="done more"><span class="ck">&#10003;</span><span class="tx">${cur - 1} step${cur > 2 ? 's' : ''} done</span></li>`;
     b.steps.forEach((x, i) => { if (i === cur - 1) items += li(x, i, 'done'); else if (i === cur) items += li(x, i, 'cur'); else if (i > cur && i <= cur + 2) items += li(x, i, 'todo'); });
     if (n - cur - 3 > 0) items += `<li class="todo more"><span class="ck"></span><span class="tx">+${n - cur - 3} more step${n - cur - 3 > 1 ? 's' : ''}</span></li>`;
-    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}"><div class="ch"><span>${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}</span><button class="mini" data-a="tutMin">${this.tutMin ? 'Show' : 'Hide'}</button></div>
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}`}</span><button class="mini" data-a="tutMin">${this.tutMin ? 'Show' : 'Hide'}</button></div>
       <h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
-      <div class="row">${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : '<span class="mini">Follow the steps - the ring shows where to tap</span>'}<button class="skip" data-a="tutSkip">Skip tutorial</button></div></div>`;
+      <div class="row">${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : '<span class="mini">Follow the steps - the ring shows where to tap</span>'}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
   // Coach ring: points at the current step's DOM control, or the control that leads to it, or its map spot.
   guideTarget() {
@@ -799,7 +873,7 @@ export class UI {
     const g = this.$('guide'); if (!g) return;
     const s = this.sim.s;
     if (s.tut && s.tut.on && s.tut.beat === 0 && !this.title) { const sig = [this.rend.zoom.toFixed(3), this.rend.rot, this.rend.center.x.toFixed(2), this.rend.center.z.toFixed(2)].join(','); if (this.lookSig == null) this.lookSig = sig; else if (performance.now() - (this.lookT0 || (this.lookT0 = performance.now())) < 2500) this.lookSig = sig; else if (sig !== this.lookSig) this.tutLooked = true; }
-    const t = s.tut && s.tut.on ? this.guideTarget() : null;
+    const t = curBeat(this.sim) ? this.guideTarget() : null;
     if (!t) { if (!g.hidden) g.hidden = true; return; }
     let x, y, w, h;
     if (t.el) {
@@ -946,7 +1020,7 @@ export class UI {
   }
   renderCoach() {
     const s = this.sim.s, el = this.$('coach');
-    const hide = this.title || this.modalOpen() || (s.tut && s.tut.on && !s.tut.done) || this.root.classList.contains('has-sheet');
+    const hide = this.title || this.modalOpen() || (s.tut && s.tut.on && !s.tut.done) || !!s.lesson || !!s.lessonOffer || this.root.classList.contains('has-sheet');
     const h = hide ? null : this.coachHint(); this.coachAct = h && h.act;
     if (!h) { if (!el.hidden) { el.hidden = true; this.root.classList.remove('has-coach'); } return; }
     const key = h.text + '|' + h.kind + '|' + this.ownerStatus();
@@ -992,12 +1066,16 @@ export class UI {
     for (const p of list) {
       if (!viewOk(p.f)) continue;
       const pr = R.project(p.x, p.y, p.f * 1.9 + 2.3); if (!pr.vis || pr.x < -20 || pr.y < -20 || pr.x > innerWidth + 20 || pr.y > innerHeight + 20) continue;
+      // cluster: pins whose screen positions overlap fold into the first one as a count badge
+      const cl = placed.find((q) => q.pin && Math.abs(q.x + 17 - pr.x) < 28 && Math.abs(q.y + 40 - pr.y) < 30);
+      if (cl) { cl.n++; continue; }
       let el = pool.get(p.key);
       if (!el) { el = document.createElement('button'); el.className = 'pin'; el.dataset.a = 'pin'; pool.set(p.key, el); root.appendChild(el); }
       const sig = p.k + p.who; if (el.dataset.sig !== sig) { el.dataset.sig = sig; el.className = 'pin ' + p.k; el.innerHTML = PIN[p.k] + (p.who ? `<span class="who">${PIN.person}</span>` : ''); el.setAttribute('aria-label', { repair: 'Needs repair', makeready: 'Needs make-ready', clean: 'Needs cleaning', late: 'Rent past due', lock: 'Overlocked for non-payment', auction: 'Scheduled for auction', blocked: 'No customer access', power: 'No power', cart: 'Stranded cart', ready: 'Ready to commission' }[p.k]); }
       el.dataset.k = p.cart ? 'cart' : p.dirt ? 'dirt' : 'obj'; el.dataset.id = p.cart ? p.id : p.id; if (p.dirt) { el.dataset.f = p.f; el.dataset.x = p.x - 0.5; el.dataset.y = p.y - 0.5; }
-      el.style.transform = `translate(${Math.round(pr.x - 17)}px, ${Math.round(pr.y - 40)}px)`; live.add(p.key); placed.push({ x: pr.x - 17, y: pr.y - 40, w: 34, h: 40 });
+      el.style.transform = `translate(${Math.round(pr.x - 17)}px, ${Math.round(pr.y - 40)}px)`; live.add(p.key); placed.push({ x: pr.x - 17, y: pr.y - 40, w: 34, h: 40, pin: true, n: 1, el });
     }
+    for (const q of placed) { let c = q.el.querySelector('.cnt'); if (q.n > 1) { if (!c) { c = document.createElement('span'); c.className = 'cnt'; q.el.appendChild(c); } c.textContent = q.n; q.el.dataset.n = q.n; } else if (c) { c.remove(); delete q.el.dataset.n; } }
     for (const [k, el] of pool) if (!live.has(k)) { el.remove(); pool.delete(k); }
     this.updateLabels(placed);
   }

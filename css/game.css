@@ -484,3 +484,19 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
   #ui.has-sheet .tut .steps li.cur { margin: 4px 0 0; }
   #ui.has-sheet .tut.has-btn .row { display: flex; }
 }
+/* ---- Round 11: market, report card, reviews ---- */
+.report { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.report .grade { flex: 0 0 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; font-size: 30px; font-weight: 900; color: #fff; background: #2f8f5b; }
+.report .grade.gB { background: #3d7fb3; } .report .grade.gC { background: #c79a2a; } .report .grade.gD { background: #c76a2a; } .report .grade.gF { background: #b83a2e; }
+.report .rgrow { flex: 1; min-width: 0; } .report .kv { margin: 0; } .report .up { color: #2f8f5b; font-size: 11px; } .report .down { color: #b83a2e; font-size: 11px; }
+.list.sug .item .num { flex: 0 0 22px; height: 22px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+.stars { color: #e0a81e; letter-spacing: 1px; } .stars i { color: #d8d3c8; font-style: normal; }
+.pin .cnt { position: absolute; top: -6px; right: -8px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #1f2a33; color: #fff; font: 800 11px/18px system-ui, sans-serif; text-align: center; border: 2px solid #fff; }
+.convo.more { display: block; width: 100%; text-align: center; font-weight: 700; font-size: 12px; padding: 6px 10px; cursor: pointer; background: rgba(255,255,255,.92); border: 1px dashed #b9b2a3; color: #3d3a33; }
+.tut.offer .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.career { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.career .tier small { display: block; font-size: 11px; color: var(--muted, #6b665c); text-transform: uppercase; letter-spacing: .06em; }
+.career .tier b { font-size: 18px; }
+.career .goal { display: grid; gap: 4px; } .career .bar { height: 8px; border-radius: 4px; background: #ece7dc; overflow: hidden; } .career .bar i { display: block; height: 100%; background: #2f8f5b; }
+.career .perks { color: var(--muted, #6b665c); font-size: 12px; line-height: 1.35; }
+#ui.has-sheet .tut.offer { display: none; }

@@ -254,9 +254,13 @@ export function installShowcase(game) {
   }
   function officeAt() { const o = Object.values(game.sim.s.objects).find((q) => q.type === 'office'); return o ? { x: o.x + (o.w || 1) / 2, z: o.y + (o.h || 1) / 2, f: 0 } : { x: rend.center.x, z: rend.center.z, f: 0 }; }
   function pop(x, z, f, text, cls) {
-    if (sc.pops.length > 14 || ui.title) return;
+    if (ui.title) return;
+    // phone declutter: merge a pop into a recent identical one nearby instead of stacking labels
+    const near = sc.pops.find((q) => q.base === text && q.t < 0.8 && Math.hypot(q.x - x, q.z - z) < 6 && Math.abs(q.y - ((f || 0) * FLOOR_H + 1.4)) < 1);
+    if (near) { near.n = (near.n || 1) + 1; near.el.textContent = `${text} ×${near.n}`; return; }
+    if (sc.pops.length > (innerWidth < 700 ? 6 : 14)) return;
     const el = document.createElement('div'); el.className = 'mpop ' + (cls || ''); el.textContent = text; $('pops').appendChild(el);
-    sc.pops.push({ x, z, y: (f || 0) * FLOOR_H + 1.4, t: 0, el });
+    sc.pops.push({ x, z, y: (f || 0) * FLOOR_H + 1.4, t: 0, el, base: text });
   }
   function onEvent(e) {
     if (ui.title) return;
@@ -266,6 +270,8 @@ export function installShowcase(game) {
       case 'rent': { if (s.speed > 2) break; const A = sc.rentAgg; if (A && performance.now() - A.t < 900) { A.amt += e.amt; A.el.textContent = `+${money(A.amt)}`; } else { const o = officeAt(); pop(o.x, o.z, 0, `+${money(e.amt)}`, 'rent'); const P = sc.pops[sc.pops.length - 1]; sc.rentAgg = P ? { t: performance.now(), amt: e.amt, el: P.el } : null; } break; }
       case 'repaired': if (e.x != null) pop(e.x + 0.5, e.y + 0.5, e.f, 'Fixed', 'fix'); break;
       case 'rentready': pop(e.x + 0.5, e.y + 0.5, e.f, 'Rent-ready', 'fix'); break;
+      case 'tier_up': celebrate('Promoted', ['', 'Owner-operator', 'Local operator', 'Regional operator', 'Portfolio operator', 'Storage magnate'][e.tier] || 'New level', 'New perks unlocked in Growth'); break;
+      case 'lesson_done': celebrate('Lesson complete', e.title, ''); break;
       case 'milestone': if (MILESTONES[e.k] && !String(e.k).startsWith('scenario_')) celebrate('Milestone', MILESTONES[e.k], milestoneSub(e.k), officeAt()); break;
       case 'commissioned': if (e.n >= 2) celebrate('Grand opening', `${e.n} new units open`, 'Now visible to shoppers. Leasing starts today.', { x: e.x + 0.5, z: e.y + 0.5, f: e.f }); break;
       case 'scenario_end': if (e.won) celebrate('Scenario complete', s.scenario ? s.scenario.name || 'Goals met' : 'Goals met', `Finished on day ${game.sim.day}`, officeAt()); break;

@@ -32,6 +32,7 @@ export const MARKETS = {
     // prospects per day by size at market price (all environments)
     demand: { '5x5': 0.35, '5x10': 0.7, '10x10': 0.8, '10x20': 0.35 },
     climateShare: 0.3,
+    settled: 0.4, // after the tutorial the pent-up local backlog is gone: steady-state demand for a small facility
   },
   urban: {
     name: 'Dense urban infill',
@@ -150,3 +151,13 @@ export const WORK = {
 
 export const NAMES_FIRST = ['Ana','Ben','Carla','Dev','Elena','Frank','Grace','Hector','Iris','Jamal','Kim','Luis','Maya','Nate','Olga','Priya','Quinn','Rosa','Sam','Tara','Uma','Victor','Wes','Ximena','Yusuf','Zoe','Marco','Leah','Omar','Jen'];
 export const NAMES_LAST = ['Alvarez','Brooks','Chen','Diaz','Evans','Flores','Garcia','Hughes','Ito','Johnson','Kowalski','Lopez','Martin','Nguyen','Ortiz','Patel','Reyes','Singh','Torres','Walker'];
+
+// Operator career (company progression). Requirements are portfolio-wide.
+export const TIERS = [
+  { n: 1, name: 'Owner-operator', roll: 0, props: 1, perks: ['Suburban parcels and operating facilities for sale'] },
+  { n: 2, name: 'Local operator', roll: 3500, props: 1, perks: ['Rush contractors: pay 25% more, build twice as fast', 'Priority vendor contract: repairs in ~5 hours instead of ~10'] },
+  { n: 3, name: 'Regional operator', roll: 7000, props: 2, perks: ['Urban infill and rural highway parcels', 'Better loan rate (6.5%)'] },
+  { n: 4, name: 'Portfolio operator', roll: 15000, props: 3, perks: ['Bulk purchasing: operating costs -8%', 'Premium marketing: +10% shopper traffic'] },
+  { n: 5, name: 'Storage magnate', roll: 30000, props: 4, perks: ['Top of the industry. Keep growing.'] },
+];
+

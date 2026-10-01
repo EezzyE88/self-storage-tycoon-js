@@ -1,6 +1,6 @@
 // Boot, fixed-step simulation loop, input, save/load, test hooks.
 import { Sim } from './sim.js';
-import { TICKS_PER_SEC_1X } from './data.js';
+import { TICKS_PER_SEC_1X, TIERS } from './data.js';
 import { makeMaple, makeEmptyLot } from './maple.js';
 import { makeScenario, makeSandbox, SCENARIOS } from './scenarios.js';
 import { MARKETS, MIN_PER_DAY, ROLES } from './data.js';
@@ -36,10 +36,22 @@ const game = {
     const speed = this.sim.s.speed; C.active = k; const sim = C.props[k].sim; sim.s.speed = speed;
     this.attach(sim, 'switch');
   },
+  tierInfo() { // operator career: portfolio-wide rent roll + property count
+    const props = this.company ? this.company.props : [{ sim: this.sim }];
+    const roll = props.reduce((a, p) => a + p.sim.rentRoll(), 0), n = props.length;
+    let cur = TIERS[0]; for (const T of TIERS) if (roll >= T.roll && n >= T.props) cur = T;
+    return { cur, next: TIERS.find((T) => T.n === cur.n + 1) || null, roll, n };
+  },
+  syncTier() { // runs once a game-hour; tiers never go down
+    const s = this.sim.s; if (s.creative || s.scenario || (s.mode === 'tutorial' && !s.tut.done)) return;
+    const ti = this.tierInfo(); const props = this.company ? this.company.props : [{ sim: this.sim }];
+    for (const p of props) if ((p.sim.s.coTier || 1) < ti.cur.n) p.sim.dispatch({ type: 'coTier', tier: ti.cur.n });
+  },
   offers() { // acquisition offers (GDD §46)
     const day = this.sim.day, n = this.company ? this.company.props.length : 1;
     const out = [];
-    for (const m of ['blank', 'urban', 'rural']) out.push({ kind: 'parcel', market: m, name: `Empty parcel · ${MARKETS[m].name}`, desc: 'Raw land with street frontage. Build it from scratch.', price: { blank: 45000, urban: 70000, rural: 25000 }[m] * (1 + 0.1 * (n - 1)) });
+    const tier = this.sim.s.coTier || 1;
+    for (const m of ['blank', 'urban', 'rural']) if (m === 'blank' || tier >= 3) out.push({ kind: 'parcel', market: m, name: `Empty parcel · ${MARKETS[m].name}`, desc: 'Raw land with street frontage. Build it from scratch.', price: { blank: 45000, urban: 70000, rural: 25000 }[m] * (1 + 0.1 * (n - 1)) });
     const mp = makeMapleSeedPrice(day);
     const fac = FACILITY_NAMES.find((nm) => !(this.company ? this.company.props : []).some((p) => p.name === nm)) || 'Oak Ridge Storage';
     out.push({ kind: 'facility', market: 'maple', name: 'Operating facility · ' + fac, fac, desc: '23 units, mostly leased, some deferred maintenance. Rent roll comes with it.', price: mp });
@@ -82,7 +94,7 @@ const game = {
   },
   note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },
   attach(sim, kind) {
-    this.sim = sim; if (sim.s.mode === 'tutorial') installTutorial(sim); else sim.onTick = null;
+    this.sim = sim; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)
     if (this.rend) this.rend.setSim(sim);
     if (this.ui) {
       this.ui.tool = null; this.ui.sel = null; this.ui.plan = null; this.ui.setTab(null); this.ui.renderActionBar();
@@ -199,7 +211,7 @@ function stepTicks(n) {
   const sim = game.sim, C = game.company;
   const others = C ? C.props.map((p, k) => ({ p, k })).filter((x) => x.p.sim !== sim) : [];
   for (let i = 0; i < n; i++) {
-    sim.step(); if (sim.events.length > 400) game.drain();
+    sim.step(); if (sim.events.length > 400) game.drain(); if (sim.s.t % 60 === 0) game.syncTier();
     for (const { p, k } of others) {
       p.sim.step();
       for (const e of p.sim.events) { const f = BG_EVENTS[e.type]; const msg = f && f(e, p.sim); if (msg) { game.note(k, msg); if (e.type !== 'lease' && e.type !== 'moveout') game.ui.toast(`${p.name}: ${msg}`, 'bad'); } }
