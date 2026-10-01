@@ -1,0 +1,35 @@
+const { hold, step, sim } = require('./lib.js');
+module.exports = async (p, shot, log, mob) => {
+  await p.waitForTimeout(800);
+  await p.evaluate(()=>{ document.querySelector('[data-a="new"][data-v="maple"]').click(); });
+  await p.waitForTimeout(600); await hold(p);
+  const fr = async (n=3) => { await step(p, n, 1/30, false); await p.waitForTimeout(250); };
+  const st = () => p.evaluate(()=>{ const t=document.querySelector('.tut li.cur'); const g=document.getElementById('guide'); const r=g.getBoundingClientRect(); return (t?t.innerText.replace(/\s+/g,' ').slice(0,90):'-')+' | guide '+(g.hidden?'hidden':`${g.querySelector('.glbl').textContent}@${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)}`); });
+  await p.evaluate(()=>{ __game.ui.closeModal && __game.ui.closeModal(); }); await fr(4);
+  await shot('t10_welcome'); log('welcome', await st());
+  await p.evaluate(()=>{ __game.ui.tutLooked=true; }); await fr(); log('welcome2', await st());
+  await p.evaluate(()=>{ document.querySelector('.tut [data-a="tutNext"]').click(); }); await fr(6);
+  log('mr1', await st()); await shot('t10_mr1');
+  await p.evaluate(()=>{ const u=__game.sim.objs('unit').find(u=>u.num===107); __game.ui.select(u.id); }); await fr();
+  log('mr2', await st()); await shot('t10_mr2');
+  await p.evaluate(()=>{ document.querySelector(`[data-cmd*='"ownerMakeReady"']`).click(); }); await fr();
+  log('mr3', await st()); await shot('t10_mr3');
+  await p.evaluate(()=>{ __game.ui.select(null); __game.ui.do({type:'speed', v:4}); }); await sim(p, 1440*1.5); await fr();
+  log('after mr', await p.evaluate(()=>__game.sim.s.tut.beat)); log('lease', await st());
+  await sim(p, 1440); await fr(); log('beat', await p.evaluate(()=>__game.sim.s.tut.beat), await st()); await shot('t10_money');
+  await p.evaluate(()=>{ document.querySelector('#tabs [data-v="business"]').click(); }); await fr(); log('money2', await st()); await shot('t10_money2');
+  await p.evaluate(()=>{ document.querySelector('.tut [data-a="tutNext"]').click(); }); await fr(4);
+  await p.evaluate(()=>{ document.querySelector('[data-a="close"]') && document.querySelector('[data-a="close"]').click(); }); await fr();
+  log('expand1', await st()); await shot('t10_exp1');
+  await p.evaluate(()=>{ document.querySelector('#tabs [data-v="build"]').click(); }); await fr(); log('expand2', await st()); await shot('t10_exp2');
+  await p.evaluate(()=>{ document.querySelector('.cats [data-v="units"]').click(); }); await fr(); log('expand3', await st()); await shot('t10_exp3');
+  await p.evaluate(()=>{ document.querySelector('[data-a="tool"][data-v="du10x10"]').click(); }); await fr(); log('expand4', await st()); await shot('t10_exp4');
+  await p.evaluate(()=>{ const u=__game.ui; u.planArgs={a:{x:13,y:18},b:{x:13,y:25}}; u.replan(); }); await fr(); log('expand5', await st()); await shot('t10_exp5');
+  await p.evaluate(()=>{ document.querySelector('#abar [data-a="confirm"]').click(); }); await fr(); log('expand6', await st()); await shot('t10_exp6');
+  // jump to climate beat via sim for a long-step card
+  await p.evaluate(()=>{ const g=__game, s=g.sim.s; g.ui.pickTool(null); g.ui.setTab(null); s.tut.beat=9; s.tut.entered=false; g.sim.poll(); g.drain(); g.ui.renderTut(true); }); await fr(4);
+  log('climate', await st()); await shot('t10_climate');
+  await p.evaluate(()=>{ document.querySelector('.tut [data-a="tutWhy"]').click(); }); await fr(); await shot('t10_why');
+  log('text', await p.evaluate(()=>{ const t=document.querySelector('.tut').innerText; return /undefined|NaN|\[object/.test(t) ? 'BAD' : 'clean'; }));
+  log('overflow', await p.evaluate(()=>document.documentElement.scrollWidth));
+};
