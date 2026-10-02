@@ -1,5 +1,5 @@
 // Boot, fixed-step simulation loop, input, save/load, test hooks.
-import { Sim } from './sim.js';
+import { Sim, fmtTime } from './sim.js';
 import { TICKS_PER_SEC_1X, TIERS } from './data.js';
 import { makeMaple, makeEmptyLot } from './maple.js';
 import { makeScenario, makeSandbox, SCENARIOS } from './scenarios.js';
@@ -9,6 +9,7 @@ import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { cloud } from './cloud.js';
+import { localsave } from './localsave.js';
 import { installShowcase } from './showcase.js';
 
 Renderer.prototype.setSim = function (sim) {
@@ -140,13 +141,19 @@ const game = {
   },
   saveMeta() {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
-    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, cash: Math.round(s.cash), props: C ? C.props.length : 1 };
+    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1 };
   },
   // autosave: whenever a game is running (not on the title screen); `hide` uses a keepalive request
   async autosave(hide) {
     if (!this.ui || this.ui.title || this.saving) return false;
     this.saving = true;
-    try { const code = await this.saveCode(); const meta = this.saveMeta(); if (hide) { cloud.beacon(code, meta); return true; } return await cloud.put(code, meta); }
+    try {
+      const code = await this.saveCode(); const meta = this.saveMeta();
+      const local = localsave.put(code, meta); // browser storage first: it works on any normal host, including GitHub Pages
+      if (hide) { if (cloud.ok !== false || !local) cloud.beacon(code, meta); return local || true; }
+      const remote = cloud.ok === false && local ? false : await cloud.put(code, meta);
+      return local || remote;
+    }
     catch (e) { return false; } finally { this.saving = false; this.lastAuto = performance.now(); this.lastAutoDay = this.sim.day; }
   },
   cloud,
@@ -272,8 +279,12 @@ function tick(now) {
 requestAnimationFrame(loop);
 window.addEventListener('resize', () => game.rend.resize());
 window.addEventListener('pagehide', () => { if (!document.hidden) game.autosave(true); });
-// offer "Continue" on the title screen when this browser has an autosave
-cloud.get().then((d) => { game.ui.contSave = d; if (game.ui.title) game.ui.showTitle(); });
+// offer "Continue" on the title screen: newest of the browser autosave and the save server, with the browser backup as fallback
+game.localsave = localsave;
+{ const L = localsave.get(); const pick = (d, src) => d ? { ...d, src } : null;
+  const offer = (cl) => { const cands = [pick(L.main, 'browser'), pick(cl, 'server')].filter(Boolean).sort((a, b) => (b.at || 0) - (a.at || 0));
+    game.ui.contSave = cands[0] || pick(L.backup, 'backup'); game.ui.contBackup = L.main && L.backup ? pick(L.backup, 'backup') : null; if (game.ui.title) game.ui.showTitle(); };
+  offer(null); cloud.get().then((d) => offer(d)); }
 
 // ---------------------------------------------------------------- input
 const ptrs = new Map(); let drag = null; let pinch = null;

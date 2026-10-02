@@ -241,16 +241,16 @@ export function installShowcase(game) {
   // ---------------------------------------------------------------- celebrations + money pops
   let banQ = [], banBusy = false;
   function celebrate(kicker, title, sub, at, tone) {
-    if (at && tone !== 'bad') fx.burst(at.x, at.z, at.f || 0);
+    if (at && !tone) fx.burst(at.x, at.z, at.f || 0);
     banQ.push({ kicker, title, sub, tone }); if (banQ.length > 3) banQ.shift(); if (!banBusy) nextBanner();
   }
   sc.celebrate = celebrate;
   sc.bannerBusy = () => banBusy || banQ.length > 0; // the UI holds lesson offers until celebrations finish
   function nextBanner() {
     const b = banQ.shift(); const el = $('celebrate'); if (!b) { banBusy = false; return; } banBusy = true;
-    game.audio.play(b.tone === 'bad' ? 'attention' : 'flourish');
+    game.audio.play(b.tone ? 'attention' : 'flourish');
     el.innerHTML = `<div class="cb"><span class="cb-k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.6L21 9l-5.2 4.2L17.6 20 12 16.2 6.4 20l1.8-6.8L3 9l6.6-.4z"/></svg>${esc(b.kicker)}</span><b>${esc(b.title)}</b>${b.sub ? `<small>${esc(b.sub)}</small>` : ''}</div>`;
-    el.classList.toggle('bad', b.tone === 'bad'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    el.classList.toggle('warn', b.tone === 'warn'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
     setTimeout(() => { el.classList.remove('on'); setTimeout(nextBanner, 450); }, 3600);
   }
   function officeAt() { const o = Object.values(game.sim.s.objects).find((q) => q.type === 'office'); return o ? { x: o.x + (o.w || 1) / 2, z: o.y + (o.h || 1) / 2, f: 0 } : { x: rend.center.x, z: rend.center.z, f: 0 }; }
@@ -273,7 +273,7 @@ export function installShowcase(game) {
       case 'rentready': pop(e.x + 0.5, e.y + 0.5, e.f, 'Rent-ready', 'fix'); break;
       case 'tier_up': celebrate('Promoted', ['', 'Owner-operator', 'Local operator', 'Regional operator', 'Portfolio operator', 'Storage magnate'][e.tier] || 'New level', 'New perks unlocked in Growth'); break;
       case 'lesson_done': celebrate('Lesson complete', e.title, ''); break;
-      case 'drama': celebrate(e.k === 'breakin' ? 'Break-in' : e.k === 'pricewar' ? 'Price war' : 'News', e.title, e.sub, e.x != null ? { x: e.x + 0.5, z: e.y + 0.5, f: e.f } : null, 'bad'); break;
+      case 'drama': celebrate(e.k === 'breakin' ? 'Break-in' : e.k === 'pricewar' ? 'Price war' : 'News', e.title, e.sub, e.x != null ? { x: e.x + 0.5, z: e.y + 0.5, f: e.f } : null, 'warn'); break;
       case 'milestone': if (MILESTONES[e.k] && !String(e.k).startsWith('scenario_')) celebrate('Milestone', MILESTONES[e.k], milestoneSub(e.k), officeAt()); break;
       case 'commissioned': if (e.n >= 2) celebrate('Grand opening', `${e.n} new units open`, 'Now visible to shoppers. Leasing starts today.', { x: e.x + 0.5, z: e.y + 0.5, f: e.f }); break;
       case 'scenario_end': if (e.won) celebrate('Scenario complete', s.scenario ? s.scenario.name || 'Goals met' : 'Goals met', `Finished on day ${game.sim.day}`, officeAt()); break;

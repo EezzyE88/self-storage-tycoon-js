@@ -813,18 +813,27 @@ export class Renderer {
     const sim = this.sim, s = sim.s, D = sim.D, g = this.ovCanvas.getContext('2d'), C = 16, W = s.W, f = this.view === 1 ? 1 : 0;
     g.clearRect(0, 0, this.ovCanvas.width, this.ovCanvas.height);
     const cell = (i, c) => { g.fillStyle = c; g.fillRect((i % W) * C, ((i / W) | 0) * C, C, C); };
+    // status is never color alone (concept §11): every state also gets a mark
+    const mark = (px, py, m, sz = C) => { if (!m) return; g.save(); g.strokeStyle = 'rgba(20,24,30,0.75)'; g.fillStyle = 'rgba(20,24,30,0.75)'; g.lineWidth = Math.max(2, sz / 7); const a = sz * 0.22, b = sz * 0.78;
+      if (m === 'x') { g.beginPath(); g.moveTo(px + a, py + a); g.lineTo(px + b, py + b); g.moveTo(px + b, py + a); g.lineTo(px + a, py + b); g.stroke(); }
+      else if (m === '/') { g.beginPath(); g.moveTo(px + a, py + b); g.lineTo(px + b, py + a); g.stroke(); }
+      else if (m === '.') { g.beginPath(); g.arc(px + sz / 2, py + sz / 2, sz * 0.14, 0, 7); g.fill(); }
+      else if (m === 'v') { g.beginPath(); g.moveTo(px + a, py + sz * 0.52); g.lineTo(px + sz * 0.43, py + b); g.lineTo(px + b, py + a); g.stroke(); }
+      g.restore(); };
+    const cellM = (i, c, m) => { cell(i, c); mark((i % W) * C, ((i / W) | 0) * C, m); };
     if (this.overlay === 'security') {
       for (let i = 0; i < W * s.H; i++) {
         if (!D.walk[f][i] && !(f === 0 && D.solid[i] && !D.shellAt[i])) continue;
         const lit = D.lit[f][i] >= 0.5, cam = D.cam[f][i];
-        if (cam && lit) cell(i, 'rgba(64,170,110,0.55)'); else if (cam) cell(i, 'rgba(70,130,220,0.5)'); else if (lit) cell(i, 'rgba(240,200,70,0.5)'); else cell(i, 'rgba(200,60,50,0.5)');
+        if (cam && lit) cell(i, 'rgba(64,170,110,0.55)'); else if (cam) cellM(i, 'rgba(70,130,220,0.5)', '.'); else if (lit) cellM(i, 'rgba(240,200,70,0.5)', '/'); else cellM(i, 'rgba(200,60,50,0.5)', 'x');
       }
     } else if (this.overlay === 'clean') {
-      for (let i = 0; i < W * s.H; i++) { if (!D.walk[f][i]) continue; const d = s.dirt[f][i]; cell(i, d > 0.55 ? 'rgba(200,60,50,0.6)' : d > 0.25 ? 'rgba(230,170,50,0.5)' : 'rgba(64,170,110,0.35)'); }
+      for (let i = 0; i < W * s.H; i++) { if (!D.walk[f][i]) continue; const d = s.dirt[f][i]; if (d > 0.55) cellM(i, 'rgba(200,60,50,0.6)', 'x'); else if (d > 0.25) cellM(i, 'rgba(230,170,50,0.5)', '/'); else cell(i, 'rgba(64,170,110,0.35)'); }
     } else if (this.overlay === 'hvac') {
       for (const sh of sim.objs('shell')) {
         const hv = D.hvac[sh.id]; const c = !hv || hv.cap <= 0 ? 'rgba(120,120,120,0.35)' : hv.load > hv.cap ? 'rgba(200,60,50,0.5)' : 'rgba(70,170,220,0.45)';
-        for (let y = sh.y; y < sh.y + sh.h; y++) for (let x = sh.x; x < sh.x + sh.w; x++) cell(y * W + x, c);
+        const hm = !hv || hv.cap <= 0 ? '/' : hv.load > hv.cap ? 'x' : null;
+        for (let y = sh.y; y < sh.y + sh.h; y++) for (let x = sh.x; x < sh.x + sh.w; x++) cellM(y * W + x, c, (x + y) % 2 === 0 ? hm : null);
       }
       for (const u of sim.objs('unit')) if (u.env === 'climate' && (u.f || 0) === f) { g.strokeStyle = '#8fe0ff'; g.lineWidth = 2; g.strokeRect(u.x * C + 1, u.y * C + 1, u.w * C - 2, u.h * C - 2); }
       for (const hvo of sim.objs('hvac')) { g.fillStyle = '#8fe0ff'; g.beginPath(); g.arc(hvo.x * C + 8, hvo.y * C + 8, 7, 0, 7); g.fill(); }
@@ -834,11 +843,12 @@ export class Renderer {
         const col = o.unpowered ? 'rgba(210,60,45,0.85)' : 'rgba(64,170,110,0.75)';
         if (o.w && o.h) { g.fillStyle = col; g.fillRect(o.x * C, o.y * C, o.w * C, o.h * C); }
         else { g.fillStyle = col; g.beginPath(); g.arc(o.x * C + 8, o.y * C + 8, o.type === 'elevator' || o.type === 'hvac' ? 12 : 7, 0, 7); g.fill(); }
+        if (o.unpowered) mark(o.x * C - 4, o.y * C - 4, 'x', 24);
       }
       for (const p of sim.objs('power')) { g.strokeStyle = '#f1d24a'; g.lineWidth = 3; g.strokeRect(p.x * C + 1, p.y * C + 1, C - 2, C - 2); }
     } else if (this.overlay === 'carts') {
       for (let i = 0; i < W * s.H; i++) if (D.walk[f][i]) cell(i, 'rgba(255,255,255,0.12)');
-      for (const co of sim.objs('corral')) { if ((co.f || 0) !== f) continue; const n = sim.cartsAt(co.id).length; g.fillStyle = n === 0 ? 'rgba(200,60,50,0.8)' : n < (co.target || 2) ? 'rgba(230,170,50,0.8)' : 'rgba(64,170,110,0.8)'; g.beginPath(); g.arc(co.x * C + 8, co.y * C + 8, 14, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = '700 12px system-ui'; g.textAlign = 'center'; g.fillText(String(n), co.x * C + 8, co.y * C + 12); }
+      for (const co of sim.objs('corral')) { if ((co.f || 0) !== f) continue; const n = sim.cartsAt(co.id).length; g.fillStyle = n === 0 ? 'rgba(200,60,50,0.8)' : n < (co.target || 2) ? 'rgba(230,170,50,0.8)' : 'rgba(64,170,110,0.8)'; g.beginPath(); g.arc(co.x * C + 8, co.y * C + 8, 14, 0, 7); g.fill(); mark(co.x * C - 4, co.y * C - 4, n === 0 ? 'x' : n < (co.target || 2) ? '/' : 'v', 24); g.fillStyle = '#fff'; g.font = '700 12px system-ui'; g.textAlign = 'center'; g.fillText(String(n), co.x * C + 8, co.y * C + 12); }
       for (const c of s.carts) if ((c.st === 'stranded' || c.st === 'damaged') && (c.f || 0) === f) { g.strokeStyle = '#d2452f'; g.lineWidth = 3; g.beginPath(); g.arc(c.x * C, c.y * C, 7, 0, 7); g.stroke(); }
     }
     this.ovTex.needsUpdate = true;

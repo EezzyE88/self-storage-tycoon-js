@@ -717,3 +717,73 @@ Honest read: idle play no longer pins at 100%, and neglect now collapses. But th
 
 ### Not verified
 - Whether these events feel exciting or just annoying to real players. Break-in frequency may need tuning after playtests.
+
+
+## Foundations branch (`work/foundations`, 2026-10-02): ideas 1, 2, 5 and 11
+
+**Requested by the user:** "Implement adopt-now ideas 1, 2, 5 and 11 from SST Ideas to Adopt on a work/foundations branch, test them, and share a preview for my review without merging to master."
+
+**Status:** not merged to master; awaiting review.
+
+### Changes
+1. **Browser autosave** (`js/localsave.js`)
+   - Saves to browser storage every in-game day, about once a minute while running, on page hide, and before load. The previous save is kept as a backup. If storage is full, the backup is dropped first.
+   - Continue picks the newest save from the browser or the save server. If it can't be loaded, the backup is used and the player is told.
+   - The Continue message states what was restored: "Restored Maple Street Storage: Day 5, 7:00 AM, $26,127 cash (saved just now)."
+   - Save codes and files are unchanged.
+2. **Honest money**
+   - The HUD shows "est +$41/d", calculated from paying tenants only.
+   - Business adds:
+     - an "Owed to you" card: accounts behind, "not cash until paid"
+     - a rent roll split into paying and past due
+     - "Rent collected, last 30 days"
+     - an "Estimate: net per day" card labelled "Projection, not money earned"
+     - a note on cash: "Unpaid rent is not included"
+   - New sim helpers: `rentRollPaying()`, `receivables()`, `estDailyNet()`.
+3. **Not color alone**
+   - Every overlay state has a mark:
+     - Security: cross = dark, stripe = lit only, dot = camera only.
+     - Cleanliness: cross = dirty, stripe = getting dirty.
+     - HVAC: cross = overloaded, stripe = none.
+     - Carts: check, stripe or cross on corrals.
+     - Power: cross = shut off.
+   - Legends describe the marks. A one-line legend appears when an overlay is opened from a card.
+   - The 14-day chart has "Rent in ↑" and "Costs out ↓" labels, and construction is striped.
+4. **No time pressure**
+   - Conversation cards no longer show "Xh to answer". They say "No rush. If you leave it, the game picks: …". Collections show "Lien decision due Day N".
+   - Break-ins and price wars use the attention tone, with an amber banner instead of red.
+   - A "Security check" notice, with a lot pin and a "Show security map" button, comes at least 3 days before any break-in at a low-security property.
+   - Thieves pick dark, unwatched units, so the cause is visible on the map.
+   - Scenario deadlines are unchanged.
+
+### Verified (headless, plus Playwright Chromium on localhost)
+- **`tfin`, all pass:**
+  - Cash change equals the ledger total over 120 days of Turnaround.
+  - Rent roll = paying + past due, checked every day.
+  - "Owed to you" matches balances (peak $627).
+  - Bills to behind tenants raised balances, not cash (3/3).
+- **`tcalm`, all pass:**
+  - 7 break-ins in 3 seeds × 2 years, each 3+ days after a notice (closest gap 9 days).
+  - 7/7 hit dark units; none were critical.
+  - 48 notices in total, about one every 45 days at low security.
+- **Regressions:**
+  - Determinism and continuation: true. Tutorial walkthrough: day 5.
+  - `tdrama` and `tfix`: pass.
+  - Maple year 1 cash: idle $34,572, good $41,275, strategic $37,196.
+  - Scenarios:
+    - Turnaround: the builder wins on day 41, and idle loses.
+    - Climate Boom: won on day 59.
+    - Go Vertical: won on day 257.
+- **Browser (`s_found.js`), 390×844 and 1280:**
+  - Save, reload, Continue: day, time, cash and leases match exactly.
+  - Damaged main save: the backup loaded, with a notice.
+  - HUD shows "est"; the Business cards are correct.
+  - The security notice, overlay button, legend toast, break-in card with its "No rush" line, and amber banner all work.
+  - `s_r11`: no errors or overflow.
+- Save size is about 6 KB for a single Maple save.
+
+### Not verified / known issues
+- iPhone Safari: browser storage, page-hide saving when the app is backgrounded, and Private Browsing behavior.
+- The sandboxed preview blocks browser storage, so the preview tests the save-server path, not the browser one.
+- One desktop Playwright screenshot timed out (software WebGL); the page stayed responsive.
+- On phones, the break-in banner briefly covers the "No rush" line of the card.

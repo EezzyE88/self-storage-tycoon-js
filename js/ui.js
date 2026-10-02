@@ -113,7 +113,7 @@ export class UI {
       case 'coach': this.runCoach(); break;
       case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
-      case 'overlay': this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); break;
+      case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
       case 'close': this.select(null); this.setTab(null); break;
       case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
@@ -146,7 +146,13 @@ export class UI {
       case 'photo': this.closeModal(); this.g.showcase.enterPhoto(); break;
       case 'tour': this.closeModal(); this.g.showcase.startTour(); if (!this.sim.s.speed) this.do({ type: 'speed', v: 1 }); break;
       case 'lens': this.g.showcase.setLens(!this.g.showcase.lensPref); this.showMenu(); break;
-      case 'continue': { const d = this.contSave; if (!d) break; this.g.loadCode(d.code).then((ok) => { if (ok) { this.closeModal(); this.toast('Welcome back', 'good'); this.sfx('confirm'); } else { this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded', 'bad'); } }); break; }
+      case 'continue': { const d = this.contSave; if (!d) break;
+        const told = (r, note) => { const m = r.meta || {}; this.closeModal(); this.sfx('confirm'); this.toast(`${note}Restored ${m.name || 'your game'}: Day ${+m.day || 1}${m.time ? ', ' + m.time : ''}, ${money(+m.cash || 0)} cash (${this.ago((r.at || 0) * 1000)}${r.src === 'server' ? ', from the save server' : ''}).`, note ? 'bad' : 'good'); };
+        this.g.loadCode(d.code).then(async (ok) => {
+          if (ok) return told(d, d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '');
+          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
+          this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded, and no backup worked. Load a save code or file instead.', 'bad');
+        }); break; }
       case 'loadCode': this.g.loadCode(this.root.querySelector('#loadTa').value).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else { this.toast('That save code could not be read', 'bad'); const ta = this.root.querySelector('#loadTa'); if (ta) { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); } } }); break;
       case 'loadFile': this.root.querySelector('#loadFile').click(); break;
       case 'copy': { const ta = this.root.querySelector('#saveTa'); ta.select(); try { navigator.clipboard.writeText(ta.value); this.toast('Save code copied', 'good'); } catch (err) { document.execCommand && document.execCommand('copy'); } break; }
@@ -469,8 +475,11 @@ export class UI {
       <p class="note">Porter: make-ready, cleaning, carts. Tech: repairs incl. elevators and HVAC. Clerk: office service during office hours. Manager: opens ready units, escalates stalled repairs to vendors, restocks carts and adjusts asking rents monthly.</p>`;
     if (sim.hasManager() || s.mgrLog.length) h += `<h3>Manager log</h3><div class="kv">${s.mgrLog.length ? s.mgrLog.slice(0, 8).map((l) => `<span>Day ${dayOf(l.t)} ${fmtTime(l.t)}</span><span>${esc(l.msg)}</span>`).join('') : '<span>No decisions yet</span><span></span>'}</div>`;
     h += `<h3>Overlays</h3><div class="row wrap">${[['security', 'Security'], ['carts', 'Carts'], ['hvac', 'HVAC'], ['clean', 'Cleanliness'], ['power', 'Power']].map(([k, n]) => `<button class="btn sm ${this.rend.overlay === k ? 'pri' : ''}" data-a="overlay" data-v="${k}">${n}</button>`).join('')}</div>`;
-    if (this.rend.overlay === 'security') h += `<p class="note">Green: lit + camera. Blue: camera only. Yellow: lit only. Red: dark, no camera.</p>`;
-    if (this.rend.overlay === 'power') h += `<p class="note">Green: powered equipment. Red: shut off because demand exceeds electrical service.</p>`;
+    if (this.rend.overlay === 'security') h += `<p class="note legend">Each patch shows a mark as well as a color. <b>No mark</b> (green): lit and on camera. <b>Dot</b> (blue): camera only. <b>One stripe</b> (yellow): lit only. <b>Cross</b> (red): dark and unwatched - where thieves look first.</p>`;
+    if (this.rend.overlay === 'clean') h += `<p class="note legend"><b>No mark</b> (green): clean. <b>One stripe</b> (amber): getting dirty. <b>Cross</b> (red): dirty - customers notice.</p>`;
+    if (this.rend.overlay === 'hvac') h += `<p class="note legend"><b>Blue, no mark</b>: building has climate capacity. <b>Cross</b> (red): HVAC overloaded. <b>One stripe</b> (grey): no HVAC. Outlined boxes are climate units; filled circles are HVAC plants.</p>`;
+    if (this.rend.overlay === 'carts') h += `<p class="note legend">Circles are cart corrals. <b>Check</b> (green): stocked. <b>One stripe</b> (amber): running low. <b>Cross</b> (red): empty. Small rings mark stranded or damaged carts.</p>`;
+    if (this.rend.overlay === 'power') h += `<p class="note legend"><b>No mark</b> (green): powered. <b>Cross</b> (red): shut off because demand exceeds electrical service. Yellow squares are electrical services.</p>`;
     h += `<h3>Carts</h3><div class="list">`;
     for (const c of sim.objs('corral')) h += `<div class="item"><div class="grow"><b>${esc(c.name)}</b><small>${sim.cartsAt(c.id).length} available · target ${c.target || 2}</small></div><button class="btn sm" data-a="sel" data-v="${c.id}">Inspect</button></div>`;
     const str = s.carts.filter((c) => c.st === 'stranded' || c.st === 'damaged').length;
@@ -575,12 +584,16 @@ export class UI {
   businessSheet() {
     const sim = this.sim, s = sim.s; const occ = sim.occupancy(), roll = sim.rentRoll(), ox = sim.dailyOpex();
     const pay = s.staff.reduce((a, st) => a + st.wage, 0);
+    const paying = sim.rentRollPaying(), rcv = sim.receivables(), est = sim.estDailyNet();
     const last = s.days.slice(-30); const sum = (k) => last.reduce((a, d) => a + (d[k] || 0), 0) + (s.today[k] || 0);
     const collected = sum('rent'), costs = sum('opex') + sum('payroll'), capex = sum('capex');
     let h = `<div class="stats">
-      <div class="stat"><small>Cash</small><b class="${s.cash < 0 ? 'neg' : ''}">${money(s.cash)}</b></div>
-      <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
-      <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops${ox.tax ? ` (incl. ${money(ox.tax, true)} tax & insurance)` : ''} + ${money(pay)} payroll</div></div></div>`;
+      <div class="stat"><small>Cash</small><b class="${s.cash < 0 ? 'neg' : ''}">${money(s.cash)}</b><div class="n">Money you have now. Unpaid rent is not included.</div></div>
+      <div class="stat"><small>Owed to you</small><b>${money(rcv.amt)}</b><div class="n">${rcv.n ? `${rcv.n} account${rcv.n > 1 ? 's' : ''} behind · not cash until paid` : 'Every tenant is paid up'}</div></div>
+      <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${money(paying)} from paying tenants${roll - paying > 0 ? ` · ${money(roll - paying)} past due` : ''} · ${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
+      <div class="stat"><small>Rent collected, last 30 days</small><b>${money(collected)}</b><div class="n">Received, already in cash</div></div>
+      <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops${ox.tax ? ` (incl. ${money(ox.tax, true)} tax & insurance)` : ''} + ${money(pay)} payroll</div></div>
+      <div class="stat"><small>Estimate: net per day</small><b class="${est < 0 ? 'neg' : ''}">${est >= 0 ? '+' : '-'}${money(Math.abs(est))}</b><div class="n">Projection, not money earned: paying tenants' rent minus today's costs. Shown as "est" under your cash.</div></div></div>`;
     h += this.reportHtml() + this.marketHtml();
     // GDD §63.1–63.2: operating contribution, with capital and financing shown separately
     const anc = sum('anc'), svc = sum('service'), contrib = collected + anc - costs - svc, debtSvc = sum('debt') + sum('interest'), fin = sum('fin');
@@ -600,7 +613,7 @@ export class UI {
     h += this.collectionsHtml();
     if (!s.creative) h += this.financingHtml();
     h += `
-      <h3>Last 14 days</h3><canvas class="chart" width="520" height="120"></canvas><p class="note">Green: rent collected. Red: operating + payroll. Grey: construction. A monthly-billing business looks lumpy day to day.</p>`;
+      <h3>Last 14 days</h3><canvas class="chart" width="520" height="120"></canvas><p class="note">Bars above the line: rent collected (green). Below the line: operating + payroll (solid red), then construction (grey with stripes). A monthly-billing business looks lumpy day to day.</p>`;
     h += `<h3>Asking rents</h3><div class="list">`;
     const M = MARKETS[s.market.id];
     const products = new Set(sim.objs('unit').map((u) => productKey(u.size, u.env)));
@@ -644,9 +657,11 @@ export class UI {
       const up = (d.rent / max) * (mid - 12); g.fillStyle = '#2f8f5b'; g.fillRect(x, mid - up, w, up);
       const c1 = ((d.opex + d.payroll) / max) * (H - mid - 14); g.fillStyle = '#c8412f'; g.fillRect(x, mid + 1, w, c1);
       const c2 = (d.capex / max) * (H - mid - 14); g.fillStyle = '#9aa1a8'; g.fillRect(x, mid + 1 + c1, w, c2);
+      if (c2 > 2) { g.save(); g.beginPath(); g.rect(x, mid + 1 + c1, w, c2); g.clip(); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1.5; for (let q = -c2; q < w + c2; q += 5) { g.beginPath(); g.moveTo(x + q, mid + 1 + c1); g.lineTo(x + q + c2, mid + 1 + c1 + c2); g.stroke(); } g.restore(); }
       g.fillStyle = '#6c737b'; g.font = '10px system-ui'; g.textAlign = 'center'; if (k % 2 === 0 || days.length < 8) g.fillText(String(d.day), x + w / 2, H - 2);
     });
     g.fillStyle = '#6c737b'; g.textAlign = 'left'; g.font = '10px system-ui'; g.fillText(money(Math.round(max)), 4, 11);
+    g.textAlign = 'right'; g.fillText('Rent in \u2191', W - 4, 11); g.fillText('Costs out \u2193', W - 4, mid + 13);
   }
 
   // ------------------------------------------------------------ GROWTH
@@ -709,8 +724,10 @@ export class UI {
     else if (this.convoAll && order.length <= 1) this.convoAll = false;
     for (const c of order.slice(0, cap).reverse()) {
       const el = document.createElement('div'); el.className = 'convo ' + (c.sev || 'attention');
-      const left = c.ttl ? Math.max(0, c.ttl - (s.t - c.t)) : null;
-      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}${left != null ? `<span class="ttl">${left >= 120 ? Math.round(left / 60) + 'h' : left + 'm'} to answer</span>` : ''}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}">View</button>` : ''}</div>`;
+      // no countdowns (concept §9): say calmly what happens if the player leaves it; only collections keep a real-world date
+      const defA = c.def != null && c.actions && c.actions[c.def]; const due = c.ttl ? c.t + c.ttl : null;
+      const calm = c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. If you leave it: ${defA ? defA.label : 'nothing happens'}.` : defA && c.actions.length > 1 ? `No rush. If you leave it, the game picks: ${defA.label}.` : '';
+      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
       frag.appendChild(el);
     }
     feed.prepend(frag);
@@ -1001,9 +1018,8 @@ export class UI {
   slowHud() {
     const sim = this.sim, s = sim.s; const oc = sim.occupancy();
     if (!oc.n || s.creative) { this.cashSub = null; return; }
-    const pay = s.staff.reduce((a, st) => a + (st.wage || 0), 0);
-    const net = Math.round(sim.rentRoll() * 12 / 365 - sim.dailyOpex().total - pay);
-    this.cashSub = `${oc.occ}/${oc.n} · ${net >= 0 ? '+' : '-'}$${Math.abs(net).toLocaleString()}${this.phone() ? '/d' : '/day'}`;
+    const net = sim.estDailyNet(); // an estimate from paying tenants only, labelled as one
+    this.cashSub = `${oc.occ}/${oc.n} · est ${net >= 0 ? '+' : '-'}$${Math.abs(net).toLocaleString()}${this.phone() ? '/d' : '/day'}`;
   }
   ownerStatus() {
     const s = this.sim.s, owner = s.staff.find((x) => x.role === 'owner'); if (!owner) return '';
@@ -1139,6 +1155,8 @@ export class UI {
   }
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
   autosaveNote() {
+    const L = this.g.localsave;
+    if (L && L.ok) return L.lastAt ? `Autosave is on in this browser (${this.ago(L.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave, and keeps the previous save as a backup.${L.lastErr ? ' Note: ' + L.lastErr + '.' : ''} Codes and files move a game between devices.` : 'Autosave is on in this browser. It saves each in-game day and when you leave, and keeps the previous save as a backup. Codes and files move a game between devices.';
     const c = this.g.cloud;
     if (c.ok === false) return 'Autosave is offline right now. Save with a code or a file to keep your progress.';
     if (c.lastAt) return `Autosave is on (${this.ago(c.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave. Codes and files are backups you can move between devices.`;

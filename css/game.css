@@ -508,6 +508,7 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .goalbar { display: block; position: absolute; left: 10px; right: 10px; bottom: 4px; height: 3px; margin: 0; border-radius: 2px; background: rgba(22,32,43,0.12); overflow: hidden; }
 .goalbar b { display: block; height: 100%; width: 0; background: var(--yellow, #f2b632); transition: width 0.6s ease; }
 .goalbar[hidden] { display: none; }
-#celebrate.bad .cb { box-shadow: 0 18px 50px rgba(8,12,18,0.4), inset 0 0 0 2px rgba(214,82,62,0.85); }
-#celebrate.bad .cb-k { color: #ff8a73; }
+#celebrate.warn .cb { box-shadow: 0 18px 50px rgba(8,12,18,0.4), inset 0 0 0 2px rgba(242,182,50,0.8); }
+#celebrate.warn .cb-k { color: #f2c14e; }
+.convo .calm { display: block; margin-top: 6px; font-size: 12px; opacity: 0.75; }
 .goalnote { margin-top: 8px; }

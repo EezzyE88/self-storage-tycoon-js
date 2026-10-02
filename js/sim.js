@@ -1274,13 +1274,24 @@ export class Sim {
     const D = (s.drama ||= { lastBreak: -99, wars: {} });
     // break-in: dark, unwatched properties get hit more often
     const occ = this.objs('unit').filter((u) => u.lease && s.leases[u.lease] && s.tenants[s.leases[u.lease].tenant]);
+    const dark = (u) => { const f = u.f || 0, i = this.idx(u.x, u.y); return !(this.D.lit[f][i] >= 0.5) && !this.D.cam[f][i]; };
+    // notice before trouble (concept §9, GDD §2): a low-security property is warned, with the dark spots marked, days before any break-in
+    const risky = s.exp.security < 0.65;
+    if (risky && (D.warned == null || day - D.warned > 45)) {
+      D.warned = day; const spot = this.objs('unit').find(dark) || occ[0];
+      this.convo({ key: 'secrisk', who: 'Security check', sev: 'attention', obj: spot ? spot.id : undefined, overlay: 'security', ttl: 2 * MIN_PER_DAY, def: 0,
+        text: 'Parts of the lot are dark and off camera. Unwatched spots are where break-ins happen. The security map marks them with a cross.',
+        actions: [{ label: 'Noted', action: { type: 'cv', op: 'noted' } }] });
+    }
     const pBreak = 0.0022 * (1 + 8 * clamp(0.8 - s.exp.security, 0, 0.8));
-    if (occ.length && day - D.lastBreak > 20 && this.rnd() < pBreak) {
-      const u = occ[Math.floor(this.rnd() * occ.length)], L = s.leases[u.lease], tn = s.tenants[L.tenant];
+    const warnedOk = !risky || (D.warned != null && day - D.warned >= 3);
+    if (occ.length && warnedOk && day - D.lastBreak > 20 && this.rnd() < pBreak) {
+      const pool = occ.filter(dark).length ? occ.filter(dark) : occ; // thieves pick the dark, unwatched units: the cause is on the map
+      const u = pool[Math.floor(this.rnd() * pool.length)], L = s.leases[u.lease], tn = s.tenants[L.tenant];
       D.lastBreak = day; tn.sat = clamp(tn.sat - 0.25, 0, 1); s.exp.security = clamp(s.exp.security - 0.05, 0, 1);
       const loss = Math.round((400 + this.rnd() * 1800) / 50) * 50;
       this.emit('drama', { k: 'breakin', title: `Break-in at Unit ${u.num}`, sub: s.exp.security < 0.65 ? 'Dark, unwatched corners invite thieves. Lights and cameras deter them.' : 'Even well-run properties get hit sometimes.', x: u.x, y: u.y, f: u.f || 0 });
-      this.convo({ key: 'bi' + u.id, who: tn.name, obj: u.id, sev: 'critical', ttl: 10 * 60, def: 1, auto: 1,
+      this.convo({ key: 'bi' + u.id, who: tn.name, obj: u.id, sev: 'attention', overlay: 'security', ttl: 10 * 60, def: 1, auto: 1,
         text: `Someone cut the lock on Unit ${u.num}. About $${loss.toLocaleString()} of my things are gone. What are you going to do about it?`,
         actions: [{ label: 'Cover their insurance deductible ($250)', action: { type: 'cv', op: 'biCover', tenant: tn.id } }, { label: 'File a police report and apologize', action: { type: 'cv', op: 'biReport', tenant: tn.id } }] });
     }
@@ -1290,7 +1301,7 @@ export class Sim {
       D.wars[c.id] = 'pending'; if (this.rnd() < 0.4) { D.wars[c.id] = 'none'; continue; }
       c.price = Math.round((c.price - 0.06) * 100) / 100; D.wars[c.id] = day;
       this.emit('drama', { k: 'pricewar', title: `${c.name} cut prices`, sub: `They now charge about ${Math.round((1 - c.price) * 100)}% under market. Your move.` });
-      this.convo({ key: 'pw' + c.id, who: 'Market watch', sev: 'critical', ttl: 24 * 60, def: 1, auto: 1, comp: c.id,
+      this.convo({ key: 'pw' + c.id, who: 'Market watch', sev: 'attention', ttl: 24 * 60, def: 1, auto: 1, comp: c.id,
         text: `${c.name} just dropped its rents to about ${Math.round((1 - c.price) * 100)}% under market. Price shoppers will notice this week.`,
         actions: [{ label: 'Match them: cut asking rents 6%', action: { type: 'cv', op: 'pwMatch', comp: c.id } }, { label: 'Hold your prices', action: { type: 'cv', op: 'pwHold', comp: c.id } }, { label: 'Run a local ad campaign ($600)', action: { type: 'cv', op: 'pwAd', comp: c.id } }] });
     }
@@ -1512,6 +1523,7 @@ export class Sim {
   act_cv(a) {
     const s = this.s;
     switch (a.op) {
+      case 'noted': return { ok: true };
       case 'biCover': { const tn = s.tenants[a.tenant]; if (s.cash < 250 && !s.creative) return { ok: false, msg: 'Not enough cash' }; this.money(-250, 'service', 'Break-in: covered tenant deductible'); if (tn) tn.sat = clamp(tn.sat + 0.32, 0, 1); return { ok: true, msg: `${tn ? tn.name.split(' ')[0] : 'The tenant'} is grateful and staying.` }; }
       case 'biReport': { const tn = s.tenants[a.tenant]; if (!tn) return { ok: true }; tn.sat = clamp(tn.sat - 0.05, 0, 1);
         if (this.rnd() < 0.35 && !tn.leaving) { const L = s.leases[tn.lease]; if (L) { tn.leaving = true; this.schedule({ kind: 'moveout', tenant: tn.id, unit: L.unit }, this.randomAccessTime(this.day + 3)); } this.postReview(tn, true); return { ok: true, msg: `${tn.name.split(' ')[0]} is moving out after the break-in.` }; }
@@ -2390,6 +2402,10 @@ export class Sim {
     }
   }
   rentRoll() { return Object.values(this.s.leases).reduce((a, L) => a + L.rent, 0); }
+  // honest money (concept §7): contracted rent split by whether the tenant is actually paying, and what is owed but not collected
+  rentRollPaying() { return Object.values(this.s.leases).reduce((a, L) => a + (L.status === 'current' || L.status === 'plan' ? L.rent : 0), 0); }
+  receivables() { const ls = Object.values(this.s.leases).filter((L) => this.owed(L) > 0); return { amt: ls.reduce((a, L) => a + this.owed(L), 0), n: ls.length }; }
+  estDailyNet() { const pay = this.s.staff.reduce((a, st) => a + (st.wage || 0), 0); return Math.round(this.rentRollPaying() * 12 / 365 - this.dailyOpex().total - pay); }
   occupancy() {
     const us = this.objs('unit').filter((u) => u.cstate === 'operating');
     const occ = us.filter((u) => u.lease).length; return { n: us.length, occ, pct: us.length ? occ / us.length : 0 };
