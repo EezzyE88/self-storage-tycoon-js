@@ -1,6 +1,6 @@
 # Bug Test, Stress Test and Playtest Report
 
-Build `sandbox-1.1`, branch `work/sandbox` (not merged, not pushed). Date: 2026-10-02.
+Build `sandbox-1.1`. Tested on branch `work/sandbox`, then merged to `master` as tag `playtest-1`. Date: 2026-10-02.
 
 All testing was automated: headless simulation in Node, and Chromium with iPhone-size touch emulation (390 x 844) and desktop (1280 x 800) using software WebGL. No real iPhone and no human players were involved. Frame rates in emulation aren't meaningful, so performance numbers below are simulation CPU time only.
 

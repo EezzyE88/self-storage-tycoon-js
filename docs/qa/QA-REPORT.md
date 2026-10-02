@@ -723,7 +723,7 @@ Honest read: idle play no longer pins at 100%, and neglect now collapses. But th
 
 **Requested by the user:** "Implement adopt-now ideas 1, 2, 5 and 11 from SST Ideas to Adopt on a work/foundations branch, test them, and share a preview for my review without merging to master."
 
-**Status:** not merged to master; awaiting review.
+**Status:** merged to master on 2026-10-02 (tag `playtest-1`), together with `work/sandbox`.
 
 ### Changes
 1. **Browser autosave** (`js/localsave.js`)
@@ -890,3 +890,7 @@ Honest read: idle play no longer pins at 100%, and neglect now collapses. But th
 - Free Build can still lose money as a business; that is shown, not prevented.
 - Not in v1: starting date, starting occupancy, save checkpoints, and an advanced testing panel.
 - Urban and Rural lots are offered only under Advanced. They are less tested than Suburban.
+
+
+## Merge to master (2026-10-02)
+`work/sandbox` (which contains `work/foundations`) was fast-forwarded into `master` and tagged `playtest-1` (build `sandbox-1.1`). The bug, stress and playtest pass is in `BUG-STRESS-PLAYTEST-2026-10-02.md`. Not yet checked on a real iPhone.

@@ -7,7 +7,7 @@ A 3D self-storage tycoon game for **iPhone Safari** and desktop browsers. You bu
 ## Source version (from available evidence)
 | Item | Value | Evidence |
 |---|---|---|
-| Game source commit | Round 12 (see `git log`); before that `a823f496c12bb503b53ba26c913b9dd34b93fcd6` (`a823f49`), "Round 11: market pressure, report cards, core tutorial + lessons, operator career, renovations, phone declutter", 2026-10-01 01:37:22 UTC | `git log` in this repository |
+| Game source commit | Tag `playtest-1`, build `sandbox-1.1` (Round 14 + foundations + sandbox v1 + the 2026-10-02 bug/stress/playtest fixes; see `git log`). Earlier: Round 12; before that `a823f496c12bb503b53ba26c913b9dd34b93fcd6` (`a823f49`), "Round 11: market pressure, report cards, core tutorial + lessons, operator career, renovations, phone declutter", 2026-10-01 01:37:22 UTC | `git log` in this repository |
 | Branch | `master` | `git branch` |
 | History | 6 commits: `5550d8f` baseline → `ec22ac9` Showcase → `100d18c` autosave server restore → `98f4c30` Round 9 → `6851b44` Round 10 → `a823f49` Round 11 | `git log` |
 | Packaging commit | One commit on top of `a823f49` that adds only `README.md`, `PACKAGE_MANIFEST.md`, `docs/` and `tests/`. No game files changed. | `git show --stat HEAD` |
@@ -109,7 +109,7 @@ cd tests/browser-qa && node run.js d s_r11.js   # d = 1280x800 desktop, m = 390x
 | **Headless simulation** | Determinism, continuation, the tutorial walkthrough and the soaks: see the table above. |
 | **Live preview** | Autosave was confirmed working in the Perplexity preview in Round 7. The preview is private and wasn't re-checked during packaging. |
 
-## Sandbox (v1, branch `work/sandbox`)
+## Sandbox (v1, merged to `master` 2026-10-02, tag `playtest-1`)
 - **Two kinds.**
   - Business sandbox (default): limited cash; construction costs money and takes time.
   - Free Build: unlimited funds and instant construction on by default. Every cost and rent payment is still recorded. Spending beyond cash is covered by "Free Build funds" and shown separately, never as income.
