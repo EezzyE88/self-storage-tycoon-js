@@ -665,3 +665,55 @@ Honest read: idle play no longer pins at 100%, and neglect now collapses. But th
 
 ### Notes
 - Climate Boom may be easy: the bot won before the rival opened.
+
+
+## Round 14: story events, visible goals, repair choice (2026-10-01)
+
+**Requested by the user:** "Implement recommendations", following the gameplay-director plan.
+
+### Changes
+1. **Break-ins**
+   - Base chance is about 0.8 per year at good security, rising to about 2.7 per year at Maple's starting security. At most one every 20 days.
+   - Effects: a red banner, tenant satisfaction −0.25, and security −0.05.
+   - The tenant then asks for a decision:
+     - Cover the deductible: $250, tenant +0.32.
+     - File a police report: free, but there's a 35% chance the tenant moves out and leaves a bad review.
+2. **Price war**
+   - Each rival, once it has been open 20 days, has a 60% chance to cut its prices by 6% once.
+   - The player chooses one response:
+     - Match: asking rents −6%.
+     - Hold.
+     - Run a local ad campaign: $600, +18% shopper traffic for 45 days.
+3. **Auction surprises**
+   - Each lot now has contents: 8% treasure (bidding war, 4–9× rent, gold banner), 14% junk (low price plus an $80 haul-away), the rest ordinary.
+   - Toasts name the contents.
+4. **Visible next goal**
+   - A thin progress bar under the cash shows progress to the next career level (with a hover/long-press title).
+   - The monthly report adds a "Next goal" line listing what the next level unlocks.
+5. **Repair is a choice**
+   - Under market pressure, the Owner's repair is now a quick fix: condition 0.72, so it fails again sooner.
+   - A Tech or vendor still restores to 100%.
+   - The button reads "Owner: quick fix (free, wears sooner)".
+
+### Verified (headless and emulation only)
+- Determinism and continuation: true. Tutorial walkthrough: done, day 5.
+- **`tdrama`** (2 seeds × 2 years):
+  - Idle: 8 break-ins and 3 price wars.
+  - Good: 11 break-ins, 2 price wars, and 237 quick fixes. The good bot has more tenants, and both bots stay at about 0.5 security.
+  - Every choice applies its effect, and auction lots name their contents.
+- **Maple year 1** (cash): idle $34,067 (9/23 rented); good $41,524; strategic $36,893.
+- **Maple year 2** (cash): idle $30,685 (falling); good $53,544; strategic $57,154.
+  - The good bot's year-2 grades fall to mostly C, because it relies on the Owner's quick fixes.
+- **Scenarios, all still won:**
+  - Turnaround: builder wins on day 46, idle loses.
+  - Climate Boom: day 57.
+  - Go Vertical: day 241.
+- **Browser, 390×844:**
+  - The break-in banner, card and answer work.
+  - The treasure banner works.
+  - The goal bar shows 74% toward Local operator.
+  - No page errors or overflow.
+- **Browser, desktop:** same results. One Playwright desktop screenshot timed out (software WebGL); the page stayed responsive.
+
+### Not verified
+- Whether these events feel exciting or just annoying to real players. Break-in frequency may need tuning after playtests.

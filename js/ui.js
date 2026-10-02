@@ -49,7 +49,7 @@ export class UI {
       <div id="pins"></div>
       <div class="hud">
         <div class="chip brand">${I.logo}<div class="nm" id="pname">Maple Street Storage<small id="pmode">Tutorial</small></div></div>
-        <div class="chip"><div class="cash num" id="cash">$0<small>Cash</small></div></div>
+        <div class="chip"><div class="cash num" id="cash">$0<small>Cash</small></div><i id="goalbar" class="goalbar" hidden aria-hidden="true"><b></b></i></div>
         <div class="chip clock"><b class="num" id="clock">7:00 AM</b><span id="date">Day 1</span></div>
         <div class="spacer"></div>
         <div class="chip speed" id="speed"><button data-a="speed" data-v="0" aria-label="Pause">${I.pause}</button><button data-a="speed" data-v="1">1x</button><button data-a="speed" data-v="2">2x</button><button data-a="speed" data-v="4">4x</button></div>
@@ -302,7 +302,7 @@ export class UI {
     if (t) {
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? (s.staff.find((x) => x.id === t.assigned) || {}).name || 'Assigned' : 'Waiting in queue';
       h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''}</small></div></div><div class="row wrap" style="margin-top:6px">`;
-      if (!t.assigned && ownerCan) h += `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Send Owner</button>`;
+      if (!t.assigned && ownerCan) h += `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>${t.type === 'repair' && this.sim.pressureOn() ? 'Owner: quick fix (free, wears sooner)' : 'Send Owner'}</button>`;
       if (!t.assigned || (t.assigned !== 'vendor' && !ownerCan)) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Call vendor (${money(t.need === 'repair_complex' ? 650 : 250)})</button>`;
       h += `</div>`;
       if (!ownerCan) h += `<p class="note">The Owner can't service this equipment. Hire a Tech or call a vendor.</p>`;
@@ -494,7 +494,7 @@ export class UI {
     const chg = (a, b, f) => b == null ? '' : ` <span class="${a >= b ? 'up' : 'down'}">${a >= b ? '▲' : '▼'} ${f(Math.abs(a - b))}</span>`;
     const L = R.lost || {}; const lostN = Object.values(L).reduce((a, b) => a + b, 0);
     return `<h3>Monthly report · Month ${R.month}</h3><div class="report"><div class="grade g${R.grade}">${R.grade}</div><div class="rgrow">
-      <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span>${R.upkeep != null ? `<span>Upkeep</span><span class="${R.upkeep < 6 ? 'neg' : ''}">${R.upkeep}/10${R.stale ? ` · ${R.stale} job${R.stale > 1 ? 's' : ''} waiting 2+ days` : ''}</span><span>Growth</span><span>${R.growPts}/15 · rent roll ${R.growth >= 0 ? '+' : ''}${Math.round(R.growth * 100)}% in 3 months</span>` : ''}<span>Shoppers who didn't sign</span><span>${lostN}</span></div>
+      <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span>${R.upkeep != null ? `<span>Upkeep</span><span class="${R.upkeep < 6 ? 'neg' : ''}">${R.upkeep}/10${R.stale ? ` · ${R.stale} job${R.stale > 1 ? 's' : ''} waiting 2+ days` : ''}</span><span>Growth</span><span>${R.growPts}/15 · rent roll ${R.growth >= 0 ? '+' : ''}${Math.round(R.growth * 100)}% in 3 months</span>` : ''}<span>Shoppers who didn't sign</span><span>${lostN}</span></div>${(() => { const ti = this.g.tierInfo && !s.scenario && this.g.tierInfo(), nx = ti && ti.next; return nx ? `<p class="note goalnote"><b>Next goal: ${esc(nx.name)}.</b> Rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo (${Math.round(Math.min(1, ti.roll / nx.roll) * 100)}%)${nx.props > 1 ? `, properties ${ti.n} of ${nx.props}` : ''}. Unlocks ${nx.perks.map(esc).join('; ')}.</p>` : ''; })()}
       <small class="note">${esc(R.season)}${R.comps.length ? ' · Competing with ' + esc(R.comps.join(', ')) : ''}</small></div></div>
       ${R.sug.length ? `<div class="list sug">${R.sug.map((t, i) => `<div class="item"><span class="num">${i + 1}</span><div class="grow">${esc(t)}</div></div>`).join('')}</div>` : '<p class="note">Nothing urgent. Keep it up.</p>'}`;
   }
@@ -786,7 +786,8 @@ export class UI {
       case 'lien_notice': { const u = s.objects[e.unit]; this.toast(`Lien notice sent - ${u ? u.name : 'unit'}`); break; }
       case 'auction_scheduled': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A unit'} goes to auction on Day ${e.day} at 10 AM`, 'bad'); this.sfx('attention'); break; }
       case 'auction_start': this.toast(`Auction day: ${e.units.length} unit${e.units.length > 1 ? 's' : ''} up for bid`, 'good'); this.sfx('attention'); break;
-      case 'auction_sold': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'Unit'} sold for ${money(e.price)}${e.war ? ' after a bidding war' : ''}`, 'good'); this.sfx('rent'); break; }
+      case 'auction_sold': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'Unit'}: ${e.what || 'contents'} sold for ${money(e.price)}${e.war ? ' after a bidding war' : ''}${e.tier === 'junk' ? ' ($80 haul-away)' : ''}`, e.tier === 'junk' ? '' : 'good'); this.sfx('rent'); break; }
+      case 'drama': if (!this.g.showcase) this.toast(e.title + (e.sub ? ' - ' + e.sub : ''), 'bad'); this.sfx('attention'); break;
       case 'auction_end': if (e.mode !== 'auction') this.toast(`${e.n} delinquent unit${e.n > 1 ? 's' : ''} cleared out and donated`); break;
       case 'paid_up': { const u = s.objects[e.unit]; if (s.speed <= 2) this.toast(`${u ? u.name : 'A tenant'} paid ${money(e.amt)} and is current again`, 'good'); break; }
       case 'plan_broken': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A tenant'} missed their payment plan`, 'bad'); break; }
@@ -959,6 +960,11 @@ export class UI {
     const s = this.sim.s; const now = performance.now();
     const cash = Math.round(s.cash);
     const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small>${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }
+    if (now - (this.goalT || 0) > 1000) { // next career goal, always visible as a thin bar under the cash
+      this.goalT = now; const gb = this.$('goalbar'); const on = this.g.tierInfo && !this.title && !s.creative && !s.scenario && !(s.mode === 'tutorial' && !s.tut.done);
+      const ti = on && this.g.tierInfo(), nx = ti && ti.next; gb.hidden = !nx;
+      if (nx) { const pr = Math.min(1, Math.min(ti.roll / nx.roll, ti.n / nx.props)); gb.firstChild.style.width = Math.round(pr * 100) + '%'; gb.title = `Next: ${nx.name} - rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? `, ${ti.n} of ${nx.props} properties` : ''}`; }
+    }
     const tm = fmtTime(s.t); if (tm !== this.hTime) { this.hTime = tm; this.$('clock').textContent = tm; const d = dayOf(s.t); this.$('date').textContent = `Day ${d} · ${DOW[(d - 1) % 7]}${s.weather === 'rain' ? ' · Rain' : ''}`; }
     if (s.speed !== this.hSpeed) { this.hSpeed = s.speed; for (const b of this.root.querySelectorAll('#speed button')) b.classList.toggle('on', +b.dataset.v === s.speed); }
     const hasF2 = this.sim.objs('shell').some((x) => x.floors > 1);

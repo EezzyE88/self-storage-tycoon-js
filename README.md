@@ -80,6 +80,7 @@ Run from inside `tests/headless`; they import `../../js/`.
 | `tbal.mjs` | Round 12 balance check: idle / absent / good / strategic / pro bots. Set `DAYS=730` for two years. | Run, exit 0 (prints numbers; see QA report Round 12) |
 | `tsc.mjs` | Round 12 scenario check: idle vs. fixer vs. manager vs. builder (`SC=turnaround` to limit) | Run, exit 0: idle loses Turnaround, builder wins on day 68 |
 | `tclim.mjs`, `tvert.mjs` | Round 13 builder bots for Climate Boom and Go Vertical (`UPPERONLY=1` builds only upper-floor units; `NOCOMP=1` turns market pressure off) | Climate Boom won day 48; Go Vertical won day 212 with the rival |
+| `tdrama.mjs` | Round 14 story events: break-in and price-war frequency over 2 years, each choice's effect, auction contents | All pass |
 | `tfix.mjs` | Round 13 fixes: pre-Round-11 tutorial save migration, climate-conversion renovation | All pass |
 | `t9.mjs`, `t9b.mjs`, `t9d.mjs`, `t9e.mjs`, `dbg.mjs` | Round 9 era checks and debugging | Ran, exit 0. They're older and may print values without asserting anything. |
 | `tv.mjs`, `tw.mjs` | Build-layout planners | **Need a JSON argument**. They exit 1 when run with none, so they aren't pass/fail tests. |

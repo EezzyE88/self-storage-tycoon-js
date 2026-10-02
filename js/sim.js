@@ -1110,6 +1110,7 @@ export class Sim {
       if (this.rnd() < 1 / 1.8) this.schedule({ kind: this.rnd() < 0.15 ? 'bigaccess' : 'access', tenant: tn.id, unit: L.unit }, this.randomAccessTime(day));
     }
     this.marketDay(day);
+    this.dramaDay(day);
     if (day > 1 && (day - 1) % 30 === 0 && !s.creative && !(s.mode === 'tutorial' && !s.tut.done)) this.monthReport(day);
     if (s.open) this.genProspects(day, 1);
     // equipment wear
@@ -1155,7 +1156,7 @@ export class Sim {
   }
   genProspects(day, frac) {
     const s = this.s, M = MARKETS[s.market.id]; const rep = this.reputation();
-    const press = this.season(day) * (1 - this.compShare()) * this.reviewFactor() * (this.pressureOn() && M.settled && !s.scenario ? M.settled : 1) * ((s.coTier || 1) >= 4 ? 1.1 : 1);
+    const press = this.season(day) * (1 - this.compShare()) * this.reviewFactor() * (this.pressureOn() && M.settled && !s.scenario ? M.settled : 1) * ((s.coTier || 1) >= 4 ? 1.1 : 1) * this.promoFactor();
     for (const sz of Object.keys(M.demand)) {
       const lam = M.demand[sz] * (s.opts && s.opts.demand || 1) * frac * (0.45 + 0.8 * rep) * (s.mode === 'tutorial' && !s.tut.done ? 0.75 : 1) * press;
       let k = 0; const L = Math.exp(-lam); let p = 1; do { k++; p *= this.rnd(); } while (p > L); k--;
@@ -1266,6 +1267,35 @@ export class Sim {
     for (const c of M.comp) if (day === c.opens) this.emit('comp_open', { name: c.name, price: c.price });
     for (const tn of Object.values(s.tenants)) if (!tn.leaving && this.rnd() < 1 / 150) this.postReview(tn, false);
   }
+  // ============================================================ STORY EVENTS (Round 14)
+  // Rare, readable moments built on existing systems. Each one asks the player for a decision.
+  dramaDay(day) {
+    const s = this.s; if (!this.pressureOn()) return;
+    const D = (s.drama ||= { lastBreak: -99, wars: {} });
+    // break-in: dark, unwatched properties get hit more often
+    const occ = this.objs('unit').filter((u) => u.lease && s.leases[u.lease] && s.tenants[s.leases[u.lease].tenant]);
+    const pBreak = 0.0022 * (1 + 8 * clamp(0.8 - s.exp.security, 0, 0.8));
+    if (occ.length && day - D.lastBreak > 20 && this.rnd() < pBreak) {
+      const u = occ[Math.floor(this.rnd() * occ.length)], L = s.leases[u.lease], tn = s.tenants[L.tenant];
+      D.lastBreak = day; tn.sat = clamp(tn.sat - 0.25, 0, 1); s.exp.security = clamp(s.exp.security - 0.05, 0, 1);
+      const loss = Math.round((400 + this.rnd() * 1800) / 50) * 50;
+      this.emit('drama', { k: 'breakin', title: `Break-in at Unit ${u.num}`, sub: s.exp.security < 0.65 ? 'Dark, unwatched corners invite thieves. Lights and cameras deter them.' : 'Even well-run properties get hit sometimes.', x: u.x, y: u.y, f: u.f || 0 });
+      this.convo({ key: 'bi' + u.id, who: tn.name, obj: u.id, sev: 'critical', ttl: 10 * 60, def: 1, auto: 1,
+        text: `Someone cut the lock on Unit ${u.num}. About $${loss.toLocaleString()} of my things are gone. What are you going to do about it?`,
+        actions: [{ label: 'Cover their insurance deductible ($250)', action: { type: 'cv', op: 'biCover', tenant: tn.id } }, { label: 'File a police report and apologize', action: { type: 'cv', op: 'biReport', tenant: tn.id } }] });
+    }
+    // price war: a rival that has been open a few weeks cuts its prices once
+    for (const c of this.openComps()) {
+      if (D.wars[c.id] || day - c.opens < 20) continue;
+      D.wars[c.id] = 'pending'; if (this.rnd() < 0.4) { D.wars[c.id] = 'none'; continue; }
+      c.price = Math.round((c.price - 0.06) * 100) / 100; D.wars[c.id] = day;
+      this.emit('drama', { k: 'pricewar', title: `${c.name} cut prices`, sub: `They now charge about ${Math.round((1 - c.price) * 100)}% under market. Your move.` });
+      this.convo({ key: 'pw' + c.id, who: 'Market watch', sev: 'critical', ttl: 24 * 60, def: 1, auto: 1, comp: c.id,
+        text: `${c.name} just dropped its rents to about ${Math.round((1 - c.price) * 100)}% under market. Price shoppers will notice this week.`,
+        actions: [{ label: 'Match them: cut asking rents 6%', action: { type: 'cv', op: 'pwMatch', comp: c.id } }, { label: 'Hold your prices', action: { type: 'cv', op: 'pwHold', comp: c.id } }, { label: 'Run a local ad campaign ($600)', action: { type: 'cv', op: 'pwAd', comp: c.id } }] });
+    }
+  }
+  promoFactor() { const m = this.s.mkt; return m && m.promoUntil && this.day <= m.promoUntil ? 1.18 : 1; }
   lostRecent(days = 30) { const d0 = this.day - days; const out = {}; for (const x of this.s.mkt.lostLog) if (x.d > d0) out[x.r] = (out[x.r] || 0) + 1; return out; }
   monthReport(day) {
     const s = this.s, last = s.days.slice(-30); if (last.length < 20) return;
@@ -1376,11 +1406,16 @@ export class Sim {
       for (const id of A.live.lots) {
         const L = s.leases[id]; if (!L || L.status !== 'auction') continue; const u = s.objects[L.unit];
         if (s.policies.resolution === 'auction') {
-          const war = this.rnd() < 0.12; const price = Math.round(L.rent * (war ? 3 + this.rnd() * 3 : 0.4 + this.rnd() * 2.1) / 5) * 5;
+          // what's inside is a surprise: most lots are ordinary, some are junk, a few start a bidding war
+          const roll = this.rnd(); const tier = roll < 0.08 ? 'treasure' : roll < 0.22 ? 'junk' : 'normal'; const war = tier === 'treasure';
+          const what = tier === 'treasure' ? this.pick(['a restored 1968 motorcycle', 'a vintage arcade cabinet', 'sealed comic book boxes', 'a coin collection', 'a classic guitar and amp', 'antique oak furniture'])
+            : tier === 'junk' ? this.pick(['old mattresses and broken chairs', 'boxes of tax papers', 'a sofa nobody wants', 'mystery bags of clothes']) : this.pick(['household furniture', 'tools and a lawn mower', 'boxed kitchenware', 'sports gear and bikes', 'holiday decorations']);
+          const price = Math.round(L.rent * (war ? 4 + this.rnd() * 5 : tier === 'junk' ? 0.15 + this.rnd() * 0.3 : 0.5 + this.rnd() * 2) / 5) * 5;
+          if (tier === 'junk') this.money(-80, 'service', `Haul-away after auction - Unit ${u.num}`);
           const credit = Math.min(price, this.owed(L)); total += price;
           this.money(price, 'anc', `Lien auction - Unit ${u.num}${war ? ' (bidding war)' : ''}`);
-          sold.push({ unit: u.id, num: u.num, price, war, owed: this.owed(L), credit });
-          this.emit('auction_sold', { unit: u.id, price, war, x: u.x, y: u.y, f: u.f || 0 });
+          sold.push({ unit: u.id, num: u.num, price, war, what, tier, owed: this.owed(L), credit });
+          this.emit('auction_sold', { unit: u.id, price, war, what, tier, x: u.x, y: u.y, f: u.f || 0 });
         } else {
           this.money(-120, 'service', `Clean-out and donation - Unit ${u.num}`);
           sold.push({ unit: u.id, num: u.num, price: 0 });
@@ -1477,6 +1512,13 @@ export class Sim {
   act_cv(a) {
     const s = this.s;
     switch (a.op) {
+      case 'biCover': { const tn = s.tenants[a.tenant]; if (s.cash < 250 && !s.creative) return { ok: false, msg: 'Not enough cash' }; this.money(-250, 'service', 'Break-in: covered tenant deductible'); if (tn) tn.sat = clamp(tn.sat + 0.32, 0, 1); return { ok: true, msg: `${tn ? tn.name.split(' ')[0] : 'The tenant'} is grateful and staying.` }; }
+      case 'biReport': { const tn = s.tenants[a.tenant]; if (!tn) return { ok: true }; tn.sat = clamp(tn.sat - 0.05, 0, 1);
+        if (this.rnd() < 0.35 && !tn.leaving) { const L = s.leases[tn.lease]; if (L) { tn.leaving = true; this.schedule({ kind: 'moveout', tenant: tn.id, unit: L.unit }, this.randomAccessTime(this.day + 3)); } this.postReview(tn, true); return { ok: true, msg: `${tn.name.split(' ')[0]} is moving out after the break-in.` }; }
+        return { ok: true, msg: 'Report filed. The tenant is unhappy but staying for now.' }; }
+      case 'pwMatch': { for (const k of Object.keys(s.market.ask)) s.market.ask[k] = Math.round(s.market.ask[k] * 0.94); return { ok: true, msg: 'Asking rents cut 6%. Existing tenants keep their rates.' }; }
+      case 'pwHold': return { ok: true, msg: 'Holding prices. Expect fewer price shoppers; quality has to win them.' };
+      case 'pwAd': { if (s.cash < 600 && !s.creative) return { ok: false, msg: 'Not enough cash' }; this.money(-600, 'service', 'Local ad campaign'); s.mkt.promoUntil = this.day + 45; return { ok: true, msg: 'Ad campaign running for 45 days: more shoppers will visit.' }; }
       case 'rateExplain': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.02, 0, 1); return { ok: true, msg: 'Explained: rates follow the local market. The new rate stands.' }; }
       case 'rateIgnore': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.07, 0, 1); return { ok: true }; }
       case 'rateHold': {
@@ -2306,7 +2348,9 @@ export class Sim {
     const o = t.obj != null && s.objects[t.obj];
     if (t.type === 'makeready' && o) { o.commercial = 'ready'; this.milestone('first_makeready'); this.emit('rentready', { unit: o.id, x: o.x, y: o.y, f: o.f || 0 }); }
     else if ((t.type === 'repair' || t.type === 'pm') && o) {
-      o.cond = 1; if (o.type === 'door' && o.keypad) o.kcond = 1; this.markDirty();
+      // choice, not chore: the Owner's quick fix is free but wears out sooner; a Tech or vendor restores it fully
+      const quick = t.type === 'repair' && ag && ag.role === 'owner' && this.pressureOn();
+      o.cond = quick ? Math.max(o.cond, 0.72) : 1; o.quickFix = quick; if (o.type === 'door' && o.keypad) o.kcond = quick ? 0.72 : 1; this.markDirty();
       this.milestone('first_repair'); this.emit('repaired', { obj: o.id, x: o.x, y: o.y, f: o.f || 0 });
       s.convos = s.convos.filter((c) => c.obj !== o.id);
     } else if (t.type === 'cleanroom' && o) {

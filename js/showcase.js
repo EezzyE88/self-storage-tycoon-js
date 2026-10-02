@@ -240,17 +240,17 @@ export function installShowcase(game) {
 
   // ---------------------------------------------------------------- celebrations + money pops
   let banQ = [], banBusy = false;
-  function celebrate(kicker, title, sub, at) {
-    if (at) fx.burst(at.x, at.z, at.f || 0);
-    banQ.push({ kicker, title, sub }); if (banQ.length > 3) banQ.shift(); if (!banBusy) nextBanner();
+  function celebrate(kicker, title, sub, at, tone) {
+    if (at && tone !== 'bad') fx.burst(at.x, at.z, at.f || 0);
+    banQ.push({ kicker, title, sub, tone }); if (banQ.length > 3) banQ.shift(); if (!banBusy) nextBanner();
   }
   sc.celebrate = celebrate;
   sc.bannerBusy = () => banBusy || banQ.length > 0; // the UI holds lesson offers until celebrations finish
   function nextBanner() {
     const b = banQ.shift(); const el = $('celebrate'); if (!b) { banBusy = false; return; } banBusy = true;
-    game.audio.play('flourish');
+    game.audio.play(b.tone === 'bad' ? 'attention' : 'flourish');
     el.innerHTML = `<div class="cb"><span class="cb-k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.6L21 9l-5.2 4.2L17.6 20 12 16.2 6.4 20l1.8-6.8L3 9l6.6-.4z"/></svg>${esc(b.kicker)}</span><b>${esc(b.title)}</b>${b.sub ? `<small>${esc(b.sub)}</small>` : ''}</div>`;
-    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    el.classList.toggle('bad', b.tone === 'bad'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
     setTimeout(() => { el.classList.remove('on'); setTimeout(nextBanner, 450); }, 3600);
   }
   function officeAt() { const o = Object.values(game.sim.s.objects).find((q) => q.type === 'office'); return o ? { x: o.x + (o.w || 1) / 2, z: o.y + (o.h || 1) / 2, f: 0 } : { x: rend.center.x, z: rend.center.z, f: 0 }; }
@@ -273,13 +273,15 @@ export function installShowcase(game) {
       case 'rentready': pop(e.x + 0.5, e.y + 0.5, e.f, 'Rent-ready', 'fix'); break;
       case 'tier_up': celebrate('Promoted', ['', 'Owner-operator', 'Local operator', 'Regional operator', 'Portfolio operator', 'Storage magnate'][e.tier] || 'New level', 'New perks unlocked in Growth'); break;
       case 'lesson_done': celebrate('Lesson complete', e.title, ''); break;
+      case 'drama': celebrate(e.k === 'breakin' ? 'Break-in' : e.k === 'pricewar' ? 'Price war' : 'News', e.title, e.sub, e.x != null ? { x: e.x + 0.5, z: e.y + 0.5, f: e.f } : null, 'bad'); break;
       case 'milestone': if (MILESTONES[e.k] && !String(e.k).startsWith('scenario_')) celebrate('Milestone', MILESTONES[e.k], milestoneSub(e.k), officeAt()); break;
       case 'commissioned': if (e.n >= 2) celebrate('Grand opening', `${e.n} new units open`, 'Now visible to shoppers. Leasing starts today.', { x: e.x + 0.5, z: e.y + 0.5, f: e.f }); break;
       case 'scenario_end': if (e.won) celebrate('Scenario complete', s.scenario ? s.scenario.name || 'Goals met' : 'Goals met', `Finished on day ${game.sim.day}`, officeAt()); break;
       case 'tut_done': if (s.tut.done) celebrate('Graduated', 'Maple Street is yours', 'The full game is unlocked. Build whatever you like.', officeAt()); else if (BEATS[e.beat] && BEATS[e.beat + 1] && e.beat > 0) celebrate(`Part ${e.beat + 1} of ${BEATS.length} complete`, BEATS[e.beat].title.replace(/\.$/, ''), `Next: ${BEATS[e.beat + 1].title.replace(/\.$/, '')}`, officeAt()); break;
       case 'moveout': checkFull(); break;
       case 'auction_start': auctionCrowd(e.units); { const u = s.objects[e.units[0]]; celebrate('Auction day', `${e.units.length} unit${e.units.length > 1 ? 's' : ''} up for bid`, 'Bidders are gathering at the doors. Sales close in about an hour.', u ? { x: u.x + 0.5, z: u.y + 0.5, f: u.f || 0 } : officeAt()); } break;
-      case 'auction_sold': pop(e.x + 0.5, e.y + 0.5, e.f, `Sold ${money(e.price)}`, 'lease'); fx.burst(e.x + 0.5, e.y + 0.5, e.f || 0); cheer(e.unit); break;
+      case 'auction_sold': if (e.tier === 'treasure') celebrate('Auction surprise', `Unit ${(game.sim.s.objects[e.unit] || {}).num || ''}: ${e.what}`, `Bidding war - sold for ${money(e.price)}`, { x: e.x + 0.5, z: e.y + 0.5, f: e.f });
+        pop(e.x + 0.5, e.y + 0.5, e.f, `Sold ${money(e.price)}`, 'lease'); fx.burst(e.x + 0.5, e.y + 0.5, e.f || 0); cheer(e.unit); break;
       case 'auction_end': setTimeout(clearCrowd, 2500); if (e.mode === 'auction' && e.n) celebrate('Auction closed', `${e.n} lot${e.n > 1 ? 's' : ''} sold for ${money(e.total)}`, 'Units need a clean-out before they rent again.', officeAt()); break;
       case 'retained': { const u = s.objects[e.unit]; if (u) pop(u.x + 0.5, u.y + 0.5, u.f || 0, 'Staying', 'fix'); break; }
       case 'paid_up': { const u = s.objects[e.unit]; if (u && e.amt > 0) pop(u.x + 0.5, u.y + 0.5, u.f || 0, `+${money(e.amt)}`, 'rent'); break; }
