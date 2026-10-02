@@ -3,6 +3,7 @@ import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIER
 import { fmtTime, dayOf, productKey } from './sim.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
+import { guideFor } from './handbook.js';
 
 const PIN = {
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-8.3 8.3a2 2 0 0 1-2.8-2.8l8.3-8.3"/><path d="M14.5 5.5 17 3"/></svg>',
@@ -58,9 +59,9 @@ export class UI {
       </div>
       <div class="viewctl">
         <div class="seg floorseg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="view" data-v="1">F2</button></div>
+        <div class="seg rotseg"><button data-a="rot" data-v="-1" aria-label="Rotate view left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate view right">${I.rotR}</button></div>
         <button class="viewmore" data-a="viewMore" aria-label="More camera controls" aria-expanded="false">${I.view}</button>
         <div class="viewextra">
-          <div class="seg"><button data-a="rot" data-v="-1" aria-label="Rotate left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate right">${I.rotR}</button></div>
           <div class="seg"><button data-a="zoom" data-v="1.25" aria-label="Zoom in">${I.plus}</button><button data-a="zoom" data-v="0.8" aria-label="Zoom out">${I.minus}</button><button data-a="fit" aria-label="Fit property">${PIN.fit}</button></div>
           <div class="seg"><button data-a="photo" aria-label="Photo mode" title="Photo mode (P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.6"/></svg></button></div>
         </div>
@@ -134,6 +135,7 @@ export class UI {
       case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
       case 'tutWhy': this.tutWhy = !this.tutWhy; this.renderTut(true); break;
       case 'menu': this.showMenu(); break;
+      case 'handbook': this.showHandbook(); this.sfx('click'); break;
       case 'modalClose': this.closeModal(); break;
       case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); }); break;
       case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then(() => run()); break; }
@@ -257,7 +259,7 @@ export class UI {
       const cost = t.cost != null ? money(t.cost * (1)) : t.costPerCell != null ? `${money(t.costPerCell)} / cell` : 'Free';
       return `<button class="tool ${locked ? 'locked' : ''} ${focus && focus.tool === k ? 'pulse' : ''}" data-a="tool" data-v="${k}"><b>${t.name}</b><span class="c">${locked ? (s.tut.on && (k === 'office' || k === 'gate') ? 'Built' : 'Unlocks after the tutorial') : cost}</span><span class="d">${t.desc}</span></button>`;
     }).join('');
-    return this.sheet('Build', s.creative ? 'Creative mode: instant and free' : s.sb && (s.sb.unlimited || s.sb.instant) ? [s.sb.unlimited ? 'Free Build funds' : '', s.sb.instant ? 'Instant construction' : ''].filter(Boolean).join(' · ') + '. Costs are still recorded.' : 'Place, preview, then confirm', `<div class="tools">${cards}</div>`, catHtml);
+    return this.sheet('Build', s.creative ? 'Creative mode: instant and free' : s.sb && (s.sb.unlimited || s.sb.instant) ? [s.sb.unlimited ? 'Free Build funds' : '', s.sb.instant ? 'Instant construction' : ''].filter(Boolean).join(' · ') + '. Costs are still recorded.' : 'Place, preview, then confirm', `<div class="build-help"><button class="btn sm" data-a="handbook">Builder's handbook</button><span>How, why and when to use every build item</span></div><div class="tools">${cards}</div>`, catHtml);
   }
   pickTool(k) {
     if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
@@ -279,7 +281,7 @@ export class UI {
     if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
     if (this.tool.startsWith('du')) a.f = 0;
     this.plan = this.sim.plan(a); this.plan.args = a;
-    this.rend.setPreview(this.plan); this.renderActionBar();
+    this.rend.setPreview(this.plan, this.planArgs.a); this.renderActionBar();
   }
   canRush() { const s = this.sim.s; return !s.creative && (s.coTier || 1) >= 2; }
   confirmPlan() {
@@ -1257,17 +1259,34 @@ export class UI {
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
-      <div class="menu-list"><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}</div>
+      <div class="menu-list"><button class="btn" data-a="handbook">Builder\'s handbook <small>How, why and when to use every build item</small></button><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}</div>
       <h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
       <div class="row wrap"><button class="btn sm" data-a="music">Music ${a.musicOn ? 'on' : 'off'}</button><button class="btn sm" data-a="fps">FPS meter ${this.g.showFps ? 'on' : 'off'}</button></div>
       <h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button><button class="btn sm" data-a="lens">Miniature lens ${this.g.showcase && this.g.showcase.lensPref ? 'on' : 'off'}</button></div>
       <h3>Showcase</h3><div class="menu-list"><button class="btn" data-a="photo">Photo mode <small>Light, looks, lens and a shutter (P)</small></button><button class="btn" data-a="tour">Cinematic tour <small>The camera wanders your property. Tap to stop.</small></button></div>
       <p class="note">Tip: tap any customer, car or staff member to follow them and read their story.</p>
       <h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="sandboxSetup">Sandbox</button></div>
-      <h3>Controls</h3><p class="note">Drag to pan, pinch or scroll to zoom, rotate with the side buttons (Q/E). While building, drag to place and use two fingers (or right-drag) to pan. Space pauses, 1-3 set speed, Esc cancels.</p>
+      <h3>Controls</h3><p class="note">Drag to pan, pinch or scroll to zoom, rotate with the side buttons (Q/E). On touch, press and hold then drag to place a build; a quick drag pans. Two fingers pan/zoom. Space pauses, 1-3 set speed, Esc cancels.</p>
       <p class="note" id="autosaveNote">${this.autosaveNote()}</p>
       <p class="note build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')} · ${esc(this.g.BUILD ? this.g.BUILD.date : '')}. Mention this when you send feedback.</p></div></div>`;
   }
+  showHandbook() {
+    const cost = (t) => t.cost != null ? money(t.cost) : t.costPerCell != null ? money(t.costPerCell) + ' / cell' : 'No build price';
+    const place = (t) => t.shape === 'tap' ? 'Press-and-hold placement' : t.shape === 'row' ? 'Press-hold-drag row' : 'Press-hold-drag area';
+    const groups = CATEGORIES.map((cat) => {
+      const rows = Object.entries(TOOLS).filter(([, t]) => t.cat === cat.id);
+      if (!rows.length) return '';
+      const items = rows.map(([k, t]) => {
+        const g = guideFor(k, t);
+        return '<details class="handbook-item"><summary><span><b>' + esc(t.name) + '</b><small>' + esc(cost(t)) + ' · ' + esc(place(t)) + '</small></span><span aria-hidden="true">›</span></summary>' +
+          '<div class="handbook-copy"><p><b>What it does</b><br>' + esc(t.desc) + '</p><p><b>How to use it</b><br>' + esc(g.how) + '</p><p><b>Why it matters</b><br>' + esc(g.why) + '</p><p><b>When to use it</b><br>' + esc(g.when) + '</p></div></details>';
+      }).join('');
+      return '<section class="handbook-section"><h3>' + esc(cat.name) + '</h3>' + items + '</section>';
+    }).join('');
+    this.$('modal').innerHTML = '<div class="modal-bg"><div class="modal handbook"><div class="row"><h2 style="flex:1">Builder\'s handbook</h2><button class="x" data-a="modalClose" aria-label="Close">' + I.x + '</button></div>' +
+      '<p class="note">Every item in the Build menu is listed here. The handbook explains the current game rules; build previews remain the final authority for whether a specific placement is valid.</p>' + groups + '</div></div>';
+  }
+
   async showSave() {
     const code = await this.g.saveCode();
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Save code</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>

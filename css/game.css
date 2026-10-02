@@ -174,6 +174,23 @@ canvas.chart { width: 100%; height: 120px; display: block; background: #fff; bor
 .slider { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; font-size: 13px; margin: 6px 0; }
 .slider input { width: 100%; accent-color: var(--ink); }
 
+.build-help { display: flex; align-items: center; gap: 8px; padding: 8px 10px 2px; color: var(--muted); font-size: 11px; }
+.build-help .btn { flex: none; }
+
+/* builder's handbook */
+.handbook { max-width: 640px; }
+.handbook-section { margin-top: 14px; }
+.handbook-section > h3 { position: sticky; top: -1px; z-index: 2; background: var(--paper); padding: 8px 0 6px; margin: 0; }
+.handbook-item { border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.35); margin: 7px 0; overflow: hidden; }
+.handbook-item summary { list-style: none; cursor: pointer; min-height: 48px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.handbook-item summary::-webkit-details-marker { display: none; }
+.handbook-item summary span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.handbook-item summary small { color: var(--muted); font-size: 11px; font-weight: 500; }
+.handbook-item[open] summary { border-bottom: 1px solid var(--line); }
+.handbook-copy { padding: 2px 12px 10px; }
+.handbook-copy p { margin: 9px 0; font-size: 13px; line-height: 1.4; }
+.handbook-copy p b { color: var(--ink); }
+
 /* title screen */
 .title { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(22,32,43,0.2), rgba(22,32,43,0.85)); display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 24px 16px calc(28px + var(--safe-b)); text-align: center; color: #f6f3ec; }
 .title .logo { width: 84px; height: 84px; color: #f6f3ec; }
@@ -205,7 +222,7 @@ canvas.chart { width: 100%; height: 120px; display: block; background: #fff; bor
   #ui.has-sheet .tut h4 { font-size: 14px; margin: 2px 0 0; }
   #ui.has-sheet .feed { display: none; }
   .viewctl { top: calc(66px + var(--safe-t)); gap: 6px; }
-  .viewctl .floorseg button { width: 46px; height: 42px; }
+  .viewctl .floorseg button, .viewctl .rotseg button { width: 46px; height: 42px; }
   .viewmore { display: grid; width: 46px; height: 46px; }
   .viewextra { display: none; position: absolute; right: 52px; top: 0; flex-direction: row; align-items: flex-start; gap: 6px; padding: 4px; border-radius: 14px; background: rgba(22,32,43,.16); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   .viewctl.open .viewextra { display: flex; }

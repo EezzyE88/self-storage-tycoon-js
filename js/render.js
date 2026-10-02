@@ -780,7 +780,7 @@ export class Renderer {
   }
 
   // ================================================================ PREVIEW / OVERLAYS / FOCUS
-  setPreview(R) {
+  setPreview(R, anchor = null) {
     this.clearGroup(this.previewG);
     if (!R) return;
     const col = R.status === 'invalid' ? 0xd2452f : R.status === 'incomplete' ? 0xe8a91f : 0x39b36b;
@@ -793,13 +793,35 @@ export class Renderer {
       m.position.set(it.x + 0.5, (it.f || 0) * FLOOR_H + 0.06, it.y + 0.5); m.renderOrder = 30; this.previewG.add(m);
     }
     const ghost = new THREE.MeshStandardMaterial({ color: col, transparent: true, opacity: 0.35, depthWrite: false });
+    const drivePreview = TOOLS[R.tool] && TOOLS[R.tool].access === 'drive';
+    const frontageMat = new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false });
     for (const u of R.units || []) {
-      const H = TOOLS[R.tool] && TOOLS[R.tool].access === 'drive' ? WALL_H : 1.05;
+      const H = drivePreview ? WALL_H : 1.05;
       const m = new THREE.Mesh(this.geo.box, u.ok === false ? badMat : ghost); m.scale.set(u.w - 0.08, H, u.h - 0.08); m.position.set(u.x + u.w / 2, (u.f || 0) * FLOOR_H + H / 2, u.y + u.h / 2); this.previewG.add(m);
-      // door-side arrow
+      // Door/frontage direction: keep the arrow and add a bright strip along the whole door edge.
+      if (drivePreview) {
+        const edge = new THREE.Mesh(this.geo.box, frontageMat);
+        const alongX = u.dir[1] !== 0;
+        edge.scale.set(alongX ? Math.max(0.35, u.w - 0.12) : 0.18, 0.08, alongX ? 0.18 : Math.max(0.35, u.h - 0.12));
+        edge.position.set(
+          u.x + u.w / 2 + u.dir[0] * (u.w / 2 + 0.12),
+          (u.f || 0) * FLOOR_H + 0.10,
+          u.y + u.h / 2 + u.dir[1] * (u.h / 2 + 0.12)
+        );
+        edge.renderOrder = 32; this.previewG.add(edge);
+      }
       const ar = new THREE.Mesh(this.geo.cone, new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false })); ar.scale.set(0.22, 0.34, 0.22);
       ar.position.set(u.x + u.w / 2 + u.dir[0] * (u.w / 2 + 0.25), (u.f || 0) * FLOOR_H + 0.25, u.y + u.h / 2 + u.dir[1] * (u.h / 2 + 0.25));
-      ar.rotation.set(u.dir[1] * Math.PI / 2, 0, -u.dir[0] * Math.PI / 2); ar.renderOrder = 31; this.previewG.add(ar);
+      ar.rotation.set(u.dir[1] * Math.PI / 2, 0, -u.dir[0] * Math.PI / 2); ar.renderOrder = 33; this.previewG.add(ar);
+    }
+    if (anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y)) {
+      const f = R.args && Number.isFinite(R.args.f) ? R.args.f : 0;
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.43, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.98, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(anchor.x + 0.5, f * FLOOR_H + 0.11, anchor.y + 0.5);
+      ring.renderOrder = 35; this.previewG.add(ring);
+      const dot = new THREE.Mesh(new THREE.CircleGeometry(0.11, 24), new THREE.MeshBasicMaterial({ color: 0xffd23a, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+      dot.rotation.x = -Math.PI / 2; dot.position.copy(ring.position); dot.position.y += 0.01; dot.renderOrder = 36; this.previewG.add(dot);
     }
     for (const c of R.creates || []) {
       if (c.type === 'light' || c.type === 'camera') {
