@@ -79,6 +79,8 @@ Run from inside `tests/headless`; they import `../../js/`.
 | `tr.mjs` | Unit split renovation, career tier, rush build | Ran, exit 0 (split and rush behave as expected) |
 | `tbal.mjs` | Round 12 balance check: idle / absent / good / strategic / pro bots. Set `DAYS=730` for two years. | Run, exit 0 (prints numbers; see QA report Round 12) |
 | `tsc.mjs` | Round 12 scenario check: idle vs. fixer vs. manager vs. builder (`SC=turnaround` to limit) | Run, exit 0: idle loses Turnaround, builder wins on day 68 |
+| `tclim.mjs`, `tvert.mjs` | Round 13 builder bots for Climate Boom and Go Vertical (`UPPERONLY=1` builds only upper-floor units; `NOCOMP=1` turns market pressure off) | Climate Boom won day 48; Go Vertical won day 212 with the rival |
+| `tfix.mjs` | Round 13 fixes: pre-Round-11 tutorial save migration, climate-conversion renovation | All pass |
 | `t9.mjs`, `t9b.mjs`, `t9d.mjs`, `t9e.mjs`, `dbg.mjs` | Round 9 era checks and debugging | Ran, exit 0. They're older and may print values without asserting anything. |
 | `tv.mjs`, `tw.mjs` | Build-layout planners | **Need a JSON argument**. They exit 1 when run with none, so they aren't pass/fail tests. |
 
@@ -104,12 +106,12 @@ cd tests/browser-qa && node run.js d s_r11.js   # d = 1280x800 desktop, m = 390x
 - **Untested on a real device**, and no human playtests (see above).
 - **Tutorial scope question:** the tutorial was cut from 12 parts/74 steps to 8 parts/25 steps plus optional lessons. This may conflict with the user's earlier preference that a comprehensive tutorial is necessary. See `docs/HANDOFF.md` §16, C1.
 - **Saves:**
-  - Mid-tutorial saves from before Round 11 may resume at the wrong part (the tutorial part numbering changed; no migration).
+  - Mid-tutorial saves from before Round 11 are moved to the matching part of the 8-part tutorial (tested headless with a synthetic save, not a real old save).
   - Local autosave needs the save server plus a fixed `?cid=`.
   - Other static hosts have no autosave.
-- **Economy (Round 12):** idle play now declines (Maple: about 30% occupancy by the end of year 1, cash falling in year 2), and grades separate play styles. The numbers come from simple bots, not people. Go Vertical and Climate Boom now have a rival competitor but haven't been re-checked for winnability with a building player. A staffed Maple loses money.
-- **Unverified features:** the climate-conversion renovation's success path; the career-tier sync (it runs in the browser only).
-- **Polish issues:** the HUD showed "Day 1" in a QA run that had stepped the simulation manually (unclear whether that's a harness artifact); the "Tutorial" subtitle stays after graduation; competitors don't appear on the map; tapping a pin cluster opens only the first object.
+- **Economy (Round 13):** idle play declines (Maple: about 45% occupancy by the end of year 1, cash flat to slightly falling in year 2), and grades separate play styles. The numbers come from simple bots, not people. All three scenarios were won by a building bot with the rival on. A staffed Maple loses money.
+- **Unverified features:** the career-tier sync (it runs in the browser only).
+- **Polish issues:** the HUD showed "Day 1" in a QA run that had stepped the simulation manually (unclear whether that's a harness artifact); competitors don't appear on the map; tapping a pin cluster opens only the first object.
 - **Limits:** at most 5 properties.
 - **External:** the fonts depend on the Fontshare CDN.
 

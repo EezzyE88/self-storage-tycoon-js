@@ -621,3 +621,47 @@ Honest read: idle play no longer pins at 100%, and neglect now collapses. But th
 
 ### Known issue seen in QA
 - A milestone banner can sit over the top of an open Business sheet on phones (existing behavior).
+
+
+## Round 13: fixes and open items from Round 12 (2026-10-01)
+
+**Requested by the user:** "Implement recommendations and fixes".
+
+### Changes
+1. **Idle-play penalty softened.**
+   - Broken-gate move-out effect 1.8 → 1.5, dark-lot effect 1.0 → 0.9.
+   - Signing chance with a broken gate now has a floor of 42% (was 35%).
+2. **Milestone banner on phones:** with a sheet open, the banner moves just under the HUD in a compact form instead of covering the sheet header.
+3. **Lesson offer:** still waits for banners and notifications, but never longer than 12 seconds.
+4. **HUD subtitle:** Maple shows "Career" instead of "Tutorial" after graduating or skipping the tutorial. The save metadata uses the same label.
+5. **Old-save migration:** mid-tutorial saves from before Round 11 (detected by missing market state) map the old 12-part index to the matching part of the 8-part tutorial, and restart that part.
+
+### Verified (headless and emulation only)
+- Determinism and continuation: true. Tutorial walkthrough: done, day 5.
+- **Maple year 1** (`tbal`):
+
+| Bot | Cash | Units rented | Occupancy by month |
+|---|---|---|---|
+| Idle | $33,402 | 10/23 | about 43–48% from month 4 |
+| Good | $40,430 | 22/23 | — |
+| Strategic | $37,486 | 31/34 | — |
+
+- **Maple year 2** (cash): idle **$33,120 (flat to slightly down)**; good $54,643; strategic $60,333.
+- **Scenarios, rival on:**
+  - Turnaround: idle loses, builder wins on day 68.
+  - Climate Boom (`tclim`): won on day 48 with 24 climate units leased.
+  - Go Vertical (`tvert`, upper floor only): won on day 212 of 300. Without market pressure it's won on day 142.
+  - A Go Vertical build that also fills the ground floor reached only 20 upper units: shoppers take ground-floor units first.
+- **`tfix`, all pass:**
+  - Old save at part 9 maps to part 8 (Graduation); a Round 11+ save is left untouched.
+  - Climate conversion: offered with HVAC, charges $600, queues a make-ready, and the unit re-leases within 20 days.
+- **Browser** (Playwright, desktop and 390×844 emulation):
+  - No page errors, no undefined/NaN, no overflow.
+  - `s_r13.js`: subtitle changes from Tutorial to Career on skip; the banner sits under the HUD, above the open Business sheet.
+
+### Not verified
+- Real iPhone, human players.
+- A real pre-Round-11 save file: only a synthetic one was tested.
+
+### Notes
+- Climate Boom may be easy: the bot won before the rival opened.

@@ -432,6 +432,8 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .item.stack { flex-wrap: wrap; } .item.stack > .grow { flex: 1 1 100%; } .item.stack > .acts { flex: 1 1 100%; gap: 6px; }
 .item .acct { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; } .item .acct b { margin-right: 2px; }
 @media (max-width: 600px) and (orientation: portrait) { #celebrate { top: 36%; } }
+/* with a sheet open the banner sits just under the HUD, compact, instead of over the sheet header */
+@media (max-width: 600px) and (orientation: portrait) { body.sheet-open #celebrate { top: calc(62px + var(--safe-t)); } body.sheet-open #celebrate .cb { padding: 8px 14px 9px; } body.sheet-open #celebrate b { font-size: 16px; } body.sheet-open #celebrate small { display: none; } }
 /* ---- Round 10: guided tutorial ---- */
 .tut .intro { margin-bottom: 8px; }
 .tut .prog { position: relative; height: 18px; display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }

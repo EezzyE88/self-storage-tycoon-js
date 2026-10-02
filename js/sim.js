@@ -72,6 +72,10 @@ export class Sim {
     state.mgrLog ||= []; state.debt ||= []; if (state.auction === undefined) state.auction = null;
     const P = state.policies; if (P.lateFee == null) P.lateFee = 20; if (P.autoNotice == null) P.autoNotice = false; if (!P.resolution) P.resolution = 'auction'; if (P.retention == null) P.retention = true; if (P.overlock == null) P.overlock = true;
     for (const L of Object.values(state.leases || {})) { if (L.fees == null) L.fees = 0; }
+    // saves from before Round 11 (no market state) used the 12-part tutorial; move them to the matching part of the 8-part one
+    if (!state.mkt && state.tut && state.tut.on && !state.tut.done && state.tut.beat > 4) {
+      state.tut.beat = [0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 7][Math.min(11, state.tut.beat)] ?? 7; state.tut.entered = false; state.tut.migrated = 11;
+    }
     state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; if (state.coTier == null) state.coTier = 1;
     this.rebuild();
   }
@@ -1034,7 +1038,7 @@ export class Sim {
     return { ok: false };
   }
   poll() { this.ensure(); if (this.onTick) this.onTick(this); if (this.dirty) this.rebuild(); }
-  act_tutSkip() { this.s.tut.on = false; this.s.tut.done = true; return { ok: true }; }
+  act_tutSkip() { this.s.tut.on = false; this.s.tut.done = true; this.emit('tut_skip'); return { ok: true }; }
   milestone(k) { if (!this.s.milestones[k]) { this.s.milestones[k] = this.s.t; this.emit('milestone', { k }); } }
 
   // ============================================================ TICK
@@ -1092,7 +1096,7 @@ export class Sim {
     for (const tn of Object.values(s.tenants)) {
       const L = s.leases[tn.lease]; if (!L || L.status !== 'current' || tn.leaving) continue;
       const u = s.objects[L.unit]; const mk = this.marketRent(u);
-      const cpx = this.compPrice(); const hazard = (1 / 320) * (1 + clamp(0.72 - tn.sat, 0, 1) * 5) * (1 + 1.8 * clamp(0.6 - s.exp.access, 0, 0.6) + 1.0 * clamp(0.6 - s.exp.security, 0, 0.6)) /* broken gates and dark lots drive tenants out */ * clamp(L.rent / mk, 0.8, 1.6) ** 2 * (L.incT != null && s.t - L.incT < 60 * MIN_PER_DAY ? 1.5 : 1) * (cpx != null && L.rent / mk > cpx + 0.05 ? 1 + this.compShare() * 2 : 1) * (0.85 + 0.15 * this.season(day));
+      const cpx = this.compPrice(); const hazard = (1 / 320) * (1 + clamp(0.72 - tn.sat, 0, 1) * 5) * (1 + 1.5 * clamp(0.6 - s.exp.access, 0, 0.6) + 0.9 * clamp(0.6 - s.exp.security, 0, 0.6)) /* broken gates and dark lots drive tenants out */ * clamp(L.rent / mk, 0.8, 1.6) ** 2 * (L.incT != null && s.t - L.incT < 60 * MIN_PER_DAY ? 1.5 : 1) * (cpx != null && L.rent / mk > cpx + 0.05 ? 1 + this.compShare() * 2 : 1) * (0.85 + 0.15 * this.season(day));
       if (this.rnd() < hazard) {
         tn.leaving = true; const when = this.randomAccessTime(day + 2); this.schedule({ kind: 'moveout', tenant: tn.id, unit: u.id }, when);
         if (this.rnd() < 0.5) this.postReview(tn, true);
@@ -1550,7 +1554,7 @@ export class Sim {
       let pPrice = ratio <= 0.9 ? 0.95 : 0.95 * Math.exp(-4.2 * (ratio - 0.9));
       if (v.keen) pPrice = ratio > 1.25 ? pPrice : 0.97;
       const conv = v.keen ? 1 : u.conv * (u.f > 0 ? this.elevatorFactor(u) : 1);
-      let p = pPrice * clamp(conv, 0.4, 1) * (v.keen ? 1 : 0.72 + 0.35 * rep) * (settling ? 0.35 : 1) * clamp(0.35 + 1.1 * s.exp.access, 0.35, 1); // shoppers who see a broken gate walk away
+      let p = pPrice * clamp(conv, 0.4, 1) * (v.keen ? 1 : 0.72 + 0.35 * rep) * (settling ? 0.35 : 1) * clamp(0.42 + 1.0 * s.exp.access, 0.42, 1); // shoppers who see a broken gate walk away
       if (cp != null && !v.keen && ratio > cp + 0.04) p *= clamp(1 - (ratio - cp) * 2.2, 0.35, 1);
       if (p > bestP) { bestP = p; best = u; }
     }

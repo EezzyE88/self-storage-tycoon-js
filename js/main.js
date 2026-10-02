@@ -18,6 +18,8 @@ Renderer.prototype.setSim = function (sim) {
 };
 
 const canvas = document.getElementById('view');
+// HUD subtitle: Maple stops saying "Tutorial" once the player graduates
+export function modeLabel(s) { return s.mode === 'tutorial' ? (s.tut && s.tut.done ? 'Career' : 'Tutorial') : s.mode === 'scenario' ? 'Scenario' : s.creative ? 'Creative' : 'Sandbox'; }
 const game = {
   sim: null, rend: null, ui: null, audio: new Audio(), showFps: false, acc: 0,
   company: null,
@@ -82,7 +84,7 @@ const game = {
     s.milestones = {}; s.speed = 0; sim.markDirty(); sim.rebuild();
     src.money(-of.price, 'capex', 'Acquisition: ' + name);
     sim.money(WORKING_FLOAT, 'other', 'Opening working cash from ' + C.props[C.active].name);
-    C.props.push({ name, sim }); if (this.ui) this.ui.setMeta(this.metaName(), src.s.mode === 'tutorial' ? 'Tutorial' : src.s.mode === 'scenario' ? 'Scenario' : src.s.creative ? 'Creative' : 'Sandbox');
+    C.props.push({ name, sim }); if (this.ui) this.ui.setMeta(this.metaName(), modeLabel(src.s));
     this.note(C.active, `Acquired ${name} for $${of.price.toLocaleString()}`);
     return { ok: true, msg: `Acquired ${name}. Open the Portfolio to switch to it and send it cash.` };
   },
@@ -98,7 +100,7 @@ const game = {
     if (this.rend) this.rend.setSim(sim);
     if (this.ui) {
       this.ui.tool = null; this.ui.sel = null; this.ui.plan = null; this.ui.setTab(null); this.ui.renderActionBar();
-      const s = sim.s; this.ui.setMeta(this.metaName() || (s.mode === 'tutorial' ? 'Maple Street Storage' : s.creative ? 'Creative Lot' : 'Empty Lot'), s.mode === 'tutorial' ? 'Tutorial' : s.mode === 'scenario' ? 'Scenario' : s.creative ? 'Creative' : 'Sandbox');
+      const s = sim.s; this.ui.setMeta(this.metaName() || (s.mode === 'tutorial' ? 'Maple Street Storage' : s.creative ? 'Creative Lot' : 'Empty Lot'), modeLabel(s));
       this.ui.hF2 = null; this.ui.renderTut(true); this.ui.renderFeed(true);
     }
     this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));
@@ -138,7 +140,7 @@ const game = {
   },
   saveMeta() {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
-    return { name: p ? p.name : 'Property', mode: s.mode === 'tutorial' ? 'Tutorial' : s.mode === 'scenario' ? 'Scenario' : s.creative ? 'Creative' : 'Sandbox', day: this.sim.day, cash: Math.round(s.cash), props: C ? C.props.length : 1 };
+    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, cash: Math.round(s.cash), props: C ? C.props.length : 1 };
   },
   // autosave: whenever a game is running (not on the title screen); `hide` uses a keepalive request
   async autosave(hide) {

@@ -759,7 +759,9 @@ export class UI {
       case 'elevator': this.sfx('chime'); break;
       case 'work_start': case 'work_tick': this.sfx('work'); break;
       case 'convo': this.sfx('attention'); this.renderFeed(true); break;
-      case 'milestone': if (MILESTONES[e.k]) { if (!this.g.showcase) this.toast('Milestone: ' + MILESTONES[e.k], 'good'); this.sfx('milestone'); } break;
+      case 'tut_skip': { const t = this.root.querySelector('#pname small'); if (t && this.sim.s.mode === 'tutorial') t.textContent = 'Career'; break; }
+      case 'milestone': if (e.k === 'graduated') { const t = this.root.querySelector('#pname small'); if (t) t.textContent = 'Career'; }
+        if (MILESTONES[e.k]) { if (!this.g.showcase) this.toast('Milestone: ' + MILESTONES[e.k], 'good'); this.sfx('milestone'); } break;
       case 'hire': this.sfx('confirm'); break;
       case 'weather': if (e.w === 'rain') this.toast('Rain rolling in'); break;
       case 'tier_up': { const T = TIERS[e.tier - 1]; if (T) { this.toast(`Promoted: ${T.name}. Unlocked ${T.perks.join('; ')}`, 'good'); this.sfx('milestone'); } break; }
@@ -803,7 +805,9 @@ export class UI {
     const b = this.title ? null : curBeat(this.sim);
     if (!b) {
       this.guideStep = null;
-      const held = this.phone() && ((this.g.showcase && this.g.showcase.bannerBusy && this.g.showcase.bannerBusy()) || this.toasts.length > 0); // one card at a time on phones
+      // one card at a time on phones: hold a new lesson offer while banners or notifications are up, but never longer than 12 s
+      if (s.lessonOffer !== this.offerSeen) { this.offerSeen = s.lessonOffer; this.offerT = performance.now(); }
+      const held = this.phone() && performance.now() - (this.offerT || 0) < 12000 && ((this.g.showcase && this.g.showcase.bannerBusy && this.g.showcase.bannerBusy()) || this.toasts.length > 0);
       const off = !this.title && !held && s.lessonOffer && lessonById(s.lessonOffer);
       const key = 'offer:' + (off ? off.id : '');
       if (!force && key === this.tutKey) return; this.tutKey = key; this.rend.setFocus(null);
@@ -961,6 +965,7 @@ export class UI {
     if (hasF2 !== this.hF2) { this.hF2 = hasF2; this.root.querySelector('#floors [data-v="1"]').disabled = !hasF2; if (!hasF2 && this.rend.view === 1) this.setView(0); }
     const open = s.tasks.filter((t) => !t.assigned).length; if (open !== this.hTasks) { this.hTasks = open; const b = this.$('taskBadge'); b.hidden = !open; b.textContent = open; }
     this.root.classList.toggle('has-sheet', !!(this.$('sheet').firstChild || this.$('abar').firstChild));
+    document.body.classList.toggle('sheet-open', this.root.classList.contains('has-sheet')); // lets the milestone banner move clear of the sheet
     if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
     if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.renderTut(); }
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
