@@ -830,3 +830,63 @@ Honest read: idle play no longer pins at 100%, and neglect now collapses. But th
 - The preview can't exercise browser storage, the previous-game slot, or the switched-off save server. On the preview, New game warns that it will replace the game.
 - Desktop Playwright screenshots time out intermittently (software WebGL); the page logic still ran.
 - Idle Maple was harsher in this run. The likely cause is break-ins now aimed at dark units, which an idle property has more of. Re-check over several seeds before the next balance pass.
+
+## Sandbox v1 (`work/sandbox`, branched from `work/foundations` at `c6c3bcb`; build `sandbox-1`)
+
+**Requested by the user:** "We should solidify sandbox." The user supplied a design. This build implements its "Recommended first version" (section 12) plus parts of sections 2, 7, 8, 9 and 10. Status: not merged; awaiting review.
+
+### What was built
+- **Business sandbox and Free Build.** One setup screen replaces Empty Lot, Custom sandbox and Creative.
+  - Free Build has unlimited funds and still records costs. Spending past zero is covered by "Free Build funds", tracked in `s.sb.subsidy` and counted as sandbox money, never as income.
+  - The old Creative mode (free, unrecorded spending) is no longer offered. Old Creative saves still load.
+- **Starting conditions:**
+  - Empty lot or starter facility (the Maple Street layout).
+  - Presets: Relaxed, Standard or Challenging.
+  - Advanced: market, cash, demand, operating costs (new multiplier), maintenance, starting staff, company perks and instant construction.
+  - Every sandbox starts paused.
+- **Sim:**
+  - `unlimited()` and `instantOn()` replace the scattered `s.creative` cash checks.
+  - New actions: `act_sbFunds` (adds sandbox funds) and `act_sbSet` (instant construction, one-way Free Build, goal).
+  - `opResult(n)` is the operating result over the last n days. `sbGoalProgress()` reports progress on the four goals, checked every morning, and logs when one is met.
+  - No credit-line or low-cash prompts appear in Free Build.
+- **UI:**
+  - A Sandbox panel at the top of Business, with a cash-shortage box showing what costs are driving the shortage, what still earns, and ways to recover.
+  - "Sandbox funds (not income)" in the operating statement.
+  - The Build sheet subtitle names any overrides.
+  - The HUD flag shows Free / Instant / +Funds on phones and full words on desktop.
+  - The Continue label includes the mode.
+- **HUD fix (a foundations regression):** "est" made the cash chip wider and pushed the menu button 16 px off-screen at 390 px wide, which `s_found` did not check. Fixed: the button now ends at 382/390, 371/375 and 312/320 px.
+
+### Verified
+- **`tsandbox` (headless), all pass:**
+  - Business charges cash, building takes time, and unaffordable construction is refused with a reason.
+  - Free Build completes valid builds instantly. Cash never went below $0.
+  - Start cash plus recorded flows equals current cash.
+  - The operating result excludes construction and Free Build funds.
+  - Added funds are logged, mark the save Modified, and are not counted as income.
+  - Instant construction can be toggled during play, and the toggle is logged.
+  - Free Build is one-way.
+  - Costs ×1.25 scaled daily operating cost exactly 1.25×.
+  - With maintenance off, nothing lost condition in 60 days.
+  - The starter facility runs with no tutorial; the porter was hired and $5,284 rent came in over 60 days.
+  - Goal met and play continued. **The units target was lowered to 8 for this test** because the test layout fits only 8 units.
+  - Save and resume: identical continuation.
+  - Mode labels are correct.
+- **`s_sandbox` (browser, 390×844):**
+  - The setup screen renders with no overflow, the presets apply, and the game starts paused.
+  - The panel numbers render; Add $10,000 shows the toast, the Modified badge, the HUD flag and the statement line.
+  - The shortage box appears at $120 cash.
+  - Continue shows "Starter Facility · Business sandbox · Funds added", and the sandbox settings restore identically.
+  - The Free Build subtitle and HUD flag work.
+- **Regressions:**
+  - Determinism and continuation: true. Tutorial walkthrough: day 5.
+  - `tfin`, `tfix`, `tdrama` and `tcalm`: pass.
+  - Balance is unchanged: idle $31,260, good $41,016, strategic $38,569.
+  - Climate Boom: won on day 59. Turnaround builder: won on day 41.
+
+### Not verified / known issues
+- **Go Vertical:** the builder bot loses by the day-300 deadline, on this branch, on `work/foundations` and on master `1d7b399`. The earlier "won" result no longer reproduces. The cause is not a sandbox change. Not yet investigated.
+- **Not on a real iPhone.**
+- Free Build can still lose money as a business; that is shown, not prevented.
+- Not in v1: starting date, starting occupancy, save checkpoints, and an advanced testing panel.
+- Urban and Rural lots are offered only under Advanced. They are less tested than Suburban.

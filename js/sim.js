@@ -106,8 +106,27 @@ export class Sim {
     if (cat === 'rent') d.rent += amt; else if (cat === 'opex') d.opex -= amt; else if (cat === 'payroll') d.payroll -= amt;
     else if (cat === 'capex') d.capex -= amt; else if (cat === 'anc') d.anc = (d.anc || 0) + amt; else if (cat === 'service') d.service = (d.service || 0) - amt;
     else if (cat === 'debt') d.debt = (d.debt || 0) - amt; else if (cat === 'interest') d.interest = (d.interest || 0) - amt; else if (cat === 'loan') d.fin = (d.fin || 0) + amt;
+    else if (cat === 'inject' || cat === 'subsidy') d.inject = (d.inject || 0) + amt; // sandbox money: never income
     else d.other += amt;
     if (amt > 0 && cat === 'rent') this.emit('rent', { amt });
+    // Free Build: spending is recorded normally; when it would take cash below zero, sandbox funds cover the gap
+    if (amt < 0 && s.sb && s.sb.unlimited && s.cash < 0) { const top = Math.ceil(-s.cash); s.sb.subsidy = (s.sb.subsidy || 0) + top; this.money(top, 'subsidy', 'Free Build funds'); }
+  }
+  // ---- sandbox configuration (sandbox only; other modes read the defaults)
+  unlimited() { const s = this.s; return !!(s.creative || (s.sb && s.sb.unlimited)); }
+  instantOn() { const s = this.s; return !!(s.creative || (s.sb && s.sb.instant)); }
+  sbLog(msg, modifies) { const B = this.s.sb; if (!B) return; (B.log ||= []).push({ day: this.day, msg }); if (B.log.length > 40) B.log.shift(); if (modifies) B.modified = true; }
+  // trailing operating result: rent and fees in, operating costs, payroll, services and interest out.
+  // Construction, loans, transfers and sandbox funds are excluded.
+  opResult(n = 30) { const ds = this.s.days.slice(-n); return { n: ds.length, amt: Math.round(ds.reduce((a, d) => a + (d.rent || 0) + (d.anc || 0) - (d.opex || 0) - (d.payroll || 0) - (d.service || 0) - (d.interest || 0), 0)) }; }
+  sbGoalProgress() {
+    const s = this.s, B = s.sb, g = B && B.goal; if (!g) return null;
+    const units = this.objs('unit'), op = units.filter((u) => u.cstate === 'operating');
+    if (g.k === 'occ') { const occ = op.length ? op.filter((u) => u.lease).length / op.length : 0; return { cur: occ, target: g.target, met: op.length >= 5 && occ >= g.target, text: `${Math.round(occ * 100)}% of ${op.length} rentable units leased (needs at least 5 units)` }; }
+    if (g.k === 'profit') { const since = this.day - (g.from || 1); const R = this.opResult(30); const ok = since >= 30 && R.n >= 30; return { cur: R.amt, target: g.target, met: ok && R.amt >= g.target, text: ok ? `${R.amt < 0 ? '-' : ''}$${Math.abs(R.amt).toLocaleString()} operating result over the last 30 days` : `Measuring: ${Math.max(0, since)} of 30 days since the goal was set` }; }
+    if (g.k === 'units') return { cur: op.length, target: g.target, met: op.length >= g.target, text: `${op.length} units built and open for rent` };
+    if (g.k === 'backlog') { const open = s.tasks.filter((t) => /repair|clean/.test(t.kind || t.type || '')).length; const clear = open === 0 ? (B.clearSince ??= this.day) : (B.clearSince = null); return { cur: open, target: 0, met: open === 0 && clear != null && this.day - clear >= 7, text: open ? `${open} repair and cleaning jobs open` : `Backlog clear for ${this.day - (B.clearSince ?? this.day)} of 7 days` }; }
+    return null;
   }
 
   // ============================================================ DERIVED CACHES
@@ -762,8 +781,8 @@ export class Sim {
     const s = this.s, R = this.plan(a);
     if (R.status === 'invalid') { this.emit('refuse'); return { ok: false, msg: R.reasons[0] }; }
     if (a.tool === 'demolish') return this.demolish(R);
-    const rush = !!a.rush && (s.coTier || 1) >= 2 && !s.creative; if (rush) { R.cost = Math.round(R.cost * 1.25); R.dur = R.dur * 0.5; }
-    if (!s.creative && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }
+    const rush = !!a.rush && (s.coTier || 1) >= 2 && !this.instantOn(); if (rush) { R.cost = Math.round(R.cost * 1.25); R.dur = R.dur * 0.5; }
+    if (!this.unlimited() && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }
     const ord = { id: this.id(), label: R.label, tool: a.tool, cost: R.cost, dur: Math.max(30, Math.round(R.dur)), prog: 0, st: 'construction', objs: [], tiles: R.tiles, t0: s.t, cells: R.items.filter((it) => !it.skip).map((it) => ({ x: it.x, y: it.y, f: it.f })) };
     if (!s.creative) this.money(-R.cost, 'capex', R.label);
     if (R.waitShell) ord.waitShell = R.waitShell;
@@ -786,7 +805,7 @@ export class Sim {
     s.lastCommit = { order: ord.id, t: s.t };
     this.markDirty();
     this.emit('commit', { order: ord.id, cells: ord.cells });
-    if (s.creative) this.completeOrder(ord);
+    if (this.instantOn()) this.completeOrder(ord);
     return { ok: true, order: ord.id, msg: `${R.label} committed` };
   }
   corralName(o) {
@@ -911,7 +930,7 @@ export class Sim {
   managerTick() {
     const s = this.s; if (!this.hasManager()) return;
     const h = this.hour; if (h < OFFICE_HOURS[0] || h >= OFFICE_HOURS[1]) return;
-    const reserve = (c) => s.creative || s.cash - c >= 2500;
+    const reserve = (c) => this.unlimited() || s.cash - c >= 2500;
     // 1. commission rent-ready units
     if (s.open && this.objs('unit').some((u) => u.cstate === 'ready')) { const r = this.act_commission({ all: true }); if (r.ok) this.mgr('Opened rent-ready units for rental'); }
     // 2. escalate stalled repairs to vendors
@@ -948,7 +967,7 @@ export class Sim {
   act_hire(a) {
     const s = this.s, R = ROLES[a.role]; if (!R || a.role === 'owner') return { ok: false, msg: 'Cannot hire that role' };
     const office = this.objs('office')[0]; if (!office) return { ok: false, msg: 'Staff need an office to work from' };
-    if (!s.creative && s.cash < R.wage * 7) { this.emit('refuse'); return { ok: false, msg: `Keep at least a week of wages ($${(R.wage * 7).toLocaleString()}) in cash before hiring` }; }
+    if (!this.unlimited() && s.cash < R.wage * 7) { this.emit('refuse'); return { ok: false, msg: `Keep at least a week of wages ($${(R.wage * 7).toLocaleString()}) in cash before hiring` }; }
     const st = { id: this.id(), role: a.role, name: this.pick(NAMES_FIRST), wage: R.wage, hired: s.t };
     s.staff.push(st); this.spawnStaffAgent(st);
     this.emit('hire', { role: a.role }); return { ok: true, msg: `Hired ${st.name} (${R.name}) - $${R.wage}/day` };
@@ -979,7 +998,7 @@ export class Sim {
     const s = this.s, t = s.tasks.find((x) => x.id === a.task); if (!t) return { ok: false };
     if (t.vendor) return { ok: false, msg: 'A vendor is already booked' };
     const cost = t.need === 'repair_complex' ? 650 : 250;
-    if (!s.creative && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
+    if (!this.unlimited() && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     for (const ag of s.agents) { if (ag.task === t.id) { if (ag.cart) this.dropCart(ag); ag.task = null; ag.st = 'idle'; } if (ag.queue) ag.queue = ag.queue.filter((x) => x !== t.id); }
     if (!s.creative) this.money(-cost, 'service', 'Vendor service: ' + t.label);
     const pri = (s.coTier || 1) >= 2; t.vendor = s.t + (pri ? 300 : 600); t.assigned = 'vendor'; this.emit('task_assigned');
@@ -988,7 +1007,7 @@ export class Sim {
   act_buyCarts(a) {
     const s = this.s, c = s.objects[a.corral]; if (!c || c.cstate !== 'operating') return { ok: false, msg: 'Corral not ready' };
     const n = clamp(Math.floor(Number(a.n) || 1), 1, 50), cost = n * CART_COST;
-    if (!s.creative && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
+    if (!this.unlimited() && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     if (!s.creative) this.money(-cost, 'capex', `${n} cart${n > 1 ? 's' : ''}`);
     for (let k = 0; k < n; k++) s.carts.push({ id: this.id(), st: 'corral', corral: c.id, home: c.id, f: c.f || 0, x: c.x, y: c.y, cond: 1, uses: 0 });
     this.emit('carts_bought', { n }); return { ok: true, msg: `${n} cart${n > 1 ? 's' : ''} delivered to ${c.name}` };
@@ -1015,7 +1034,7 @@ export class Sim {
     const s = this.s, u = s.objects[a.unit]; this.ensure();
     const op = this.renovateOptions(u).find((x) => x.kind === a.kind); if (!op) return { ok: false, msg: 'Only vacant units can be renovated' };
     if (!op.ok) return { ok: false, msg: op.why };
-    if (!s.creative && s.cash < op.cost) return { ok: false, msg: 'Not enough cash' };
+    if (!this.unlimited() && s.cash < op.cost) return { ok: false, msg: 'Not enough cash' };
     if (!s.creative) this.money(-op.cost, 'capex', `${op.label} - ${u.name}`);
     s.tasks = s.tasks.filter((t) => !(t.obj === u.id && t.type === 'makeready'));
     const ready = (o) => { o.commercial = 'unready'; o.vacatedAt = s.t; this.addTask({ type: 'makeready', need: 'makeready', obj: o.id, label: `Make-ready ${o.name}`, work: WORK.makeready }); };
@@ -1027,6 +1046,23 @@ export class Sim {
     }
     this.markDirty(); this.emit('renovated', { unit: u.id, kind: a.kind });
     return { ok: true, msg: `${op.label}: done. Make-ready queued.` };
+  }
+  act_sbFunds(a) { // Business sandbox rescue: recorded as sandbox money, never as income
+    const s = this.s, B = s.sb, amt = Math.floor(Number(a.amt) || 0); if (!B || s.mode !== 'sandbox') return { ok: false, msg: 'Only in a sandbox' };
+    if (B.unlimited) return { ok: false, msg: 'Free Build funds are already unlimited' };
+    if (amt <= 0 || amt > 500000) return { ok: false, msg: 'Choose an amount up to $500,000' };
+    B.injected = (B.injected || 0) + amt; this.money(amt, 'inject', 'Sandbox funds added'); this.sbLog(`Added $${amt.toLocaleString()} sandbox funds`, true);
+    return { ok: true, msg: `Added $${amt.toLocaleString()}. It is recorded as sandbox funds, not income.` };
+  }
+  act_sbSet(a) { // settings that may change during play; ones that change what results mean are logged as modifications
+    const s = this.s, B = s.sb; if (!B || s.mode !== 'sandbox') return { ok: false, msg: 'Only in a sandbox' };
+    if (a.k === 'instant') { B.instant = !!a.v; this.sbLog(`Instant construction turned ${B.instant ? 'on' : 'off'}`, B.instant); if (B.instant) for (const o of s.orders.filter((x) => x.st === 'construction' && !x.waitShell)) this.completeOrder(o); return { ok: true, msg: `Instant construction ${B.instant ? 'on' : 'off'}` }; }
+    if (a.k === 'unlimited') { if (!a.v) return { ok: false, msg: 'Free Build cannot be turned back into a Business sandbox' }; B.unlimited = true; s.loan.neg = false; this.sbLog('Switched to Free Build: unlimited funds', true); if (s.cash < 0) { const top = Math.ceil(-s.cash); B.subsidy = (B.subsidy || 0) + top; this.money(top, 'subsidy', 'Free Build funds'); } return { ok: true, msg: 'Free Build on: funds are unlimited and every cost is still recorded' }; }
+    if (a.k === 'goal') {
+      const G = { occ: { k: 'occ', target: 0.9, label: 'Lease 90% of rentable units' }, profit: { k: 'profit', target: 3000, label: 'Operating result of $3,000 over 30 days' }, units: { k: 'units', target: 40, label: 'Build and open 40 units' }, backlog: { k: 'backlog', target: 0, label: 'No repair or cleaning jobs for 7 days' } }[a.v];
+      B.goal = G ? { ...G, from: this.day } : null; B.clearSince = null; this.sbLog(G ? 'Goal set: ' + G.label : 'Goal cleared'); return { ok: true, msg: G ? 'Goal: ' + G.label : 'No goal' };
+    }
+    return { ok: false };
   }
   act_coTier(a) { const s = this.s; const was = s.coTier || 1; s.coTier = a.tier; if (a.tier > was) this.emit('tier_up', { tier: a.tier }); return { ok: true }; }
   act_tutFlag(a) { this.s.tut.flags[a.flag] = true; if (this.s.lesson) this.s.lesson.flags[a.flag] = true; return { ok: true }; }
@@ -1085,7 +1121,8 @@ export class Sim {
     this.money(-ox.total, 'opex', 'Daily operating cost');
     const pay = s.staff.reduce((a, st) => a + st.wage, 0); if (pay) this.money(-pay, 'payroll', 'Payroll');
     if (s.loan.bal > 0) { const int = Math.round(s.loan.bal * 0.0004 * 100) / 100; this.money(-int, 'interest', 'Credit line interest'); }
-    if (!s.creative) this.cashCheck(ox.total + pay);
+    if (!this.unlimited()) this.cashCheck(ox.total + pay);
+    if (s.sb && s.sb.goal && !s.sb.goal.done) { const P = this.sbGoalProgress(); if (P && P.met) { s.sb.goal.done = day; this.sbLog('Goal met: ' + s.sb.goal.label); this.emit('sb_goal', { label: s.sb.goal.label }); } }
     // billing on anniversary days, then the collections ladder (GDD §36)
     for (const L of Object.values(s.leases)) this.billLease(L, day);
     this.debtService(day);
@@ -1211,6 +1248,7 @@ export class Sim {
     }
     for (const e of Object.values(this.D.hvac)) o.hvac += e.load * OPEX.hvacPerClimateCell;
     if (this.pressureOn()) { o.tax = 4 + 0.25 * this.objs('unit').filter((u) => u.cstate === 'operating').length; const k = this.costIdx() * ((s.coTier || 1) >= 4 ? 0.92 : 1); for (const key of Object.keys(o)) o[key] = Math.round(o[key] * k * 100) / 100; }
+    { const k = s.opts && s.opts.costs; if (k && k !== 1) for (const key of Object.keys(o)) o[key] = Math.round(o[key] * k * 100) / 100; }
     o.total = Object.values(o).reduce((a, b) => a + b, 0);
     o.payroll = s.staff.reduce((a, st) => a + st.wage, 0);
     return o;
@@ -1472,7 +1510,7 @@ export class Sim {
   loanTerms() { return { rate: (this.s.coTier || 1) >= 3 ? 0.065 : 0.075, months: 60 }; }
   loanPmt(P, rate = 0.075, n = 60) { const r = rate / 12; return Math.round(P * r / (1 - Math.pow(1 + r, -n)) * 100) / 100; }
   loanLimit() {
-    const s = this.s; if (s.creative) return 0;
+    const s = this.s; if (this.unlimited()) return 0;
     if (s.mode === 'tutorial' && !s.tut.done) return 0;
     const roll = this.rentRoll(); const pay = s.debt.reduce((a, d) => a + d.pmt, 0);
     const room = roll * 0.45 - pay; if (room <= 0) return 0;
@@ -1493,7 +1531,7 @@ export class Sim {
   }
   act_payoff(a) {
     const s = this.s, d = s.debt.find((x) => x.id === a.id); if (!d) return { ok: false };
-    const amt = Math.round(d.bal * 100) / 100; if (!s.creative && s.cash < amt) { this.emit('refuse'); return { ok: false, msg: 'Not enough cash to pay it off' }; }
+    const amt = Math.round(d.bal * 100) / 100; if (!this.unlimited() && s.cash < amt) { this.emit('refuse'); return { ok: false, msg: 'Not enough cash to pay it off' }; }
     this.money(-amt, 'debt', 'Term loan payoff'); s.debt = s.debt.filter((x) => x !== d); this.emit('loan_paid');
     return { ok: true, msg: 'Loan paid off' };
   }
@@ -1526,13 +1564,13 @@ export class Sim {
     const s = this.s;
     switch (a.op) {
       case 'noted': { const D = (s.drama ||= { lastBreak: -99, wars: {} }); D.noted = (D.noted || 0) + 1; return { ok: true }; }
-      case 'biCover': { const tn = s.tenants[a.tenant]; if (s.cash < 250 && !s.creative) return { ok: false, msg: 'Not enough cash' }; this.money(-250, 'service', 'Break-in: covered tenant deductible'); if (tn) tn.sat = clamp(tn.sat + 0.32, 0, 1); return { ok: true, msg: `${tn ? tn.name.split(' ')[0] : 'The tenant'} is grateful and staying.` }; }
+      case 'biCover': { const tn = s.tenants[a.tenant]; if (s.cash < 250 && !this.unlimited()) return { ok: false, msg: 'Not enough cash' }; this.money(-250, 'service', 'Break-in: covered tenant deductible'); if (tn) tn.sat = clamp(tn.sat + 0.32, 0, 1); return { ok: true, msg: `${tn ? tn.name.split(' ')[0] : 'The tenant'} is grateful and staying.` }; }
       case 'biReport': { const tn = s.tenants[a.tenant]; if (!tn) return { ok: true }; tn.sat = clamp(tn.sat - 0.05, 0, 1);
         if (this.rnd() < 0.35 && !tn.leaving) { const L = s.leases[tn.lease]; if (L) { tn.leaving = true; this.schedule({ kind: 'moveout', tenant: tn.id, unit: L.unit }, this.randomAccessTime(this.day + 3)); } this.postReview(tn, true); return { ok: true, msg: `${tn.name.split(' ')[0]} is moving out after the break-in.` }; }
         return { ok: true, msg: 'Report filed. The tenant is unhappy but staying for now.' }; }
       case 'pwMatch': { for (const k of Object.keys(s.market.ask)) s.market.ask[k] = Math.round(s.market.ask[k] * 0.94); return { ok: true, msg: 'Asking rents cut 6%. Existing tenants keep their rates.' }; }
       case 'pwHold': return { ok: true, msg: 'Holding prices. Expect fewer price shoppers; quality has to win them.' };
-      case 'pwAd': { if (s.cash < 600 && !s.creative) return { ok: false, msg: 'Not enough cash' }; this.money(-600, 'service', 'Local ad campaign'); s.mkt.promoUntil = this.day + 45; return { ok: true, msg: 'Ad campaign running for 45 days: more shoppers will visit.' }; }
+      case 'pwAd': { if (s.cash < 600 && !this.unlimited()) return { ok: false, msg: 'Not enough cash' }; this.money(-600, 'service', 'Local ad campaign'); s.mkt.promoUntil = this.day + 45; return { ok: true, msg: 'Ad campaign running for 45 days: more shoppers will visit.' }; }
       case 'rateExplain': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.02, 0, 1); return { ok: true, msg: 'Explained: rates follow the local market. The new rate stands.' }; }
       case 'rateIgnore': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.07, 0, 1); return { ok: true }; }
       case 'rateHold': {

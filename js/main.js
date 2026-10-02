@@ -2,7 +2,8 @@
 import { Sim, fmtTime } from './sim.js';
 import { TICKS_PER_SEC_1X, TIERS } from './data.js';
 import { makeMaple, makeEmptyLot } from './maple.js';
-import { makeScenario, makeSandbox, SCENARIOS } from './scenarios.js';
+import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from './scenarios.js';
+export { modeLabel };
 import { MARKETS, MIN_PER_DAY, ROLES } from './data.js';
 import { installTutorial } from './tutorial.js';
 import { Renderer } from './render.js';
@@ -21,14 +22,14 @@ Renderer.prototype.setSim = function (sim) {
 
 const canvas = document.getElementById('view');
 // HUD subtitle: Maple stops saying "Tutorial" once the player graduates
-export function modeLabel(s) { return s.mode === 'tutorial' ? (s.tut && s.tut.done ? 'Career' : 'Tutorial') : s.mode === 'scenario' ? 'Scenario' : s.creative ? 'Creative' : 'Sandbox'; }
 const game = {
   sim: null, rend: null, ui: null, audio: new Audio(), showFps: false, acc: 0,
   company: null,
   newGame(kind, opts) {
     let sim, name;
     if (kind && kind.startsWith('sc:')) { sim = makeScenario(kind.slice(3)); name = SCENARIOS[kind.slice(3)].name; }
-    else if (kind === 'custom') { sim = makeSandbox(opts); name = { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[opts.market] || 'Sandbox Lot'; }
+    else if (kind === 'custom') { sim = makeSandbox(opts); name = sandboxName(sim.s); }
+    else if (kind === 'empty' || kind === 'creative') { sim = makeSandbox({ kind: kind === 'creative' ? 'free' : 'business' }); name = kind === 'creative' ? 'Free Build Lot' : 'Empty Lot'; sim.s.sb.name = name; } // quick starts (menu, tests)
     else if (kind === 'maple') { sim = makeMaple(); name = 'Maple Street Storage'; }
     else { sim = makeEmptyLot({ creative: kind === 'creative' }); name = kind === 'creative' ? 'Creative Lot' : 'Empty Lot'; }
     this.company = { props: [{ name, sim }], active: 0, feed: [] };
@@ -67,7 +68,7 @@ const game = {
     const of = this.offers().find((o) => o.kind === kind && o.market === market); if (!of) return { ok: false, msg: 'Offer not available' };
     if (src.s.cash < of.price) return { ok: false, msg: 'Not enough cash at this property' };
     let sim, name;
-    if (kind === 'parcel') { sim = makeSandbox({ market, cash: 0 }); name = { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[market] + ' ' + (C.props.length + 1); }
+    if (kind === 'parcel') { sim = makeSandbox({ market, cash: 0, plain: true }); name = { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[market] + ' ' + (C.props.length + 1); }
     else {
       const k = C.props.filter((p) => p.sim.s.mirror != null || FACILITY_NAMES.includes(p.name)).length;
       sim = makeMaple(1000 + C.props.length * 77, { mirror: k % 2 === 0 }); const s = sim.s; s.mode = 'sandbox'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true; s.cash = 0; name = of.fac;
@@ -136,7 +137,7 @@ const game = {
       }
       if (!validState(st)) return false;
       st.speed = 0; const sim = new Sim(st);
-      this.company = { props: [{ name: st.scenario ? st.scenario.name : st.mode === 'tutorial' ? 'Maple Street Storage' : st.creative ? 'Creative Lot' : 'My Property', sim }], active: 0, feed: [] };
+      this.company = { props: [{ name: st.scenario ? st.scenario.name : st.mode === 'tutorial' ? 'Maple Street Storage' : st.creative ? 'Creative Lot' : sandboxName(st) || 'My Property', sim }], active: 0, feed: [] };
       this.attach(sim); this.ui.title = false; return true;
     } catch (e) { console.warn(e); return false; }
   },
@@ -164,6 +165,7 @@ const game = {
     if (this.sim !== this.demo && this.ui && !this.ui.title) { const code = await this.saveCode(); return localsave.keep({ code, meta: this.saveMeta(), at: Math.floor(Date.now() / 1000) }); }
     const L = localsave.get(); return localsave.keep(L.main || fallback);
   },
+  modeLabel,
   playing() { return this.sim !== this.demo && this.ui && !this.ui.title; },
   async saveFile() {
     const code = await this.saveCode(); const fname = `storage-day${Math.floor(this.sim.s.t / 1440) + 1}.sst`;

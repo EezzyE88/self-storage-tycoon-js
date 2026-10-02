@@ -13,14 +13,14 @@ module.exports = async (p, shot, log) => {
   // in-game menu -> New game is guarded
   await p.evaluate(()=>__game.ui.showMenu()); await p.waitForTimeout(300);
   log('menu build line', await p.evaluate(()=>{ const b=document.querySelector('.note.build'); return b ? b.innerText : 'none'; }));
-  await p.evaluate(()=>document.querySelector('.menu-list [data-a="new"][data-v="empty"]').click()); await p.waitForTimeout(300);
+  await p.evaluate(()=>document.querySelector('.menu-list [data-a="new"][data-v="maple"]').click()); await p.waitForTimeout(300);
   log('menu new -> confirm', await p.evaluate(()=>{ const c=document.querySelector('.confirm-new'); return c ? c.innerText.replace(/\n/g,' / ') : 'NO CONFIRM'; }));
   await shot('f2_confirm');
   await p.evaluate(()=>document.querySelector('[data-a="replaceNo"]').click()); await p.waitForTimeout(300);
   log('after cancel still game A', await p.evaluate(()=>JSON.stringify({ day: __game.sim.day, modal: !!document.querySelector('.confirm-new') })));
   // reload -> title -> New game guarded -> start new
   await p.reload(); await p.waitForTimeout(1800);
-  await p.evaluate(()=>document.querySelector('[data-a="new"][data-v="empty"]').click()); await p.waitForTimeout(300);
+  await p.evaluate(()=>document.querySelector('[data-a="sandboxSetup"]').click()); await p.waitForTimeout(300); await p.evaluate(()=>document.querySelector('[data-a="sbStart"]').click()); await p.waitForTimeout(300);
   log('title new -> confirm', await p.evaluate(()=>!!document.querySelector('.confirm-new')));
   await p.evaluate(()=>document.querySelector('[data-a="replaceYes"]').click()); await p.waitForTimeout(1200); await step(p, 2, 1/30, false);
   await sim(p, 1440); await step(p, 2, 1/30, false); await p.evaluate(async()=>{ await __game.autosave(); }); await sim(p, 1440); await p.evaluate(async()=>{ await __game.autosave(); });

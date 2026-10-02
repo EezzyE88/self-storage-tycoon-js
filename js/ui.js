@@ -2,7 +2,7 @@
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
-import { SCENARIOS, scenarioProgress } from './scenarios.js';
+import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 
 const PIN = {
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-8.3 8.3a2 2 0 0 1-2.8-2.8l8.3-8.3"/><path d="M14.5 5.5 17 3"/></svg>',
@@ -50,7 +50,7 @@ export class UI {
       <div class="hud">
         <div class="chip brand">${I.logo}<div class="nm" id="pname">Maple Street Storage<small id="pmode">Tutorial</small></div></div>
         <div class="chip"><div class="cash num" id="cash">$0<small>Cash</small></div><i id="goalbar" class="goalbar" hidden aria-hidden="true"><b></b></i></div>
-        <div class="chip clock"><b class="num" id="clock">7:00 AM</b><span id="date">Day 1</span></div>
+        <div class="chip clock"><b class="num" id="clock">7:00 AM</b><span id="date">Day 1</span><span class="sbflag" id="sbflag" hidden></span></div>
         <div class="spacer"></div>
         <div class="chip speed" id="speed"><button data-a="speed" data-v="0" aria-label="Pause">${I.pause}</button><button data-a="speed" data-v="1">1x</button><button data-a="speed" data-v="2">2x</button><button data-a="speed" data-v="4">4x</button></div>
         <button class="iconbtn" data-a="menu" aria-label="Menu">${I.menu}</button>
@@ -138,7 +138,14 @@ export class UI {
           else this.toast('The previous game could not be loaded.', 'bad'); })(); break; }
       case 'scenarios': this.showScenarios(); this.sfx('click'); break;
       case 'sandboxSetup': this.showSandbox(); this.sfx('click'); break;
-      case 'sbOpt': { this.sb[el.dataset.k] = JSON.parse(v); this.showSandbox(); this.sfx('click'); break; }
+      case 'sbOpt': { const k = el.dataset.k, val = JSON.parse(v);
+        if (k === 'kind') { const keep = { start: this.sb.start, goal: this.sb.goal, market: this.sb.market }; this.sb = { ...sbDefaults(val), ...keep }; }
+        else if (k === 'preset') { const P = SB_PRESETS[val]; Object.assign(this.sb, { preset: val, cash: P.cash, demand: P.demand, costs: P.costs, wear: P.wear }); }
+        else { this.sb[k] = val; if (['cash', 'demand', 'costs', 'wear'].includes(k) && this.sb.kind === 'business') this.sb.preset = 'custom'; if (k === 'start' && val === 'empty') this.sb.staff = 'owner'; }
+        this.showSandbox(); this.sfx('click'); break; }
+      case 'sbAdv': this.sbAdv = !this.sbAdv; this.showSandbox(); this.sfx('click'); break;
+      case 'sbFunds': this.do({ type: 'sbFunds', amt: +v }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
+      case 'sbSet': this.do({ type: 'sbSet', k: el.dataset.k, v: JSON.parse(v) }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
       case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.sfx('confirm'); }); break; }
       case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
       case 'acquire': { const r = this.g.acquire(v, el.dataset.m); this.toast(r.msg, r.ok ? 'good' : 'bad'); this.renderSheet(true); break; }
@@ -240,7 +247,7 @@ export class UI {
       const cost = t.cost != null ? money(t.cost * (1)) : t.costPerCell != null ? `${money(t.costPerCell)} / cell` : 'Free';
       return `<button class="tool ${locked ? 'locked' : ''} ${focus && focus.tool === k ? 'pulse' : ''}" data-a="tool" data-v="${k}"><b>${t.name}</b><span class="c">${locked ? (s.tut.on && (k === 'office' || k === 'gate') ? 'Built' : 'Unlocks after the tutorial') : cost}</span><span class="d">${t.desc}</span></button>`;
     }).join('');
-    return this.sheet('Build', s.creative ? 'Creative mode: instant and free' : 'Place, preview, then confirm', `<div class="tools">${cards}</div>`, catHtml);
+    return this.sheet('Build', s.creative ? 'Creative mode: instant and free' : s.sb && (s.sb.unlimited || s.sb.instant) ? [s.sb.unlimited ? 'Free Build funds' : '', s.sb.instant ? 'Instant construction' : ''].filter(Boolean).join(' · ') + '. Costs are still recorded.' : 'Place, preview, then confirm', `<div class="tools">${cards}</div>`, catHtml);
   }
   pickTool(k) {
     if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
@@ -274,7 +281,7 @@ export class UI {
       return;
     }
     const r = this.sim.dispatch({ type: 'build', ...this.plan.args });
-    if (r.ok) { this.sfx('confirm'); this.toast(r.msg + (this.sim.s.creative ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); }
+    if (r.ok) { this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); }
     this.renderActionBar();
   }
@@ -290,9 +297,9 @@ export class UI {
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
         const after = this.sim.s.cash - R.cost, burn = this.sim.dailyOpex().total + this.sim.s.staff.reduce((a, st) => a + st.wage, 0) + (R.opex || 0);
-        status += `<div class="refund-note">Cash ${money(this.sim.s.cash)} → <b class="${after < 0 ? 'neg' : ''}">${money(after)}</b> after build${burn > 0 ? ` · covers ~${Math.max(0, Math.floor(after / burn))} days of costs` : ''}${R.power ? ` · Power ${R.power.demand.toFixed(1)} / ${R.power.cap} kW` : ''}</div>`;
+        status += `<div class="refund-note">Cash ${money(this.sim.s.cash)} → <b class="${after < 0 ? 'neg' : ''}">${money(after)}</b> after build${this.sim.unlimited() ? (after < 0 ? ' · Free Build funds cover the rest' : '') : burn > 0 ? ` · covers ~${Math.max(0, Math.floor(after / burn))} days of costs` : ''}${R.power ? ` · Power ${R.power.demand.toFixed(1)} / ${R.power.cap} kW` : ''}</div>`;
       }
-      if (R.status !== 'invalid' && R.dur && !this.sim.s.creative) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
+      if (R.status !== 'invalid' && R.dur && !this.sim.instantOn()) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
     }
     const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
     const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
@@ -587,13 +594,39 @@ export class UI {
     h += `<p class="note">Loans show exactly what you commit to each month. Nothing here forecasts future rent: build previews show cash before and after.</p>`;
     return h;
   }
+  sandboxHtml() {
+    const sim = this.sim, s = sim.s, B = s.sb, free = B.unlimited;
+    const R = sim.opResult(30), P = sim.sbGoalProgress();
+    const wear = s.opts.wear ?? 1, gl = (k, label) => `<button class="btn sm ${B.goal && B.goal.k === k ? 'pri' : ''}" data-a="sbSet" data-k="goal" data-v='${JSON.stringify(k)}'>${label}</button>`;
+    const flags = [free ? 'Unlimited funds' : `Started with ${money(B.cash0 || 0)}`, `Demand ×${s.opts.demand ?? 1}`, `Costs ×${s.opts.costs ?? 1}`, wear ? `Wear ×${wear}` : 'Maintenance off', (B.tiers === 'all' ? 'All perks unlocked' : 'Perks earned'), B.instant ? 'Instant construction ON' : 'Normal build times'];
+    let h = `<div class="sb-panel"><h3>${free ? 'Free Build' : 'Business sandbox'}${B.modified ? ' <span class="sb-mod">Modified</span>' : ''}</h3><p class="note">${flags.join(' · ')}</p>
+      <div class="kv"><span>Operating result, last ${R.n || 0} days</span><span class="${R.amt < 0 ? 'neg' : ''}">${money(R.amt)}</span></div>
+      <p class="note">Rent and fees minus operating costs, payroll, services and interest. Construction, loans and sandbox funds are not counted.</p>
+      ${free ? `<div class="kv"><span>Free Build funds used</span><span>${money(B.subsidy || 0)}</span></div><p class="note">Spending beyond your cash. A business would have needed this money from somewhere.</p>` : `<div class="kv"><span>Sandbox funds added</span><span>${money(B.injected || 0)}</span></div>`}
+      <h3>Goal</h3><p class="note">${P ? `${esc(B.goal.label)}: ${esc(P.text)}${B.goal.done ? ` · <b>Met on day ${B.goal.done}</b>` : ''}` : 'No goal. Pick one if you want a target.'}</p>
+      <div class="row wrap">${gl(null, 'None')}${gl('occ', '90% leased')}${gl('profit', '$3k in 30 days')}${gl('units', '40 units')}${gl('backlog', 'No backlog')}</div>
+      <h3>Sandbox controls</h3><div class="row wrap"><button class="btn sm" data-a="sbSet" data-k="instant" data-v="${!B.instant}">Instant construction: ${B.instant ? 'on' : 'off'}</button>
+      ${free ? '' : `<button class="btn sm" data-a="sbFunds" data-v="10000">Add $10,000</button><button class="btn sm" data-a="sbFunds" data-v="50000">Add $50,000</button><button class="btn sm" data-a="sbSet" data-k="unlimited" data-v="true">Switch to Free Build</button>`}</div>
+      <p class="note">${free ? 'Instant construction can be switched any time. It is recorded in the log.' : 'Added funds, Free Build and instant construction are recorded and mark this save as Modified. Switching to Free Build cannot be undone.'}</p>`;
+    // cash shortage: what is driving it, what still earns, how to recover (Business only)
+    const ox = sim.dailyOpex(), pay = s.staff.reduce((a, st) => a + st.wage, 0), debt = s.debt.reduce((a, d) => a + d.pmt, 0) / 30, burn = ox.total + pay + debt;
+    if (!free && (s.cash < 0 || (burn > 0 && s.cash < burn * 14))) {
+      const leased = sim.objs('unit').filter((u) => u.lease).length, vac = sim.objs('unit').filter((u) => u.cstate === 'operating' && !u.lease && !u.blocked).length;
+      h += `<div class="sb-short"><b>${s.cash < 0 ? 'Cash is negative' : `Cash covers about ${Math.max(0, Math.floor(s.cash / burn))} days of costs`}</b>
+        <div class="kv"><span>Operating costs / day</span><span>${money(ox.total)}</span><span>Payroll / day</span><span>${money(pay)}</span>${debt ? `<span>Loan payments / day</span><span>${money(debt)}</span>` : ''}</div>
+        <p class="note">Still earning: ${leased} leased unit${leased === 1 ? '' : 's'} (${money(sim.rentRollPaying())}/mo from paying tenants)${vac ? `, plus ${vac} vacant unit${vac === 1 ? '' : 's'} ready to rent` : ''}. ${s.cash < 0 ? 'New construction and hiring need cash. ' : ''}Ways to recover: fill vacant units or adjust prices in Pricing, let staff go in Staff, draw on the credit line below if offered, or add sandbox funds.</p></div>`;
+    }
+    if (B.log && B.log.length) h += `<details class="sb-log"><summary>Sandbox log (${B.log.length})</summary>${B.log.slice(-8).reverse().map((e) => `<div>Day ${e.day}: ${esc(e.msg)}</div>`).join('')}</details>`;
+    return h + '</div>';
+  }
   businessSheet() {
     const sim = this.sim, s = sim.s; const occ = sim.occupancy(), roll = sim.rentRoll(), ox = sim.dailyOpex();
     const pay = s.staff.reduce((a, st) => a + st.wage, 0);
     const paying = sim.rentRollPaying(), rcv = sim.receivables(), est = sim.estDailyNet();
     const last = s.days.slice(-30); const sum = (k) => last.reduce((a, d) => a + (d[k] || 0), 0) + (s.today[k] || 0);
     const collected = sum('rent'), costs = sum('opex') + sum('payroll'), capex = sum('capex');
-    let h = `<div class="stats">
+    let h = s.sb ? this.sandboxHtml() : '';
+    h += `<div class="stats">
       <div class="stat"><small>Cash</small><b class="${s.cash < 0 ? 'neg' : ''}">${money(s.cash)}</b><div class="n">Money you have now. Unpaid rent is not included.</div></div>
       <div class="stat"><small>Owed to you</small><b>${money(rcv.amt)}</b><div class="n">${rcv.n ? `${rcv.n} account${rcv.n > 1 ? 's' : ''} behind · not cash until paid` : 'Every tenant is paid up'}</div></div>
       <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${money(paying)} from paying tenants${roll - paying > 0 ? ` · ${money(roll - paying)} past due` : ''} · ${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
@@ -603,7 +636,7 @@ export class UI {
     h += this.reportHtml() + this.marketHtml();
     // GDD §63.1–63.2: operating contribution, with capital and financing shown separately
     const anc = sum('anc'), svc = sum('service'), contrib = collected + anc - costs - svc, debtSvc = sum('debt') + sum('interest'), fin = sum('fin');
-    const net = contrib - capex - debtSvc + fin + sum('other');
+    const inj = sum('inject'); const net = contrib - capex - debtSvc + fin + sum('other') + inj;
     h += `<h3>Operating statement · last 30 days</h3><div class="kv stmt">
       <span>Collected rent</span><span>${money(collected)}</span>
       <span>Ancillary (late fees, auctions)</span><span>${money(anc)}</span>
@@ -614,10 +647,11 @@ export class UI {
       <span>Construction (capital)</span><span>${money(-capex)}</span>
       <span>Debt service</span><span>${money(-debtSvc)}</span>
       ${fin ? `<span>Loan proceeds</span><span>${money(fin)}</span>` : ''}
+      ${inj ? `<span>Sandbox funds (not income)</span><span>${money(inj)}</span>` : ''}
       <span class="tot">Net cash change</span><span class="tot ${net < 0 ? 'neg' : ''}">${money(net)}</span></div>
       <p class="note">Construction is capital spending, so a profitable property doesn't look unprofitable just because you built a new wing.</p>`;
     h += this.collectionsHtml();
-    if (!s.creative) h += this.financingHtml();
+    if (!sim.unlimited()) h += this.financingHtml();
     h += `
       <h3>Last 14 days</h3><canvas class="chart" width="520" height="120"></canvas><p class="note">Bars above the line: rent collected (green). Below the line: operating + payroll (solid red), then construction (grey with stripes). A monthly-billing business looks lumpy day to day.</p>`;
     h += `<h3>Asking rents</h3><div class="list">`;
@@ -801,6 +835,7 @@ export class UI {
       case 'cash_warn': this.toast(e.msg, 'bad'); this.sfx('attention'); break;
       case 'power_shed': this.toast(`Power capacity exceeded - ${e.name} shut off`, 'bad'); this.sfx('attention'); break;
       case 'power_restored': break;
+      case 'sb_goal': this.sfx('milestone'); this.toast(`Goal met: ${e.label}. Keep playing - the facility is still yours.`, 'good'); break;
       case 'scenario_end': this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
       case 'rent_review': this.sfx('rent'); break;
       case 'manager': if (s.speed <= 2) this.toast(/^(Clerk|Manager) /.test(e.msg) ? e.msg : 'Manager: ' + e.msg); this.renderFeed(true); break;
@@ -947,17 +982,36 @@ export class UI {
     const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
   }
   showSandbox() {
-    this.sb ||= { market: 'blank', cash: 60000, demand: 1, wear: 1 };
-    const opt = (k, v, label) => `<button class="btn sm ${JSON.stringify(this.sb[k]) === JSON.stringify(v) ? 'pri' : ''}" data-a="sbOpt" data-k="${k}" data-v='${JSON.stringify(v)}'>${label}</button>`;
-    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Custom sandbox</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
-      <h3>Market</h3><div class="row wrap">${opt('market', 'blank', 'Suburban')}${opt('market', 'urban', 'Urban infill')}${opt('market', 'rural', 'Rural highway')}</div>
-      <p class="note">${esc(MARKETS[this.sb.market].name)}: ${Object.entries(MARKETS[this.sb.market].rent).map(([k, v]) => `${k} ${money(v)}`).join(' · ')}</p>
-      <h3>Starting capital</h3><div class="row wrap">${opt('cash', 30000, '$30,000')}${opt('cash', 60000, '$60,000')}${opt('cash', 120000, '$120,000')}${opt('cash', 250000, '$250,000')}</div>
-      <h3>Demand</h3><div class="row wrap">${opt('demand', 0.6, 'Low')}${opt('demand', 1, 'Normal')}${opt('demand', 1.6, 'High')}</div>
-      <h3>Equipment wear and incidents</h3><div class="row wrap">${opt('wear', 0, 'Off')}${opt('wear', 0.5, 'Gentle')}${opt('wear', 1, 'Normal')}${opt('wear', 1.6, 'Harsh')}</div>
-      <div class="row" style="margin-top:14px"><button class="btn pri" data-a="sbStart">Start sandbox</button></div></div></div>`;
+    this.sb ||= sbDefaults('business');
+    const b = this.sb, free = b.kind === 'free';
+    const opt = (k, v, label) => `<button class="btn sm ${JSON.stringify(b[k]) === JSON.stringify(v) ? 'pri' : ''}" data-a="sbOpt" data-k="${k}" data-v='${JSON.stringify(v)}'>${label}</button>`;
+    const card = (k, v, title, text) => `<button class="sb-card ${JSON.stringify(b[k]) === JSON.stringify(v) ? 'on' : ''}" data-a="sbOpt" data-k="${k}" data-v='${JSON.stringify(v)}'><b>${title}</b><span>${text}</span></button>`;
+    const wearTxt = { 0: 'Off: nothing new wears out. Damage that already exists stays until repaired, and repairs still work.', 0.5: 'Gentle: equipment wears at half speed.', 1: 'Normal wear and repair work.', 1.5: 'Harsh: equipment wears 50% faster.' }[b.wear] || '';
+    const goals = { occ: 'Lease 90% of rentable units (at least 5 units open).', profit: 'Reach a $3,000 operating result over 30 days. Counts rent and fees minus operating costs, payroll, services and interest. Construction, loans and sandbox funds are excluded.', units: 'Build and open 40 units.', backlog: 'Go 7 days in a row with no repair or cleaning jobs open.' };
+    const adv = this.sbAdv ? `<div class="sb-adv">
+        ${b.start === 'empty' ? `<h3>Market</h3><div class="row wrap">${opt('market', 'blank', 'Suburban')}${opt('market', 'urban', 'Urban infill')}${opt('market', 'rural', 'Rural highway')}</div>
+        <p class="note">${esc(MARKETS[b.market].name)}: ${Object.entries(MARKETS[b.market].rent).map(([k, v]) => `${k} ${money(v)}`).join(' · ')}. Suburban is the best-tested lot.</p>` : ''}
+        ${free ? '' : `<h3>Starting cash</h3><div class="row wrap">${opt('cash', 35000, '$35,000')}${opt('cash', 60000, '$60,000')}${opt('cash', 120000, '$120,000')}${opt('cash', 250000, '$250,000')}</div>`}
+        <h3>Customer demand</h3><div class="row wrap">${opt('demand', 0.75, 'Low')}${opt('demand', 1, 'Normal')}${opt('demand', 1.3, 'High')}</div>
+        <h3>Operating costs</h3><div class="row wrap">${opt('costs', 0.8, 'Low (-20%)')}${opt('costs', 1, 'Normal')}${opt('costs', 1.25, 'High (+25%)')}</div>
+        <h3>Maintenance</h3><div class="row wrap">${opt('wear', 0, 'Off')}${opt('wear', 0.5, 'Gentle')}${opt('wear', 1, 'Normal')}${opt('wear', 1.5, 'Harsh')}</div><p class="note">${wearTxt}</p>
+        <h3>Starting staff</h3><div class="row wrap">${opt('staff', 'owner', 'Owner only')}${b.start === 'starter' ? opt('staff', 'basic', 'Owner + porter ($55/day)') : ''}</div>${b.start === 'empty' ? '<p class="note">Staff work from an office. On an empty lot, build one and then hire.</p>' : ''}
+        <h3>Company perks</h3><div class="row wrap">${opt('tiers', 'earn', 'Earn by growing')}${opt('tiers', 'all', 'All unlocked')}</div><p class="note">Perks: rush construction, priority vendors, better loan rates, a demand bonus. Every building tool is available either way.</p>
+        <h3>Instant construction</h3><div class="row wrap">${opt('instant', false, 'Off')}${opt('instant', true, 'On')}</div><p class="note">On: valid builds finish the moment you confirm. Costs are still charged and recorded. Shown on the HUD while on.</p>
+      </div>` : '';
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal sb-setup"><div class="row"><h2 style="flex:1">Sandbox</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
+      <p class="note">Build and run a facility on your own terms. No campaign steps. The same rules as the main game.</p>
+      <div class="sb-cards">${card('kind', 'business', 'Business sandbox', 'Limited cash. Building costs money and takes time. The business has to pay its way.')}${card('kind', 'free', 'Free Build', 'Unlimited funds, optional instant building. Every cost and rent payment is still recorded, so you can see if the design works as a business.')}</div>
+      <h3>Property</h3><div class="sb-cards">${card('start', 'empty', 'Empty lot', 'Bare land with a street entrance. Build everything yourself.')}${card('start', 'starter', 'Starter facility', 'The Maple Street layout: 23 units, 22 leased, an office, and some worn equipment.')}</div>
+      ${free ? `<h3>Maintenance</h3><div class="row wrap">${opt('wear', 0, 'Off')}${opt('wear', 1, 'Normal')}</div><p class="note">${wearTxt}</p>` : `<h3>Difficulty</h3><div class="row wrap">${Object.entries(SB_PRESETS).map(([k, P]) => opt('preset', k, P.label)).join('')}</div>
+      <p class="note">${b.preset === 'custom' ? `Custom: ${money(b.cash)} to start, demand ×${b.demand}, costs ×${b.costs}, wear ×${b.wear}.` : esc(SB_PRESETS[b.preset].blurb)}</p>`}
+      <h3>Optional goal</h3><div class="row wrap">${opt('goal', null, 'None')}${opt('goal', 'occ', '90% leased')}${opt('goal', 'profit', '$3k in 30 days')}${opt('goal', 'units', '40 units')}${opt('goal', 'backlog', 'No backlog')}</div>
+      <p class="note">${b.goal ? esc(goals[b.goal]) + ' After the goal is met, keep playing.' : 'Play for whatever you want. You can set a goal later in Business.'}</p>
+      <button class="btn sm" data-a="sbAdv" style="margin-top:6px">${this.sbAdv ? 'Hide' : 'Show'} advanced settings</button>${adv}
+      <div class="row" style="margin-top:14px;align-items:center"><button class="btn pri" data-a="sbStart">Start ${free ? 'Free Build' : 'Business sandbox'}</button><span class="note" style="margin:0 0 0 10px">Starts paused. Press 1x when you are ready.</span></div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
   }
+
   portfolioHtml() {
     const C = this.g.company; if (!C) return '';
     const cur = C.active; let h = `<h3>Portfolio</h3><div class="list">`;
@@ -1000,7 +1054,14 @@ export class UI {
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
     this.updateBubbles(); this.updatePins(); this.updateGuide();
   }
-  setMeta(name, mode) { this.$('pname').innerHTML = `${esc(name)}<small>${esc(mode)}</small>`; }
+  setMeta(name, mode) {
+    this.$('pname').innerHTML = `${esc(name)}<small>${esc(mode)}</small>`;
+    // overrides stay visible on phones too, where the name chip is hidden
+    const B = this.sim && this.sim.s.sb, f = this.$('sbflag'); if (!f) return;
+    const t = !B ? '' : [B.unlimited ? 'Free Build' : '', B.instant ? 'Instant' : '', !B.unlimited && B.injected ? 'Funds added' : ''].filter(Boolean).join(' · ');
+    const sh = !B ? '' : [B.unlimited ? 'Free' : '', B.instant ? 'Inst' : '', !B.unlimited && B.injected ? '+Funds' : ''].filter(Boolean).join('·');
+    f.innerHTML = `<span class="l">${esc(t)}</span><span class="s">${esc(sh)}</span>`; f.hidden = !t; f.title = t ? 'Sandbox overrides in effect: ' + mode : ''; f.setAttribute('aria-label', t);
+  }
 
   // ------------------------------------------------------------ PHONE-FIRST HUD: coach line, pins, labels, fit
   phone() { return innerWidth <= 700 || innerHeight <= 520; }
@@ -1161,11 +1222,9 @@ export class UI {
   showTitle() {
     this.title = true;
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
-      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
+      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Turnaround, Go Vertical, Climate Boom</small></button>
-      <button class="btn" data-a="new" data-v="empty">Empty Lot <small>Sandbox · $60,000</small></button>
-      <button class="btn" data-a="sandboxSetup">Custom sandbox <small>Market, capital, demand, wear</small></button>
-      <button class="btn" data-a="new" data-v="creative">Creative <small>Instant, free building</small></button>
+      <button class="btn" data-a="sandboxSetup">Sandbox <small>Business or Free Build, on your terms</small></button>
       <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>
       <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
   }
@@ -1189,7 +1248,7 @@ export class UI {
       <h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button><button class="btn sm" data-a="lens">Miniature lens ${this.g.showcase && this.g.showcase.lensPref ? 'on' : 'off'}</button></div>
       <h3>Showcase</h3><div class="menu-list"><button class="btn" data-a="photo">Photo mode <small>Light, looks, lens and a shutter (P)</small></button><button class="btn" data-a="tour">Cinematic tour <small>The camera wanders your property. Tap to stop.</small></button></div>
       <p class="note">Tip: tap any customer, car or staff member to follow them and read their story.</p>
-      <h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="new" data-v="empty">Empty Lot sandbox</button><button class="btn" data-a="sandboxSetup">Custom sandbox</button><button class="btn" data-a="new" data-v="creative">Creative lot</button></div>
+      <h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="sandboxSetup">Sandbox</button></div>
       <h3>Controls</h3><p class="note">Drag to pan, pinch or scroll to zoom, rotate with the side buttons (Q/E). While building, drag to place and use two fingers (or right-drag) to pan. Space pauses, 1-3 set speed, Esc cancels.</p>
       <p class="note" id="autosaveNote">${this.autosaveNote()}</p>
       <p class="note build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')} · ${esc(this.g.BUILD ? this.g.BUILD.date : '')}. Mention this when you send feedback.</p></div></div>`;

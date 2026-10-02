@@ -102,12 +102,36 @@ export function makeScenario(id) {
   return null;
 }
 
-// Sandbox with setup options (GDD §45)
-export function makeSandbox({ market = 'blank', cash = 60000, demand = 1, wear = 1 } = {}) {
-  const s = newState({ mode: 'sandbox', seed: 777 + Math.round(cash / 1000), market });
-  s.cash = cash; s.opts = { demand, wear };
-  const sim = new Sim(s);
-  s.staff.push({ id: sim.id(), role: 'owner', name: 'You', wage: 0, hired: 0 });
+// Sandbox with setup options (GDD §45; solidified sandbox v1).
+// Business: limited cash, everything costs money and time. Free Build: unlimited funds (every cost still recorded), optional instant construction.
+export const SB_PRESETS = {
+  relaxed:     { label: 'Relaxed',     cash: 120000, demand: 1.3, costs: 0.8, wear: 0.5, blurb: '$120,000 to start, 30% more customers, 20% lower operating costs, gentle wear.' },
+  standard:    { label: 'Standard',    cash: 60000,  demand: 1,   costs: 1,   wear: 1,   blurb: '$60,000 to start, normal demand, costs and wear.' },
+  challenging: { label: 'Challenging', cash: 35000,  demand: 0.75, costs: 1.25, wear: 1.5, blurb: '$35,000 to start, 25% fewer customers, 25% higher operating costs, faster wear.' },
+};
+export function sbDefaults(kind = 'business') {
+  return kind === 'free'
+    ? { kind: 'free', start: 'empty', market: 'blank', preset: 'standard', cash: 60000, demand: 1, costs: 1, wear: 0, staff: 'owner', tiers: 'all', instant: true, goal: null }
+    : { kind: 'business', start: 'empty', market: 'blank', preset: 'standard', cash: 60000, demand: 1, costs: 1, wear: 1, staff: 'owner', tiers: 'earn', instant: false, goal: null };
+}
+export function makeSandbox(o = {}) {
+  const c = { ...sbDefaults(o.kind), ...o };
+  let sim, s;
+  if (c.start === 'starter') { // the Maple Street layout: 23 units, existing tenants and some wear
+    sim = makeMaple(5150 + Math.round(c.cash / 1000)); s = sim.s;
+    s.mode = 'sandbox'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true; s.lesson = null;
+  } else {
+    s = newState({ mode: 'sandbox', seed: 777 + Math.round(c.cash / 1000), market: c.market });
+    sim = new Sim(s); s.staff.push({ id: sim.id(), role: 'owner', name: 'You', wage: 0, hired: 0 });
+  }
+  s.cash = c.cash; s.opts = { demand: c.demand, wear: c.wear, costs: c.costs };
+  if (c.plain) { s.opts = { demand: 1, wear: 1 }; return sim; } // a parcel bought inside a career, not a sandbox
+  s.sb = { kind: c.kind, unlimited: c.kind === 'free', instant: !!c.instant, start: c.start, market: c.start === 'starter' ? 'maple' : c.market, preset: c.preset, tiers: c.tiers, staff: c.staff,
+    cash0: c.cash, injected: 0, subsidy: 0, modified: false, log: [], goal: null };
+  if (c.tiers === 'all') s.coTier = 4;
+  if (c.staff === 'basic') { const r = sim.act_hire({ role: 'porter' }); if (!r.ok) s.sb.staffNote = r.msg; }
+  if (c.goal) sim.act_sbSet({ k: 'goal', v: c.goal });
+  sim.sbLog(`Started ${c.kind === 'free' ? 'Free Build' : 'Business sandbox'} (${c.start === 'starter' ? 'starter facility' : 'empty lot'})`);
   return sim;
 }
 
@@ -115,3 +139,12 @@ export function scenarioProgress(sim) {
   const sc = sim.s.scenario; if (!sc) return null;
   return sc.goals.map((g) => ({ ...g, cur: sim.metric(g.k), met: sim.goalMet(g) }));
 }
+
+export function modeLabel(s) {
+  if (s.mode === 'sandbox' && s.sb) { // save screen and HUD show the kind of sandbox and any overrides in effect
+    const f = [s.sb.unlimited ? 'Free Build' : 'Business sandbox']; if (s.sb.instant) f.push('Instant'); if (s.sb.injected) f.push('Funds added');
+    return f.join(' · ');
+  }
+  return s.mode === 'tutorial' ? (s.tut && s.tut.done ? 'Career' : 'Tutorial') : s.mode === 'scenario' ? 'Scenario' : s.creative ? 'Creative' : 'Sandbox'; }
+
+export function sandboxName(s) { const B = s.sb; if (!B) return null; if (B.name) return B.name; return B.start === 'starter' ? 'Starter Facility' : B.unlimited && B.kind === 'free' ? 'Free Build Lot' : { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[B.market] || 'Sandbox Lot'; }

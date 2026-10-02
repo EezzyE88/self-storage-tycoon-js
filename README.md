@@ -79,9 +79,10 @@ Run from inside `tests/headless`; they import `../../js/`.
 | `tr.mjs` | Unit split renovation, career tier, rush build | Ran, exit 0 (split and rush behave as expected) |
 | `tbal.mjs` | Round 12 balance check: idle / absent / good / strategic / pro bots. Set `DAYS=730` for two years. | Run, exit 0 (prints numbers; see QA report Round 12) |
 | `tsc.mjs` | Round 12 scenario check: idle vs. fixer vs. manager vs. builder (`SC=turnaround` to limit) | Run, exit 0: idle loses Turnaround, builder wins on day 68 |
-| `tclim.mjs`, `tvert.mjs` | Round 13 builder bots for Climate Boom and Go Vertical (`UPPERONLY=1` builds only upper-floor units; `NOCOMP=1` turns market pressure off) | Climate Boom won day 48; Go Vertical won day 212 with the rival |
+| `tclim.mjs`, `tvert.mjs` | Round 13 builder bots for Climate Boom and Go Vertical (`UPPERONLY=1` builds only upper-floor units; `NOCOMP=1` turns market pressure off) | Re-run 2026-10-02: Climate Boom won day 59. Go Vertical **lost** (deadline day 300, 25 upper units), and lost the same way on master `1d7b399`, so the earlier win no longer reproduces |
 | `tfin.mjs` | Foundations: cash moves only through the ledger; billing a behind tenant raises their balance, not cash; rent roll = paying + past due; "owed to you" matches balances | All pass |
 | `tcalm.mjs` | Foundations: a security notice comes 3+ days before any low-security break-in; break-ins hit dark units; story events are not critical; notices stop after two acknowledgements unless security worsens | All pass |
+| `tsandbox.mjs` | Sandbox v1: Business vs Free Build, instant construction, Free Build funds and add-funds accounting, presets and cost multiplier, maintenance off, starter facility, goals, save/resume, mode labels | All pass |
 | `tdrama.mjs` | Round 14 story events: break-in and price-war frequency over 2 years, each choice's effect, auction contents | All pass |
 | `tfix.mjs` | Round 13 fixes: pre-Round-11 tutorial save migration, climate-conversion renovation | All pass |
 | `t9.mjs`, `t9b.mjs`, `t9d.mjs`, `t9e.mjs`, `dbg.mjs` | Round 9 era checks and debugging | Ran, exit 0. They're older and may print values without asserting anything. |
@@ -104,6 +105,38 @@ cd tests/browser-qa && node run.js d s_r11.js   # d = 1280x800 desktop, m = 390x
 | **Browser emulation** | Many rounds of Playwright Chromium runs at desktop 1280×800 and phone viewports (390×844, 375×667; iPhone SE and iPhone 15 Pro profiles in earlier rounds). This is emulation, not a device. |
 | **Headless simulation** | Determinism, continuation, the tutorial walkthrough and the soaks: see the table above. |
 | **Live preview** | Autosave was confirmed working in the Perplexity preview in Round 7. The preview is private and wasn't re-checked during packaging. |
+
+## Sandbox (v1, branch `work/sandbox`)
+- **Two kinds.**
+  - Business sandbox (default): limited cash; construction costs money and takes time.
+  - Free Build: unlimited funds and instant construction on by default. Every cost and rent payment is still recorded. Spending beyond cash is covered by "Free Build funds" and shown separately, never as income.
+- **Property.** An empty lot (Suburban is the best tested; Urban and Rural are under Advanced) or a starter facility (the Maple Street layout: 23 units, 22 leased).
+- **Difficulty presets** set four values: starting cash, demand, operating costs and wear.
+  - Relaxed: $120k; demand ×1.3; costs ×0.8; wear ×0.5.
+  - Standard: $60k; ×1; ×1; ×1.
+  - Challenging: $35k; demand ×0.75; costs ×1.25; wear ×1.5.
+- **Advanced settings:**
+  - Market (empty lot only), cash, demand and operating costs.
+  - Maintenance: Off means no new wear; existing damage stays repairable.
+  - Starting staff: owner plus porter, starter facility only.
+  - Company perks: earned or all unlocked. Building tools are never locked.
+  - Instant construction.
+- **Starts paused.** Speeds are Pause, 1x, 2x and 4x.
+- **Optional goals**, each with a measurable definition:
+  - 90% of rentable units leased, with at least 5 open.
+  - A $3,000 operating result over 30 days: rent and fees minus operating costs, payroll, services and interest. Construction, loans and sandbox funds are excluded.
+  - 40 units open.
+  - 7 days with no repair or cleaning jobs.
+  Play continues after a goal is met.
+- **Business → Sandbox panel:**
+  - Settings and the operating result.
+  - Free Build funds used, or sandbox funds added.
+  - Goal progress.
+  - Controls: instant construction on or off, add $10k or $50k, switch to Free Build (one way).
+  - A sandbox log, and a cash-shortage box showing what costs are driving the shortage, what still earns, and ways to recover.
+- **Recorded overrides.** Added funds, instant construction and Free Build mark the save as Modified. Free Build, instant construction and added funds also show on the HUD and the Continue label.
+- **Save code.** Sandbox settings live in `s.sb`. Saves without it (older Empty Lot and Creative saves) behave as before.
+- **Not in v1:** starting date, starting occupancy, checkpoints, and an advanced testing panel.
 
 ## Known limitations
 - **Untested on a real device**, and no human playtests (see above).
