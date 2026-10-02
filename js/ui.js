@@ -102,6 +102,7 @@ export class UI {
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
       case 'cat': this.cat = v; this.renderSheet(true); this.sfx('click'); break;
       case 'tool': this.pickTool(v); break;
+      case 'goTool': if (TOOLS[v]) { this.select(null); this.cat = TOOLS[v].cat; this.setTab('build'); this.pickTool(v); } break; // opening checklist shortcuts
       case 'cancelTool': this.pickTool(null); break;
       case 'confirm': this.confirmPlan(); break;
       case 'flip': this.flip = !this.flip; this.replan(); break;
@@ -168,7 +169,11 @@ export class UI {
         }); break; }
       case 'loadCode': { const code = this.root.querySelector('#loadTa').value; this.g.keepCurrent(this.contSave).then(() => this.g.loadCode(code)).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else { this.toast('That save code could not be read', 'bad'); const ta = this.root.querySelector('#loadTa'); if (ta) { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); } } }); break; }
       case 'loadFile': this.root.querySelector('#loadFile').click(); break;
-      case 'copy': { const ta = this.root.querySelector('#saveTa'); ta.select(); try { navigator.clipboard.writeText(ta.value); this.toast('Save code copied', 'good'); } catch (err) { document.execCommand && document.execCommand('copy'); } break; }
+      case 'copy': { // the clipboard promise can reject (permission denied); fall back to execCommand and only claim success when it worked
+        const ta = this.root.querySelector('#saveTa'); ta.select();
+        const fallback = () => { let ok = false; try { ok = !!(document.execCommand && document.execCommand('copy')); } catch (e2) { ok = false; } this.toast(ok ? 'Save code copied' : 'Could not copy - the code is selected, use your device copy', ok ? 'good' : 'bad'); };
+        try { const pr = navigator.clipboard && navigator.clipboard.writeText(ta.value); if (pr && pr.then) pr.then(() => this.toast('Save code copied', 'good'), fallback); else fallback(); } catch (err) { fallback(); }
+        break; }
       case 'music': this.g.audio.musicOn = !this.g.audio.musicOn; this.g.audio.applyVol(); this.showMenu(); break;
       case 'fps': this.g.showFps = !this.g.showFps; document.getElementById('fps').hidden = !this.g.showFps; this.showMenu(); break;
       case 'focus': this.rend.lookAt(+el.dataset.x, +el.dataset.y); break;
@@ -392,6 +397,7 @@ export class UI {
         const acts = [];
         if (o.cstate === 'ready') acts.push(`<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', unit: o.id })}'>Commission unit</button>`);
         if (o.cstate === 'ready' && o.order) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: o.order })}'>Commission whole order</button>`);
+        if (o.cstate === 'ready') { const allReady = sim.objs('unit').filter((u) => u.cstate === 'ready').length, inOrder = o.order ? sim.objs('unit').filter((u) => u.cstate === 'ready' && u.order === o.order).length : 1; if (allReady > inOrder) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission all ${allReady} ready units</button>`); }
         const mr = s.tasks.find((t) => t.type === 'makeready' && t.obj === o.id);
         if (mr) acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id })}'>Start Owner Make-Ready</button>`);
         for (const op of sim.renovateOptions ? sim.renovateOptions(o) : []) acts.push(op.ok ? `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'renovate', unit: o.id, kind: op.kind })}'>${op.label} · ${money(op.cost)}</button>` : `<button class="btn" disabled title="${esc(op.why)}">${op.label} · ${esc(op.why)}</button>`);
@@ -708,6 +714,13 @@ export class UI {
   growthSheet() {
     const sim = this.sim, s = sim.s;
     let h = '';
+    // not open yet: the opening checklist comes first (the coach sends players here; on phones it used to sit below the fold)
+    if (!s.open) {
+      const iss = sim.openingIssues();
+      const nReady = sim.objs('unit').filter((u) => u.cstate === 'ready').length, nUnits = sim.objs('unit').length;
+      const fix = (m) => /gate/i.test(m) ? (sim.objs('gate').length ? '' : this.issueBtn('Place a gate', 'gate')) : /No operating office/.test(m) ? (sim.objs('office').length ? '<small> (being built)</small>' : this.issueBtn('Place an office', 'office')) : /Office door/.test(m) ? this.issueBtn('Pave a walkway', 'walk') : /commissioned/.test(m) ? (nReady ? `<button class="btn sm go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission ${nReady} ready</button>` : nUnits ? '<small> (units under construction)</small>' : this.issueBtn('Build units', 'du5x10')) : '';
+      h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)} ${fix(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
+    }
     if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>Deadline</span><span>Day ${s.scenario.deadline} (${s.scenario.status})</span></div>`; }
     if (this.g.tierInfo && !s.creative && !s.scenario && !(s.mode === 'tutorial' && !s.tut.done)) {
       const ti = this.g.tierInfo(), nx = ti.next;
@@ -715,10 +728,6 @@ export class UI {
       if (nx) { const pr = Math.min(1, ti.roll / nx.roll), pp = Math.min(1, ti.n / nx.props);
         h += `<div class="goal"><span>Next: <b>${nx.name}</b></span><div class="bar"><i style="width:${Math.round(pr * 100)}%"></i></div><small>Portfolio rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? ` · Properties ${ti.n} of ${nx.props}` : ''}</small>${nx.props > 1 ? `<div class="bar"><i style="width:${Math.round(pp * 100)}%"></i></div>` : ''}<small class="perks">Unlocks: ${nx.perks.map(esc).join(' · ')}</small></div>`; }
       h += `<small class="perks">Your perks: ${TIERS.filter((T) => T.n <= ti.cur.n).flatMap((T) => T.perks).map(esc).join(' · ')}</small></div>`;
-    }
-    if (!s.open) {
-      const iss = sim.openingIssues();
-      h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
     }
     h += `<h3>Customer experience</h3><div class="list">${Object.entries(EXP).map(([k, n]) => { const v = s.exp[k]; return `<div class="row" style="font-size:13px"><span style="width:92px;color:var(--muted)">${n}</span><div class="bar"><i class="${v < 0.5 ? 'r' : v < 0.7 ? 'a' : ''}" style="width:${Math.round(v * 100)}%"></i></div><b class="num" style="width:38px;text-align:right">${pct(v)}</b></div>`; }).join('')}</div>
       <p class="note">Reputation ${pct(sim.reputation())}. Built from what customers actually experienced on the property, not from what you built.</p>`;
@@ -1113,7 +1122,7 @@ export class UI {
     if (mr) return T(`${sim.objName(s.objects[mr.obj])} needs a make-ready before it can rent again.`, { sel: mr.obj });
     const ready = objs.filter((o) => o.type === 'unit' && o.cstate === 'ready');
     if (ready.length) return T(`${ready.length} new ${ready.length === 1 ? 'unit is' : 'units are'} ready to commission.`, { sel: ready[0].id }, 'good');
-    if (!s.open && s.mode !== 'tutorial') return T('Not open for business yet. See what is missing.', { tab: 'growth' });
+    if (!s.open && s.mode !== 'tutorial') { const iss = sim.openingIssues(); return T(iss.length ? `Not open yet: ${iss[0].charAt(0).toLowerCase() + iss[0].slice(1)}${iss.length > 1 ? ` (+${iss.length - 1} more)` : ''}. Tap for the checklist.` : 'Ready to open. Tap to open for business.', { tab: 'growth' }); }
     const late = Object.values(s.leases).filter((L) => L.status !== 'current');
     if (late.length) { const u = objs.find((o) => o.lease === late[0].id); return T(`${late.length} ${late.length === 1 ? 'tenant is' : 'tenants are'} past due on rent.`, u ? { sel: u.id } : { tab: 'business' }); }
     const room = open.find((t) => t.type === 'cleanroom' && s.objects[t.obj]); if (room) return T('A restroom needs cleaning.', { sel: room.obj });
@@ -1133,6 +1142,7 @@ export class UI {
     if (key !== this.coachKey || el.hidden) { this.coachKey = key; el.className = 'coach ' + h.kind + (h.act ? ' act' : ''); this.$('coachT').textContent = h.text; this.$('coachO').textContent = this.ownerStatus(); }
     if (el.hidden) { el.hidden = false; this.root.classList.add('has-coach'); }
   }
+  issueBtn(label, tool) { return `<button class="btn sm" data-a="goTool" data-v="${tool}">${label}</button>`; }
   runCoach() {
     const a = this.coachAct; if (!a) return; this.sfx('click');
     if (a.tab) { if (a.cat) this.cat = a.cat; this.select(null); this.setTab(a.tab); return; }

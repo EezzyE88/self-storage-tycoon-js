@@ -83,6 +83,9 @@ Run from inside `tests/headless`; they import `../../js/`.
 | `tfin.mjs` | Foundations: cash moves only through the ledger; billing a behind tenant raises their balance, not cash; rent roll = paying + past due; "owed to you" matches balances | All pass |
 | `tcalm.mjs` | Foundations: a security notice comes 3+ days before any low-security break-in; break-ins hit dark units; story events are not critical; notices stop after two acknowledgements unless security worsens | All pass |
 | `tsandbox.mjs` | Sandbox v1: Business vs Free Build, instant construction, Free Build funds and add-funds accounting, presets and cost multiplier, maintenance off, starter facility, goals, save/resume, mode labels | All pass |
+| `tbugs.mjs` | Regression checks for the 2026-10-02 bug/stress/playtest pass (B1-B6: bad clean cell, carts for a non-corral, undo window, worn carts in a corral, crowd-capped visits, commissioning a pruned order) | All pass (2026-10-02) |
+| `tfuzz.mjs [days] [seeds]` | Bug hunt: random valid and garbage actions in every mode with invariant checks after each (cash and ledger finite, lease/unit links, states, one owner, save round trip) | `365 3`: no issues after fixes (see `docs/qa/BUG-STRESS-PLAYTEST-2026-10-02.md`) |
+| `../stress/tstress.mjs A\|B\|C [years]` | Stress: A = 550-unit lot at triple demand with 10 staff; B = 10-year Maple career; C = 3,000 build/cancel actions in one tick. Prints timing, array sizes and save size | See the 2026-10-02 report |
 | `tdrama.mjs` | Round 14 story events: break-in and price-war frequency over 2 years, each choice's effect, auction contents | All pass |
 | `tfix.mjs` | Round 13 fixes: pre-Round-11 tutorial save migration, climate-conversion renovation | All pass |
 | `t9.mjs`, `t9b.mjs`, `t9d.mjs`, `t9e.mjs`, `dbg.mjs` | Round 9 era checks and debugging | Ran, exit 0. They're older and may print values without asserting anything. |

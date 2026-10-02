@@ -59,6 +59,9 @@ const plan = JSON.parse(process.env.PLAN || 'null') || [
   { tool: 'corral', a: { x: 16, y: 12 }, b: { x: 16, y: 12 } },
   { tool: 'power', a: { x: 32, y: 6 }, b: { x: 32, y: 6 } },
 ];
+// 2026-10-02: the all-5x5 plan stopped winning after Round 14 (rival price wars). Demand is mostly 5x10, so upstairs now builds 5x10
+// (env ALL5X5=1 restores the old plan). A 5x5 ground floor + 5x10 upper floor wins on day 127.
+if (!process.env.PLAN && !process.env.ALL5X5) for (const a of plan) if (a.tool === 'iu5x5' && a.f) a.tool = 'iu5x10';
 for (const a of plan) { if (process.env.UPPERONLY && a.tool.startsWith('iu') && !a.f) continue; B(a); }
 if (process.env.NOCOMP) s.opts = { ...(s.opts || {}), competition: false };
 console.log('cash after orders', Math.round(s.cash));

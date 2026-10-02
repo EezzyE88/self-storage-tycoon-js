@@ -76,6 +76,7 @@ export class Sim {
     if (!state.mkt && state.tut && state.tut.on && !state.tut.done && state.tut.beat > 4) {
       state.tut.beat = [0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 7][Math.min(11, state.tut.beat)] ?? 7; state.tut.entered = false; state.tut.migrated = 11;
     }
+    if (Array.isArray(state.tasks) && Array.isArray(state.dirt)) state.tasks = state.tasks.filter((t) => t.f == null || (Number.isInteger(t.f) && t.f >= 0 && t.f < state.dirt.length)); // heal saves hit by the old ownerClean bug
     state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; if (state.coTier == null) state.coTier = 1;
     this.rebuild();
   }
@@ -455,7 +456,7 @@ export class Sim {
       if (n === 0 && R.status !== 'invalid') bad('Nothing to change here');
       if (a.tool === 'aisle' && R.status !== 'invalid') {
         const touches = R.tiles.some((t) => { const x = t.i % s.W, y = (t.i / s.W) | 0; return DIRS.some(([dx, dy]) => { const j = this.idx(x + dx, y + dy); return D.vehReach[j] || (D.pendingGround.get(j) === G.ASPHALT); }); });
-        if (!touches) inc('Not connected to an existing drive aisle');
+        if (!touches) inc(this.objs('gate').length ? 'Not connected to an existing drive aisle' : 'Not connected yet - add an Entrance Gate where this aisle meets the street');
       }
       if (R.status !== 'invalid' && R.tiles.length && (a.tool === 'walk' || a.tool === 'loading' || a.tool === 'parking')) {
         const n = this.accessImpact(() => { const old = R.tiles.map((t) => [t.i, s.ground[t.i]]); for (const t of R.tiles) s.ground[t.i] = t.v; return () => { for (const [i, g] of old) s.ground[i] = g; }; });
@@ -826,7 +827,7 @@ export class Sim {
   act_cancelOrder(a) {
     const s = this.s, ord = s.orders.find((o) => o.id === a.id);
     if (!ord || ord.st !== 'construction') return { ok: false, msg: 'Nothing to cancel' };
-    const undo = s.lastCommit && s.lastCommit.order === ord.id && s.t - s.lastCommit.t <= 30;
+    const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     const refund = undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6);
     if (!s.creative) this.money(refund, 'capex', (undo ? 'Undo: ' : 'Cancelled: ') + ord.label);
     for (const id of ord.objs) delete s.objects[id];
@@ -844,7 +845,7 @@ export class Sim {
     return { ok: true, refund, msg: `${undo ? 'Undone' : 'Cancelled'}${nDep ? ` (+${nDep} dependent order${nDep > 1 ? 's' : ''})` : ''} - refunded $${total.toLocaleString()}` };
   }
   cancelRefund(ord) {
-    const s = this.s; const undo = s.lastCommit && s.lastCommit.order === ord.id && s.t - s.lastCommit.t <= 30;
+    const s = this.s; const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     return { undo, refund: undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6) };
   }
   completeOrder(ord) {
@@ -870,7 +871,7 @@ export class Sim {
   act_commission(a) {
     const s = this.s; this.ensure();
     let targets = [];
-    if (a.order) { const ord = s.orders.find((o) => o.id === a.order); targets = ord ? ord.objs.map((id) => s.objects[id]).filter(Boolean) : []; }
+    if (a.order) { const ord = s.orders.find((o) => o.id === a.order); targets = ord ? ord.objs.map((id) => s.objects[id]).filter(Boolean) : []; if (!targets.length) targets = this.objs('unit').filter((u) => u.order === a.order); } // finished orders are pruned after 3 days; the units keep their order id
     else if (a.unit) targets = [s.objects[a.unit]];
     else if (a.all) targets = this.objs('unit');
     targets = targets.filter((u) => u && u.type === 'unit' && u.cstate === 'ready');
@@ -1005,7 +1006,7 @@ export class Sim {
     return { ok: true, msg: `Vendor booked (~${pri ? 5 : 10} hours) - $${cost}` };
   }
   act_buyCarts(a) {
-    const s = this.s, c = s.objects[a.corral]; if (!c || c.cstate !== 'operating') return { ok: false, msg: 'Corral not ready' };
+    const s = this.s, c = s.objects[a.corral]; if (!c || c.type !== 'corral' || c.cstate !== 'operating') return { ok: false, msg: 'Corral not ready' };
     const n = clamp(Math.floor(Number(a.n) || 1), 1, 50), cost = n * CART_COST;
     if (!this.unlimited() && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     if (!s.creative) this.money(-cost, 'capex', `${n} cart${n > 1 ? 's' : ''}`);
@@ -1681,7 +1682,12 @@ export class Sim {
     if (mod < ACCESS_HOURS[0] * 60 || mod > ACCESS_HOURS[1] * 60 - 30) { this.schedule(v, this.randomAccessTime(this.day + 1)); return; }
     if (!this.D.gate) { this.schedule(v, s.t + 240); return; }
     if (v.unit && !s.objects[v.unit]) return;
-    if (s.agents.filter((a) => a.kind === 'cust').length > 60) { this.schedule(v, s.t + 30); return; }
+    if (s.agents.filter((a) => a.kind === 'cust').length > 60) {
+      // Crowd cap. Routine access visits now happen off-screen instead of queueing: at 500+ tenants the queue used to grow
+      // without limit (30k+ visits, 2 MB saves, seconds per game-day). Move-ins, move-outs and shoppers still wait their turn.
+      if (v.kind === 'access' || v.kind === 'bigaccess') { s.offscreen = (s.offscreen || 0) + 1; return; }
+      this.schedule(v, s.t + 30); return;
+    }
     const u = v.unit && s.objects[v.unit];
     const vtype = v.kind === 'movein' || v.kind === 'moveout' ? this.pick(['van', 'box', 'box', 'pickup', 'suv']) : this.pick(['sedan', 'sedan', 'suv', 'suv', 'pickup', 'van']);
     const fromEast = this.rnd() < 0.5; const p = s.parcel;
@@ -2272,6 +2278,9 @@ export class Sim {
     return t ? this.act_ownerTask({ task: t.id }) : { ok: false };
   }
   act_ownerClean(a) {
+    const x = Math.floor(Number(a.x)), y = Math.floor(Number(a.y)), f = Math.floor(Number(a.f) || 0); // validate: a bad cell used to crash every later tick
+    if (!this.inb(x, y) || f < 0 || f >= this.s.dirt.length) return { ok: false, msg: 'Nothing to clean there' };
+    a = { ...a, x, y, f };
     const t = this.addTask({ type: 'clean', need: 'clean', obj: null, f: a.f, x: a.x, y: a.y, label: 'Clean ' + (this.D.shellAt[this.idx(a.x, a.y)] ? 'hallway' : 'loading area'), work: WORK.clean });
     return t ? this.act_ownerTask({ task: t.id }) : { ok: false };
   }
@@ -2287,8 +2296,9 @@ export class Sim {
       }
     }
     for (const c of s.carts) {
-      if ((c.st === 'stranded' && s.t - c.since > 45) || c.st === 'damaged') {
-        if (!s.tasks.some((t) => t.type === 'carts' && t.cart === c.id)) this.addTask({ type: 'carts', need: 'carts', cart: c.id, obj: 'cart' + c.id, label: c.st === 'damaged' ? 'Repair damaged cart' : `Recover cart${c.f > 0 ? ' from Floor ' + (c.f + 1) : ''}`, work: c.st === 'damaged' ? 45 : WORK.carts, phase: 1 });
+      const worn = c.st === 'damaged' || (c.st === 'corral' && c.cond < 0.2); // worn-out carts returned to a corral used to sit there unusable forever
+      if ((c.st === 'stranded' && s.t - c.since > 45) || worn) {
+        if (!s.tasks.some((t) => t.type === 'carts' && t.cart === c.id)) this.addTask({ type: 'carts', need: 'carts', cart: c.id, obj: 'cart' + c.id, label: worn ? 'Repair damaged cart' : `Recover cart${c.f > 0 ? ' from Floor ' + (c.f + 1) : ''}`, work: worn ? 45 : WORK.carts, phase: 1 });
       }
     }
     const WH = s.W * s.H;
