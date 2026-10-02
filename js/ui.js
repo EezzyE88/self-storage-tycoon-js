@@ -30,6 +30,7 @@ const I = {
   rotR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  view: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2"/><circle cx="15" cy="16" r="2"/></svg>',
   logo: '<svg viewBox="0 0 48 48" fill="none" aria-label="Self Storage Tycoon"><path d="M6 20 24 8l18 12" stroke="#f5c542" stroke-width="4" stroke-linejoin="round"/><rect x="9" y="21" width="30" height="21" rx="2" fill="currentColor"/><path d="M13 26h22M13 30.5h22M13 35h22" stroke="#16202b" stroke-width="2.2" opacity=".55"/></svg>',
 };
 const money = (v, dec = false) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: dec ? 2 : 0, minimumFractionDigits: dec ? 2 : 0 });
@@ -56,10 +57,13 @@ export class UI {
         <button class="iconbtn" data-a="menu" aria-label="Menu">${I.menu}</button>
       </div>
       <div class="viewctl">
-        <div class="seg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="view" data-v="1">F2</button></div>
-        <div class="seg"><button data-a="rot" data-v="-1" aria-label="Rotate left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate right">${I.rotR}</button></div>
-        <div class="seg"><button data-a="zoom" data-v="1.25" aria-label="Zoom in">${I.plus}</button><button data-a="zoom" data-v="0.8" aria-label="Zoom out">${I.minus}</button><button data-a="fit" aria-label="Fit property">${PIN.fit}</button></div>
-        <div class="seg"><button data-a="photo" aria-label="Photo mode" title="Photo mode (P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.6"/></svg></button></div>
+        <div class="seg floorseg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="view" data-v="1">F2</button></div>
+        <button class="viewmore" data-a="viewMore" aria-label="More camera controls" aria-expanded="false">${I.view}</button>
+        <div class="viewextra">
+          <div class="seg"><button data-a="rot" data-v="-1" aria-label="Rotate left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate right">${I.rotR}</button></div>
+          <div class="seg"><button data-a="zoom" data-v="1.25" aria-label="Zoom in">${I.plus}</button><button data-a="zoom" data-v="0.8" aria-label="Zoom out">${I.minus}</button><button data-a="fit" aria-label="Fit property">${PIN.fit}</button></div>
+          <div class="seg"><button data-a="photo" aria-label="Photo mode" title="Photo mode (P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.6"/></svg></button></div>
+        </div>
       </div>
       <button class="coach" id="coach" data-a="coach" hidden><span class="ct" id="coachT"></span><span class="co" id="coachO"></span></button>
       <div class="feed" id="feed"></div>
@@ -111,6 +115,7 @@ export class UI {
       case 'rot': this.rend.rotate(+v); this.sfx('click'); break;
       case 'zoom': this.rend.zoomBy(+v); break;
       case 'fit': this.rend.fitProperty(this.safeRect()); this.sfx('click'); break;
+      case 'viewMore': { const ctl = el.closest('.viewctl'); const open = !ctl.classList.contains('open'); ctl.classList.toggle('open', open); el.setAttribute('aria-expanded', String(open)); this.sfx('click'); break; }
       case 'coach': this.runCoach(); break;
       case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
@@ -294,7 +299,7 @@ export class UI {
     const box = this.$('abar'); if (!this.tool) { box.innerHTML = ''; return; }
     const T = TOOLS[this.tool], R0 = this.plan; const rush = this.canRush() && this.rush && R0 && R0.dur;
     const R = R0 && rush ? { ...R0, cost: Math.round(R0.cost * 1.25), dur: R0.dur * 0.5 } : R0;
-    let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Tap the map to place.' : 'Drag on the map to size it. Two fingers pan.'}${this.toolFloor() ? ' Placing on Floor 2.' : ''}</span></div>`;
+    let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ' Placing on Floor 2.' : ''}</span></div>`;
     if (R) {
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
       const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Valid - ready to confirm') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));

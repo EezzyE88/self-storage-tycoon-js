@@ -297,16 +297,30 @@ game.localsave = localsave; game.BUILD = BUILD;
   offer(null); cloud.get().then((d) => offer(d)); }
 
 // ---------------------------------------------------------------- input
-const ptrs = new Map(); let drag = null; let pinch = null;
+const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null;
+const BUILD_HOLD_MS = 240;
+const cancelBuildHold = () => { if (buildHold) clearTimeout(buildHold); buildHold = null; };
 canvas.addEventListener('pointerdown', (e) => {
   game.audio.unlock(); canvas.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
   game.ui.pointerBusy = true;
-  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; drag = null; return; }
+  if (ptrs.size === 2) { cancelBuildHold(); const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; drag = null; return; }
   const panBtn = e.button === 1 || e.button === 2 || e.shiftKey;
   const building = !!game.ui.tool && !panBtn;
-  drag = { mode: building ? 'build' : 'pan', moved: false, x: e.clientX, y: e.clientY };
-  if (building) game.ui.placeStart(game.rend.cellAt(e.clientX, e.clientY));
+  const holdBuild = building && (e.pointerType === 'touch' || e.pointerType === 'pen');
+  drag = { mode: holdBuild ? 'buildPending' : building ? 'build' : 'pan', moved: false, x: e.clientX, y: e.clientY, pointerId: e.pointerId };
+  if (building && !holdBuild) game.ui.placeStart(game.rend.cellAt(e.clientX, e.clientY));
+  if (holdBuild) {
+    cancelBuildHold();
+    buildHold = setTimeout(() => {
+      buildHold = null;
+      const p = ptrs.get(e.pointerId);
+      if (!p || !drag || drag.pointerId !== e.pointerId || drag.mode !== 'buildPending') return;
+      drag.mode = 'build';
+      game.ui.placeStart(game.rend.cellAt(p.x0, p.y0));
+      game.ui.placeMove(game.rend.cellAt(p.x, p.y));
+    }, BUILD_HOLD_MS);
+  }
 });
 canvas.addEventListener('pointermove', (e) => {
   const p = ptrs.get(e.pointerId); if (!p) return;
@@ -316,14 +330,20 @@ canvas.addEventListener('pointermove', (e) => {
     if (pinch.d > 0) game.rend.zoomBy(d / pinch.d); game.rend.pan(cx - pinch.cx, cy - pinch.cy); pinch = { d, cx, cy }; return;
   }
   if (!drag) return;
-  if (Math.hypot(e.clientX - p.x0, e.clientY - p.y0) > 7) drag.moved = true;
+  const dist = Math.hypot(e.clientX - p.x0, e.clientY - p.y0);
+  if (dist > 7) drag.moved = true;
+  if (drag.mode === 'buildPending') {
+    if (drag.moved) { cancelBuildHold(); drag.mode = 'pan'; game.rend.pan(dx, dy); }
+    return;
+  }
   if (drag.mode === 'pan') { if (drag.moved) game.rend.pan(dx, dy); }
   else game.ui.placeMove(game.rend.cellAt(e.clientX, e.clientY));
 });
 function up(e) {
   const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
   if (ptrs.size === 0) game.ui.pointerBusy = false;
-  if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
+  if (pinch) { if (ptrs.size < 2) pinch = null; cancelBuildHold(); drag = null; return; }
+  if (drag && drag.pointerId === e.pointerId && drag.mode === 'buildPending') cancelBuildHold();
   if (drag && drag.mode === 'pan' && !drag.moved && p && e.type === 'pointerup') game.ui.tapMap(game.rend.cellAt(e.clientX, e.clientY), e.clientX, e.clientY);
   drag = null;
 }

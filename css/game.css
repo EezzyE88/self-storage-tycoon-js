@@ -44,6 +44,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .seg button.on { background: var(--ink); color: var(--yellow); }
 .seg button:disabled { opacity: 0.35; }
 .seg button svg { width: 18px; height: 18px; }
+.viewextra { display: flex; flex-direction: column; gap: 6px; }
+.viewmore { display: none; width: 44px; height: 44px; border-radius: 12px; background: rgba(246,243,236,.95); box-shadow: var(--shadow); place-items: center; color: var(--ink2); }
+.viewmore svg { width: 20px; height: 20px; }
 
 /* feed (convos + toasts) */
 .feed { position: absolute; right: calc(62px + var(--safe-r)); top: calc(62px + var(--safe-t)); align-items: flex-end; width: min(340px, calc(100vw - 80px)); display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
@@ -201,6 +204,19 @@ canvas.chart { width: 100%; height: 120px; display: block; background: #fff; bor
   #ui.has-sheet .tut p, #ui.has-sheet .tut .row { display: none; }
   #ui.has-sheet .tut h4 { font-size: 14px; margin: 2px 0 0; }
   #ui.has-sheet .feed { display: none; }
+  .viewctl { top: calc(66px + var(--safe-t)); gap: 6px; }
+  .viewctl .floorseg button { width: 46px; height: 42px; }
+  .viewmore { display: grid; width: 46px; height: 46px; }
+  .viewextra { display: none; position: absolute; right: 52px; top: 0; flex-direction: row; align-items: flex-start; gap: 6px; padding: 4px; border-radius: 14px; background: rgba(22,32,43,.16); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .viewctl.open .viewextra { display: flex; }
+  .viewctl.open .viewmore { background: var(--ink); color: var(--yellow); }
+  .viewextra .seg button { width: 46px; height: 42px; }
+  .tabs { width: calc(100vw - 28px - var(--safe-l) - var(--safe-r)); max-width: 430px; justify-content: stretch; }
+  .tabs button { min-width: 0; flex: 1 1 25%; height: 52px; }
+  .x { width: 44px; height: 44px; }
+  .btn { min-height: 44px; }
+  .btn.sm { min-height: 40px; }
+  .cats button { min-height: 40px; }
 }
 @media (max-height: 520px) {
   .sheet { max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px - var(--safe-b)); }
@@ -238,7 +254,15 @@ canvas.chart { width: 100%; height: 120px; display: block; background: #fff; bor
 #loadTa.err::placeholder { color: var(--red, #c8412f); }
 
 /* iPhone: 16px+ text fields so Safari does not zoom on focus; notch-aware landscape */
-@media (pointer: coarse) { .modal textarea, .modal input:not([type=range]):not([type=checkbox]), .modal select { font-size: 16px; } }
+@media (pointer: coarse) {
+  .modal textarea, .modal input:not([type=range]):not([type=checkbox]), .modal select { font-size: 16px; }
+  .iconbtn { width: 46px; height: 46px; }
+  .speed button { min-height: 40px; }
+  .tool { min-height: 84px; }
+  .pin { width: 44px; height: 44px; margin-left: -5px; }
+  .pin::before { left: 7px; }
+  .pin > svg { left: 14px; }
+}
 
 /* iPhone landscape: tabs become a left rail, sheets and the action bar dock right, the tutorial card fills the gap */
 @media (max-height: 520px) and (orientation: landscape) {
