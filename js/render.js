@@ -748,6 +748,7 @@ export class Renderer {
     }
   }
   // day/night + weather
+  lightning() { this.lightningAt = performance.now(); }
   updateSky(dt) {
     const s = this.sim.s, h = this.todOverride != null ? this.todOverride : (s.t % 1440) / 60;
     const dayK = Math.max(0, Math.min(1, (h < 12 ? (h - 5.8) / 1.6 : (19.6 - h) / 1.6)));
@@ -757,12 +758,15 @@ export class Renderer {
     const sunA = ((h - 6) / 13) * Math.PI;
     const sx = Math.cos(sunA) * 40, sy = Math.max(8, Math.sin(sunA) * 50);
     this.sun.position.set(this.center.x + sx, sy, this.center.z + 22); this.sun.target.position.copy(this.center);
-    this.sun.intensity = (0.15 + dayK * 2.3) * (1 - rain * 0.45);
+    const lf = rain && this.lightningAt ? performance.now() - this.lightningAt : 9999;
+    const flash = lf < 85 ? 1 : lf > 130 && lf < 210 ? 0.45 : 0;
+    this.sun.intensity = (0.15 + dayK * 2.3) * (1 - rain * 0.45) + flash * 2.8;
     this.sun.color.setRGB(1, 0.93 - golden * 0.2, 0.84 - golden * 0.35);
-    this.hemi.intensity = 0.55 + dayK * 0.45 - rain * 0.1;
+    this.hemi.intensity = 0.55 + dayK * 0.45 - rain * 0.1 + flash * 1.25;
     this.hemi.color.setRGB(0.55 + dayK * 0.35, 0.62 + dayK * 0.3, 0.8 + dayK * 0.15);
-    this.ambient.intensity = night * 0.9;
+    this.ambient.intensity = night * 0.9 + flash * 0.75;
     const sky = new THREE.Color().setRGB(0.12 + dayK * 0.57 + golden * 0.12 - rain * 0.12, 0.09 + dayK * 0.7 - rain * 0.1, 0.17 + dayK * 0.72 - rain * 0.05);
+    if (flash) sky.lerp(new THREE.Color(0xe8efff), flash * 0.62);
     this.scene.background = sky; this.scene.fog.color.copy(sky);
     this.mat.head.emissiveIntensity = night * 2.2; this.mat.tail.emissiveIntensity = night * 1.2;
     // rain particles

@@ -122,7 +122,7 @@ export class UI {
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
       case 'close': this.select(null); this.setTab(null); break;
-      case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay'].includes(act.type)) this.renderSheet(true); break; }
+      case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
       case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
@@ -533,6 +533,34 @@ export class UI {
       <small class="note">${esc(R.season)}${R.comps.length ? ' · Competing with ' + esc(R.comps.join(', ')) : ''}</small></div></div>
       ${R.sug.length ? `<div class="list sug">${R.sug.map((t, i) => `<div class="item"><span class="num">${i + 1}</span><div class="grow">${esc(t)}</div></div>`).join('')}</div>` : '<p class="note">Nothing urgent. Keep it up.</p>'}`;
   }
+  advertisingHtml() {
+    const sim = this.sim, s = sim.s, active = sim.activeAd();
+    const recent = (s.mkt.adHistory || []).slice(-1)[0];
+    const roi = (a) => a ? (a.revenue || 0) - (a.cost || 0) : 0;
+    let h = '<h3>Advertising</h3>';
+    if (active) {
+      const net = roi(active), days = Math.max(0, active.until - sim.day + 1);
+      h += '<div class="item"><div class="grow"><b>' + esc(active.label) + '</b><small>' + days + ' day' + (days === 1 ? '' : 's') + ' left · ' + (active.inquiries || 0) + ' extra shopper' + ((active.inquiries || 0) === 1 ? '' : 's') + ' attributed · ' + (active.leases || 0) + ' lease' + ((active.leases || 0) === 1 ? '' : 's') + ' · first-month rent ' + money(active.revenue || 0) + '</small></div><span class="pill ' + (net >= 0 ? 'g' : 'a') + '">' + (net >= 0 ? '+' : '') + money(net) + ' vs spend</span></div>';
+      h += '<p class="note">Only the campaign-created share of shoppers is attributed here. A campaign cannot fix bad pricing, no vacancy, poor access or weak reviews.</p>';
+    } else {
+      const ready = sim.objs('unit').filter((u) => u.cstate === 'operating' && u.commercial === 'ready' && !u.blocked);
+      const bySize = {};
+      for (const u of ready) (bySize[u.size] ||= []).push(u);
+      h += '<p class="note">Ads create more shoppers, not guaranteed leases. Focus on a size you actually have vacant and competitively priced. The simple break-even below is campaign cost ÷ current asking rent.</p><div class="list">';
+      h += '<div class="item"><div class="grow"><b>Local search · 30 days</b><small>+15% shopper traffic across all sizes · $500. Best when several sizes have vacancy.</small></div>' + this.cmdBtn('Run $500', { type: 'ad', kind: 'local' }, '', !s.open) + '</div>';
+      for (const sz of Object.keys(MARKETS[s.market.id].demand)) {
+        const units = bySize[sz] || [], ask = s.market.ask[productKey(sz, 'std')] || MARKETS[s.market.id].rent[sz], be = Math.max(1, Math.ceil(250 / Math.max(1, ask)));
+        h += '<div class="item"><div class="grow"><b>Target ' + esc(sz) + ' · 30 days</b><small>+50% ' + esc(sz) + ' shopper traffic · $250 · ' + units.length + ' rent-ready now · roughly ' + be + ' new lease' + (be === 1 ? '' : 's') + ' at ' + money(ask) + '/mo to cover the spend.</small></div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';
+      }
+      h += '</div>';
+      if (recent) {
+        const net = roi(recent);
+        h += '<p class="note"><b>Last campaign:</b> ' + esc(recent.label) + ' · ' + (recent.inquiries || 0) + ' extra shoppers · ' + (recent.leases || 0) + ' leases · ' + money(recent.revenue || 0) + ' first-month rent against ' + money(recent.cost || 0) + ' spend (' + (net >= 0 ? '+' : '') + money(net) + ').</p>';
+      }
+    }
+    return h;
+  }
+
   marketHtml() {
     const sim = this.sim, s = sim.s; if (!sim.pressureOn()) return '';
     let h = `<h3>Your market</h3><div class="list">`;
@@ -543,6 +571,7 @@ export class UI {
     }
     if (!s.mkt.comp.length) h += `<div class="item"><div class="grow"><b>No direct competitors yet</b><small>Developers watch busy markets. A new facility nearby would take shoppers and push prices down.</small></div></div>`;
     h += `</div>`;
+    h += this.advertisingHtml();
     // why shoppers didn't sign
     const lost = sim.lostRecent(30); const tot = Object.values(lost).reduce((a, b) => a + b, 0);
     const WHY = { noReady: ['Nothing ready to rent', 'Turn vacant units over faster, or build more of what sells out.'], noSize: ['Size not offered', 'You have no units of the size they wanted. Build some.'], noClimate: ['Needed climate control', 'Add an HVAC plant and climate units.'], price: ['Too expensive', 'Your asking rent is well above market for them.'], competitor: ['Went to a competitor', 'A cheaper facility nearby. Close the price gap or out-compete on quality.'], convenience: ['Inconvenient', 'Long walks, cart shortages or elevator waits.'], reputation: ['Put off by reputation', 'Low reputation and reviews. Fix what customers complain about.'], shopping: ['Kept shopping', 'Normal: some shoppers always compare.'], service: ['Gave up waiting', 'Nobody at the counter. A Clerk keeps the office covered.'] };
@@ -648,7 +677,7 @@ export class UI {
       <div class="stat"><small>Estimate: net per day</small><b class="${est < 0 ? 'neg' : ''}">${est >= 0 ? '+' : '-'}${money(Math.abs(est))}</b><div class="n">Projection, not money earned: paying tenants' rent minus today's costs. Shown as "est" under your cash.</div></div></div>`;
     h += this.reportHtml() + this.marketHtml();
     // GDD §63.1–63.2: operating contribution, with capital and financing shown separately
-    const anc = sum('anc'), svc = sum('service'), contrib = collected + anc - costs - svc, debtSvc = sum('debt') + sum('interest'), fin = sum('fin');
+    const anc = sum('anc'), svc = sum('service'), marketing = sum('marketing'), contrib = collected + anc - costs - svc - marketing, debtSvc = sum('debt') + sum('interest'), fin = sum('fin');
     const inj = sum('inject'); const net = contrib - capex - debtSvc + fin + sum('other') + inj;
     h += `<h3>Operating statement · last 30 days</h3><div class="kv stmt">
       <span>Collected rent</span><span>${money(collected)}</span>
@@ -656,6 +685,7 @@ export class UI {
       <span>Operating costs</span><span>${money(-sum('opex'))}</span>
       <span>Payroll</span><span>${money(-sum('payroll'))}</span>
       <span>Vendor service</span><span>${money(-svc)}</span>
+      <span>Advertising</span><span>${money(-marketing)}</span>
       <span class="tot">Operating contribution</span><span class="tot ${contrib < 0 ? 'neg' : ''}">${money(contrib)}</span>
       <span>Construction (capital)</span><span>${money(-capex)}</span>
       <span>Debt service</span><span>${money(-debtSvc)}</span>

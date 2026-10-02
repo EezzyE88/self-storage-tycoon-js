@@ -22,7 +22,7 @@ for (const [name, good] of [['idle', false], ['good', true]]) {
   sim.dramaDay(sim.day); sim.rnd = r0;
   const pw = s.convos.find((c) => c.key === 'pw' + comp.id); check('price war convo appears', !!pw && comp.price < 0.9, pw ? pw.text : JSON.stringify(s.drama));
   if (pw) { const k = Object.keys(s.market.ask)[0], a0 = s.market.ask[k]; const r = sim.dispatch({ type: 'convo', id: pw.id, i: 0 }); check('match cuts asking 6%', r.ok && s.market.ask[k] === Math.round(a0 * 0.94), `${a0} -> ${s.market.ask[k]}`); }
-  const cash0 = s.cash; const r2 = sim.dispatch({ type: 'cv', op: 'pwAd', comp: comp.id }); check('ad campaign charges $600 and boosts traffic', r2.ok && Math.round(cash0 - s.cash) === 600 && sim.promoFactor() > 1);
+  const cash0 = s.cash; const r2 = sim.dispatch({ type: 'cv', op: 'pwAd', comp: comp.id }); check('price-war ad starts local campaign for $500', r2.ok && Math.round(cash0 - s.cash) === 500 && sim.activeAd() && sim.adFactor('10x10') > 1);
   const u = sim.objs('unit').find((x) => x.lease); const tn = s.tenants[s.leases[u.lease].tenant]; const sat0 = tn.sat; const c1 = s.cash;
   const r3 = sim.dispatch({ type: 'cv', op: 'biCover', tenant: tn.id }); check('cover deductible: -$250, tenant happier', r3.ok && Math.round(c1 - s.cash) === 250 && tn.sat > sat0);
 }

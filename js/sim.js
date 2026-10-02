@@ -33,7 +33,7 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     ledger: [], days: [], today: null,
     exp: { access: 0.85, convenience: 0.8, cleanliness: 0.85, security: 0.7, climate: 0.9, service: 0.85, value: 0.8, comfort: 0.8 },
     powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, debt: [], auction: null, mgrLog: [],
-    thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] },
+    thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [], ad: null, adHistory: [] },
     milestones: {}, tut: { on: mode === 'tutorial', beat: 0, flags: {}, done: false },
     open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true },
     weather: 'fair', nextId: 1, structV: 1, unitNo: { drive: 101, interior: 201, upper: 301 },
@@ -58,7 +58,7 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
 const COMP_NAMES = ['StorQuik Self Storage', 'Carlsbad Box & Lock', 'SecureSpace on 5th', 'Coastline Storage Co.', 'Depot Self Storage'];
 const M_open_comps = (sim) => sim.openComps().length > 0;
 const OWNER_AUTO_PER_DAY = 3; // routine chores the Owner picks up unasked each day (repairs always wait for the player)
-function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }
+function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, marketing: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }
 
 // ---------------------------------------------------------------- Sim
 export class Sim {
@@ -77,7 +77,7 @@ export class Sim {
       state.tut.beat = [0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 7][Math.min(11, state.tut.beat)] ?? 7; state.tut.entered = false; state.tut.migrated = 11;
     }
     if (Array.isArray(state.tasks) && Array.isArray(state.dirt)) state.tasks = state.tasks.filter((t) => t.f == null || (Number.isInteger(t.f) && t.f >= 0 && t.f < state.dirt.length)); // heal saves hit by the old ownerClean bug
-    state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; if (state.coTier == null) state.coTier = 1;
+    state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; state.mkt.adHistory ||= []; if (state.mkt.ad === undefined) state.mkt.ad = null; if (state.coTier == null) state.coTier = 1;
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -105,7 +105,7 @@ export class Sim {
     if (s.ledger.length > 250) s.ledger.splice(0, s.ledger.length - 250);
     const d = s.today;
     if (cat === 'rent') d.rent += amt; else if (cat === 'opex') d.opex -= amt; else if (cat === 'payroll') d.payroll -= amt;
-    else if (cat === 'capex') d.capex -= amt; else if (cat === 'anc') d.anc = (d.anc || 0) + amt; else if (cat === 'service') d.service = (d.service || 0) - amt;
+    else if (cat === 'capex') d.capex -= amt; else if (cat === 'anc') d.anc = (d.anc || 0) + amt; else if (cat === 'service') d.service = (d.service || 0) - amt; else if (cat === 'marketing') d.marketing = (d.marketing || 0) - amt;
     else if (cat === 'debt') d.debt = (d.debt || 0) - amt; else if (cat === 'interest') d.interest = (d.interest || 0) - amt; else if (cat === 'loan') d.fin = (d.fin || 0) + amt;
     else if (cat === 'inject' || cat === 'subsidy') d.inject = (d.inject || 0) + amt; // sandbox money: never income
     else d.other += amt;
@@ -119,7 +119,7 @@ export class Sim {
   sbLog(msg, modifies) { const B = this.s.sb; if (!B) return; (B.log ||= []).push({ day: this.day, msg }); if (B.log.length > 40) B.log.shift(); if (modifies) B.modified = true; }
   // trailing operating result: rent and fees in, operating costs, payroll, services and interest out.
   // Construction, loans, transfers and sandbox funds are excluded.
-  opResult(n = 30) { const ds = this.s.days.slice(-n); return { n: ds.length, amt: Math.round(ds.reduce((a, d) => a + (d.rent || 0) + (d.anc || 0) - (d.opex || 0) - (d.payroll || 0) - (d.service || 0) - (d.interest || 0), 0)) }; }
+  opResult(n = 30) { const ds = this.s.days.slice(-n); return { n: ds.length, amt: Math.round(ds.reduce((a, d) => a + (d.rent || 0) + (d.anc || 0) - (d.opex || 0) - (d.payroll || 0) - (d.service || 0) - (d.marketing || 0) - (d.interest || 0), 0)) }; }
   sbGoalProgress() {
     const s = this.s, B = s.sb, g = B && B.goal; if (!g) return null;
     const units = this.objs('unit'), op = units.filter((u) => u.cstate === 'operating');
@@ -1195,15 +1195,19 @@ export class Sim {
   genProspects(day, frac) {
     const s = this.s, M = MARKETS[s.market.id]; const rep = this.reputation();
     const press = this.season(day) * (1 - this.compShare()) * this.reviewFactor() * (this.pressureOn() && M.settled && !s.scenario ? M.settled : 1) * ((s.coTier || 1) >= 4 ? 1.1 : 1) * this.promoFactor();
+    const ad = this.activeAd();
     for (const sz of Object.keys(M.demand)) {
-      const lam = M.demand[sz] * (s.opts && s.opts.demand || 1) * frac * (0.45 + 0.8 * rep) * (s.mode === 'tutorial' && !s.tut.done ? 0.75 : 1) * press;
+      const adF = this.adFactor(sz);
+      const lam = M.demand[sz] * (s.opts && s.opts.demand || 1) * frac * (0.45 + 0.8 * rep) * (s.mode === 'tutorial' && !s.tut.done ? 0.75 : 1) * press * adF;
       let k = 0; const L = Math.exp(-lam); let p = 1; do { k++; p *= this.rnd(); } while (p > L); k--;
       for (let j = 0; j < k; j++) {
         const needsClimate = this.rnd() < (s.opts && s.opts.climateShare != null ? s.opts.climateShare : M.climateShare);
         const online = this.rnd() < 0.4;
         const lo = Math.max(OFFICE_HOURS[0] + 0.5, frac < 1 ? this.hour + 0.3 : 0);
         const t = online ? s.t + 1 + Math.floor(this.rnd() * MIN_PER_DAY * frac) : this.randomTime(day, lo, Math.max(lo + 0.5, OFFICE_HOURS[1] - 1));
-        this.schedule({ kind: online ? 'online' : 'prospect', size: sz, climate: needsClimate }, Math.max(s.t + 1, t));
+        const adHit = ad && adF > 1 && this.rnd() < (adF - 1) / adF ? ad.id : null;
+        if (adHit) ad.inquiries = (ad.inquiries || 0) + 1;
+        this.schedule({ kind: online ? 'online' : 'prospect', size: sz, climate: needsClimate, ad: adHit }, Math.max(s.t + 1, t));
       }
     }
   }
@@ -1344,15 +1348,41 @@ export class Sim {
       this.emit('drama', { k: 'pricewar', title: `${c.name} cut prices`, sub: `They now charge about ${Math.round((1 - c.price) * 100)}% under market. Your move.` });
       this.convo({ key: 'pw' + c.id, who: 'Market watch', sev: 'attention', ttl: 24 * 60, def: 1, auto: 1, comp: c.id,
         text: `${c.name} just dropped its rents to about ${Math.round((1 - c.price) * 100)}% under market. Price shoppers will notice this week.`,
-        actions: [{ label: 'Match them: cut asking rents 6%', action: { type: 'cv', op: 'pwMatch', comp: c.id } }, { label: 'Hold your prices', action: { type: 'cv', op: 'pwHold', comp: c.id } }, { label: 'Run a local ad campaign ($600)', action: { type: 'cv', op: 'pwAd', comp: c.id } }] });
+        actions: [{ label: 'Match them: cut asking rents 6%', action: { type: 'cv', op: 'pwMatch', comp: c.id } }, { label: 'Hold your prices', action: { type: 'cv', op: 'pwHold', comp: c.id } }, { label: 'Run local search ads ($500)', action: { type: 'cv', op: 'pwAd', comp: c.id } }] });
     }
+  }
+  syncAd() {
+    const m = this.s.mkt; const a = m && m.ad;
+    if (a && this.day > a.until) { a.ended = a.until; m.adHistory.push(a); if (m.adHistory.length > 8) m.adHistory.shift(); m.ad = null; }
+    return m && m.ad;
+  }
+  activeAd() { const a = this.syncAd(); return a && this.day <= a.until ? a : null; }
+  findAd(id) { const m = this.s.mkt; const a = m && m.ad; if (a && a.id === id) return a; return (m && m.adHistory || []).find((x) => x.id === id) || null; }
+  adFactor(size) {
+    const a = this.activeAd(); if (!a) return 1;
+    if (a.kind === 'local') return 1.15;
+    if (a.kind === 'size' && a.target === size) return 1.5;
+    return 1;
+  }
+  act_ad(a) {
+    const s = this.s, m = s.mkt; this.syncAd();
+    if (m.ad) return { ok: false, msg: `A campaign is already running through Day ${m.ad.until}` };
+    const kind = a.kind === 'size' ? 'size' : 'local', target = kind === 'size' ? String(a.target || '') : null;
+    if (kind === 'size' && !MARKETS[s.market.id].demand[target]) return { ok: false, msg: 'Unknown unit-size target' };
+    const cost = kind === 'size' ? 250 : 500;
+    if (!this.unlimited() && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
+    const label = kind === 'size' ? `${target} vacancy campaign` : 'Local search campaign';
+    this.money(-cost, 'marketing', 'Advertising - ' + label);
+    m.ad = { id: this.id(), kind, target, label, start: this.day, until: this.day + 29, cost, inquiries: 0, leases: 0, revenue: 0 };
+    this.emit('ad_start', { kind, target, until: m.ad.until });
+    return { ok: true, msg: `${label} running for 30 days` };
   }
   promoFactor() { const m = this.s.mkt; return m && m.promoUntil && this.day <= m.promoUntil ? 1.18 : 1; }
   lostRecent(days = 30) { const d0 = this.day - days; const out = {}; for (const x of this.s.mkt.lostLog) if (x.d > d0) out[x.r] = (out[x.r] || 0) + 1; return out; }
   monthReport(day) {
     const s = this.s, last = s.days.slice(-30); if (last.length < 20) return;
     const sum = (k) => last.reduce((a, d) => a + (d[k] || 0), 0);
-    const collected = sum('rent') + sum('anc'), contrib = collected - sum('opex') - sum('payroll') - sum('service');
+    const collected = sum('rent') + sum('anc'), contrib = collected - sum('opex') - sum('payroll') - sum('service') - sum('marketing');
     const oc = this.occupancy(), roll = this.rentRoll(), rep = this.reputation(), rating = this.rating(), lost = this.lostRecent(30);
     const prev = s.mkt.reports[s.mkt.reports.length - 1];
     const sug = [];
@@ -1571,7 +1601,7 @@ export class Sim {
         return { ok: true, msg: 'Report filed. The tenant is unhappy but staying for now.' }; }
       case 'pwMatch': { for (const k of Object.keys(s.market.ask)) s.market.ask[k] = Math.round(s.market.ask[k] * 0.94); return { ok: true, msg: 'Asking rents cut 6%. Existing tenants keep their rates.' }; }
       case 'pwHold': return { ok: true, msg: 'Holding prices. Expect fewer price shoppers; quality has to win them.' };
-      case 'pwAd': { if (s.cash < 600 && !this.unlimited()) return { ok: false, msg: 'Not enough cash' }; this.money(-600, 'service', 'Local ad campaign'); s.mkt.promoUntil = this.day + 45; return { ok: true, msg: 'Ad campaign running for 45 days: more shoppers will visit.' }; }
+      case 'pwAd': return this.act_ad({ kind: 'local' });
       case 'rateExplain': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.02, 0, 1); return { ok: true, msg: 'Explained: rates follow the local market. The new rate stands.' }; }
       case 'rateIgnore': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.07, 0, 1); return { ok: true }; }
       case 'rateHold': {
@@ -1665,6 +1695,7 @@ export class Sim {
     tn.lease = L.id; s.tenants[tn.id] = tn; s.leases[L.id] = L;
     u.lease = L.id; u.commercial = 'reserved';
     this.money(L.rent, 'rent', `First month - ${u.name}`);
+    const ad = v && v.ad && this.findAd(v.ad); if (ad) { ad.leases = (ad.leases || 0) + 1; ad.revenue = (ad.revenue || 0) + L.rent; }
     s.today.leases++;
     if (u.vacatedAt != null) this.milestone('first_lease_after_turnover');
     this.emit('lease', { unit: u.id, x: u.x, y: u.y, f: u.f || 0, rent: L.rent });
@@ -1694,7 +1725,7 @@ export class Sim {
     const sx = fromEast ? s.W - 1 : 0, sy = fromEast ? p.y1 + 2 : p.y1 + 3;
     const veh = { id: this.id(), type: vtype, x: sx + 0.5, y: sy + 0.5, hx: fromEast ? -1 : 1, hy: 0, path: null, pi: 0, color: this.pick(['#c8ccd0', '#2e3a4a', '#8a2f2f', '#f2f2ee', '#3d5a3f', '#6b7a8f', '#a8834e', '#1e1f22']), parked: null };
     const needCart = u && u.access === 'interior' ? (v.kind === 'movein' || v.kind === 'moveout' ? true : v.kind === 'bigaccess' ? this.rnd() < 0.8 : this.rnd() < 0.25) : false;
-    const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, veh: veh.id, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,
+    const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,
       exp: { gate: 0, cart: 0, elev: 0, office: 0, walk: 0, dirt: 0, dirtN: 0, dark: false, noCart: false, door: 0 }, t0: s.t, look: Math.floor(this.rnd() * 1e6) };
     s.vehicles.push(veh); s.agents.push(ag);
     const gx = this.D.gate.x;
@@ -1891,7 +1922,7 @@ export class Sim {
             s.officeQ = s.officeQ.filter((x) => x !== ag.id);
             ag.hidden = false;
             s.convos = s.convos.filter((c) => c.key !== 'size' + ag.id);
-            const L = this.decideLease({ size: ag.size, climate: ag.climate, keen: ag.keen }, ag);
+            const L = this.decideLease({ size: ag.size, climate: ag.climate, keen: ag.keen, ad: ag.ad || null }, ag);
             if (L) { this.thought(ag, `Signed for a ${ag.size}. Moving in soon.`, 'good'); if (ag.cramped || ag.sizeQ) { const tn = s.tenants[L.tenant]; if (tn) { tn.sat = 0.64; tn.cramped = true; } } }
             this.goToVehicle(ag);
           }

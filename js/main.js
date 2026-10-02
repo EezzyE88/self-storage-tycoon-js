@@ -239,7 +239,7 @@ function stepTicks(n) {
   }
   game.drain();
 }
-let last = performance.now(), fpsT = 0, fpsN = 0;
+let last = performance.now(), fpsT = 0, fpsN = 0, weatherFxNext = performance.now() + 12000;
 game.rdt = 0; game.lastDraw = 0; game.lastInput = performance.now(); game.battery = false; game.autoQ = true;
 // adaptive graphics: if the device can't hold ~36 fps for a few seconds of active play, step quality down (never back up mid-session)
 let pwT = 0, pwN = 0, pwCool = performance.now() + 4000;
@@ -283,7 +283,13 @@ function tick(now) {
   perfWatch(rdt, idle || minGap > 0);
   const night = game.rend.ambient.intensity / 0.9;
   const sc = game.showcase, amode = game.ui.title ? 'title' : sc && sc.photo ? 'photo' : (s.speed === 0 || game.ui.modalOpen()) ? 'quiet' : game.ui.tool ? 'build' : night > 0.6 ? 'night' : 'day';
-  game.audio.update({ night, rain: (game.rend.weatherOverride || s.weather) === 'rain', hvac: game.sim.objs('hvac').filter((h) => game.sim.works(h)).length, speed: s.speed, mode: amode });
+  const raining = (game.rend.weatherOverride || s.weather) === 'rain';
+  game.audio.update({ night, rain: raining, hvac: game.sim.objs('hvac').filter((h) => game.sim.works(h)).length, speed: s.speed, mode: amode });
+  if (!game.ui.title && raining && now >= weatherFxNext) {
+    game.rend.lightning();
+    game.audio.thunder(0.45 + Math.random() * 1.25);
+    weatherFxNext = now + 9000 + Math.random() * 19000;
+  } else if (!raining && now >= weatherFxNext) weatherFxNext = now + 8000;
   fpsN++; fpsT += dt; if (fpsT > 0.5) { if (game.showFps) document.getElementById('fps').textContent = `${Math.round(fpsN / fpsT)} fps · ${game.sim.s.agents.length} agents`; fpsN = 0; fpsT = 0; }
 }
 requestAnimationFrame(loop);

@@ -58,6 +58,14 @@ export class Audio {
       case 'shutter': this.noise(0.035, { gain: 0.14, freq: 3200, q: 0.7, type: 'highpass' }); this.tone(1800, 0.03, { type: 'square', gain: 0.03 }); this.noise(0.05, { gain: 0.1, freq: 1400, q: 1.2, delay: 0.085 }); this.tone(900, 0.04, { type: 'square', gain: 0.02, delay: 0.09 }); break;
     }
   }
+  thunder(delay = 0) {
+    if (!this.ctx) return;
+    const d = Math.max(0, delay);
+    this.noise(2.8, { gain: 0.055, freq: 105, q: 0.7, type: 'lowpass', delay: d, dest: this.amb });
+    this.tone(43, 2.6, { type: 'sine', gain: 0.055, attack: 0.08, delay: d, dest: this.amb, slide: -8 });
+    this.tone(58, 1.7, { type: 'triangle', gain: 0.026, attack: 0.03, delay: d + 0.18, dest: this.amb, slide: -14 });
+    this.noise(1.2, { gain: 0.018, freq: 520, q: 0.5, type: 'bandpass', delay: d + 0.12, dest: this.amb });
+  }
   startAmbience() {
     const c = this.ctx; const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420;
@@ -73,7 +81,7 @@ export class Audio {
     // automation events pile up if re-issued every frame: only touch a param when its target moves
     this.ramp(this.ambG.gain, 0.12 + (1 - night) * 0.1, t, 0.5);
     this.ramp(this.humG.gain, Math.min(0.08, hvac * 0.03), t, 0.5);
-    this.ramp(this.rainG.gain, rain ? 0.12 : 0, t, 1);
+    this.ramp(this.rainG.gain, rain ? 0.07 : 0, t, 1);
     if (!this.musicOn || this.vol.music <= 0) return;
     this.music(t, night, mode);
   }
