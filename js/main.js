@@ -10,6 +10,7 @@ import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { cloud } from './cloud.js';
 import { localsave } from './localsave.js';
+import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
 
 Renderer.prototype.setSim = function (sim) {
@@ -141,7 +142,7 @@ const game = {
   },
   saveMeta() {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
-    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1 };
+    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name };
   },
   // autosave: whenever a game is running (not on the title screen); `hide` uses a keepalive request
   async autosave(hide) {
@@ -157,6 +158,13 @@ const game = {
     catch (e) { return false; } finally { this.saving = false; this.lastAuto = performance.now(); this.lastAutoDay = this.sim.day; }
   },
   cloud,
+  // before New game / Load replaces what the player has: copy it to the kept slot (browser storage only)
+  async keepCurrent(fallback) {
+    if (!localsave.ok) return false;
+    if (this.sim !== this.demo && this.ui && !this.ui.title) { const code = await this.saveCode(); return localsave.keep({ code, meta: this.saveMeta(), at: Math.floor(Date.now() / 1000) }); }
+    const L = localsave.get(); return localsave.keep(L.main || fallback);
+  },
+  playing() { return this.sim !== this.demo && this.ui && !this.ui.title; },
   async saveFile() {
     const code = await this.saveCode(); const fname = `storage-day${Math.floor(this.sim.s.t / 1440) + 1}.sst`;
     try { // iPhone: the share sheet offers "Save to Files", which a download link does not do reliably
@@ -280,7 +288,7 @@ requestAnimationFrame(loop);
 window.addEventListener('resize', () => game.rend.resize());
 window.addEventListener('pagehide', () => { if (!document.hidden) game.autosave(true); });
 // offer "Continue" on the title screen: newest of the browser autosave and the save server, with the browser backup as fallback
-game.localsave = localsave;
+game.localsave = localsave; game.BUILD = BUILD;
 { const L = localsave.get(); const pick = (d, src) => d ? { ...d, src } : null;
   const offer = (cl) => { const cands = [pick(L.main, 'browser'), pick(cl, 'server')].filter(Boolean).sort((a, b) => (b.at || 0) - (a.at || 0));
     game.ui.contSave = cands[0] || pick(L.backup, 'backup'); game.ui.contBackup = L.main && L.backup ? pick(L.backup, 'backup') : null; if (game.ui.title) game.ui.showTitle(); };

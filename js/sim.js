@@ -1277,8 +1277,10 @@ export class Sim {
     const dark = (u) => { const f = u.f || 0, i = this.idx(u.x, u.y); return !(this.D.lit[f][i] >= 0.5) && !this.D.cam[f][i]; };
     // notice before trouble (concept §9, GDD §2): a low-security property is warned, with the dark spots marked, days before any break-in
     const risky = s.exp.security < 0.65;
-    if (risky && (D.warned == null || day - D.warned > 45)) {
-      D.warned = day; const spot = this.objs('unit').find(dark) || occ[0];
+    // after the player has acknowledged it twice, only warn again if security gets worse (pre-merge fix 4)
+    const nagOk = (D.noted || 0) < 2 || s.exp.security < (D.warnSec ?? 1) - 0.05;
+    if (risky && (D.warned == null || (day - D.warned > 45 && nagOk))) {
+      D.warned = day; D.warnSec = s.exp.security; if ((D.noted || 0) >= 2) D.noted = 1; const spot = this.objs('unit').find(dark) || occ[0];
       this.convo({ key: 'secrisk', who: 'Security check', sev: 'attention', obj: spot ? spot.id : undefined, overlay: 'security', ttl: 2 * MIN_PER_DAY, def: 0,
         text: 'Parts of the lot are dark and off camera. Unwatched spots are where break-ins happen. The security map marks them with a cross.',
         actions: [{ label: 'Noted', action: { type: 'cv', op: 'noted' } }] });
@@ -1523,7 +1525,7 @@ export class Sim {
   act_cv(a) {
     const s = this.s;
     switch (a.op) {
-      case 'noted': return { ok: true };
+      case 'noted': { const D = (s.drama ||= { lastBreak: -99, wars: {} }); D.noted = (D.noted || 0) + 1; return { ok: true }; }
       case 'biCover': { const tn = s.tenants[a.tenant]; if (s.cash < 250 && !s.creative) return { ok: false, msg: 'Not enough cash' }; this.money(-250, 'service', 'Break-in: covered tenant deductible'); if (tn) tn.sat = clamp(tn.sat + 0.32, 0, 1); return { ok: true, msg: `${tn ? tn.name.split(' ')[0] : 'The tenant'} is grateful and staying.` }; }
       case 'biReport': { const tn = s.tenants[a.tenant]; if (!tn) return { ok: true }; tn.sat = clamp(tn.sat - 0.05, 0, 1);
         if (this.rnd() < 0.35 && !tn.leaving) { const L = s.leases[tn.lease]; if (L) { tn.leaving = true; this.schedule({ kind: 'moveout', tenant: tn.id, unit: L.unit }, this.randomAccessTime(this.day + 3)); } this.postReview(tn, true); return { ok: true, msg: `${tn.name.split(' ')[0]} is moving out after the break-in.` }; }

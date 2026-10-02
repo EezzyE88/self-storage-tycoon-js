@@ -24,3 +24,14 @@ check('every break-in at low security came 3+ days after a security notice', war
 check('break-ins hit dark, unwatched units when any are leased', darkHits === darkPossible, `${darkHits}/${darkPossible}`);
 check('story events are never shown as critical', crit === 0);
 console.log(ok ? 'ALL PASS' : 'SOME FAILED');
+{ // pre-merge fix 4: after the player acknowledges the security notice twice, it only returns if security gets worse
+  const { makeMaple } = await import('../../js/maple.js');
+  const sim = makeMaple(44); const s = sim.s; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.mode = 'sandbox'; s.open = true;
+  const days = []; const secAt = [];
+  for (let i = 0; i < 2 * 365 * 1440; i++) {
+    sim.step(); sim.events.length = 0;
+    if (i % 60 === 0) { const c = s.convos.find((x) => x.key === 'secrisk'); if (c) { days.push(sim.day); secAt.push(+s.exp.security.toFixed(2)); sim.dispatch({ type: 'convo', id: c.id, i: 0 }); } }
+  }
+  const after2 = days.slice(2); const worse = after2.every((d, k) => secAt[k + 2] < secAt[k + 1] - 0.05 + 1e-9);
+  console.log((days.length >= 2 && worse ? 'PASS' : 'FAIL') + ' notices stop after two acknowledgements unless security worsens', `notices on days ${days.join(', ')} at security ${secAt.join(', ')}`);
+}

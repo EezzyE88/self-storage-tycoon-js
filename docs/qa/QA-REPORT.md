@@ -787,3 +787,46 @@ Honest read: idle play no longer pins at 100%, and neglect now collapses. But th
 - The sandboxed preview blocks browser storage, so the preview tests the save-server path, not the browser one.
 - One desktop Playwright screenshot timed out (software WebGL); the page stayed responsive.
 - On phones, the break-in banner briefly covers the "No rush" line of the card.
+
+
+### Pre-merge fixes 1–5 (same branch, build `foundations-2`)
+
+**Requested by the user:** "Implement pre-merge recommendations 1 through 5 on work/foundations, test them, and update the preview without merging to master".
+
+#### Changes
+1. **New game never silently replaces a game.**
+   - New game, from the title or the menu (including custom sandbox), asks first and names the game being replaced.
+   - The replaced game is copied to a separate "previous game" slot that autosave never writes.
+   - "Restore previous game" on the title screen and in the menu swaps it back; the game you leave becomes the previous game.
+   - Loading a code or file also keeps the replaced game.
+   - Where browser storage is blocked, the dialog says the game will be replaced and offers "Make a save code".
+2. **Save server only where it exists.** Inside the preview (placeholder rewritten) or when the page runs on localhost. Elsewhere it is off: no requests and no local-network prompts.
+3. **Banner on phones:** in portrait, it sits just below any request cards, rechecked every 200 ms while shown, because cards can appear a frame later.
+4. **Security notice:** after two acknowledgements, it only returns if security drops by 0.05 or more since the last notice.
+5. **Build name:** `js/version.js` (`foundations-2`, 2026-10-02) appears on the title screen, in the menu ("Mention this when you send feedback"), and in save metadata.
+
+#### Verified (Playwright Chromium, plus headless)
+- **`s_found2.js`, 390×844 and 1280:**
+  - The first New game has no prompt.
+  - With a game in progress, menu → New game asks with the right name, day and cash. Cancel keeps the game.
+  - On the title screen, New game asks too. Start new game: the previous slot holds Maple Day 4.
+  - After a reload, "Restore previous game · Maple Street Storage · Day 4 · $26,164" brings back the identical name, day and cash. The slot then holds the other game.
+  - Phone: the banner top is at 311 px, below the cards' bottom at 302 px; no overlap.
+- **`s_gate.js`:**
+  - Served from a non-localhost address (169.254.0.21): save server disabled, 0 requests to :8000, browser autosave OK.
+  - Desktop: the banner and cards don't overlap.
+- **`tcalm`:** with the player acknowledging, there were 2 notices in 2 years (days 2 and 48), against about 16 before.
+- **Regressions:**
+  - Determinism and continuation: true. Tutorial walkthrough: day 5.
+  - `tfin`, `tfix` and `tdrama`: pass.
+  - `s_r11` on phone: clean.
+- **Maple year 1, this run** (cash):
+  - Idle: $31,260 (5/23 rented); in the previous run it was $34,572 (10/23).
+  - Good: $41,016.
+  - Strategic: $38,569.
+
+#### Not verified / known issues
+- iPhone Safari: storage, backgrounding and Private Browsing.
+- The preview can't exercise browser storage, the previous-game slot, or the switched-off save server. On the preview, New game warns that it will replace the game.
+- Desktop Playwright screenshots time out intermittently (software WebGL); the page logic still ran.
+- Idle Maple was harsher in this run. The likely cause is break-ins now aimed at dark units, which an idle property has more of. Re-check over several seeds before the next balance pass.

@@ -250,8 +250,16 @@ export function installShowcase(game) {
     const b = banQ.shift(); const el = $('celebrate'); if (!b) { banBusy = false; return; } banBusy = true;
     game.audio.play(b.tone ? 'attention' : 'flourish');
     el.innerHTML = `<div class="cb"><span class="cb-k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.6L21 9l-5.2 4.2L17.6 20 12 16.2 6.4 20l1.8-6.8L3 9l6.6-.4z"/></svg>${esc(b.kicker)}</span><b>${esc(b.title)}</b>${b.sub ? `<small>${esc(b.sub)}</small>` : ''}</div>`;
+    // phone portrait: never cover a request card - sit just below the card stack (pre-merge fix 3)
+    const place = () => { let top = '';
+      if (matchMedia('(max-width: 600px) and (orientation: portrait)').matches && !document.body.classList.contains('sheet-open')) {
+        const bottom = [...document.querySelectorAll('#feed .convo')].reduce((a, c) => Math.max(a, c.getBoundingClientRect().bottom), 0);
+        if (bottom > 0) top = Math.round(Math.max(bottom + 10, innerHeight * 0.36)) + 'px';
+      }
+      if (el.style.top !== top) el.style.top = top; };
+    place(); clearInterval(el._place); el._place = setInterval(place, 200); // cards can arrive a frame after the event
     el.classList.toggle('warn', b.tone === 'warn'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
-    setTimeout(() => { el.classList.remove('on'); setTimeout(nextBanner, 450); }, 3600);
+    setTimeout(() => { el.classList.remove('on'); setTimeout(() => { clearInterval(el._place); nextBanner(); }, 450); }, 3600);
   }
   function officeAt() { const o = Object.values(game.sim.s.objects).find((q) => q.type === 'office'); return o ? { x: o.x + (o.w || 1) / 2, z: o.y + (o.h || 1) / 2, f: 0 } : { x: rend.center.x, z: rend.center.z, f: 0 }; }
   function pop(x, z, f, text, cls) {

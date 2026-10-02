@@ -512,3 +512,6 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #celebrate.warn .cb-k { color: #f2c14e; }
 .convo .calm { display: block; margin-top: 6px; font-size: 12px; opacity: 0.75; }
 .goalnote { margin-top: 8px; }
+
+.title-build { margin-top: 6px; font-size: 11px; opacity: 0.55; letter-spacing: 0.04em; }
+.confirm-new p { margin: 6px 0; }

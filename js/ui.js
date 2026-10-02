@@ -129,11 +129,17 @@ export class UI {
       case 'tutWhy': this.tutWhy = !this.tutWhy; this.renderTut(true); break;
       case 'menu': this.showMenu(); break;
       case 'modalClose': this.closeModal(); break;
-      case 'new': this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); break;
+      case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); }); break;
+      case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then(() => run()); break; }
+      case 'replaceNo': this.pendingNew = null; if (this.title) this.showTitle(); else this.closeModal(); break;
+      case 'restoreKept': { const k = this.g.localsave.getKept(); if (!k) break;
+        (async () => { const cur = this.g.playing() ? { code: await this.g.saveCode(), meta: this.g.saveMeta(), at: Math.floor(Date.now() / 1000) } : this.g.localsave.get().main;
+          if (await this.g.loadCode(k.code)) { if (cur) this.g.localsave.keep(cur); this.closeModal(); this.sfx('confirm'); const m = k.meta || {}; this.toast(`Restored your previous game: ${m.name || 'Saved game'}, Day ${+m.day || 1}, ${money(+m.cash || 0)} cash.${cur ? ' The game you left is now the previous game.' : ''}`, 'good'); this.g.autosave(); }
+          else this.toast('The previous game could not be loaded.', 'bad'); })(); break; }
       case 'scenarios': this.showScenarios(); this.sfx('click'); break;
       case 'sandboxSetup': this.showSandbox(); this.sfx('click'); break;
       case 'sbOpt': { this.sb[el.dataset.k] = JSON.parse(v); this.showSandbox(); this.sfx('click'); break; }
-      case 'sbStart': this.closeModal(); this.g.newGame('custom', { ...this.sb }); this.title = false; this.sfx('confirm'); break;
+      case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.sfx('confirm'); }); break; }
       case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
       case 'acquire': { const r = this.g.acquire(v, el.dataset.m); this.toast(r.msg, r.ok ? 'good' : 'bad'); this.renderSheet(true); break; }
       case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
@@ -153,7 +159,7 @@ export class UI {
           const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
           this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded, and no backup worked. Load a save code or file instead.', 'bad');
         }); break; }
-      case 'loadCode': this.g.loadCode(this.root.querySelector('#loadTa').value).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else { this.toast('That save code could not be read', 'bad'); const ta = this.root.querySelector('#loadTa'); if (ta) { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); } } }); break;
+      case 'loadCode': { const code = this.root.querySelector('#loadTa').value; this.g.keepCurrent(this.contSave).then(() => this.g.loadCode(code)).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else { this.toast('That save code could not be read', 'bad'); const ta = this.root.querySelector('#loadTa'); if (ta) { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); } } }); break; }
       case 'loadFile': this.root.querySelector('#loadFile').click(); break;
       case 'copy': { const ta = this.root.querySelector('#saveTa'); ta.select(); try { navigator.clipboard.writeText(ta.value); this.toast('Save code copied', 'good'); } catch (err) { document.execCommand && document.execCommand('copy'); } break; }
       case 'music': this.g.audio.musicOn = !this.g.audio.musicOn; this.g.audio.applyVol(); this.showMenu(); break;
@@ -165,7 +171,7 @@ export class UI {
   }
   onInput(e) {
     const el = e.target; if (el.dataset.vol) this.g.audio.setVol(el.dataset.vol, +el.value);
-    if (el.id === 'loadFile' && el.files[0]) { el.files[0].text().then((t) => this.g.loadCode(t)).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else this.toast('That file is not a valid save', 'bad'); }); }
+    if (el.id === 'loadFile' && el.files[0]) { el.files[0].text().then((t) => this.g.keepCurrent(this.contSave).then(() => this.g.loadCode(t))).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else this.toast('That file is not a valid save', 'bad'); }); }
   }
   do(action, feedback = false) {
     const r = this.sim.dispatch(action) || {};
@@ -1142,16 +1148,26 @@ export class UI {
   }
 
   // ------------------------------------------------------------ TITLE / MENU / SAVE
+  guardNew(run) { // New game never silently replaces a game the player has (pre-merge fix 1)
+    const g = this.g, meta = g.playing() ? g.saveMeta() : this.contSave && this.contSave.meta;
+    if (!meta) return run();
+    this.pendingNew = run; const keep = g.localsave.ok;
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal confirm-new"><h2>Start a new game?</h2>
+      <p>Your current game: <b>${esc(meta.name || 'Saved game')}</b> · Day ${+meta.day || 1} · ${money(+meta.cash || 0)}.</p>
+      <p class="note">${keep ? 'It will be kept as your <b>previous game</b>. You can restore it from the title screen or the menu.' : 'This browser cannot store a second game, so the new game will replace it. Make a save code first if you want to keep it.'}</p>
+      <div class="row wrap" style="margin-top:10px"><button class="btn pri" data-a="replaceYes">Start new game</button>${keep ? '' : '<button class="btn" data-a="saveCode">Make a save code</button>'}<button class="btn" data-a="replaceNo">Cancel</button></div></div></div>`;
+  }
+  keptLabel() { const k = this.g.localsave && this.g.localsave.getKept(); if (!k) return ''; const m = k.meta || {}; return `${esc(m.name || 'Saved game')} · Day ${+m.day || 1} · ${money(+m.cash || 0)}`; }
   showTitle() {
     this.title = true;
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
-      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
+      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Turnaround, Go Vertical, Climate Boom</small></button>
       <button class="btn" data-a="new" data-v="empty">Empty Lot <small>Sandbox · $60,000</small></button>
       <button class="btn" data-a="sandboxSetup">Custom sandbox <small>Market, capital, demand, wear</small></button>
       <button class="btn" data-a="new" data-v="creative">Creative <small>Instant, free building</small></button>
       <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>
-      <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div></div>`;
+      <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
   }
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
   autosaveNote() {
@@ -1167,7 +1183,7 @@ export class UI {
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
-      <div class="menu-list"><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button></div>
+      <div class="menu-list"><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}</div>
       <h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
       <div class="row wrap"><button class="btn sm" data-a="music">Music ${a.musicOn ? 'on' : 'off'}</button><button class="btn sm" data-a="fps">FPS meter ${this.g.showFps ? 'on' : 'off'}</button></div>
       <h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button><button class="btn sm" data-a="lens">Miniature lens ${this.g.showcase && this.g.showcase.lensPref ? 'on' : 'off'}</button></div>
@@ -1175,7 +1191,8 @@ export class UI {
       <p class="note">Tip: tap any customer, car or staff member to follow them and read their story.</p>
       <h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="new" data-v="empty">Empty Lot sandbox</button><button class="btn" data-a="sandboxSetup">Custom sandbox</button><button class="btn" data-a="new" data-v="creative">Creative lot</button></div>
       <h3>Controls</h3><p class="note">Drag to pan, pinch or scroll to zoom, rotate with the side buttons (Q/E). While building, drag to place and use two fingers (or right-drag) to pan. Space pauses, 1-3 set speed, Esc cancels.</p>
-      <p class="note" id="autosaveNote">${this.autosaveNote()}</p></div></div>`;
+      <p class="note" id="autosaveNote">${this.autosaveNote()}</p>
+      <p class="note build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')} · ${esc(this.g.BUILD ? this.g.BUILD.date : '')}. Mention this when you send feedback.</p></div></div>`;
   }
   async showSave() {
     const code = await this.g.saveCode();
