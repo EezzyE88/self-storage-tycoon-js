@@ -41,6 +41,7 @@ Seven bugs and four friction points were fixed. Each bug fix has a regression ch
 | UI fuzz on phone, before the clipboard fix | 648 taps | 0 page errors, 0 bad text |
 | UI fuzz on phone, final code | 594 taps | 0 page errors, 0 bad text |
 | UI fuzz on desktop, before the clipboard fix | 441 taps | 3 page errors, 1 cause (BUG-06) |
+| UI fuzz on desktop, final code | 355 taps | 0 page errors, 0 bad text |
 
 ### Bugs found and fixed
 | ID | Severity | Bug | Cause | Fix |
@@ -154,7 +155,7 @@ The scenario is winnable. The test bot's layout stopped working, not the game.
 | tfuzz, 365 days x 3 seeds | 178,151 actions, no issues |
 | Browser, phone size | s_play_sb, s_sandbox, s_found, s_found2, s_hud and s_r14 run with no page errors. The phone top bar fits: the rightmost element ends at 382 px on a 390 px screen. s_found's "Failed to fetch" comes from the test's save server being off, as before. |
 | Browser, desktop | s_sandbox has no errors |
-| UI fuzz, final code | Phone: 594 taps, 0 page errors, 0 bad text. Desktop: DESKTOP_RESULT |
+| UI fuzz, final code | Phone: 594 taps, 0 page errors, 0 bad text. Desktop: 355 taps, 0 page errors (BUG-06 no longer appears), 0 bad text. |
 
 ## 6. Files changed
 | File | Change |
