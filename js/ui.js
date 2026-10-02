@@ -477,7 +477,7 @@ export class UI {
     h += `</div><p class="note">${s.carts.length} carts total · ${str} stranded or damaged.</p>`;
     h += `<h3>Policies</h3><div class="list">
       <div class="item"><div class="grow"><b>Porters recover carts</b><small>Porters return stranded carts to their corral</small></div><button class="toggle ${s.policies.porterCarts ? 'on' : ''}" data-a="policy" data-v="porterCarts" aria-label="Toggle"></button></div>
-      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, the Owner does make-readies, cleaning and cart runs</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
+      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, the Owner picks up to 3 routine chores a day (make-readies, cleaning, cart runs). Repairs always wait for you or a vendor.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
       <div class="item"><div class="grow"><b>Preventive maintenance</b><small>Techs service equipment before it fails</small></div><button class="toggle ${s.policies.preventive ? 'on' : ''}" data-a="policy" data-v="preventive" aria-label="Toggle"></button></div></div>`;
     return this.sheet('Operate', `${s.staff.length} staff · ${tasks.length} tasks`, h);
   }
@@ -494,7 +494,7 @@ export class UI {
     const chg = (a, b, f) => b == null ? '' : ` <span class="${a >= b ? 'up' : 'down'}">${a >= b ? '▲' : '▼'} ${f(Math.abs(a - b))}</span>`;
     const L = R.lost || {}; const lostN = Object.values(L).reduce((a, b) => a + b, 0);
     return `<h3>Monthly report · Month ${R.month}</h3><div class="report"><div class="grade g${R.grade}">${R.grade}</div><div class="rgrow">
-      <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span><span>Shoppers who didn't sign</span><span>${lostN}</span></div>
+      <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span>${R.upkeep != null ? `<span>Upkeep</span><span class="${R.upkeep < 6 ? 'neg' : ''}">${R.upkeep}/10${R.stale ? ` · ${R.stale} job${R.stale > 1 ? 's' : ''} waiting 2+ days` : ''}</span><span>Growth</span><span>${R.growPts}/15 · rent roll ${R.growth >= 0 ? '+' : ''}${Math.round(R.growth * 100)}% in 3 months</span>` : ''}<span>Shoppers who didn't sign</span><span>${lostN}</span></div>
       <small class="note">${esc(R.season)}${R.comps.length ? ' · Competing with ' + esc(R.comps.join(', ')) : ''}</small></div></div>
       ${R.sug.length ? `<div class="list sug">${R.sug.map((t, i) => `<div class="item"><span class="num">${i + 1}</span><div class="grow">${esc(t)}</div></div>`).join('')}</div>` : '<p class="note">Nothing urgent. Keep it up.</p>'}`;
   }
@@ -690,9 +690,11 @@ export class UI {
 
   // ------------------------------------------------------------ FEED / TOASTS / BUBBLES
   toast(text, kind = '') {
+    // one message at a time on phones; a repeat of a visible message refreshes it instead of stacking
+    const dup = this.toasts.find((t) => t.text === text); if (dup) { dup.t = performance.now(); dup.el.classList.remove('out'); return; }
     const feed = this.$('feed'); const el = document.createElement('div'); el.className = 'toast ' + kind; el.innerHTML = `<span class="dot"></span><span>${esc(text)}</span>`;
-    feed.appendChild(el); this.toasts.push({ el, t: performance.now() });
-    while (this.toasts.length > (this.phone() ? 2 : 3)) { const o = this.toasts.shift(); o.el.remove(); }
+    feed.appendChild(el); this.toasts.push({ el, t: performance.now(), text });
+    while (this.toasts.length > (this.phone() ? 1 : 3)) { const o = this.toasts.shift(); o.el.remove(); }
   }
   renderFeed(force = false) {
     const s = this.sim.s; const key = s.convos.map((c) => c.id).join(',') + ':' + (s.convos.length ? Math.floor(s.t / 15) : 0) + ':' + !!this.convoAll;
@@ -714,7 +716,10 @@ export class UI {
     feed.prepend(frag);
   }
   addBubble(th) {
-    if (this.bubbles.length > 7) { const o = this.bubbles.shift(); o.el.remove(); }
+    // merge identical complaints ("Loading bays are full." x3) into one tag with a count
+    const same = this.bubbles.find((b) => b.th.text === th.text);
+    if (same) { same.n = (same.n || 1) + 1; same.t = performance.now(); same.el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)} <b class="n">×${same.n}</b>`; return; }
+    if (this.bubbles.length > (this.phone() ? 2 : 7)) { const o = this.bubbles.shift(); o.el.remove(); }
     const el = document.createElement('div'); el.className = 'bub ' + th.kind;
     el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)}`;
     this.bubRoot.appendChild(el); this.bubbles.push({ el, th, t: performance.now(), ag: th.ag });
@@ -798,7 +803,8 @@ export class UI {
     const b = this.title ? null : curBeat(this.sim);
     if (!b) {
       this.guideStep = null;
-      const off = !this.title && s.lessonOffer && lessonById(s.lessonOffer);
+      const held = this.phone() && ((this.g.showcase && this.g.showcase.bannerBusy && this.g.showcase.bannerBusy()) || this.toasts.length > 0); // one card at a time on phones
+      const off = !this.title && !held && s.lessonOffer && lessonById(s.lessonOffer);
       const key = 'offer:' + (off ? off.id : '');
       if (!force && key === this.tutKey) return; this.tutKey = key; this.rend.setFocus(null);
       box.innerHTML = off ? `<div class="tut offer"><div class="ch"><span>Optional lesson</span></div><h4>${off.title}</h4><p class="intro">${off.body}</p><div class="row"><button class="btn pri" data-a="lessonStart" data-v="${off.id}">Start lesson</button><button class="skip" data-a="lessonLater" data-v="${off.id}">Not now</button></div></div>` : '';

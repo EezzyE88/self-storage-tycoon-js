@@ -7,7 +7,7 @@ A 3D self-storage tycoon game for **iPhone Safari** and desktop browsers. You bu
 ## Source version (from available evidence)
 | Item | Value | Evidence |
 |---|---|---|
-| Game source commit | `a823f496c12bb503b53ba26c913b9dd34b93fcd6` (`a823f49`), "Round 11: market pressure, report cards, core tutorial + lessons, operator career, renovations, phone declutter", 2026-10-01 01:37:22 UTC | `git log` in this repository |
+| Game source commit | Round 12 (see `git log`); before that `a823f496c12bb503b53ba26c913b9dd34b93fcd6` (`a823f49`), "Round 11: market pressure, report cards, core tutorial + lessons, operator career, renovations, phone declutter", 2026-10-01 01:37:22 UTC | `git log` in this repository |
 | Branch | `master` | `git branch` |
 | History | 6 commits: `5550d8f` baseline → `ec22ac9` Showcase → `100d18c` autosave server restore → `98f4c30` Round 9 → `6851b44` Round 10 → `a823f49` Round 11 | `git log` |
 | Packaging commit | One commit on top of `a823f49` that adds only `README.md`, `PACKAGE_MANIFEST.md`, `docs/` and `tests/`. No game files changed. | `git show --stat HEAD` |
@@ -77,6 +77,8 @@ Run from inside `tests/headless`; they import `../../js/`.
 | `t9f.mjs` | 365-day Maple soak plus scenario soaks | Ran, exit 0 (reports numbers; no pass/fail assertions) |
 | `tp.mjs`, `tp2.mjs` | Market-pressure balance soaks (idle / absent / good / strategic) | Ran, exit 0 (reports numbers) |
 | `tr.mjs` | Unit split renovation, career tier, rush build | Ran, exit 0 (split and rush behave as expected) |
+| `tbal.mjs` | Round 12 balance check: idle / absent / good / strategic / pro bots. Set `DAYS=730` for two years. | Run, exit 0 (prints numbers; see QA report Round 12) |
+| `tsc.mjs` | Round 12 scenario check: idle vs. fixer vs. manager vs. builder (`SC=turnaround` to limit) | Run, exit 0: idle loses Turnaround, builder wins on day 68 |
 | `t9.mjs`, `t9b.mjs`, `t9d.mjs`, `t9e.mjs`, `dbg.mjs` | Round 9 era checks and debugging | Ran, exit 0. They're older and may print values without asserting anything. |
 | `tv.mjs`, `tw.mjs` | Build-layout planners | **Need a JSON argument**. They exit 1 when run with none, so they aren't pass/fail tests. |
 
@@ -105,7 +107,7 @@ cd tests/browser-qa && node run.js d s_r11.js   # d = 1280x800 desktop, m = 390x
   - Mid-tutorial saves from before Round 11 may resume at the wrong part (the tutorial part numbering changed; no migration).
   - Local autosave needs the save server plus a fixed `?cid=`.
   - Other static hosts have no autosave.
-- **Economy:** idle play is still fairly safe on Maple Street, because the Owner does chores automatically. Report-card grades don't separate play styles strongly. Market pressure is off in scenarios, so Turnaround is easy. A staffed Maple loses money.
+- **Economy (Round 12):** idle play now declines (Maple: about 30% occupancy by the end of year 1, cash falling in year 2), and grades separate play styles. The numbers come from simple bots, not people. Go Vertical and Climate Boom now have a rival competitor but haven't been re-checked for winnability with a building player. A staffed Maple loses money.
 - **Unverified features:** the climate-conversion renovation's success path; the career-tier sync (it runs in the browser only).
 - **Polish issues:** the HUD showed "Day 1" in a QA run that had stepped the simulation manually (unclear whether that's a harness artifact); the "Tutorial" subtitle stays after graduation; competitors don't appear on the map; tapping a pin cluster opens only the first object.
 - **Limits:** at most 5 properties.

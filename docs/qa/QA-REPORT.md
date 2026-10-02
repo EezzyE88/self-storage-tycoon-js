@@ -570,3 +570,54 @@ Honest read: idle play no longer pins at 100%, and neglect now collapses. But th
 - Determinism and continuation: true. Tutorial walkthrough: 8 core parts, then all 4 Maple lessons complete. Scenario soaks are unchanged.
 - Browser QA on desktop and mobile (s_r11.js): report card, market, reviews, career, lessons, the lesson card, the renovate button and the rush toggle all render. No page errors, no undefined/NaN, no horizontal overflow.
 - Not done (needs people or hardware): a real iPhone Safari test and human playtests.
+
+
+## Round 12: idle play, grades, scenario pressure, phone declutter (2026-10-01)
+
+**Requested by the user:** "Implement recommendations", following the automated playtest that found idle play winning.
+
+### Changes
+1. **Idle play declines.**
+   - The Owner now auto-does only **3 routine chores a day** (make-ready, cleaning, carts). **Repairs are never automatic.**
+   - A broken gate (low access) and dark lots (low security) raise move-out risk, and shoppers who see a broken gate are less likely to sign.
+   - Reputation has a stronger effect on shopper traffic and on the rent shoppers accept.
+2. **Grades reward running and growing the property.**
+   - Occupancy weight drops from 30 to 20 points.
+   - New **Upkeep** score (out of 10): share of equipment in working order, minus jobs waiting 2+ days.
+   - New **Growth** score (out of 15): rent roll vs. 3 months ago.
+   - Scaled to 100. The report card shows both new rows, and a new top suggestion names broken equipment and the gate.
+3. **Scenario pressure.** Scenarios now have seasons, reviews, rising costs and **one rival competitor**, which opens around day 80–110. Maple's "settled demand" ×0.4 is not applied in scenarios.
+4. **Phone declutter.**
+   - One notification visible at a time; duplicate notifications refresh instead of stacking.
+   - Identical customer complaints merge into one tag with a count (×N), and at most 2 tags show at once.
+   - The optional-lesson card waits until milestone banners and notifications have cleared.
+
+### Verified (headless and emulation only)
+- Determinism and continuation (`t9c`): true. Tutorial walkthrough (`twalk`): done, day 5.
+- **Maple year 1** (`tbal`):
+
+| Bot | Cash | Units rented | Rent roll | Grades |
+|---|---|---|---|---|
+| Idle | $33,130 | 5/23 | $585 | BCDFFFDFFFDF |
+| Absent | $19,270 | 0/23 | — | — |
+| Good | $42,714 | 22/23 | — | B's |
+| Strategic | $37,780 | 34/34 | $3,673 | — |
+| Pro | $34,682 | 33/34 | — | — |
+
+  - Before this round, idle ended year 1 at $44,122 with 22/23 rented.
+  - The pro bot reached an A in a growth month.
+- **Maple year 2** (cash): idle **$29,518 (falling)**; absent $4,848; good $58,105; strategic $62,100; pro $53,849.
+- **Turnaround** (`tsc`):
+  - Idle: lost, 15/23 rented.
+  - Fixer and manager: lost on the $3,000 rent-roll goal.
+  - Builder (adds 8 drive-up units): **won on day 68**.
+- **Browser QA** (Playwright, desktop and 390×844 emulation): no page errors, no undefined/NaN, no horizontal overflow.
+  - `s_r12.js` confirmed a duplicate notification refreshes instead of stacking, three identical complaints merge into one tag "×3", and a day-95 idle report card grades D with Upkeep 0/10 and the repair suggestion first.
+
+### Not verified
+- Real iPhone, human players.
+- Winnability of Go Vertical and Climate Boom with the rival (no building bot for them).
+- Whether the lesson-offer hold ever starves the card during very busy play.
+
+### Known issue seen in QA
+- A milestone banner can sit over the top of an open Business sheet on phones (existing behavior).

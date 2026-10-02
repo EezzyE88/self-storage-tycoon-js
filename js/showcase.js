@@ -245,6 +245,7 @@ export function installShowcase(game) {
     banQ.push({ kicker, title, sub }); if (banQ.length > 3) banQ.shift(); if (!banBusy) nextBanner();
   }
   sc.celebrate = celebrate;
+  sc.bannerBusy = () => banBusy || banQ.length > 0; // the UI holds lesson offers until celebrations finish
   function nextBanner() {
     const b = banQ.shift(); const el = $('celebrate'); if (!b) { banBusy = false; return; } banBusy = true;
     game.audio.play('flourish');
