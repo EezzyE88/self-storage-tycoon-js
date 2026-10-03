@@ -819,13 +819,24 @@ export class UI {
     feed.prepend(frag);
   }
   addBubble(th) {
-    // merge identical complaints ("Loading bays are full." x3) into one tag with a count
+    // Merge identical customer thoughts without letting rapid repeats pin a bubble on-screen forever.
+    // On phones, routine shopper outcomes get a short real-time cooldown; Business still keeps the full lost-demand totals.
+    const now = performance.now();
     const same = this.bubbles.find((b) => b.th.text === th.text);
-    if (same) { same.n = (same.n || 1) + 1; same.t = performance.now(); same.el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)} <b class="n">×${same.n}</b>`; return; }
-    if (this.bubbles.length > (this.phone() ? 2 : 7)) { const o = this.bubbles.shift(); o.el.remove(); }
+    if (same) {
+      same.n = (same.n || 1) + 1;
+      same.el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)} <b class="n">×${same.n}</b>`;
+      return;
+    }
+    const routine = th.text === 'Nothing ready to rent today.' || th.text === "I'll keep shopping.";
+    this.bubbleSeen ||= new Map();
+    const seen = this.bubbleSeen.get(th.text) || 0;
+    if (this.phone() && routine && now - seen < 12000) return;
+    this.bubbleSeen.set(th.text, now);
+    if (this.bubbles.length >= (this.phone() ? 2 : 7)) { const o = this.bubbles.shift(); o.el.remove(); }
     const el = document.createElement('div'); el.className = 'bub ' + th.kind;
     el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)}`;
-    this.bubRoot.appendChild(el); this.bubbles.push({ el, th, t: performance.now(), ag: th.ag });
+    this.bubRoot.appendChild(el); this.bubbles.push({ el, th, t: now, ag: th.ag });
   }
   updateBubbles() {
     const now = performance.now(), s = this.sim.s; const placed = [];
