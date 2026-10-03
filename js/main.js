@@ -283,13 +283,13 @@ function tick(now) {
   perfWatch(rdt, idle || minGap > 0);
   const night = game.rend.ambient.intensity / 0.9;
   const sc = game.showcase, amode = game.ui.title ? 'title' : sc && sc.photo ? 'photo' : (s.speed === 0 || game.ui.modalOpen()) ? 'quiet' : game.ui.tool ? 'build' : night > 0.6 ? 'night' : 'day';
-  const raining = (game.rend.weatherOverride || s.weather) === 'rain';
-  game.audio.update({ night, rain: raining, hvac: game.sim.objs('hvac').filter((h) => game.sim.works(h)).length, speed: s.speed, mode: amode });
-  if (!game.ui.title && raining && now >= weatherFxNext) {
+  const raining = (game.rend.weatherOverride || s.weather) === 'rain', weatherPlaying = raining && s.speed > 0 && !game.ui.modalOpen();
+  game.audio.update({ night, rain: weatherPlaying, hvac: game.sim.objs('hvac').filter((h) => game.sim.works(h)).length, speed: s.speed, mode: amode });
+  if (!game.ui.title && weatherPlaying && now >= weatherFxNext) {
     game.rend.lightning();
     game.audio.thunder(0.45 + Math.random() * 1.25);
     weatherFxNext = now + 9000 + Math.random() * 19000;
-  } else if (!raining && now >= weatherFxNext) weatherFxNext = now + 8000;
+  } else if (!weatherPlaying && now >= weatherFxNext) weatherFxNext = now + 8000;
   fpsN++; fpsT += dt; if (fpsT > 0.5) { if (game.showFps) document.getElementById('fps').textContent = `${Math.round(fpsN / fpsT)} fps · ${game.sim.s.agents.length} agents`; fpsN = 0; fpsT = 0; }
 }
 requestAnimationFrame(loop);

@@ -51,8 +51,8 @@ export class UI {
       <div id="pins"></div>
       <div class="hud">
         <div class="chip brand">${I.logo}<div class="nm" id="pname">Maple Street Storage<small id="pmode">Tutorial</small></div></div>
-        <div class="chip"><div class="cash num" id="cash">$0<small>Cash</small></div><i id="goalbar" class="goalbar" hidden aria-hidden="true"><b></b></i></div>
-        <div class="chip clock"><b class="num" id="clock">7:00 AM</b><span id="date">Day 1</span><span class="sbflag" id="sbflag" hidden></span></div>
+        <div class="chip" data-a="finances" role="button" aria-label="Open finances"><div class="cash num" id="cash">$0<small>Cash</small></div><i id="goalbar" class="goalbar" hidden aria-hidden="true"><b></b></i></div>
+        <div class="chip clock" data-a="calendar" role="button" aria-label="Open calendar"><b class="num" id="clock">7:00 AM</b><span id="date">Day 1</span><span class="sbflag" id="sbflag" hidden></span></div>
         <div class="spacer"></div>
         <div class="chip speed" id="speed"><button data-a="speed" data-v="0" aria-label="Pause">${I.pause}</button><button data-a="speed" data-v="1">1x</button><button data-a="speed" data-v="2">2x</button><button data-a="speed" data-v="4">4x</button></div>
         <button class="iconbtn" data-a="menu" aria-label="Menu">${I.menu}</button>
@@ -96,6 +96,18 @@ export class UI {
   get sim() { return this.g.sim; }
   get rend() { return this.g.rend; }
   sfx(k) { this.g.audio.play(k); }
+  pauseForPopup(kind) {
+    if (this.title) return;
+    this.popupBlocks ||= new Set();
+    if (this.popupBlocks.has(kind)) return;
+    this.popupBlocks.add(kind);
+    if (this.sim.s.speed !== 0) this.do({ type: 'speed', v: 0 });
+  }
+  resumePopup(kind) {
+    if (!this.popupBlocks || !this.popupBlocks.has(kind)) return;
+    this.popupBlocks.delete(kind);
+    if (!this.popupBlocks.size && !this.title) this.do({ type: 'speed', v: 1 });
+  }
 
   // ------------------------------------------------------------ clicks
   onClick(e) {
@@ -103,7 +115,9 @@ export class UI {
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
     switch (a) {
-      case 'speed': this.do({ type: 'speed', v: +v }); this.sfx('click'); break;
+      case 'speed': if (!(this.popupBlocks && this.popupBlocks.size && +v > 0)) this.do({ type: 'speed', v: +v }); this.sfx('click'); break;
+      case 'finances': this.showFinances(); this.sfx('click'); break;
+      case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
       case 'cat': this.cat = v; this.renderSheet(true); this.sfx('click'); break;
       case 'tool': this.pickTool(v); break;
@@ -124,19 +138,20 @@ export class UI {
       case 'close': this.select(null); this.setTab(null); break;
       case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
-      case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); break;
+      case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); if (!this.sim.s.convos.length) this.resumePopup('convo'); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
-      case 'lessonStart': this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = false; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
+      case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = false; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
       case 'rush': this.rush = !this.rush; this.replan(); this.sfx('click'); break;
       case 'convoAll': this.convoAll = !this.convoAll; this.renderFeed(true); break;
       case 'lessonEnd': this.do({ type: 'lesson', op: 'end' }); this.renderTut(true); break;
-      case 'lessonLater': this.do({ type: 'lesson', op: 'dismiss', id: v }); this.renderTut(true); break;
+      case 'lessonLater': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'dismiss', id: v }); this.renderTut(true); break;
       case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
       case 'tutWhy': this.tutWhy = !this.tutWhy; this.renderTut(true); break;
       case 'menu': this.showMenu(); break;
       case 'handbook': this.showHandbook(); this.sfx('click'); break;
       case 'modalClose': this.closeModal(); break;
+      case 'tabFromModal': this.closeModal(); this.setTab(v); break;
       case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); }); break;
       case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then(() => run()); break; }
       case 'replaceNo': this.pendingNew = null; if (this.title) this.showTitle(); else this.closeModal(); break;
@@ -811,6 +826,7 @@ export class UI {
     // phone declutter: one request at a time, most urgent first (critical, then soonest to expire)
     const urg = (c) => (c.sev === 'critical' ? 0 : 1e6) + (c.ttl ? Math.max(0, c.ttl - (s.t - c.t)) : 5e5);
     const order = s.convos.slice().sort((a, b) => urg(a) - urg(b)); const cap = this.convoAll ? 3 : 1;
+    if (order.length) this.pauseForPopup('convo'); else this.resumePopup('convo');
     if (order.length > cap) { const m = document.createElement('button'); m.className = 'convo more'; m.dataset.a = 'convoAll'; m.textContent = this.convoAll ? 'Show fewer' : `+${order.length - cap} more request${order.length - cap > 1 ? 's' : ''} waiting`; frag.appendChild(m); }
     else if (this.convoAll && order.length <= 1) this.convoAll = false;
     for (const c of order.slice(0, cap).reverse()) {
@@ -930,6 +946,7 @@ export class UI {
       if (s.lessonOffer !== this.offerSeen) { this.offerSeen = s.lessonOffer; this.offerT = performance.now(); }
       const held = this.phone() && performance.now() - (this.offerT || 0) < 12000 && ((this.g.showcase && this.g.showcase.bannerBusy && this.g.showcase.bannerBusy()) || this.toasts.length > 0);
       const off = !this.title && !held && s.lessonOffer && lessonById(s.lessonOffer);
+      if (off) this.pauseForPopup('lessonOffer'); else this.resumePopup('lessonOffer');
       const key = 'offer:' + (off ? off.id : '');
       if (!force && key === this.tutKey) return; this.tutKey = key; this.rend.setFocus(null);
       box.innerHTML = off ? `<div class="tut offer"><div class="ch"><span>Optional lesson</span></div><h4>${off.title}</h4><p class="intro">${off.body}</p><div class="row"><button class="btn pri" data-a="lessonStart" data-v="${off.id}">Start lesson</button><button class="skip" data-a="lessonLater" data-v="${off.id}">Not now</button></div></div>` : '';
@@ -1097,6 +1114,7 @@ export class UI {
   // ------------------------------------------------------------ HUD (per frame, cheap)
   update(dt) {
     const s = this.sim.s; const now = performance.now();
+    if (!this.title && this.modalOpen()) this.pauseForPopup('modal');
     const cash = Math.round(s.cash);
     const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small>${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }
     if (now - (this.goalT || 0) > 1000) { // next career goal, always visible as a thin bar under the cash
@@ -1147,8 +1165,10 @@ export class UI {
   slowHud() {
     const sim = this.sim, s = sim.s; const oc = sim.occupancy();
     if (!oc.n || s.creative) { this.cashSub = null; return; }
-    const net = sim.estDailyNet(); // an estimate from paying tenants only, labelled as one
-    this.cashSub = `${oc.occ}/${oc.n} · est ${net >= 0 ? '+' : '-'}$${Math.abs(net).toLocaleString()}${this.phone() ? '/d' : '/day'}`;
+    const start = (dayOf(s.t) - 1) * 1440;
+    const actual = s.ledger.filter((x) => x.t >= start).reduce((a, x) => a + x.amt, 0);
+    const n = Math.round(actual);
+    this.cashSub = `${oc.occ}/${oc.n} · today ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;
   }
   ownerStatus() {
     const s = this.sim.s, owner = s.staff.find((x) => x.role === 'owner'); if (!owner) return '';
@@ -1297,8 +1317,54 @@ export class UI {
     if (c.lastAt) return `Autosave is on (${this.ago(c.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave. Codes and files are backups you can move between devices.`;
     return 'Autosave is on. It saves each in-game day and when you leave. Codes and files are backups you can move between devices.';
   }
+  cashWindow(days) {
+    const s = this.sim.s, from = s.t - days * 1440, rows = s.ledger.filter((x) => x.t >= from);
+    const incoming = rows.filter((x) => x.amt > 0).reduce((a, x) => a + x.amt, 0);
+    const outgoing = -rows.filter((x) => x.amt < 0).reduce((a, x) => a + x.amt, 0);
+    return { rows, incoming, outgoing, net: incoming - outgoing };
+  }
+  showFinances() {
+    const sim = this.sim, s = sim.s, rcv = sim.receivables(), est = sim.estDailyNet();
+    const W = [1, 7, 30].map((d) => [d, this.cashWindow(d)]);
+    const cats = { rent: 'Rent collected', anc: 'Late fees & auctions', opex: 'Operating costs', payroll: 'Payroll', service: 'Vendors / service', marketing: 'Advertising', capex: 'Construction / capital', debt: 'Loan principal', interest: 'Interest', loan: 'Loan proceeds', inject: 'Added funds', subsidy: 'Sandbox funds', other: 'Other' };
+    const w30 = W[2][1], grouped = {};
+    for (const x of w30.rows) grouped[x.cat || 'other'] = (grouped[x.cat || 'other'] || 0) + x.amt;
+    const groupHtml = Object.entries(grouped).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).map(([k,v]) => '<span>' + esc(cats[k] || k) + '</span><span class="' + (v < 0 ? 'neg' : '') + '">' + (v >= 0 ? '+' : '') + money(v) + '</span>').join('');
+    const recent = s.ledger.slice(-16).reverse().map((x) => '<div class="item"><div class="grow"><b>' + esc(x.note || cats[x.cat] || 'Cash movement') + '</b><small>Day ' + dayOf(x.t) + ' · ' + fmtTime(x.t) + ' · ' + esc(cats[x.cat] || x.cat || 'Other') + '</small></div><b class="' + (x.amt < 0 ? 'neg' : '') + '">' + (x.amt >= 0 ? '+' : '') + money(x.amt) + '</b></div>').join('');
+    this.$('modal').innerHTML = '<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Finances</h2><button class="x" data-a="modalClose" aria-label="Close">' + I.x + '</button></div>' +
+      '<div class="stats"><div class="stat"><small>Cash now</small><b>' + money(s.cash) + '</b><div class="n">What is actually in the account.</div></div><div class="stat"><small>Owed to you</small><b>' + money(rcv.amt) + '</b><div class="n">' + rcv.n + ' account' + (rcv.n === 1 ? '' : 's') + ' behind; not cash until collected.</div></div><div class="stat"><small>Normalized operating estimate</small><b class="' + (est < 0 ? 'neg' : '') + '">' + (est >= 0 ? '+' : '-') + money(Math.abs(est)) + '/day</b><div class="n">Paying rent roll spread across the year minus routine operating cost and payroll. This is profitability guidance, not today&apos;s cash movement.</div></div></div>' +
+      '<h3>Actual cash movement</h3><div class="kv">' + W.map(([d,w]) => '<span>Last ' + d + ' day' + (d === 1 ? '' : 's') + '</span><span class="' + (w.net < 0 ? 'neg' : '') + '">' + (w.net >= 0 ? '+' : '') + money(w.net) + ' · in ' + money(w.incoming) + ' / out ' + money(w.outgoing) + '</span>').join('') + '</div>' +
+      '<p class="note">Cash can fall while the property is operationally profitable because rent arrives on billing dates while construction, vendors, debt, advertising and other expenses hit when they occur.</p>' +
+      '<h3>Where the last 30 days went</h3><div class="kv">' + (groupHtml || '<span>No transactions yet</span><span></span>') + '</div>' +
+      '<h3>Recent transactions</h3><div class="list">' + (recent || '<p class="note">No cash movement recorded yet.</p>') + '</div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn" data-a="tabFromModal" data-v="business">Open full Business statement</button></div></div></div>';
+  }
+  calendarEvents() {
+    const s = this.sim.s, now = s.t, day = dayOf(now), E = [];
+    const add = (t, label, detail, kind='') => { if (Number.isFinite(t) && t >= now - 1) E.push({ t, label, detail, kind }); };
+    if (s.scenario && s.scenario.status === 'active') add((s.scenario.deadline - 1) * 1440 + 23 * 60 + 59, 'Scenario deadline', s.scenario.name || 'Scenario');
+    const bills = new Map();
+    for (const L of Object.values(s.leases)) {
+      if (L.nextBill >= day) { const x = bills.get(L.nextBill) || { n:0, amt:0 }; x.n++; x.amt += L.rent; bills.set(L.nextBill, x); }
+      if (L.planDue) add((L.planDue - 1) * 1440 + 7 * 60, 'Payment plan due', (s.objects[L.unit] || {}).name || 'Tenant account');
+      if (L.noticeUntil) add((L.noticeUntil - 1) * 1440 + 7 * 60, 'Lien notice period ends', (s.objects[L.unit] || {}).name || 'Tenant account');
+      if (L.auctionDay) add((L.auctionDay - 1) * 1440 + 10 * 60, 'Lien auction', (s.objects[L.unit] || {}).name || 'Scheduled unit', 'important');
+    }
+    for (const [d,x] of bills) add((d - 1) * 1440 + 7 * 60, 'Tenant billing day', x.n + ' tenant' + (x.n===1?'':'s') + ' · ' + money(x.amt) + ' contracted rent');
+    for (const d of s.debt || []) if (d.next) add((d.next - 1) * 1440 + 7 * 60, 'Term-loan payment', money(d.pmt) + ' scheduled');
+    for (const o of s.orders.filter((x) => x.st === 'construction')) if (!o.waiting) add(now + Math.max(1, Math.ceil((1 - (o.prog || 0)) * o.dur)), 'Estimated construction finish', o.label || 'Construction');
+    for (const cp of (s.mkt && s.mkt.comp || [])) if (cp.opens >= day) add((cp.opens - 1) * 1440 + 8 * 60, 'Competitor opens', cp.name);
+    return E.sort((a,b) => a.t - b.t).slice(0, 40);
+  }
+  showCalendar() {
+    const E = this.calendarEvents(), now = this.sim.s.t;
+    const rows = E.map((e) => { const d=dayOf(e.t), same=d===dayOf(now); return '<div class="item"><div class="grow"><b>' + esc(e.label) + '</b><small>' + esc(e.detail || '') + '</small></div><span class="pill ' + (e.kind==='important'?'r':same?'a':'b') + '">Day ' + d + '<br>' + fmtTime(e.t) + '</span></div>'; }).join('');
+    this.$('modal').innerHTML = '<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Calendar</h2><button class="x" data-a="modalClose" aria-label="Close">' + I.x + '</button></div>' +
+      '<p class="note">Day ' + dayOf(now) + ' · ' + fmtTime(now) + '. Dates below come from current leases, collections, loans, construction, competitors and scenario state; estimated construction dates can move if prerequisites block work.</p>' +
+      '<div class="list">' + (rows || '<p class="note">No important scheduled dates yet.</p>') + '</div></div></div>';
+  }
   modalOpen() { return !!this.$('modal').firstChild; }
-  closeModal() { this.$('modal').innerHTML = ''; this.title = false; this.renderTut(true); }
+  closeModal() { this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>

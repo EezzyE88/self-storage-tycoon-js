@@ -81,7 +81,7 @@ export class Audio {
     // automation events pile up if re-issued every frame: only touch a param when its target moves
     this.ramp(this.ambG.gain, 0.12 + (1 - night) * 0.1, t, 0.5);
     this.ramp(this.humG.gain, Math.min(0.08, hvac * 0.03), t, 0.5);
-    this.ramp(this.rainG.gain, rain ? 0.07 : 0, t, 1);
+    this.ramp(this.rainG.gain, rain ? 0.045 : 0, t, 0.45);
     if (!this.musicOn || this.vol.music <= 0) return;
     this.music(t, night, mode);
   }

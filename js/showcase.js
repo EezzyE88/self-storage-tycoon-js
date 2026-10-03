@@ -247,7 +247,8 @@ export function installShowcase(game) {
   sc.celebrate = celebrate;
   sc.bannerBusy = () => banBusy || banQ.length > 0; // the UI holds lesson offers until celebrations finish
   function nextBanner() {
-    const b = banQ.shift(); const el = $('celebrate'); if (!b) { banBusy = false; return; } banBusy = true;
+    const b = banQ.shift(); const el = $('celebrate'); if (!b) { banBusy = false; game.ui.resumePopup('celebrate'); return; } banBusy = true;
+    game.ui.pauseForPopup('celebrate');
     game.audio.play(b.tone ? 'attention' : 'flourish');
     el.innerHTML = `<div class="cb"><span class="cb-k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.6L21 9l-5.2 4.2L17.6 20 12 16.2 6.4 20l1.8-6.8L3 9l6.6-.4z"/></svg>${esc(b.kicker)}</span><b>${esc(b.title)}</b>${b.sub ? `<small>${esc(b.sub)}</small>` : ''}</div>`;
     // phone portrait: never cover a request card - sit just below the card stack (pre-merge fix 3)
