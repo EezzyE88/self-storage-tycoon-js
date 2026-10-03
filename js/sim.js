@@ -57,7 +57,6 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
 }
 const COMP_NAMES = ['StorQuik Self Storage', 'Carlsbad Box & Lock', 'SecureSpace on 5th', 'Coastline Storage Co.', 'Depot Self Storage'];
 const M_open_comps = (sim) => sim.openComps().length > 0;
-const OWNER_AUTO_PER_DAY = 3; // routine chores the Owner picks up unasked each day (repairs always wait for the player)
 function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, marketing: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }
 
 // ---------------------------------------------------------------- Sim
@@ -987,11 +986,16 @@ export class Sim {
     if (!ROLES.owner.can.includes(t.need)) return { ok: false, msg: 'The Owner cannot do this work - it needs a Tech or vendor' };
     if (t.assigned && t.assigned !== owner.id) return { ok: false, msg: 'Already assigned to someone else' };
     if (ag.task === t.id) return { ok: false, msg: 'Owner is already on it' };
-    if (ag.task || (ag.queue && ag.queue.length)) { ag.queue = ag.queue || []; if (!ag.queue.includes(t.id)) ag.queue.push(t.id); t.assigned = owner.id; t.queued = true; this.emit('task_assigned'); return { ok: true, msg: 'Owner is busy - task queued' }; }
+    const need = this.taskHours(t), left = this.workRemaining(owner);
+    if (left + 1e-9 < need) { this.emit('refuse'); return { ok: false, msg: `Owner has ${left}h available today; this needs ${need}h. Wait for tomorrow, hire staff, or use a vendor.` }; }
+    if (ag.task || (ag.queue && ag.queue.length)) {
+      if (!this.reserveTaskWork(owner, t)) { this.emit('refuse'); return { ok: false, msg: `Owner has ${this.workRemaining(owner)}h available today; this needs ${need}h.` }; }
+      ag.queue = ag.queue || []; if (!ag.queue.includes(t.id)) ag.queue.push(t.id); t.assigned = owner.id; t.queued = true; this.emit('task_assigned'); return { ok: true, msg: `Owner queued this work (${need}h) · ${this.workRemaining(owner)}h left today` };
+    }
     t.unreachable = null;
     if (!this.startTask(ag, t)) return { ok: false, msg: 'The Owner has no walkable route to that spot' };
     this.emit('task_assigned');
-    return { ok: true, msg: 'Owner is on the way' };
+    return { ok: true, msg: `Owner started this work (${need}h) · ${this.workRemaining(owner)}h left today` };
   }
   act_ownerMakeReady(a) { const t = this.s.tasks.find((x) => x.type === 'makeready' && x.obj === a.unit); if (!t) return { ok: false, msg: 'No make-ready needed' }; return this.act_ownerTask({ task: t.id }); }
   act_taskPri(a) { const t = this.s.tasks.find((x) => x.id === a.task); if (t) t.pri = a.pri; return { ok: true }; }
@@ -1001,6 +1005,7 @@ export class Sim {
     const cost = t.need === 'repair_complex' ? 650 : 250;
     if (!this.unlimited() && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     for (const ag of s.agents) { if (ag.task === t.id) { if (ag.cart) this.dropCart(ag); ag.task = null; ag.st = 'idle'; } if (ag.queue) ag.queue = ag.queue.filter((x) => x !== t.id); }
+    if (t.workBooked) { const st = s.staff.find((x) => x.id === t.workBooked); this.refundTaskWork(st, t); }
     if (!s.creative) this.money(-cost, 'service', 'Vendor service: ' + t.label);
     const pri = (s.coTier || 1) >= 2; t.vendor = s.t + (pri ? 300 : 600); t.assigned = 'vendor'; this.emit('task_assigned');
     return { ok: true, msg: `Vendor booked (~${pri ? 5 : 10} hours) - $${cost}` };
@@ -1117,6 +1122,8 @@ export class Sim {
     // close out yesterday
     s.days.push(s.today); if (s.days.length > 90) s.days.shift();
     s.today = blankDay(day);
+    for (const st of s.staff) if (this.workCapacity(st)) { st.workDay = day; st.workUsed = 0; st.officeUsed = 0; }
+    for (const t of s.tasks) if (t.workBookedDay && t.workBookedDay !== day) { t.workBooked = null; t.workBookedDay = null; }
     // operating costs
     const ox = this.dailyOpex();
     this.money(-ox.total, 'opex', 'Daily operating cost');
@@ -1919,7 +1926,7 @@ export class Sim {
         if (ag.serveT > 0) {
           ag.serveT--;
           if (ag.serveT === 0) {
-            s.officeQ = s.officeQ.filter((x) => x !== ag.id);
+            s.officeQ = s.officeQ.filter((x) => x !== ag.id); ag.serveBy = null;
             ag.hidden = false;
             s.convos = s.convos.filter((c) => c.key !== 'size' + ag.id);
             const L = this.decideLease({ size: ag.size, climate: ag.climate, keen: ag.keen, ad: ag.ad || null }, ag);
@@ -1929,7 +1936,7 @@ export class Sim {
         } else {
           ag.exp.office++;
           if (ag.exp.office > 50) {
-            s.officeQ = s.officeQ.filter((x) => x !== ag.id); ag.hidden = false;
+            s.officeQ = s.officeQ.filter((x) => x !== ag.id); ag.hidden = false; ag.serveBy = null;
             s.lost.service = (s.lost.service || 0) + 1; s.today.lost++; this.emit('lost', { reason: 'service' });
             this.thought(ag, 'No one at the office.', 'bad');
             this.goToVehicle(ag);
@@ -2205,15 +2212,41 @@ export class Sim {
   }
 
   // ============================================================ OFFICE
-  officeServers() {
+  officeServerAgents() {
     const s = this.s, h = this.hour;
-    return s.agents.filter((a) => a.kind === 'staff' && a.st === 'office' && (a.role === 'owner' || (a.role === 'clerk' && h >= OFFICE_HOURS[0] && h < OFFICE_HOURS[1]))).length;
+    return s.agents.filter((a) => {
+      if (a.kind !== 'staff' || a.st !== 'office') return false;
+      if (a.role === 'clerk') return h >= OFFICE_HOURS[0] && h < OFFICE_HOURS[1];
+      if (a.role !== 'owner') return false;
+      const st = this.staffOf(a);
+      return this.workRemaining(st) >= 0.5;
+    }).sort((a, b) => (a.role === 'clerk' ? -1 : 1) - (b.role === 'clerk' ? -1 : 1)); // Clerk takes the desk first, freeing Owner capacity.
+  }
+  officeServers() { return this.officeServerAgents().length; }
+  consumeOfficeWork(st, hours = 0.5) {
+    if (!st || st.role !== 'owner') return true;
+    this.syncStaffWork(st);
+    const need = Math.max(0.5, Math.ceil(hours * 2) / 2);
+    if (this.workRemaining(st) + 1e-9 < need) return false;
+    st.workUsed = Math.round(((st.workUsed || 0) + need) * 2) / 2;
+    st.officeUsed = Math.round(((st.officeUsed || 0) + need) * 2) / 2;
+    return true;
   }
   serveOffice() {
-    const s = this.s; let free = this.officeServers() - s.officeQ.filter((id) => { const a = s.agents.find((x) => x.id === id); return a && a.serveT > 0; }).length;
+    const s = this.s;
+    const busy = new Set(s.officeQ.map((id) => s.agents.find((x) => x.id === id)).filter((a) => a && a.serveT > 0 && a.serveBy).map((a) => a.serveBy));
+    const free = this.officeServerAgents().filter((a) => !busy.has(a.sid));
     for (const id of s.officeQ) {
-      if (free <= 0) break; const a = s.agents.find((x) => x.id === id);
-      if (a && !(a.serveT > 0)) { a.serveT = 25; free--; }
+      if (!free.length) break;
+      const a = s.agents.find((x) => x.id === id);
+      if (!a || a.serveT > 0) continue;
+      let server = free.shift(), st = this.staffOf(server);
+      if (server.role === 'owner' && !this.consumeOfficeWork(st, 0.5)) {
+        server = free.find((x) => x.role === 'clerk') || null;
+        if (!server) continue;
+        st = this.staffOf(server);
+      }
+      a.serveT = 25; a.serveBy = st && st.id || null;
     }
   }
 
@@ -2281,6 +2314,38 @@ export class Sim {
   }
 
   // ============================================================ STAFF + TASKS
+  taskHours(t) {
+    const mins = Math.max(1, Number(t && (t.total || t.work)) || 60);
+    return Math.max(0.5, Math.ceil(mins / 30) / 2); // clear half-hour blocks
+  }
+  syncStaffWork(st) {
+    if (!st || !ROLES[st.role] || !ROLES[st.role].workHours) return;
+    if (st.workDay !== this.day) { st.workDay = this.day; st.workUsed = 0; st.officeUsed = 0; }
+  }
+  workCapacity(st) { return st && ROLES[st.role] ? (ROLES[st.role].workHours || 0) : 0; }
+  workRemaining(st) {
+    const cap = this.workCapacity(st); if (!cap) return 0;
+    this.syncStaffWork(st);
+    return Math.max(0, Math.round((cap - (st.workUsed || 0)) * 2) / 2);
+  }
+  reserveTaskWork(st, t) {
+    const cap = this.workCapacity(st); if (!cap) return true;
+    this.syncStaffWork(st);
+    if (t.workBooked === st.id && t.workBookedDay === this.day) return true;
+    const need = this.taskHours(t), left = this.workRemaining(st);
+    if (left + 1e-9 < need) return false;
+    st.workUsed = Math.round(((st.workUsed || 0) + need) * 2) / 2;
+    t.workHours = need; t.workBooked = st.id; t.workBookedDay = this.day;
+    return true;
+  }
+  refundTaskWork(st, t) {
+    if (!st || !t || t.workBooked !== st.id) return;
+    if (t.workBookedDay === this.day) {
+      this.syncStaffWork(st);
+      st.workUsed = Math.max(0, Math.round(((st.workUsed || 0) - (t.workHours || this.taskHours(t))) * 2) / 2);
+    }
+    t.workBooked = null; t.workBookedDay = null;
+  }
   spawnStaffAgent(st) {
     const s = this.s, office = this.objs('office')[0];
     const ag = { id: this.id(), kind: 'staff', sid: st.id, role: st.role, st: 'office', hidden: true, f: 0, x: office ? office.door.x + 0.5 : 5, y: office ? office.door.y + 0.5 : 5, task: null, queue: [], path: null, pi: 0, exp: { walk: 0, dirt: 0, dirtN: 0, door: 0, elev: 0 }, look: st.id * 7919 };
@@ -2365,29 +2430,31 @@ export class Sim {
     return walkNear(o.f || 0, o.x, o.y);
   }
   startTask(ag, t) {
+    const st = this.staffOf(ag);
+    if (!this.reserveTaskWork(st, t)) return false;
     const c = this.taskCell(t);
     if (ag.hidden) { const office = this.objs('office')[0]; if (office) { ag.f = 0; ag.x = office.door.x + 0.5; ag.y = office.door.y + 0.5; } }
-    if (!c || !this.goTo(ag, c.f, c.x, c.y)) { t.unreachable = this.s.t; t.assigned = null; t.queued = false; ag.task = null; this.emit('refuse'); return false; }
+    if (!c || !this.goTo(ag, c.f, c.x, c.y)) { this.refundTaskWork(st, t); t.unreachable = this.s.t; t.assigned = null; t.queued = false; ag.task = null; this.emit('refuse'); return false; }
     ag.task = t.id; t.assigned = ag.sid; ag.st = 'walk'; ag.hidden = false;
     this.emit('task_start', { task: t.id });
     return true;
   }
-  releaseTask(ag) { const t = this.s.tasks.find((x) => x.id === ag.task); if (t) t.assigned = null; ag.task = null; }
+  releaseTask(ag) { const t = this.s.tasks.find((x) => x.id === ag.task); if (t) { if (!t.prog) this.refundTaskWork(this.staffOf(ag), t); t.assigned = null; t.queued = false; } ag.task = null; }
   onShift() { const h = this.hour; return h >= 7 && h < 20; } // staff day shift (GDD §29)
   ownerMayAutoWork() { // Owner handles chores on their own when the office is quiet (after the tutorial)
     const s = this.s, h = this.hour;
     if (!s.policies.ownerChores || (s.tut && s.tut.on && !s.tut.done)) return false;
     if (h < OFFICE_HOURS[0] || h >= OFFICE_HOURS[1] - 0.5) return false;
     if (s.officeQ.length) return false;
-    if ((s.today.ownerAuto || 0) >= OWNER_AUTO_PER_DAY) return false; // the Owner has other work: only a few chores a day happen on their own
     if (s.staff.some((x) => x.role === 'clerk') ) return true;
     return !s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect');
   }
   pickTask(ag, ownerAuto = false) {
-    const s = this.s, R = ROLES[ag.role];
-    const cands = s.tasks.filter((t) => !t.assigned && !t.vendor && !t.unreachable && R.can.includes(t.need) && (t.need !== 'carts' || s.policies.porterCarts || ownerAuto) && (!ownerAuto || (t.need !== 'office' && !t.need.startsWith('repair'))))
+    const s = this.s, R = ROLES[ag.role], st = this.staffOf(ag);
+    const left = this.workCapacity(st) ? this.workRemaining(st) : Infinity;
+    const cands = s.tasks.filter((t) => !t.assigned && !t.vendor && !t.unreachable && R.can.includes(t.need) && this.taskHours(t) <= left && (t.need !== 'carts' || s.policies.porterCarts || ownerAuto) && (!ownerAuto || (t.need !== 'office' && !t.need.startsWith('repair'))))
       .sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
-    for (const t of cands) if (this.startTask(ag, t)) { if (ownerAuto) s.today.ownerAuto = (s.today.ownerAuto || 0) + 1; return true; }
+    for (const t of cands) if (this.startTask(ag, t)) return true;
     return false;
   }
   updateStaff(ag) {

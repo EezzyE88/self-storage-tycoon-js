@@ -329,14 +329,16 @@ export class UI {
   taskActions(o) {
     const s = this.sim.s; const t = s.tasks.find((x) => x.obj === o.id);
     const ownerCan = t ? ROLES.owner.can.includes(t.need) : !(o.type === 'elevator' || o.type === 'hvac');
+    const owner = s.staff.find((x) => x.role === 'owner'), hrs = t ? this.sim.taskHours(t) : 0, ownerLeft = owner ? this.sim.workRemaining(owner) : 0;
     let h = '';
     if (t) {
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? (s.staff.find((x) => x.id === t.assigned) || {}).name || 'Assigned' : 'Waiting in queue';
-      h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''}</small></div></div><div class="row wrap" style="margin-top:6px">`;
-      if (!t.assigned && ownerCan) h += `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>${t.type === 'repair' && this.sim.pressureOn() ? 'Owner: quick fix (free, wears sooner)' : 'Send Owner'}</button>`;
+      h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small></div></div><div class="row wrap" style="margin-top:6px">`;
+      if (!t.assigned && ownerCan) h += `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>${t.type === 'repair' && this.sim.pressureOn() ? `Owner: quick fix · ${hrs}h` : `Send Owner · ${hrs}h`}</button>`;
       if (!t.assigned || (t.assigned !== 'vendor' && !ownerCan)) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Call vendor (${money(t.need === 'repair_complex' ? 650 : 250)})</button>`;
       h += `</div>`;
       if (!ownerCan) h += `<p class="note">The Owner can't service this equipment. Hire a Tech or call a vendor.</p>`;
+      else if (!t.assigned && hrs > ownerLeft) h += `<p class="note">Owner has ${ownerLeft}h available today; this job needs ${hrs}h. Wait for tomorrow or delegate it.</p>`;
     } else if (o.cond != null && o.cond < 0.8 && ownerCan) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTaskFor', obj: o.id })}'>Owner: service now</button>`;
     return h;
   }
@@ -406,7 +408,7 @@ export class UI {
         if (o.cstate === 'ready' && o.order) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: o.order })}'>Commission whole order</button>`);
         if (o.cstate === 'ready') { const allReady = sim.objs('unit').filter((u) => u.cstate === 'ready').length, inOrder = o.order ? sim.objs('unit').filter((u) => u.cstate === 'ready' && u.order === o.order).length : 1; if (allReady > inOrder) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission all ${allReady} ready units</button>`); }
         const mr = s.tasks.find((t) => t.type === 'makeready' && t.obj === o.id);
-        if (mr) acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id })}'>Start Owner Make-Ready</button>`);
+        if (mr) { const mh = sim.taskHours(mr), ow = s.staff.find((x) => x.role === 'owner'), left = ow ? sim.workRemaining(ow) : 0; acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id })}' ${mh > left ? 'disabled' : ''}>Owner Make-Ready · ${mh}h</button>`); }
         for (const op of sim.renovateOptions ? sim.renovateOptions(o) : []) acts.push(op.ok ? `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'renovate', unit: o.id, kind: op.kind })}'>${op.label} · ${money(op.cost)}</button>` : `<button class="btn" disabled title="${esc(op.why)}">${op.label} · ${esc(op.why)}</button>`);
         if (acts.length) h += `<div class="row wrap" style="margin-top:8px">${acts.join('')}</div>`;
         return this.sheet(nm, `${o.access === 'drive' ? 'Drive-up' : 'Interior'} ${o.size}`, h);
@@ -478,15 +480,16 @@ export class UI {
     const sim = this.sim, s = sim.s;
     const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
     const tasks = [...s.tasks].sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
+    const owner = s.staff.find((x) => x.role === 'owner'), ownerLeft = owner ? sim.workRemaining(owner) : 0;
     let h = `<h3>Work queue (${tasks.length})</h3><div class="list">`;
     if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
     for (const t of tasks.slice(0, 14)) {
-      const ownerCan = ROLES.owner.can.includes(t.need);
+      const ownerCan = ROLES.owner.can.includes(t.need), hrs = sim.taskHours(t);
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? staffName(t.assigned) + (t.queued ? ' (queued)' : '') : t.unreachable ? 'Unreachable - check routes' : 'Unassigned';
       const loc = t.obj && s.objects[t.obj] ? s.objects[t.obj] : t.x != null ? t : null;
-      h += `<div class="item"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''}</small></div>
+      h += `<div class="item"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small></div>
         ${loc ? `<button class="btn sm" data-a="focus" data-x="${loc.x}" data-y="${loc.y}">View</button>` : ''}
-        ${!t.assigned && ownerCan ? `<button class="btn sm pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Owner</button>` : ''}
+        ${!t.assigned && ownerCan ? `<button class="btn sm pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>Owner · ${hrs}h</button>` : ''}
         ${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Vendor</button>` : ''}
         <button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'taskPri', task: t.id, pri: t.pri >= 2 ? 0 : 2 })}'>${t.pri >= 2 ? 'Normal' : 'Urgent'}</button></div>`;
     }
@@ -494,11 +497,13 @@ export class UI {
     for (const st of s.staff) {
       const ag = s.agents.find((a) => a.sid === st.id); const t = ag && ag.task && s.tasks.find((x) => x.id === ag.task);
       const doing = !ag ? 'Needs an office' : t ? esc(t.label) : ag.st === 'office' ? 'At the office' : ag.st === 'home' ? 'Returning to office' : ag.st;
-      h += `<div class="item"><div class="grow"><b>${ROLES[st.role].name} · ${esc(st.name)}</b><small>${doing}${ag && ag.queue && ag.queue.length ? ` · ${ag.queue.length} queued` : ''} · ${st.wage ? money(st.wage) + '/day' : 'unpaid'}</small></div>${st.role !== 'owner' ? `<button class="btn sm danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'fire', id: st.id })}'>Let go</button>` : ''}</div>`;
+      const cap = sim.workCapacity(st), officeTxt = st.role === 'owner' && (st.officeUsed || 0) ? ` · ${st.officeUsed}h office` : '', capTxt = cap ? ` · ${sim.workRemaining(st)}h of ${cap}h available today${officeTxt}` : '';
+      h += `<div class="item"><div class="grow"><b>${ROLES[st.role].name} · ${esc(st.name)}</b><small>${doing}${ag && ag.queue && ag.queue.length ? ` · ${ag.queue.length} queued` : ''}${capTxt} · ${st.wage ? money(st.wage) + '/day' : 'unpaid'}</small></div>${st.role !== 'owner' ? `<button class="btn sm danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'fire', id: st.id })}'>Let go</button>` : ''}</div>`;
     }
-    const focus = this.tutFocus();
-    h += `</div><div class="row wrap" style="margin-top:8px">${['porter', 'tech', 'clerk', 'manager'].map((r) => `<button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire ${ROLES[r].name} · ${money(ROLES[r].wage)}/day</button>`).join('')}</div>
-      <p class="note">Porter: make-ready, cleaning, carts. Tech: repairs incl. elevators and HVAC. Clerk: office service during office hours. Manager: opens ready units, escalates stalled repairs to vendors, restocks carts and adjusts asking rents monthly.</p>`;
+    const focus = this.tutFocus(), est = sim.estDailyNet();
+    const roleWhy = { porter: 'Adds another 8h/day for make-ready, cleaning and carts.', tech: 'Adds another 8h/day for repairs, including elevators and HVAC.', clerk: 'Handles office shoppers so those 0.5h service blocks stop consuming Owner capacity.', manager: 'Automates commissioning, vendor escalation, cart restocking and monthly pricing.' };
+    h += `</div><h3>Hire capacity</h3><div class="list">${['porter', 'tech', 'clerk', 'manager'].map((r) => { const after = est - ROLES[r].wage; return `<div class="item"><div class="grow"><b>${ROLES[r].name} · ${money(ROLES[r].wage)}/day</b><small>${roleWhy[r]} Current estimate ${est >= 0 ? '+' : '-'}${money(Math.abs(est))}/day → ${after >= 0 ? '+' : '-'}${money(Math.abs(after))}/day after this hire.</small></div><button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire</button></div>`; }).join('')}</div>
+      <p class="note">Owner, Porters and Techs each have 8 task-hours per game day. Each in-person office shopper costs the Owner 0.5h when no Clerk is covering the desk. Hiring expands capacity or frees Owner time, but payroll is charged every day. Managers add automation rather than task-hours.</p>`;
     if (sim.hasManager() || s.mgrLog.length) h += `<h3>Manager log</h3><div class="kv">${s.mgrLog.length ? s.mgrLog.slice(0, 8).map((l) => `<span>Day ${dayOf(l.t)} ${fmtTime(l.t)}</span><span>${esc(l.msg)}</span>`).join('') : '<span>No decisions yet</span><span></span>'}</div>`;
     h += `<h3>Overlays</h3><div class="row wrap">${[['security', 'Security'], ['carts', 'Carts'], ['hvac', 'HVAC'], ['clean', 'Cleanliness'], ['power', 'Power']].map(([k, n]) => `<button class="btn sm ${this.rend.overlay === k ? 'pri' : ''}" data-a="overlay" data-v="${k}">${n}</button>`).join('')}</div>`;
     if (this.rend.overlay === 'security') h += `<p class="note legend">Each patch shows a mark as well as a color. <b>No mark</b> (green): lit and on camera. <b>Dot</b> (blue): camera only. <b>One stripe</b> (yellow): lit only. <b>Cross</b> (red): dark and unwatched - where thieves look first.</p>`;
@@ -507,12 +512,12 @@ export class UI {
     if (this.rend.overlay === 'carts') h += `<p class="note legend">Circles are cart corrals. <b>Check</b> (green): stocked. <b>One stripe</b> (amber): running low. <b>Cross</b> (red): empty. Small rings mark stranded or damaged carts.</p>`;
     if (this.rend.overlay === 'power') h += `<p class="note legend"><b>No mark</b> (green): powered. <b>Cross</b> (red): shut off because demand exceeds electrical service. Yellow squares are electrical services.</p>`;
     h += `<h3>Carts</h3><div class="list">`;
-    for (const c of sim.objs('corral')) h += `<div class="item"><div class="grow"><b>${esc(c.name)}</b><small>${sim.cartsAt(c.id).length} available · target ${c.target || 2}</small></div><button class="btn sm" data-a="sel" data-v="${c.id}">Inspect</button></div>`;
-    const str = s.carts.filter((c) => c.st === 'stranded' || c.st === 'damaged').length;
+    for (const q of sim.objs('corral')) h += `<div class="item"><div class="grow"><b>${esc(q.name)}</b><small>${sim.cartsAt(q.id).length} available · target ${q.target || 2}</small></div><button class="btn sm" data-a="sel" data-v="${q.id}">Inspect</button></div>`;
+    const str = s.carts.filter((q) => q.st === 'stranded' || q.st === 'damaged').length;
     h += `</div><p class="note">${s.carts.length} carts total · ${str} stranded or damaged.</p>`;
     h += `<h3>Policies</h3><div class="list">
       <div class="item"><div class="grow"><b>Porters recover carts</b><small>Porters return stranded carts to their corral</small></div><button class="toggle ${s.policies.porterCarts ? 'on' : ''}" data-a="policy" data-v="porterCarts" aria-label="Toggle"></button></div>
-      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, the Owner picks up to 3 routine chores a day (make-readies, cleaning, cart runs). Repairs always wait for you or a vendor.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
+      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, the Owner automatically spends available daily work hours on make-readies, cleaning and cart runs. Repairs still wait for you or a vendor.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
       <div class="item"><div class="grow"><b>Preventive maintenance</b><small>Techs service equipment before it fails</small></div><button class="toggle ${s.policies.preventive ? 'on' : ''}" data-a="policy" data-v="preventive" aria-label="Toggle"></button></div></div>`;
     return this.sheet('Operate', `${s.staff.length} staff · ${tasks.length} tasks`, h);
   }
@@ -819,13 +824,24 @@ export class UI {
     feed.prepend(frag);
   }
   addBubble(th) {
-    // merge identical complaints ("Loading bays are full." x3) into one tag with a count
+    // Merge identical customer thoughts without letting rapid repeats pin a bubble on-screen forever.
+    // On phones, routine shopper outcomes get a short real-time cooldown; Business still keeps the full lost-demand totals.
+    const now = performance.now();
     const same = this.bubbles.find((b) => b.th.text === th.text);
-    if (same) { same.n = (same.n || 1) + 1; same.t = performance.now(); same.el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)} <b class="n">×${same.n}</b>`; return; }
-    if (this.bubbles.length > (this.phone() ? 2 : 7)) { const o = this.bubbles.shift(); o.el.remove(); }
+    if (same) {
+      same.n = (same.n || 1) + 1;
+      same.el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)} <b class="n">×${same.n}</b>`;
+      return;
+    }
+    const routine = th.text === 'Nothing ready to rent today.' || th.text === "I'll keep shopping.";
+    this.bubbleSeen ||= new Map();
+    const seen = this.bubbleSeen.get(th.text) || 0;
+    if (this.phone() && routine && now - seen < 12000) return;
+    this.bubbleSeen.set(th.text, now);
+    if (this.bubbles.length >= (this.phone() ? 2 : 7)) { const o = this.bubbles.shift(); o.el.remove(); }
     const el = document.createElement('div'); el.className = 'bub ' + th.kind;
     el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)}`;
-    this.bubRoot.appendChild(el); this.bubbles.push({ el, th, t: performance.now(), ag: th.ag });
+    this.bubRoot.appendChild(el); this.bubbles.push({ el, th, t: now, ag: th.ag });
   }
   updateBubbles() {
     const now = performance.now(), s = this.sim.s; const placed = [];
@@ -1136,12 +1152,9 @@ export class UI {
   }
   ownerStatus() {
     const s = this.sim.s, owner = s.staff.find((x) => x.role === 'owner'); if (!owner) return '';
-    const ag = s.agents.find((g) => g.sid === owner.id); const h = (s.t % 1440) / 60;
+    const ag = s.agents.find((g) => g.sid === owner.id), left = this.sim.workRemaining(owner);
     const busy = ag && (ag.task || (ag.queue && ag.queue.length));
-    if (h < 7) return `You: off until 7 AM`;
-    if (h >= 20) return `You: off for the night`;
-    const left = Math.max(0, Math.floor(20 - h));
-    return `You: ${busy ? 'working' : 'free'} · ${left}h left`;
+    return `Owner: ${busy ? 'working' : 'free'} · ${left}h available`;
   }
   coachHint() {
     const sim = this.sim, s = sim.s, D = sim.D; const objs = Object.values(s.objects);

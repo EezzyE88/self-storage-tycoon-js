@@ -26,7 +26,7 @@ export const SIZE_KEYS = Object.keys(SIZES);
 export const MARKETS = {
   maple: {
     name: 'Vista suburban',
-    rent: { '5x5': 60, '5x10': 95, '10x10': 150, '10x20': 260 },
+    rent: { '5x5': 75, '5x10': 118.75, '10x10': 187.5, '10x20': 325 },
     climatePremium: 1.35,
     upperFloorDiscount: 0.92,
     // prospects per day by size at market price (all environments)
@@ -36,7 +36,7 @@ export const MARKETS = {
   },
   urban: {
     name: 'Dense urban infill',
-    rent: { '5x5': 85, '5x10': 135, '10x10': 215, '10x20': 360 },
+    rent: { '5x5': 106.25, '5x10': 168.75, '10x10': 268.75, '10x20': 450 },
     climatePremium: 1.3,
     upperFloorDiscount: 0.95,
     demand: { '5x5': 1.3, '5x10': 1.8, '10x10': 1.3, '10x20': 0.35 },
@@ -44,7 +44,7 @@ export const MARKETS = {
   },
   rural: {
     name: 'Rural highway corridor',
-    rent: { '5x5': 45, '5x10': 70, '10x10': 110, '10x20': 190 },
+    rent: { '5x5': 56.25, '5x10': 87.5, '10x10': 137.5, '10x20': 237.5 },
     climatePremium: 1.3,
     upperFloorDiscount: 0.9,
     demand: { '5x5': 0.3, '5x10': 0.7, '10x10': 1.1, '10x20': 1.0 },
@@ -52,7 +52,7 @@ export const MARKETS = {
   },
   blank: {
     name: 'Growing suburban parcel',
-    rent: { '5x5': 65, '5x10': 100, '10x10': 160, '10x20': 275 },
+    rent: { '5x5': 81.25, '5x10': 125, '10x10': 200, '10x20': 343.75 },
     climatePremium: 1.4,
     upperFloorDiscount: 0.92,
     demand: { '5x5': 0.8, '5x10': 1.4, '10x10': 1.6, '10x20': 0.7 },
@@ -122,11 +122,13 @@ export const CLIMATE_COST_MULT = 1.35;
 
 // Staff (GDD §28)
 export const ROLES = {
-  owner:  { name: 'Owner',  wage: 0,  can: ['makeready', 'clean', 'carts', 'repair_simple', 'office'] },
-  porter: { name: 'Porter', wage: 55, can: ['makeready', 'clean', 'carts'] },
-  tech:   { name: 'Tech',   wage: 85, can: ['repair_simple', 'repair_complex'] },
-  clerk:  { name: 'Clerk',  wage: 65, can: ['office'] },
-  manager:{ name: 'Manager',wage: 120, can: [] },
+  owner:  { name: 'Owner',  wage: 0,  workHours: 8, can: ['makeready', 'clean', 'carts', 'repair_simple', 'office'] },
+  // Daily wages are tuned for the first-facility economy. Staffing should trade profit for capacity
+  // without making the first useful hire an automatic loss.
+  porter: { name: 'Porter', wage: 12.5, workHours: 8, can: ['makeready', 'clean', 'carts'] },
+  tech:   { name: 'Tech',   wage: 20, workHours: 8, can: ['repair_simple', 'repair_complex'] },
+  clerk:  { name: 'Clerk',  wage: 15, can: ['office'] },
+  manager:{ name: 'Manager',wage: 25, can: [] },
 };
 
 // Operating cost (per day)
