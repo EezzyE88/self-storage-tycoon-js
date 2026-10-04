@@ -1,5 +1,6 @@
 // Three.js presentation layer. Reads sim.s / sim.D; never mutates simulation state.
 import * as THREE from 'three';
+import { unitStatus, UNIT_STATUS, loadingStatus } from './status.js';
 import { G, FLOOR_H, TOOLS } from './data.js';
 
 const CELL = 32; // px per cell on ground textures
@@ -105,6 +106,7 @@ export class Renderer {
     this.tx = { rollup: rollupTexture(), glow: glowTexture(), glowCool: glowTexture('rgba(210,230,255,0.8)'), ring: ringTexture(), badges: {}, plaques: {} };
     for (const k of ['rent', 'turn', 'fault', 'commission', 'missing', 'unready', 'reserved', 'lien', 'task']) this.tx.badges[k] = badgeTexture(k);
     this.mat = this.makeMaterials();
+    this.statusMaterials = Object.fromEntries(Object.entries(UNIT_STATUS).map(([k,v])=>[k,new THREE.MeshStandardMaterial({color:v.color,map:this.tx.rollup,roughness:.65})]));
     this.geo = { box: new THREE.BoxGeometry(1, 1, 1), plane: new THREE.PlaneGeometry(1, 1), cyl: new THREE.CylinderGeometry(0.5, 0.5, 1, 10), sph: new THREE.SphereGeometry(0.5, 12, 8), cone: new THREE.ConeGeometry(0.5, 1, 8) };
     this.geo.edges = new THREE.EdgesGeometry(this.geo.box); this.mat.edgeDark = new THREE.LineBasicMaterial({ color: 0x3c4046 }); this.ringGeo = {};
     this.setupLights();
@@ -134,7 +136,7 @@ export class Renderer {
     this.lastStruct = -1; this.lastGroundT = -1e9;
     this.focus = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.tx.ring, transparent: true, depthWrite: false, depthTest: false }));
     this.focus.rotation.x = -Math.PI / 2; this.focus.renderOrder = 20; this.focus.visible = false; this.scene.add(this.focus);
-    this.selMesh = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xffd23a, depthTest: false }));
+    this.selMesh = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0x59d5ef, depthTest: false }));
     this.selMesh.renderOrder = 21; this.selMesh.visible = false; this.scene.add(this.selMesh);
     this.rain = null; this.time = 0;
     this.resize();
@@ -283,7 +285,7 @@ export class Renderer {
   // ================================================================ GROUND TEXTURES
   drawGround() {
     const sim = this.sim, s = sim.s, D = sim.D, g = this.groundCanvas.getContext('2d'), W = s.W, H = s.H, C = CELL;
-    const p = s.parcel;
+    const p = s.parcel; const bays=new Map(loadingStatus(sim).map(b=>[b.i,b.state]));
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const i = y * W + x, gv = s.ground[i], px = x * C, py = y * C, h = hash(i * 17 + 3);
       let base;
@@ -297,9 +299,10 @@ export class Renderer {
       else if (gv === G.ASPHALT || gv === G.STREET || gv === G.PARKING || gv === G.LOADING) { for (let k = 0; k < 5; k++) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(px + hash(i * 5 + k) * C, py + hash(i * 3 + k) * C, 1.5, 1.5); } }
       else if (gv === G.CONCRETE || gv === G.SIDEWALK) { g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1); }
       if (gv === G.LOADING) {
-        g.strokeStyle = COL.yellow; g.lineWidth = 2; g.strokeRect(px + 2, py + 2, C - 4, C - 4);
+        const state=bays.get(i); g.strokeStyle = state==='inaccessible' ? '#ef9d91' : state==='occupied' ? '#aabac6' : '#9ed9c0'; g.lineWidth = 3; g.strokeRect(px + 2, py + 2, C - 4, C - 4);
+        g.fillStyle=g.strokeStyle; g.font='bold 23px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(state==='inaccessible'?'×':state==='occupied'?'—':'+',px+C/2,py+C/2); g.textAlign='start'; g.textBaseline='alphabetic';
         g.save(); g.beginPath(); g.rect(px + 2, py + 2, C - 4, C - 4); g.clip(); g.strokeStyle = 'rgba(232,185,35,0.45)'; g.lineWidth = 2;
-        for (let k = -C; k < C; k += 8) { g.beginPath(); g.moveTo(px + k, py + C); g.lineTo(px + k + C, py); g.stroke(); } g.restore();
+        for (let k = -C; state==='inaccessible' && k < C; k += 8) { g.beginPath(); g.moveTo(px + k, py + C); g.lineTo(px + k + C, py); g.stroke(); } g.restore();
       }
       if (gv === G.PARKING) { g.fillStyle = COL.stripe; const vert = s.ground[i - 1] === G.PARKING || s.ground[i + 1] === G.PARKING; if (vert) g.fillRect(px, py + 2, 2, C - 4); else g.fillRect(px + 2, py, C - 4, 2); }
       if (gv === G.STREET && y === p.y1 + 2) { if (x % 2 === 0) { g.fillStyle = COL.yellow; g.fillRect(px + 4, py + C - 2, C - 8, 3); } }
@@ -401,6 +404,8 @@ export class Renderer {
         this.faceMesh(along * 0.78, H * 0.74, this.mat.doorDark, fx, H * 0.37, fz, o.dir, f);
         const door = this.faceMesh(along * 0.78, H * 0.74, o.access === 'drive' ? this.mat.door : this.mat.doorInt, fx + o.dir[0] * 0.01, H * 0.37, fz + o.dir[1] * 0.01, o.dir, f, { obj: o.id });
         this.anim.push({ k: 'rollup', mesh: door, o, H });
+        const band=this.box(o.dir[0] ? .16 : along*.78, .035, o.dir[0] ? along*.78 : .16, this.statusMaterials[unitStatus(o)], fx-o.dir[0]*.12, H+.09, fz-o.dir[1]*.12, f, {obj:o.id});
+        band.castShadow=false; this.anim.push({k:'unitStatus',mesh:band,o});
         this.faceMesh(0.42, 0.17, this.plaque(String(o.num)), fx + o.dir[0] * 0.012, H * 0.87, fz + o.dir[1] * 0.012, o.dir, f);
         const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tx.badges.rent, depthTest: false, transparent: true }));
         sp.scale.set(0.75, 0.75, 1); sp.position.set(cx, H + 0.7 + f * FLOOR_H, cz); sp.renderOrder = 10; this.add(sp, f, { obj: o.id, badge: true });
@@ -747,7 +752,8 @@ export class Renderer {
       const o = A.o;
       switch (A.k) {
         case 'build': { if (!A.ord) break; const p = Math.max(0.02, A.ord.prog); A.mesh.scale.y = A.h * p; A.mesh.position.y = A.f * FLOOR_H + A.h * p / 2; A.mesh.material.opacity = A.ord.waiting ? 0.35 : 0.8; break; }
-        case 'rollup': { const tgt = o.doorOpen ? 0.12 : 1; const cur = A.mesh.scale.y / (A.H * 0.74); const n = cur + (tgt - cur) * Math.min(1, dt * 5); A.mesh.scale.y = A.H * 0.74 * n; A.mesh.position.y = (o.f || 0) * FLOOR_H + A.H * 0.74 - A.H * 0.74 * n / 2; break; }
+        case 'unitStatus': { A.mesh.material=this.statusMaterials[unitStatus(o)]; break; }
+        case 'rollup': { A.mesh.material = this.statusMaterials[unitStatus(o)]; const tgt = o.doorOpen ? 0.12 : 1; const cur = A.mesh.scale.y / (A.H * 0.74); const n = cur + (tgt - cur) * Math.min(1, dt * 5); A.mesh.scale.y = A.H * 0.74 * n; A.mesh.position.y = (o.f || 0) * FLOOR_H + A.H * 0.74 - A.H * 0.74 * n / 2; break; }
         case 'gate': { A.mesh.position.x = A.x0 - (o.open || 0) * 2.8; break; }
         case 'keypadLed': { A.mesh.material = o.cond < 0.2 ? this.mat.cartDmg : this.mat.yellow; break; }
         case 'door': { const open = o.openT != null && s.t - o.openT < 3; A.cur = (A.cur || 0) + ((open ? 1 : 0) - (A.cur || 0)) * Math.min(1, dt * 8); const side = o.dir[1] ? [1, 0] : [0, 1]; A.mesh.position.x = A.cx + o.dir[0] * 0.09 + side[0] * A.cur * A.w * 0.8; A.mesh.position.z = A.cz + o.dir[1] * 0.09 + side[1] * A.cur * A.w * 0.8; break; }
@@ -779,7 +785,7 @@ export class Renderer {
       }
       B.sp.visible = !!k && (this.view !== 'ext' || u.access === 'drive') && this.floorVisible(u.f || 0) && !(this.view === 0 && (u.f || 0) > 0);
       if (k && B.sp.material.map !== this.tx.badges[k]) { B.sp.material.map = this.tx.badges[k]; B.sp.material.needsUpdate = true; }
-      if (k) { const bob = Math.sin(this.time * 3 + u.id) * 0.05; B.sp.position.y = (u.f || 0) * FLOOR_H + (u.access === 'drive' ? WALL_H : 1.05) + 0.62 + bob; }
+      if (k) { const bob = 0; const px=(this.canvas.clientHeight || 800)/(this.frustum/this.zoom); const size=Math.max(.65,Math.min(1.05,18/px)); B.sp.scale.set(size,size,1); B.sp.position.y = (u.f || 0) * FLOOR_H + (u.access === 'drive' ? WALL_H : 1.05) + 0.62 + bob; }
     }
   }
   // day/night + weather
@@ -929,9 +935,10 @@ export class Renderer {
     if (this.onFrame) this.onFrame(dt);
     if (Math.abs(this.targetAz - this.azimuth) > 1e-3) { this.azimuth += (this.targetAz - this.azimuth) * Math.min(1, dt * 8); this.updateCamera(); }
     if (s.structV !== this.lastStruct) { this.lastStruct = s.structV; sim.ensure(); this.rebuildStatic(); }
-    else if (s.t - this.lastGroundT >= 60) { this.lastGroundT = s.t; this.drawGround(); }
+    else if (s.t - this.lastGroundT >= 60 || this.baySignature !== s.vehicles.map(v=>v.dest).join(',')) { this.lastGroundT = s.t; this.drawGround(); }
     if (this.overlay && (this.lastOv < 0 || this.time - this.lastOv > 0.5)) { this.lastOv = this.time; this.drawOverlay(); }
     const night = this.updateSky(dt);
+    this.baySignature=s.vehicles.map(v=>v.dest).join(',');
     this.updateAnim(dt, night);
     this.updateDynamic(dt);
     // focus ring

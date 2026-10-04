@@ -2,6 +2,7 @@ import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget } from
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
+import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
@@ -49,7 +50,7 @@ export class UI {
   constructor(game) {
     this.g = game; this.root = document.getElementById('ui'); this.bubRoot = document.getElementById('bubbles');
     this.tab = null; this.cat = 'units'; this.tool = null; this.plan = null; this.planArgs = null; this.climate = false; this.flip = false;
-    this.sel = null; this.toasts = []; this.bubbles = []; this.lastSheet = 0; this.tutMin = false; this.modal = null; this.title = true;
+    this.sel = null; this.toasts = []; this.bubbles = []; this.lastSheet = 0; this.tutMin = true; this.modal = null; this.title = true;
     this.root.innerHTML = `
       <div id="pins"></div><svg id="blueprint" aria-label="Suggested building placement"></svg>
       <div class="hud">
@@ -162,7 +163,7 @@ export class UI {
       case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); if (!this.sim.s.convos.length) this.resumePopup('convo'); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
-      case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = false; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
+      case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = true; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
       case 'rush': this.rush = !this.rush; this.replan(); this.sfx('click'); break;
       case 'convoAll': this.convoAll = !this.convoAll; this.renderFeed(true); break;
       case 'lessonEnd': this.do({ type: 'lesson', op: 'end' }); this.renderTut(true); break;
@@ -275,11 +276,13 @@ export class UI {
     else if (this.tab === 'growth') html = this.growthSheet();
     if (!html) { box.innerHTML = ''; return; }
     const key = this.sel != null ? 'sel:' + JSON.stringify(this.sel) : this.tab;
+    const sameSheet=this.sheetKey===key; const statusOpen=sameSheet && !!box.querySelector('.status-key')?.open; const sectionScroll=sameSheet ? (box.querySelector('.section-shortcuts')?.scrollLeft || 0) : 0;
     const body = box.querySelector('.body'); const st = body && this.sheetKey === key ? body.scrollTop : 0; this.sheetKey = key;
     const cats = box.querySelector('.cats'); const cs = cats ? cats.scrollLeft : 0;
     if (!force && this.sheetHtml === html) return;
     const wasOpen = !!box.firstChild; this.sheetHtml = html; box.innerHTML = html;
     if (!wasOpen && box.firstChild) box.firstChild.classList.add('enter');
+    const statusKey=box.querySelector('.status-key'); if(statusKey) statusKey.open=statusOpen; const sections=box.querySelector('.section-shortcuts'); if(sections) sections.scrollLeft=sectionScroll;
     const nb = box.querySelector('.body'); if (nb) nb.scrollTop = st;
     const nc = box.querySelector('.cats'); if (nc) { nc.scrollLeft = cs; const on = nc.querySelector('button.on'); if (on) { const r = on.getBoundingClientRect(), cr = nc.getBoundingClientRect(); if (r.left < cr.left || r.right > cr.right) nc.scrollLeft += r.left - cr.left - 14; } }
     const cv = box.querySelector('canvas.chart'); if (cv) this.drawChart(cv);
@@ -294,7 +297,7 @@ export class UI {
     if (heading) body.scrollTop += heading.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
   }
   sheet(title, sub, body, extra = '') {
-    if (title === 'Operate') extra += '<button class="btn" data-a="feedback">Customer feedback: causes &amp; remedies</button>';
+    if (title === 'Operate') extra += '<button class="btn" data-a="feedback">Customer feedback</button>';
     const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
     if (sections) {
       const jumps = [];
@@ -658,12 +661,16 @@ export class UI {
     });
     el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();blocked=false;releasedVersion=this.feedbackGestureVersion||0;open();}});
   }
+  statusLegendHtml() {
+    const bays=loadingStatus(this.sim), counts=k=>bays.filter(b=>b.state===k).length;
+    return '<details class="status-key"><summary>Map status · '+counts('free')+' free loading bays</summary><p class="note">Doors: '+Object.values(UNIT_STATUS).map(v=>v.mark+' '+v.label).join(' · ')+'</p><p class="note">Cyan outline: selection. Gold ring: tutorial target. Red pins: urgent problems. Occupied units stay quiet; zoom in for status labels.</p><p class="note">Loading: + free · — occupied or vehicle arriving · × inaccessible. '+counts('occupied')+' occupied · '+counts('inaccessible')+' inaccessible. Free means vehicle and pedestrian access at the bay; the route to a particular unit must also connect.</p>'+bays.map(b=>'<p class="note"><b>Bay ('+b.x+', '+b.y+'): '+b.state+'</b> · '+(b.state==='inaccessible'?'Reconnect this pavement to the gate and keep its pedestrian exit clear. Check the destination door, hall and floor access.':b.state==='occupied'?'Let this vehicle finish its visit. Repeated queues here may justify another connected bay near this building; hiring and canopies do not add bays.':'Available for an arriving vehicle. Preserve the route to the destination building.')+'</p>').join('')+'</details>';
+  }
   operateSheet() {
     const sim = this.sim, s = sim.s;
     const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
     const tasks = [...s.tasks].sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
     const owner = s.staff.find((x) => x.role === 'owner'), ownerLeft = owner ? sim.workRemaining(owner) : 0;
-    let h = this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
+    let h = this.statusLegendHtml() + this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
     if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
     for (const t of tasks.slice(0, 14)) {
       const ownerCan = ROLES.owner.can.includes(t.need), hrs = sim.taskHours(t);
@@ -1077,7 +1084,7 @@ export class UI {
       case 'tier_up': { const T = TIERS[e.tier - 1]; if (T) { this.toast(`Promoted: ${T.name}. Unlocked ${T.perks.join('; ')}`, 'good'); this.sfx('milestone'); } break; }
       case 'lesson_offer': this.sfx('attention'); this.renderTut(true); break;
       case 'lesson_done': this.toast(`Lesson complete: ${e.title}`, 'good'); this.sfx('milestone'); this.renderTut(true); break;
-      case 'tut_beat': { const b = curBeat(this.sim); this.tutMin = false; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
+      case 'tut_beat': { const b = curBeat(this.sim); this.tutMin = true; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
       case 'tut_done': this.sfx('milestone'); this.renderTut(true); break;
       case 'comp_announce': this.toast(`Competitor: ${e.name} is being built ${e.dist} mi away and opens Day ${e.opens}. See Business → Your market.`, 'bad'); this.sfx('attention'); break;
       case 'comp_open': this.toast(`${e.name} opened, pricing about ${Math.round((1 - e.price) * 100)}% under market`, 'bad'); break;
@@ -1144,7 +1151,7 @@ export class UI {
     const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details>` : ''}</span></li>`;
     let items = '';
     b.steps.forEach((x, i) => { if (i === cur) items += li(x, i, 'cur');  });
-    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}`}</span><button class="mini" data-a="tutMin">${this.tutMin ? 'Show' : 'Hide'}</button></div>
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}`}</span><button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button></div>
       <div class="tut-body"><h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
@@ -1434,6 +1441,7 @@ export class UI {
     const hide = this.title || this.modalOpen() || (s.tut && s.tut.on && !s.tut.done) || !!s.lesson || !!s.lessonOffer || this.root.classList.contains('has-sheet');
     const h = hide ? null : this.coachHint(); this.coachAct = h && h.act;
     if (!h) { if (!el.hidden) { el.hidden = true; this.root.classList.remove('has-coach'); } return; }
+    if(h.kind==='ok' && !h.act) { el.hidden=true; this.root.classList.remove('has-coach'); return; }
     const key = h.text + '|' + h.kind + '|' + this.ownerStatus();
     if (key !== this.coachKey || el.hidden) { this.coachKey = key; el.className = 'coach ' + h.kind + (h.act ? ' act' : ''); this.$('coachT').textContent = h.text; this.$('coachO').textContent = this.ownerStatus(); }
     if (el.hidden) { el.hidden = false; this.root.classList.add('has-coach'); }
@@ -1502,12 +1510,12 @@ export class UI {
         const f = o.f || 0; if (!(R.view === 'ext' ? (o.access === 'drive' && f === 0) : R.view === f)) continue;
         const w0 = o.w || 1, h0 = o.h || 1, dr = o.dir || [0, 0]; const cx = o.x + w0 / 2 + dr[0] * (w0 / 2 + 0.15), cy = o.y + h0 / 2 + dr[1] * (h0 / 2 + 0.15);
         const pr = R.project(cx, cy, f * 1.9 + 0.95); if (!pr.vis || pr.x < 0 || pr.y < 0 || pr.x > innerWidth || pr.y > innerHeight) continue;
-        const txt = String(o.num ?? String(o.name || '').replace(/^Unit\s*/, '')); const w = 8 + txt.length * 7.5, r = { x: pr.x - w / 2, y: pr.y - 9, w, h: 18 };
+        const status=unitStatus(o), cue=UNIT_STATUS[status]; const id=String(o.num ?? String(o.name || '').replace(/^Unit\s*/, '')); const txt=px>=38 ? `${id} · ${cue.label}` : `${cue.mark} ${id}`; const w = 8 + txt.length * 7.5, r = { x: pr.x - w / 2, y: pr.y - 9, w, h: 18 };
         if (placed.some((q) => r.x < q.x + q.w + 2 && r.x + r.w + 2 > q.x && r.y < q.y + q.h + 1 && r.y + r.h + 1 > q.y)) continue;
         placed.push(r);
         let el = pool[n]; if (!el) { el = document.createElement('span'); el.className = 'ulbl'; pool.push(el); root.appendChild(el); }
         if (el.textContent !== txt) el.textContent = txt;
-        const st = o.commercial === 'occupied' ? 'occ' : o.commercial === 'ready' ? 'vac' : 'wip'; if (el.dataset.st !== st) { el.dataset.st = st; el.className = 'ulbl ' + st; }
+        el.setAttribute('aria-label', `Unit ${id}: ${cue.label}`); const st = status; if (el.dataset.st !== st) { el.dataset.st = st; el.className = 'ulbl ' + st; }
         el.style.transform = `translate(${Math.round(r.x)}px, ${Math.round(r.y)}px)`; el.hidden = false; n++;
       }
     }

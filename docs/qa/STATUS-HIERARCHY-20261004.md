@@ -1,0 +1,38 @@
+# Unit status and interface hierarchy — 2026-10-04
+
+Build **bplus-status-hierarchy-candidate-13**, branch `candidate/status-hierarchy-20261004`. This report's containing commit is the immutable candidate. Base: `b01773b37629cd5c556095e3e86e8849060110af`. Accepted master: `2812abf8d268f9a225e5786d173f95efcbd6223d`, unchanged and unmerged. Only EezzyE88/self-storage-tycoon-js was used.
+
+## Live reconciliation before editing
+
+Workspace execution succeeded. Live GitHub refs matched the supplied master and candidate; no newer candidate fixes required reconciliation. Read the five requested committed reports/evidence files. Opened the same owner-private Site, project `appgprj_6ac1995912248191b1c0a51153e182a3`, version 13, packaging commit `7114601b4e170a5e66e5e43a7ca9c45948bd89a4`. Its source proof identified candidate 12. All 27 proof hashes matched immutable Git blobs; all 26 non-HTML served files matched exactly. Served index.html retained the original markup but had hosting/editor and Cloudflare scripts inserted before the closing body. Its raw served hash therefore differs; this is explicitly not a 27/27 raw served-hash claim. Access policy had only the owner, no groups or external visitors.
+
+## Reproduced defects and changes
+
+- An actual Three.js scene probe changed one operating unit through ready, occupied, reserved and unready: all four doors retained the same material color. Doors now use four restrained state colors, with a distinct blocked cue. A narrow roof-edge band retains the cue from door-away angles. Existing shaped floating markers remain; their bobbing is removed and their size is bounded with zoom. Healthy occupied units gain no floating badge. Status labels show symbol plus unit number at medium zoom, full state text closer in, and avoid overlapping other labels/pins.
+- Loading paint was static yellow hatching, independent of vehicle state. Bays now show **+ free**, **— occupied/claimed by an arriving vehicle**, or **× inaccessible**, with a secondary color cue. Occupancy uses `vehicles[].dest`, matching simulation reservation before parking. Inaccessible means no vehicle reach or no pedestrian access at that bay. It does not claim that every destination unit is reachable from a free bay. Destination-specific access failures remain explained by the retained complaint reports.
+- Operate contains a collapsed map-status key and per-bay coordinates with practical guidance: wait for a current visitor, consider connected capacity only for repeated congestion, reconnect vehicle/pedestrian access for inaccessible bays. It explains that hiring or canopies do not add bays. Existing historical customer causes/remedies and their exact saved targets are unchanged.
+- Selection was the same gold as tutorial targeting. Selection now uses cyan; exact tutorial rings/placement geometry stay gold; urgent pins retain red. Nothing in map input or tutorial placement calculations changed.
+- At 393×852 the opening tutorial measured about 244px high. Its default compact version is 134px, retains the current step and primary action, and has a 44px Details control exposing instructions, secondary placement controls and Skip. Expanded details still scroll. Quiet coach notices have a lighter surface; the redundant Owner subtitle is suppressed, with staffing information retained in management views. The no-action “All caught up” banner is suppressed.
+- Browser testing reproduced an expanded tutorial overlap at 320×568, a cramped management reading area, and a tablet overlap at 1024×768. Compact constraints, horizontally scrolling section shortcuts and tablet panel docking resolve these. Status details and shortcut scroll positions survive live sheet refresh.
+
+## Verification
+
+New `tests/headless/tstatus_hierarchy.mjs`: **22 checks**, including five live unit states, construction/commissioning, bay reservations before arrival, departure, disconnected routes, read-only state, property isolation, JSON save/resume, real renderer material updates, retained badges/floor visibility, calm occupied units and location-specific guidance.
+
+Retained focused suites pass: feedback interactions **16** (including all 36 three-touch press/release orders), complaint hardening **33**, complaint causes **38**, anchored gestures **10**, blueprint/recovery **26**, menu/touch **8**, performance/UI **11**. These include bubbles, dragging, pinch, double-tap, cancellation, selection, construction, stale/historical reports, property/floor changes and save/resume. VM/mocked-event tests do not establish native Safari event synthesis.
+
+Expanded full suite: **43 scripts**, passed in the implementation round. Final-source evidence is in `status-hierarchy-evidence-20261004.json`. The release procedure requires another full run and browser pass on the fetched immutable commit, before private publication; those exact results accompany delivery/source proof rather than amending this commit after the run.
+
+New reproducible browser script: `tests/browser-qa/status-hierarchy.cjs`, taking a Playwright package path, installed browser executable and output directory. Installed Edge/Chromium headless, mobile/touch emulation: **14 layout states**, compact and expanded management at 320×568, 393×852, 430×932, 568×320, 667×375, 852×393 and 1024×768. No horizontal page overflow or tutorial/sheet overlap, Details targets at least 44×44, expanded sheet bodies at least 80px and scrollable. Browser checks also cover persistent status/shortcut state, touch-emulated double-tap, suggested expansion review without spending, and actual property switching, with no page errors. Corrected test fixtures to use an overflowing shortcut row and the real expansion chapter idMark prerequisites. Screenshots were inspected locally; this is browser layout evidence, not physical Safari observation.
+
+## Preservation and costs
+
+Runtime changes are limited to presentation: render.js, ui.js, game.css, new read-only status.js and version.js. sim.js, main.js, tutorial.js, blueprint.js, data.js, economics.js, finance.js, complaints.js, localsave.js and customer/offscreen stepping are unchanged. No economy coefficients, clock rates, required save fields, auto-hiring, task dispatch, Owner override, financial consequences or customer counts changed.
+
+The roof-edge cue adds one non-shadow-casting box per rendered unit, sharing existing geometry and a bounded palette. Actual Three.js fixture: Maple meshes 257→280, triangles 2234→2510; 550-unit fixture meshes 3039→3589, triangles 19378→25978. Shadow-caster counts stay 155/1233. Customer churn still allocates 20 groups for 4000 sequential customers at peak 20 and retains 20. This is an explicit visual cost, not an optimization claim; CPU timings are not GPU/FPS evidence. No locked 60fps or whole-game bug-free claim.
+
+## Release and limitations
+
+Owner-private beta candidate; no merge or promotion. Publish exact committed runtime to the same Safari Preview, with a separate Sites packaging commit, updated source proof and asset hashes. Verify owner-only access again. Safari link: https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site
+
+Physical iPhone Safari readability, native multi-touch/cancellation, screen-reader synthesis, background/resume, GPU/thermal and Low Power behavior remain unverified. Prior owner acceptance of hired help and double-tap is historical and is not acceptance of these visual changes. Existing 40-report history limits remain. Free bay status describes the bay's access, not a guarantee for every destination; reports retain historical observations. At whole-property zoom small individual states remain intentionally compact; closer zoom provides text.

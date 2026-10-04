@@ -10,6 +10,6 @@ globalThis.window = { innerWidth: 393, innerHeight: 720, devicePixelRatio: 3 };
 globalThis.matchMedia = () => ({ matches: true });
 globalThis.MockWebGLRenderer = class { shadowMap = {}; setPixelRatio() {} setSize() {} };
 let code = base ? execFileSync('git',['show',base+':js/render.js'],{encoding:'utf8'}) : readFileSync('js/render.js','utf8');
-code = code.replace("'three'", JSON.stringify(pathToFileURL(process.cwd()+'/vendor/three.module.min.js').href)).replace("'./data.js'",JSON.stringify(pathToFileURL(process.cwd()+'/js/data.js').href)).replace('new THREE.WebGLRenderer(', 'new globalThis.MockWebGLRenderer(');
+code = code.replace("'three'", JSON.stringify(pathToFileURL(process.cwd()+'/vendor/three.module.min.js').href)).replace("'./data.js'",JSON.stringify(pathToFileURL(process.cwd()+'/js/data.js').href)).replace("'./status.js'",JSON.stringify(pathToFileURL(process.cwd()+'/js/status.js').href)).replace('new THREE.WebGLRenderer(', 'new globalThis.MockWebGLRenderer(');
 return (await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'))).Renderer;
 }

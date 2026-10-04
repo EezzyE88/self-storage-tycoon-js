@@ -653,3 +653,49 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .performance-panel { margin: 12px 0; }
 .performance-panel summary { padding: 12px 0; cursor: pointer; min-height: 44px; }
 #fps { position: static; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px ui-monospace, monospace; padding: 10px; background: var(--bg); border-radius: 8px; }
+
+/* Candidate 13: quiet property-first guidance, existing touch routing retained. */
+.tut:not(.scen):not(.offer) { border-top-width: 2px; border-radius: 10px; padding: 7px 10px; box-shadow: 0 3px 12px #0003; }
+.tut .ch { align-items: center; letter-spacing: .025em; }
+.tut .ch button, .tut .skip, .tut .why button, .tut .step-help summary { min-height: 44px; min-width: 44px; }
+.tut.min h4, .tut.min .tut-actions > :not(.pri) { display: none; }
+.tut.min .tut-actions:has(.pri) { border-top: 0; margin-top: 2px; padding-top: 0; }
+.tut.min .tut-actions:not(:has(.pri)) { display: none; }
+.tut.min .steps li.cur { margin: 0; padding: 4px 2px; background: none; border: 0; }
+.tut.min .steps li.cur .tx { font-size: 14px; }
+.tut.min .tut-body { flex: 0 1 auto; }
+.tut .step-help summary, .tut .steps .how, .tut .why p { font-size: 14px; }
+.coach { border-left-width: 3px; box-shadow: 0 2px 8px #0002; font-weight: 600; min-height: 44px; }
+.coach.ok, .coach.good { background: rgba(244,247,248,.96); color: #263746; }
+.coach.ok .co, .coach.good .co { color: #52616b; }
+.coach .co { display: none; }
+.status-key { margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.status-key summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 14px; }
+.ulbl.available { background: #215e47; color: white; }
+.ulbl.occupied { background: #edf1f4; color: #344652; border-color: #8796a1; }
+.ulbl.reserved { background: #604780; color: white; }
+.ulbl.turnover { background: #f3d18a; color: #493411; }
+.ulbl.blocked { background: #963d34; color: white; }
+.ulbl.commission { background: #35617a; color: white; }
+.ulbl { font-size: 12px; }
+@media (max-width: 600px) and (orientation: portrait) {
+  .coach { right: 64px; font-size: 14px; padding: 6px 9px; }
+  .tut { width: min(350px, calc(100vw - 80px)); }
+}
+@media (prefers-reduced-motion: reduce) { .tut { animation: none; } }
+
+@media (max-width: 600px) { .section-shortcuts { display: flex; overflow-x: auto; touch-action: pan-x; } .section-shortcuts button { padding: 0 12px; white-space: nowrap; font-size: 14px; } }
+@media (max-width: 600px) and (max-height: 650px) and (orientation: portrait) {
+  #ui.has-sheet .tut { max-height: 150px; }
+  #ui.has-sheet .tut .ch > span { font-size: 10px; }
+  #ui.has-sheet .tut .tut-actions { max-height: 50px; overflow-y: auto; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  #ui.has-sheet .tut .ch { flex-wrap: wrap; }
+  #ui.has-sheet .tut .ch > span { display: none; }
+  #ui.has-sheet .tut .tut-actions { max-height: 94px; overflow-y: auto; }
+}
+
+@media (min-width: 701px) and (max-width: 1180px) and (min-height: 521px) {
+  #ui.has-sheet .sheet { left: auto; right: calc(62px + var(--safe-r)); transform: none; width: min(560px, 50vw); }
+}
