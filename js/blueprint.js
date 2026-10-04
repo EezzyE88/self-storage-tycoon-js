@@ -85,3 +85,30 @@ export function verticalCheck(sim) {
   const next=Object.keys(labels).find(k=>!verticalDone(sim,k));
   return next ? 'Next: '+labels[next]+'. Use the highlighted placement; Confirm spends cash.' : 'Customer access is ready: gate → loading → entrance → elevator → upstairs unit.';
 }
+
+// Other authored build lessons share the same review-only placement assistance.
+// Prefer the taught location; relocate an obstructed row only along nearby valid frontage.
+const authoredCache=new WeakMap();
+export function authoredPlacement(sim, step) {
+  const old=authoredCache.get(sim);
+  if(old?.version===sim.s.structV && old.step===step) return old.value;
+  const value=deriveAuthoredPlacement(sim,step);
+  authoredCache.set(sim,{version:sim.s.structV,step,value});
+  return value;
+}
+function deriveAuthoredPlacement(sim, step) {
+  const a=step?.placement; if(!a) return null;
+  const candidate={...a,a:{...a.a},b:{...a.b}};
+  if(sim.plan(candidate).status!=='invalid') return candidate;
+  if(!a.axis) return null;
+  const offsets=[];
+  for(let dy=-8;dy<=8;dy++) for(let dx=-8;dx<=8;dx++) offsets.push({dx,dy});
+  offsets.sort((a,b)=>Math.abs(a.dx)+Math.abs(a.dy)-Math.abs(b.dx)-Math.abs(b.dy)||a.dy-b.dy||a.dx-b.dx);
+  const axis=a.axis, length=Math.abs(a.b[axis]-a.a[axis])+1, stride=a.tool==='du10x10'?2:1, direction=Math.sign(a.b[axis]-a.a[axis])||1;
+  for(let len=length;len>=stride;len-=stride) for(const {dx,dy} of offsets) {
+    const p={...a,a:{x:a.a.x+dx,y:a.a.y+dy},b:{x:a.b.x+dx,y:a.b.y+dy}};
+    p.b[axis]=p.a[axis]+direction*(len-1);
+    if(sim.plan(p).status==='valid') return p;
+  }
+  return null;
+}

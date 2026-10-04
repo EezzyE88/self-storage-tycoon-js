@@ -29,15 +29,15 @@ const COMMISSION = `[data-cmd*='"type":"commission"']`;
 
 // Standard build sequence: open Build -> category -> tool -> place at the marker -> Confirm.
 // `placed` = the order exists (later steps become meaningful once it does).
-function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f = 0, placed, extra = [], after }) {
+function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f = 0, end = cell, axis, climate = false, placed, extra = [], after }) {
   const past = (sim, ui) => placed(sim) || toolIs(ui, tool);
   const steps = [
     { t: `Open <b>Build</b>`, d: 'Tap <b>Build</b> in the bottom bar.', sel: TAB('build'), done: (sim, ui) => tabIs(ui, 'build') || past(sim, ui) },
     { t: `Choose <b>${catName}</b>`, d: `In the Build panel, tap the <b>${catName}</b> category along the top. Swipe the category row sideways if you don't see it.`, sel: CAT(cat), done: (sim, ui) => catIs(ui, cat) || past(sim, ui) },
     { t: `Pick <b>${toolName}</b>`, d: `Tap the <b>${toolName}</b> card. The action bar opens at the bottom with the price.`, sel: TOOL(tool), done: past },
     ...extra,
-    { t: place, d: placeD + ' The ring on the map marks the spot. The preview turns <b>green</b> when valid, <b>amber</b> if it will build but can\'t earn yet, <b>red</b> if it can\'t go there - the action bar says why.', cell, f, done: (sim, ui) => placed(sim) || planOk(ui, tool) },
-    { t: 'Tap <b>Confirm</b>', d: 'Check the cost and "cash after" line in the action bar, then tap <b>Confirm</b>. You can undo within 30 minutes for a full refund.', sel: CONFIRM, done: placed },
+    { placement: {tool, a:cell, b:end, f, axis, climate}, t: place, d: placeD + ' Follow the highlighted footprint from Start here to End here, or tap Use suggested placement. The preview turns <b>green</b> when valid, <b>amber</b> if it will build but can\'t earn yet, <b>red</b> if it can\'t go there - the action bar says why.', cell, f, done: (sim, ui) => placed(sim) || planOk(ui, tool) },
+    { placement: {tool, a:cell, b:end, f, axis, climate}, t: 'Tap <b>Confirm</b>', d: 'Check the cost and "cash after" line in the action bar, then tap <b>Confirm</b>. You can undo within 30 minutes for a full refund.', sel: CONFIRM, done: placed },
   ];
   // A later build group only counts as progressing once the previous group is placed.
   return after ? steps.map((st) => ({ ...st, done: (sim, ui) => placed(sim) || (after(sim) && st.done(sim, ui)) })) : steps;
@@ -90,7 +90,7 @@ export const BEATS = [
     why: 'Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. New units earn nothing until built <b>and</b> commissioned.',
     focus: () => ({ tool: 'du10x10', cell: { x: 13, y: 22 } }),
     steps: [
-      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, placed: (sim) => ordered(sim, 'du10x10'),
+      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, end: { x: 13, y: 28 }, axis: 'y', placed: (sim) => ordered(sim, 'du10x10'),
         place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Flip doors</b> if they don\'t.' }),
       waitBuild('Let construction finish', (sim) => newUnits(sim).some((u) => u.cstate !== 'construction') || !!sim.s.milestones.first_expansion),
       commissionStep(() => true, (sim) => !!sim.s.milestones.first_expansion),
@@ -160,7 +160,7 @@ export const LESSONS = [
         place: '<b>Tap</b> the grass just west of the interior building', placeD: 'Tap the grass strip between the main aisle and the interior building\'s west wall, about halfway up. It must touch the building.' }).map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> (HVAC first)' } : st),
       ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'light', toolName: 'Light', cell: { x: 17, y: 8 }, f: 0, after: (sim) => built(sim, 'hvac'), placed: (sim) => built(sim, 'light'),
         place: 'Tap <b>F1</b> on the right, then <b>tap</b> the west corridor', placeD: 'Tap <b>F1</b> on the right rail to see inside. The west corridor is the narrow dark hallway on the left side of the building; tap its middle.' }).map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (Light)', done: (sim, ui) => (tabIs(ui, 'build') && ordered(sim, 'hvac')) || built(sim, 'light') || toolIs(ui, 'light') } : st),
-      ...buildSteps({ cat: 'interior', catName: 'Interior', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 8 }, f: 0, after: (sim) => built(sim, 'light'), placed: (sim) => newUnits(sim, (u) => u.env === 'climate').length > 0,
+      ...buildSteps({ cat: 'interior', catName: 'Interior', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 5 }, end: { x: 16, y: 11 }, axis: 'y', climate: true, f: 0, after: (sim) => built(sim, 'light'), placed: (sim) => newUnits(sim, (u) => u.env === 'climate').length > 0,
         place: '<b>Drag</b> a column along the corridor\'s west side', placeD: 'On <b>F1</b>, press on the empty floor just left of the west corridor at the top, and drag straight down to the bottom. Unit doors must open onto the corridor.',
         extra: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar at the bottom, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 }] })
         .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (units)', done: (sim, ui) => (tabIs(ui, 'build') && built(sim, 'light')) || toolIs(ui, 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 } : st),

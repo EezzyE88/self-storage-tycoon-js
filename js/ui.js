@@ -5,7 +5,7 @@ import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonByI
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
 import { guideFor } from './handbook.js';
-import { verticalLayout, verticalDone, verticalCheck } from './blueprint.js';
+import { verticalLayout, verticalDone, verticalCheck, authoredPlacement } from './blueprint.js';
 
 const PIN = {
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-8.3 8.3a2 2 0 0 1-2.8-2.8l8.3-8.3"/><path d="M14.5 5.5 17 3"/></svg>',
@@ -998,7 +998,7 @@ export class UI {
     if (!force && key === this.tutKey) return; this.tutKey = key;
     // map focus follows the current step
     const oid = step && step.obj ? step.obj(this.sim) : null;
-    const bp=step?.blueprint&&this.currentBlueprintPlan();
+    const bp=this.currentBlueprintPlan();
     const cell=bp ? bp.a : step?.cell;
     const f = oid ? { obj: oid } : cell ? { cell, f: bp?.f ?? step.f ?? 0 } : this.tutFocus();
     this.rend.setFocus(f);
@@ -1011,17 +1011,18 @@ export class UI {
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
-      </div><div class="row tut-actions">${b.id==='up' ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button><button class="btn sm" data-a="showPlacement">Show me where</button><button class="skip" data-a="recheckLayout">Recheck my layout</button>' : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : '<span class="mini">Follow the steps - the ring shows where to tap</span>'}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
+      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button><button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
   currentBlueprintPlan() {
-    if(this.sim.s.lesson?.id!=='up') return null;
-    const step=stepState(this.sim,this).cur, key=curBeat(this.sim)?.steps[step]?.blueprint;
+    const step=stepState(this.sim,this).cur, st=curBeat(this.sim)?.steps[step];
+    if(this.sim.s.lesson?.id!=='up') return authoredPlacement(this.sim,st);
+    const key=st?.blueprint;
     const l=verticalLayout(this.sim); if(!l?.plans) return null;
     return l.plans[key==='lights' ? (this.sim.objs('light').some(o=>(o.f||0)===0&&o.x>=l.sh.x&&o.x<l.sh.x+l.sh.w&&o.y>=l.sh.y&&o.y<l.sh.y+l.sh.h&&this.sim.s.hall[0][this.sim.idx(o.x,o.y)]) ? 'light2' : 'light') : key] || null;
   }
   suggestPlacement() {
-    const a=this.currentBlueprintPlan(); if(!a) { this.toast(verticalCheck(this.sim)); return; }
-    this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=false;
+    const a=this.currentBlueprintPlan(); if(!a) { this.toast(this.sim.s.lesson?.id==='up' ? verticalCheck(this.sim) : 'The suggested spot is blocked. Choose another valid placement or clear the taught area.'); return; }
+    this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=!!a.climate;
     this.planArgs={a:{...a.a},b:{...a.b},axis:a.axis,dir:a.dir}; this.replan(); this.showBlueprintTarget();
   }
   showBlueprintTarget() {
@@ -1042,13 +1043,13 @@ export class UI {
   }
   updateBlueprint() {
     const box=this.$('blueprint'); if(!box) return;
-    if(this.title||this.modalOpen()||this.sim.s.lesson?.id!=='up'||this.menuTouch||this.buildPlacing) {box.innerHTML='';return;}
-    const l=verticalLayout(this.sim),a=this.currentBlueprintPlan(); if(!l?.plans) {box.innerHTML='';return;}
+    if(this.title||this.modalOpen()||!curBeat(this.sim)||this.menuTouch) {box.innerHTML='';return;}
+    const l=this.sim.s.lesson?.id==='up'?verticalLayout(this.sim):null,a=this.currentBlueprintPlan(); if(!a&&!l?.plans) {box.innerHTML='';return;}
     const project=(x,y,f=0)=>this.rend.project(x,y,f*3);
     const polygon=(a,b,f,color,label)=>{const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1; const pts=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(([x,y])=>project(x,y,f)); if(!pts.every(p=>p.vis))return '';const c=project(x+w/2,y+h/2,f);return `<polygon points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="${color}" fill-opacity=".12" stroke="${color}" stroke-width="2" stroke-dasharray="6 4"/><text x="${c.x}" y="${c.y}" class="bp-label">${label}</text>`;};
-    let html=polygon(l.plans.shell2.a,l.plans.shell2.b,0,'#7adbe8',`${l.sh.w} × ${l.sh.h} · 2 floors`)+polygon(l.plans.aisle.a,l.plans.aisle.b,0,'#7adbe8','Drive aisle');
-    if(a) { html+=polygon(a.a,a.b,a.f,'#ffd23a',TOOLS[a.tool].name);for(const [c,label] of [[a.a,'Start here'],[a.b,'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(p.vis)html+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/><text x="${p.x}" y="${p.y+(label==='Start here'?-15:23)}" class="bp-label">${a.a.x===a.b.x&&a.a.y===a.b.y ? (label==='Start here'?'Place here':'') : label}</text>`;}}
-    for(const [c,label] of [[l.door,'Entrance'],[l.outer,'Loading'],[l.plans.elevator.a,'Elevator']]) {const p=project(c.x+.5,c.y+.5,a?.f||0);if(p.vis)html+=`<text x="${p.x}" y="${p.y-9}" class="bp-label secondary">${label}</text>`;}
+    let html=l?.plans ? polygon(l.plans.shell2.a,l.plans.shell2.b,0,'#7adbe8',`${l.sh.w} × ${l.sh.h} · 2 floors`)+polygon(l.plans.aisle.a,l.plans.aisle.b,0,'#7adbe8','Drive aisle') : '';
+    if(a) { const planned=this.sim.plan(a),items=planned.items||[], cells=items.filter(c=>c.x!=null&&c.y!=null); const start=cells.length?{x:Math.min(...cells.map(c=>c.x)),y:Math.min(...cells.map(c=>c.y))}:a.a,end=cells.length?{x:Math.max(...cells.map(c=>c.x)),y:Math.max(...cells.map(c=>c.y))}:a.b; html+=polygon(start,end,a.f,'#ffd23a',TOOLS[a.tool].name); for(const u of planned.units||[]) {html+=polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,'#ffd23a','');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)html+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="#ffd23a" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="#ffd23a"/>`; }for(const [c,label] of [[a.a,'Start here'],[a.b,'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(p.vis)html+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/><text x="${p.x}" y="${p.y+(label==='Start here'?-15:23)}" class="bp-label">${a.a.x===a.b.x&&a.a.y===a.b.y ? (label==='Start here'?'Place here':'') : label}</text>`;}}
+    if(l?.plans) for(const [c,label] of [[l.door,'Entrance'],[l.outer,'Loading'],[l.plans.elevator.a,'Elevator']]) {const p=project(c.x+.5,c.y+.5,a?.f||0);if(p.vis)html+=`<text x="${p.x}" y="${p.y-9}" class="bp-label secondary">${label}</text>`;}
     box.setAttribute('viewBox',`0 0 ${innerWidth} ${innerHeight}`); if(box.innerHTML!==html)box.innerHTML=html;
   }
   // Coach ring: points at the current step's DOM control, or the control that leads to it, or its map spot.
