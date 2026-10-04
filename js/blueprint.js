@@ -35,7 +35,7 @@ function deriveLayout(sim) {
   const outer={x:door.x+d[0],y:door.y+d[1]};
   const loading=d[1] ? rect(outer.x-1,outer.y,3,1) : rect(outer.x,outer.y-1,1,3);
   const hall={a:h0,b:door};
-  const plans={aisle:{tool:'aisle',...(ac.road||loading),f:0},shell2:{tool:'shell2',...rect(sh.x,sh.y,sh.w,sh.h),f:0},hall:{tool:'hall',...hall,f:0},doorWide:{tool:'doorWide',a:door,b:door,f:0,dir:d},loading:{tool:'loading',...loading,f:0},hall2:{tool:'hall',...hall,f:1},elevator:{tool:'elevator',a:e,b:e,f:0},light:{tool:'light',a:light,b:light,f:0},light2:{tool:'light',a:light,b:light,f:1},units:{tool:'iu5x5',a:u0,b:u1,f:1,flip:false}};
+  const plans={aisle:{tool:'aisle',...(ac.road||loading),f:0},shell2:{tool:'shell2',...rect(sh.x,sh.y,sh.w,sh.h),f:0},hall:{tool:'hall',...hall,f:0},doorWide:{tool:'doorWide',a:door,b:door,f:0,dir:d},loading:{tool:'loading',...loading,f:0},hall2:{tool:'hall',...hall,f:1},elevator:{tool:'elevator',a:e,b:e,f:0},light:{tool:'light',a:light,b:light,f:0},light2:{tool:'light',a:light,b:light,f:1},units:{tool:'iu5x5',a:u0,b:u1,f:1,axis:d[1]?'y':'x',flip:false}};
   // Use actual planned frontage, choosing the flip that faces this hallway.
   const up=sim.plan(plans.units); const want={x:-unitSide*t.x,y:-unitSide*t.y};
   if(up.units?.[0]?.dir && (up.units[0].dir[0]!==want.x||up.units[0].dir[1]!==want.y)) plans.units.flip=true;

@@ -842,6 +842,7 @@ export class Sim {
   act_cancelOrder(a) {
     const s = this.s, ord = s.orders.find((o) => o.id === a.id);
     if (!ord || ord.st !== 'construction') return { ok: false, msg: 'Nothing to cancel' };
+    const pavingDependents=s.orders.filter(o=>o.st==='construction'&&o.id>ord.id&&this.groundOrdersOverlap(ord,o));
     const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     const refund = undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6);
     if (!s.creative) this.money(refund, 'capex', (undo ? 'Undo: ' : 'Cancelled: ') + ord.label);
@@ -852,7 +853,7 @@ export class Sim {
     // dependent work inside a cancelled shell cannot be built on open ground
     let extra = 0, nDep = 0;
     const shellIds = new Set(ord.objs.filter((id) => !s.objects[id]));
-    for (const dep of s.orders.filter((o) => o.st === 'construction' && o.waitShell && shellIds.has(o.waitShell))) {
+    for (const dep of s.orders.filter((o) => o.st === 'construction' && ((o.waitShell && shellIds.has(o.waitShell)) || pavingDependents.includes(o)))) {
       const r = this.act_cancelOrder({ id: dep.id, cascade: true }); if (r.ok) { extra += r.refund || 0; nDep++; }
     }
     this.markDirty(); this.emit('cancel');
@@ -862,6 +863,14 @@ export class Sim {
   cancelRefund(ord) {
     const s = this.s; const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     return { undo, refund: undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6) };
+  }
+  groundOrdersOverlap(a,b) {
+    const cells=new Set(a.tiles.filter(t=>t.k==='ground').map(t=>t.i));
+    return cells.size>0 && b.tiles.some(t=>t.k==='ground'&&cells.has(t.i));
+  }
+  groundPredecessor(ord) {
+    if(!ord.tiles.some(t=>t.k==='ground')) return null;
+    return this.s.orders.find(o=>o.st==='construction'&&o.id<ord.id&&this.groundOrdersOverlap(o,ord));
   }
   completeOrder(ord) {
     const s = this.s;
@@ -1112,7 +1121,7 @@ export class Sim {
     // construction
     for (const ord of s.orders) if (ord.st === 'construction') {
       if (ord.waitShell && !s.objects[ord.waitShell]) { this.act_cancelOrder({ id: ord.id, cascade: true }); continue; }
-      if (ord.waitShell && s.objects[ord.waitShell] && s.objects[ord.waitShell].cstate === 'construction') { ord.waiting = true; continue; }
+      if ((ord.waitShell && s.objects[ord.waitShell] && s.objects[ord.waitShell].cstate === 'construction') || this.groundPredecessor(ord)) { ord.waiting = true; continue; }
       ord.waiting = false;
       ord.prog = Math.min(1, ord.prog + 1 / ord.dur);
       if (ord.prog >= 1) this.completeOrder(ord);

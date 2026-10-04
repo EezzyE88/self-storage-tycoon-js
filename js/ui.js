@@ -318,13 +318,13 @@ export class UI {
     if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { this.planArgs.a = this.planArgs.b = { x: cell.x, y: cell.y }; this.replan(); return; }
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
     const hint=this.currentBlueprintPlan();
-    if(hint && Math.abs(cell.x-hint.b.x)<=1 && Math.abs(cell.y-hint.b.y)<=1 && Math.abs(this.planArgs.a.x-hint.a.x)<=1 && Math.abs(this.planArgs.a.y-hint.a.y)<=1) { this.planArgs.a={...hint.a}; cell=hint.b; }
+    if(hint?.tool===this.tool && Math.abs(cell.x-hint.b.x)<=1 && Math.abs(cell.y-hint.b.y)<=1 && Math.abs(this.planArgs.a.x-hint.a.x)<=1 && Math.abs(this.planArgs.a.y-hint.a.y)<=1) { this.planArgs.a={...hint.a}; this.planArgs.axis=hint.axis; this.planArgs.dir=hint.dir; cell=hint.b; }
     this.planArgs.b = { x: cell.x, y: cell.y }; this.replan();
   }
   replan() {
     if (!this.tool || !this.planArgs) { this.renderActionBar(); return; }
     const T = TOOLS[this.tool];
-    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush };
+    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush };
     if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
     if (this.tool.startsWith('du')) a.f = 0;
     this.plan = this.sim.plan(a); this.plan.args = a;
@@ -416,7 +416,7 @@ export class UI {
       const ord = s.orders.find((q) => q.id === o.order);
       if (!ord) return this.sheet(nm, 'Under construction', '');
       const { undo, refund } = sim.cancelRefund(ord);
-      return this.sheet(nm, 'Under construction', `<div class="kv"><span>Order</span><span>${esc(ord.label)}</span><span>Progress</span><span>${ord.waiting ? 'Waiting for building shell' : pct(ord.prog)}</span><span>Cost</span><span>${money(ord.cost)}</span></div>
+      return this.sheet(nm, 'Under construction', `<div class="kv"><span>Order</span><span>${esc(ord.label)}</span><span>Progress</span><span>${ord.waiting ? (sim.groundPredecessor(ord) ? 'Waiting for earlier paving' : 'Waiting for building shell') : pct(ord.prog)}</span><span>Cost</span><span>${money(ord.cost)}</span></div>
         <div class="bar"><i style="width:${Math.round(ord.prog * 100)}%"></i></div>
         <div class="row" style="margin-top:10px"><button class="btn danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'cancelOrder', id: ord.id })}'>${undo ? 'Undo' : 'Cancel'} (refund ${money(refund)})</button></div>
         <p class="note">${undo ? 'Undo refunds everything within 30 game-minutes of committing.' : 'Cancelling mid-build refunds 60% of the unbuilt share.'}</p>`);
@@ -1016,12 +1016,12 @@ export class UI {
     if(this.sim.s.lesson?.id!=='up') return null;
     const step=stepState(this.sim,this).cur, key=curBeat(this.sim)?.steps[step]?.blueprint;
     const l=verticalLayout(this.sim); if(!l?.plans) return null;
-    return l.plans[key==='lights' ? (verticalDone(this.sim,'lights') ? 'light2' : this.sim.objs('light').some(o=>o.f===0&&o.x>=l.sh.x&&o.x<l.sh.x+l.sh.w&&o.y>=l.sh.y&&o.y<l.sh.y+l.sh.h) ? 'light2' : 'light') : key] || null;
+    return l.plans[key==='lights' ? (this.sim.objs('light').some(o=>(o.f||0)===0&&o.x>=l.sh.x&&o.x<l.sh.x+l.sh.w&&o.y>=l.sh.y&&o.y<l.sh.y+l.sh.h&&this.sim.s.hall[0][this.sim.idx(o.x,o.y)]) ? 'light2' : 'light') : key] || null;
   }
   suggestPlacement() {
     const a=this.currentBlueprintPlan(); if(!a) { this.toast(verticalCheck(this.sim)); return; }
     this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=false;
-    this.planArgs={a:{...a.a},b:{...a.b}}; this.replan(); this.showBlueprintTarget();
+    this.planArgs={a:{...a.a},b:{...a.b},axis:a.axis,dir:a.dir}; this.replan(); this.showBlueprintTarget();
   }
   showBlueprintTarget() {
     const a=this.currentBlueprintPlan(); if(!a) return;

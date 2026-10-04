@@ -83,3 +83,4 @@ for (const [name, mk] of modes()) for (let seed = 1; seed <= SEEDS; seed++) {
 }
 console.log(`\n${actions} actions (${okActs} accepted), ${(stepsMs / 1000).toFixed(1)}s in sim steps, ${((Date.now() - t0) / 1000).toFixed(0)}s total`);
 if (!issues.size) console.log('NO ISSUES'); else { console.log(`${issues.size} DISTINCT ISSUES`); for (const [k, v] of issues) console.log(`- [${v.n}x] ${k}\n    e.g. ${v.ex}`); }
+if (issues.size) process.exitCode = 1;
