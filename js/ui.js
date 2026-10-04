@@ -319,6 +319,7 @@ export class UI {
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
     const hint=this.currentBlueprintPlan();
     if(hint?.tool===this.tool && Math.abs(cell.x-hint.b.x)<=1 && Math.abs(cell.y-hint.b.y)<=1 && Math.abs(this.planArgs.a.x-hint.a.x)<=1 && Math.abs(this.planArgs.a.y-hint.a.y)<=1) { this.planArgs.a={...hint.a}; this.planArgs.axis=hint.axis; this.planArgs.dir=hint.dir; cell=hint.b; }
+    else { delete this.planArgs.axis; delete this.planArgs.dir; }
     this.planArgs.b = { x: cell.x, y: cell.y }; this.replan();
   }
   replan() {

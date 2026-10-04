@@ -19,7 +19,7 @@ Build label: bplus-full-game-qa-candidate-4.
 Run from repository root with Node 24:
 
 - `node tests/run-headless.mjs`: 33/33 scripts pass after fixes. This includes assertions and exploratory probes; it is not a count of 33 individual assertions. The runner supplies fixtures to the two parameterized construction probes and detects printed FAIL markers as well as failing exits.
-- `node tests/headless/tblueprint.mjs`: 20 checks pass, including the seven new checks for small-shell commissioning, hallway-light scope, different-tool drag, axis/direction preservation, normal timed build completion through save/resume, full undo and late partial refunds.
+- `node tests/headless/tblueprint.mjs`: 21 checks pass, including the eight new checks for small-shell commissioning, hallway-light scope, different-tool drag, axis/direction preservation, restoring free orientation after dragging away from assistance, normal timed build completion through save/resume, full undo and late partial refunds.
 - `node tests/headless/tmenu_touch.mjs`: 7 checks pass; loan progression, compact held placement, release review, menu shortcuts and stable guidance.
 - `node tests/headless/tbplus.mjs`: 21 checks pass; financial processing, settlements, migration, forecasts and reserves.
 - `node tests/headless/tfuzz.mjs 365 8`: 72 runs across nine modes and eight deterministic seeds; 474,034 random actions, 74,886 accepted; no invariant failures. Each run reaches Day 366 and periodically restores a JSON save. The fuzzer now exits unsuccessfully when it finds issues.
