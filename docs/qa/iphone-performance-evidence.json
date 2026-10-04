@@ -1,0 +1,698 @@
+{
+  "method": "Seven alternating independent Node processes per source after full suite completed; real Three.js scene construction, stub GPU/canvas; CPU medians only. Not Safari FPS or GPU timings.",
+  "baselineCommit": "43b9eed594b40b2d52f52ddfd858917716812037",
+  "runs": {
+    "baseline": [
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "43b9eed594b40b2d52f52ddfd858917716812037",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 167,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 8.58
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1325,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 33.89
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 4000,
+          "disposedGroups": 4000,
+          "retainedGroups": 0,
+          "cpuMs": 77.85
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "43b9eed594b40b2d52f52ddfd858917716812037",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 167,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 8.83
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1325,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 24.89
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 4000,
+          "disposedGroups": 4000,
+          "retainedGroups": 0,
+          "cpuMs": 80.2
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "43b9eed594b40b2d52f52ddfd858917716812037",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 167,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 7.96
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1325,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 32.94
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 4000,
+          "disposedGroups": 4000,
+          "retainedGroups": 0,
+          "cpuMs": 73.97
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "43b9eed594b40b2d52f52ddfd858917716812037",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 167,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 7.96
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1325,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 23.44
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 4000,
+          "disposedGroups": 4000,
+          "retainedGroups": 0,
+          "cpuMs": 70.74
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "43b9eed594b40b2d52f52ddfd858917716812037",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 167,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 9.21
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1325,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 32.82
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 4000,
+          "disposedGroups": 4000,
+          "retainedGroups": 0,
+          "cpuMs": 80.5
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "43b9eed594b40b2d52f52ddfd858917716812037",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 167,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 11.25
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1325,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 22.54
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 4000,
+          "disposedGroups": 4000,
+          "retainedGroups": 0,
+          "cpuMs": 77.51
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "43b9eed594b40b2d52f52ddfd858917716812037",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 167,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 8.36
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1325,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 21.44
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 4000,
+          "disposedGroups": 4000,
+          "retainedGroups": 0,
+          "cpuMs": 74.8
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "working tree",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 155,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 7.5
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1233,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 21.7
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 20,
+          "disposedGroups": 0,
+          "retainedGroups": 20,
+          "cpuMs": 6.07
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "working tree",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 155,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 8.5
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1233,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 30.1
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 20,
+          "disposedGroups": 0,
+          "retainedGroups": 20,
+          "cpuMs": 7.12
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "working tree",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 155,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 11.77
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1233,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 26.23
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 20,
+          "disposedGroups": 0,
+          "retainedGroups": 20,
+          "cpuMs": 5.99
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "working tree",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 155,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 8.21
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1233,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 25.64
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 20,
+          "disposedGroups": 0,
+          "retainedGroups": 20,
+          "cpuMs": 6.08
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "working tree",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 155,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 8.19
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1233,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 23.4
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 20,
+          "disposedGroups": 0,
+          "retainedGroups": 20,
+          "cpuMs": 5.81
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "working tree",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 155,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 8.76
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1233,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 21.98
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 20,
+          "disposedGroups": 0,
+          "retainedGroups": 20,
+          "cpuMs": 6.75
+        }
+      },
+      {
+        "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+        "source": "working tree",
+        "scenes": {
+          "maple": {
+            "units": 23,
+            "meshes": 257,
+            "shadowCasters": 155,
+            "sceneTriangles": 2234,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 49,
+            "rebuildCpuMs": 12.07
+          },
+          "dense": {
+            "units": 550,
+            "meshes": 3039,
+            "shadowCasters": 1233,
+            "sceneTriangles": 19378,
+            "uniqueGeometries": 2,
+            "uniqueMaterialRefs": 663,
+            "rebuildCpuMs": 27.38
+          }
+        },
+        "customerChurn": {
+          "customers": 4000,
+          "peakConcurrent": 20,
+          "createdGroups": 20,
+          "disposedGroups": 0,
+          "retainedGroups": 20,
+          "cpuMs": 6.47
+        }
+      }
+    ]
+  },
+  "medians": {
+    "baseline": {
+      "mapleRebuildCpuMs": 8.58,
+      "denseRebuildCpuMs": 24.89,
+      "customerChurnCpuMs": 77.51
+    },
+    "candidate": {
+      "mapleRebuildCpuMs": 8.5,
+      "denseRebuildCpuMs": 25.64,
+      "customerChurnCpuMs": 6.08
+    }
+  },
+  "testSuite": [
+    {
+      "file": "dbg.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "t9.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.8
+    },
+    {
+      "file": "t9b.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "t9c.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.9
+    },
+    {
+      "file": "t9d.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 39.5
+    },
+    {
+      "file": "t9e.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.5
+    },
+    {
+      "file": "t9f.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 4.4
+    },
+    {
+      "file": "tads.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tbal.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 10.8
+    },
+    {
+      "file": "tblueprint.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.5
+    },
+    {
+      "file": "tbplus_payback.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 43.3
+    },
+    {
+      "file": "tbplus_scenarios.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 5.9
+    },
+    {
+      "file": "tbplus.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "tbugs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tcalm.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 7.3
+    },
+    {
+      "file": "tcapacity.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tclim.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.5
+    },
+    {
+      "file": "tdrama.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 14.4
+    },
+    {
+      "file": "tfin.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.8
+    },
+    {
+      "file": "tfinancial_trust.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tfix.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "tfuzz.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 21.2
+    },
+    {
+      "file": "tmenu_touch.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tp.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.7
+    },
+    {
+      "file": "tp2.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 7.2
+    },
+    {
+      "file": "tperformance.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tr.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tsandbox.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.5
+    },
+    {
+      "file": "tsc.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6.7
+    },
+    {
+      "file": "tstaffing_compare.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.9
+    },
+    {
+      "file": "tsystems.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.7
+    },
+    {
+      "file": "tv.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tvert.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.2
+    },
+    {
+      "file": "tw.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "twalk.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    }
+  ],
+  "focusedChecks": {
+    "performanceUIRegressions": 11,
+    "menuTouch": 7,
+    "systems": 16,
+    "blueprintRecovery": 26,
+    "syntaxAndWhitespace": "passed"
+  },
+  "unchangedAgainstBaseline": {
+    "js/sim.js": true,
+    "js/data.js": true,
+    "js/finance.js": true,
+    "js/tutorial.js": true,
+    "js/blueprint.js": true,
+    "js/scenarios.js": true,
+    "js/maple.js": true
+  }
+}

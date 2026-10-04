@@ -7,6 +7,7 @@ import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from './
 export { modeLabel };
 import { MARKETS, MIN_PER_DAY, ROLES } from './data.js';
 import { installTutorial } from './tutorial.js';
+import { PerformanceStats } from './performance.js';
 import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
@@ -17,7 +18,7 @@ import { installShowcase } from './showcase.js';
 
 Renderer.prototype.setSim = function (sim) {
   this.sim = sim; this.resizeWorld();
-  for (const k of ['veh', 'ppl', 'cart']) { for (const m of this.pool[k].values()) { this.dynG.remove(m); this.disposeTree(m); } this.pool[k].clear(); }
+  this.clearDynamic();
   this.lastStruct = -1; this.setPreview(null); this.setSelection(null); this.setFocus(null);
 };
 
@@ -255,7 +256,7 @@ function stepTicks(n) {
   }
   game.drain();
 }
-let last = performance.now(), fpsT = 0, fpsN = 0, weatherFxNext = performance.now() + 12000;
+let last = performance.now(), weatherFxNext = performance.now() + 12000;
 game.rdt = 0; game.lastDraw = 0; game.lastInput = performance.now(); game.battery = false; game.autoQ = true;
 // adaptive graphics: if the device can't hold ~36 fps for a few seconds of active play, step quality down (never back up mid-session)
 let pwT = 0, pwN = 0, pwCool = performance.now() + 4000;
@@ -272,8 +273,12 @@ function loop(now) {
   try { tick(now); } catch (e) { console.error('loop', e && e.stack || e); }
   requestAnimationFrame(loop);
 }
+const diagnostics = new PerformanceStats();
+game.performanceSnapshot = () => diagnostics.snapshot();
 function tick(now) {
   if (window.__qaHold) { last = now; return; } // test hook: automated screenshots drive frames manually
+  const frameStart = game.showFps ? performance.now() : 0;
+  if (diagnostics.enabled !== game.showFps) { diagnostics.enabled = game.showFps; diagnostics.reset(); }
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   const s = game.sim.s;
   if (s.speed > 0 && !game.ui.title && !game.ui.modalOpen()) {
@@ -287,15 +292,28 @@ function tick(now) {
     if (game.lastAutoDay == null) { game.lastAutoDay = game.sim.day; game.lastAuto = now; }
     else if (!game.saving && (game.sim.day !== game.lastAutoDay || (now - game.lastAuto > 60000 && s.speed > 0))) game.autosave();
   }
+  const simMs = game.showFps ? performance.now() - frameStart : 0;
   // battery: when nothing is moving (paused, title or a dialog) and the player is idle, redraw ~4x a second;
   // battery saver caps drawing at ~30 fps. Simulation timing is unaffected.
   game.rdt += dt;
   const idle = (s.speed === 0 || game.ui.title || game.ui.modalOpen()) && now - game.lastInput > 1500 && Math.abs(game.rend.targetAz - game.rend.azimuth) < 1e-3 && game.rend.camV === game.drawCamV;
   const minGap = idle ? 250 : game.battery ? 32 : 0;
   if (now - game.lastDraw < minGap) return;
+  const drawInterval = now - game.lastDraw;
   const rdt = Math.min(0.25, game.rdt); game.rdt = 0; game.lastDraw = now; game.drawCamV = game.rend.camV;
-  game.rend.frame(rdt);
+  const info = game.rend.r.info, autoReset = info.autoReset;
+  const renderStart = game.showFps ? performance.now() : 0;
+  if (game.showFps) { info.autoReset = false; info.reset(); }
+  try { game.rend.frame(rdt); } finally { info.autoReset = autoReset; }
+  const renderMs = game.showFps ? performance.now() - renderStart : 0;
+  const uiStart = game.showFps ? performance.now() : 0;
   game.ui.update(rdt);
+  if (game.showFps) {
+    diagnostics.record({ frameMs: drawInterval, simMs, renderMs, uiMs: performance.now() - uiStart,
+      info: { calls: info.render.calls, triangles: info.render.triangles, geometries: info.memory.geometries, textures: info.memory.textures },
+      quality: game.rend.quality, dpr: game.rend.r.getPixelRatio(), throttled: minGap > 0 });
+    if (now - diagnostics.updatedAt > 1000) { document.getElementById('fps').textContent = diagnostics.text(); diagnostics.updatedAt = now; }
+  }
   perfWatch(rdt, idle || minGap > 0);
   const night = game.rend.ambient.intensity / 0.9;
   const sc = game.showcase, amode = game.ui.title ? 'title' : sc && sc.photo ? 'photo' : (s.speed === 0 || game.ui.modalOpen()) ? 'quiet' : game.ui.tool ? 'build' : night > 0.6 ? 'night' : 'day';
@@ -306,7 +324,6 @@ function tick(now) {
     game.audio.thunder(0.45 + Math.random() * 1.25);
     weatherFxNext = now + 9000 + Math.random() * 19000;
   } else if (!weatherPlaying && now >= weatherFxNext) weatherFxNext = now + 8000;
-  fpsN++; fpsT += dt; if (fpsT > 0.5) { if (game.showFps) document.getElementById('fps').textContent = `${Math.round(fpsN / fpsT)} fps · ${game.sim.s.agents.length} agents`; fpsN = 0; fpsT = 0; }
 }
 requestAnimationFrame(loop);
 window.addEventListener('resize', () => game.rend.resize());
@@ -379,7 +396,7 @@ for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev,
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* Safari 17+ only */ }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { game.wasSpeed = game.sim.s.speed; game.sim.s.speed = 0; if (game.audio.ctx) game.audio.ctx.suspend(); game.autosave(true); }
-  else { if (game.wasSpeed != null && game.sim.s.speed === 0) game.sim.s.speed = game.wasSpeed; game.wasSpeed = null; last = performance.now(); if (game.ui) game.ui.update && game.ui.update(true); }
+  else { if (game.wasSpeed != null && game.sim.s.speed === 0) game.sim.s.speed = game.wasSpeed; game.wasSpeed = null; last = performance.now(); game.lastDraw = last; diagnostics.reset(); if (game.ui) game.ui.update && game.ui.update(true); }
 });
 // iOS can drop the WebGL context under memory pressure; rebuild the scene when it comes back
 canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); });

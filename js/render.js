@@ -128,6 +128,7 @@ export class Renderer {
     this.previewG = new THREE.Group(); this.scene.add(this.previewG);
     this.envG = new THREE.Group(); this.scene.add(this.envG);
     this.buildEnvironment();
+    this.customerFree = [];
     this.pool = { veh: new Map(), ppl: new Map(), cart: new Map() };
     this.anim = []; // per-object animated parts {kind, id, mesh}
     this.lastStruct = -1; this.lastGroundT = -1e9;
@@ -345,7 +346,9 @@ export class Renderer {
   }
   clearGroup(g) { while (g.children.length) { const c = g.children[0]; g.remove(c); this.disposeTree(c); } }
   clearStatic() { this.clearGroup(this.staticG); this.anim = []; this.badges = []; }
-  add(mesh, f = 0, tag = {}) { mesh.userData = { f, ...tag }; mesh.castShadow = mesh.castShadow ?? true; this.staticG.add(mesh); return mesh; }
+  add(mesh, f = 0, tag = {}) { mesh.userData = { f, ...tag }; mesh.castShadow = mesh.castShadow ?? true;
+    // Tiny box props retain appearance/selection, but phones skip their shadow-map draw.
+    if (this.mobile && mesh.geometry === this.geo.box && Math.max(mesh.scale.x, mesh.scale.y, mesh.scale.z) <= 0.85) mesh.castShadow = false; this.staticG.add(mesh); return mesh; }
   box(w, h, d, mat, x, y, z, f = 0, tag = {}) {
     const m = new THREE.Mesh(this.geo.box, mat); m.scale.set(w, h, d); m.position.set(x, y + f * FLOOR_H, z); m.castShadow = true; m.receiveShadow = true; return this.add(m, f, tag);
   }
@@ -613,6 +616,15 @@ export class Renderer {
     return g;
   }
   personMesh(a) {
+    const reusable = a.kind === 'cust' && !a.role;
+    if (reusable && this.customerFree.length) {
+      const g = this.customerFree.pop();
+      g.userData.body.material.color.setHSL(hash(a.look || a.id), 0.45, 0.5);
+      g.userData.head.material = this.mat.skin[Math.floor(hash((a.look || a.id) + 5) * 4)];
+      g.position.set(0, 0, 0); g.rotation.set(0, 0, 0); g.visible = true;
+      g.userData.legs.scale.y = 0.32; g.userData.box.visible = false;
+      return g;
+    }
     const g = new THREE.Group();
     const vestCol = { owner: 0x1f3a5f, porter: 0x2f8f5b, tech: 0xd9772b, clerk: 0x6a4fa0 }[a.role];
     const shirtHue = hash(a.look || a.id) ;
@@ -626,7 +638,7 @@ export class Renderer {
       if (a.role === 'tech') { const tb = new THREE.Mesh(this.geo.box, this.mat.cartDmg); tb.scale.set(0.16, 0.1, 0.07); tb.position.set(0, 0.3, 0.16); g.add(tb); }
     }
     const box = new THREE.Mesh(this.geo.box, this.mat.boxc); box.scale.set(0.24, 0.18, 0.2); box.position.set(0.2, 0.5, 0); box.visible = false; g.add(box);
-    g.userData.box = box; g.userData.legs = legs;
+    g.userData.box = box; g.userData.legs = legs; g.userData.body = body; g.userData.head = head; g.userData.reusableCustomer = reusable;
     g.traverse((c) => { c.castShadow = true; });
     return g;
   }
@@ -648,7 +660,18 @@ export class Renderer {
       if (!m) { m = make(it); m.userData.fresh = true; map.set(it.id, m); this.dynG.add(m); }
       upd(m, it, dt); m.userData.fresh = false;
     }
-    for (const [id, m] of map) if (!seen.has(id)) { this.dynG.remove(m); this.disposeTree(m); map.delete(id); }
+    for (const [id, m] of map) if (!seen.has(id)) { this.dynG.remove(m);
+      if (map === this.pool.ppl && m.userData.reusableCustomer && this.customerFree.length < 24) this.customerFree.push(m);
+      else this.disposeTree(m);
+      map.delete(id); }
+  }
+  clearDynamic() {
+    for (const map of Object.values(this.pool)) {
+      for (const m of map.values()) { this.dynG.remove(m); this.disposeTree(m); }
+      map.clear();
+    }
+    for (const m of this.customerFree) this.disposeTree(m);
+    this.customerFree.length = 0;
   }
   smooth(m, x, y, z, dt, k = 18, snap = 3) {
     if (m.userData.fresh || Math.hypot(m.position.x - x, m.position.z - z) > snap) { m.position.set(x, y, z); return; }

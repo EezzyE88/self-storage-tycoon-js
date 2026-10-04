@@ -635,3 +635,16 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui:has(#feed .convo) #tut, #ui:has(#feed .convo) #coach { visibility: hidden; }
 
 #ui.is-placing #tut, #ui.is-placing #coach { visibility: hidden; }
+
+/* Phone statements reserve room for amounts; long prose stays inside its column. */
+.kv { grid-template-columns: minmax(0, 1fr) minmax(0, 40%); }
+.kv span { min-width: 0; overflow-wrap: anywhere; }
+.kv.stmt span:nth-child(even) { white-space: nowrap; }
+#fps { white-space: pre-line; max-width: calc(100vw - 24px); bottom: calc(92px + var(--safe-b)); }
+@media (max-width: 600px) {
+  .section-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; touch-action: auto; }
+  .section-shortcuts button { min-width: 0; padding: 0 6px; font-size: 12px; white-space: normal; }
+  .report { flex-direction: column; }
+  .report .grade { flex: none; width: 44px; height: 44px; font-size: 24px; }
+  .report .rgrow { width: 100%; }
+}
