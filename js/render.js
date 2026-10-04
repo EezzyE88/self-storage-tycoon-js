@@ -107,6 +107,7 @@ export class Renderer {
     for (const k of ['rent', 'turn', 'fault', 'commission', 'missing', 'unready', 'reserved', 'lien', 'task']) this.tx.badges[k] = badgeTexture(k);
     this.mat = this.makeMaterials();
     this.statusMaterials = Object.fromEntries(Object.entries(UNIT_STATUS).map(([k,v])=>[k,new THREE.MeshStandardMaterial({color:v.color,map:this.tx.rollup,roughness:.65})]));
+    Object.assign(this.mat, this.statusMaterials);
     this.geo = { box: new THREE.BoxGeometry(1, 1, 1), plane: new THREE.PlaneGeometry(1, 1), cyl: new THREE.CylinderGeometry(0.5, 0.5, 1, 10), sph: new THREE.SphereGeometry(0.5, 12, 8), cone: new THREE.ConeGeometry(0.5, 1, 8) };
     this.geo.edges = new THREE.EdgesGeometry(this.geo.box); this.mat.edgeDark = new THREE.LineBasicMaterial({ color: 0x3c4046 }); this.ringGeo = {};
     this.setupLights();
@@ -349,7 +350,7 @@ export class Renderer {
 
   // ================================================================ STATIC SCENE
   isShared(x) {
-    if (!this._shared) { this._shared = new Set([...Object.values(this.geo), ...Object.values(this.mat).flat(), ...Object.values(this.statusMaterials)]); }
+    if (!this._shared) { this._shared = new Set([...Object.values(this.geo), ...Object.values(this.mat).flat()]); }
     return this._shared.has(x) || Object.values(this.tx.plaques).includes(x) || Object.values(this.ringGeo).includes(x);
   }
   disposeTree(root) { // free per-instance GPU resources; shared geometries/materials/textures stay cached
