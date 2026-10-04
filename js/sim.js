@@ -6,6 +6,9 @@ import {
   SIZES, TOOLS, MARKETS, CART_COST, CLIMATE_COST_MULT, ROLES, OPEX, WORK, NAMES_FIRST, NAMES_LAST, POWER,
 } from './data.js';
 
+import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, outlook, recordCash, cashWindow, firstFinancialDay } from './finance.js';
+import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';
+
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const productKey = (size, env) => `${size}|${env}`;
@@ -30,7 +33,7 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     objects: {}, orders: [], leases: {}, tenants: {}, carts: [], vehicles: [], agents: [], staff: [], tasks: [],
     visits: [], gateQ: [], officeQ: [],
     market: { id: market, ask: {} },
-    ledger: [], days: [], today: null,
+    ledger: [], days: [], today: null, finance: financeState(),
     exp: { access: 0.85, convenience: 0.8, cleanliness: 0.85, security: 0.7, climate: 0.9, service: 0.85, value: 0.8, comfort: 0.8 },
     powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, debt: [], auction: null, mgrLog: [],
     thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [], ad: null, adHistory: [] },
@@ -77,6 +80,18 @@ export class Sim {
     }
     if (Array.isArray(state.tasks) && Array.isArray(state.dirt)) state.tasks = state.tasks.filter((t) => t.f == null || (Number.isInteger(t.f) && t.f >= 0 && t.f < state.dirt.length)); // heal saves hit by the old ownerClean bug
     state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; state.mkt.adHistory ||= []; if (state.mkt.ad === undefined) state.mkt.ad = null; if (state.coTier == null) state.coTier = 1;
+    // Legacy expenses and billing already ran at midnight. Do not run that day again.
+    if (!state.finance) {
+      state.finance = financeState(dayOf(state.t));
+      const truncated = state.ledger.length >= 250;
+      state.finance.cashCompleteFrom = truncated && state.ledger.length ? dayOf(state.ledger[0].t) + 1 : 1;
+      for (const row of state.ledger) {
+        const d = dayOf(row.t); let bucket = state.finance.cashDays.find((x) => x.day === d);
+        if (!bucket) { bucket = { day: d, incoming: 0, outgoing: 0, categories: {}, complete: d >= state.finance.cashCompleteFrom }; state.finance.cashDays.push(bucket); }
+        if (row.amt >= 0) bucket.incoming = cents(bucket.incoming + row.amt); else bucket.outgoing = cents(bucket.outgoing - row.amt);
+        bucket.categories[row.cat] = cents((bucket.categories[row.cat] || 0) + row.amt);
+      }
+    }
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -101,13 +116,14 @@ export class Sim {
   money(amt, cat, note) {
     const s = this.s; s.cash += amt;
     s.ledger.push({ t: s.t, amt: Math.round(amt * 100) / 100, cat, note });
-    if (s.ledger.length > 250) s.ledger.splice(0, s.ledger.length - 250);
+    recordCash(this, amt, cat);
+    if (s.ledger.length > 2000) s.ledger.splice(0, s.ledger.length - 2000);
     const d = s.today;
     if (cat === 'rent') d.rent += amt; else if (cat === 'opex') d.opex -= amt; else if (cat === 'payroll') d.payroll -= amt;
     else if (cat === 'capex') d.capex -= amt; else if (cat === 'anc') d.anc = (d.anc || 0) + amt; else if (cat === 'service') d.service = (d.service || 0) - amt; else if (cat === 'marketing') d.marketing = (d.marketing || 0) - amt;
     else if (cat === 'debt') d.debt = (d.debt || 0) - amt; else if (cat === 'interest') d.interest = (d.interest || 0) - amt; else if (cat === 'loan') d.fin = (d.fin || 0) + amt;
     else if (cat === 'inject' || cat === 'subsidy') d.inject = (d.inject || 0) + amt; // sandbox money: never income
-    else d.other += amt;
+    else if (!cat.startsWith('settle_')) d.other += amt;
     if (amt > 0 && cat === 'rent') this.emit('rent', { amt });
     // Free Build: spending is recorded normally; when it would take cash below zero, sandbox funds cover the gap
     if (amt < 0 && s.sb && s.sb.unlimited && s.cash < 0) { const top = Math.ceil(-s.cash); s.sb.subsidy = (s.sb.subsidy || 0) + top; this.money(top, 'subsidy', 'Free Build funds'); }
@@ -930,7 +946,7 @@ export class Sim {
   managerTick() {
     const s = this.s; if (!this.hasManager()) return;
     const h = this.hour; if (h < OFFICE_HOURS[0] || h >= OFFICE_HOURS[1]) return;
-    const reserve = (c) => this.unlimited() || s.cash - c >= 2500;
+    const reserve = (c) => this.unlimited() || this.financialPosition({ spend: c }).available >= 0;
     // 1. commission rent-ready units
     if (s.open && this.objs('unit').some((u) => u.cstate === 'ready')) { const r = this.act_commission({ all: true }); if (r.ok) this.mgr('Opened rent-ready units for rental'); }
     // 2. escalate stalled repairs to vendors
@@ -967,7 +983,7 @@ export class Sim {
   act_hire(a) {
     const s = this.s, R = ROLES[a.role]; if (!R || a.role === 'owner') return { ok: false, msg: 'Cannot hire that role' };
     const office = this.objs('office')[0]; if (!office) return { ok: false, msg: 'Staff need an office to work from' };
-    if (!this.unlimited() && s.cash < R.wage * 7) { this.emit('refuse'); return { ok: false, msg: `Keep at least a week of wages ($${(R.wage * 7).toLocaleString()}) in cash before hiring` }; }
+    if (!this.unlimited() && s.cash < 0) { this.emit('refuse'); return { ok: false, msg: 'Cash is negative. Recover cash before hiring.' }; }
     const st = { id: this.id(), role: a.role, name: this.pick(NAMES_FIRST), wage: R.wage, hired: s.t };
     s.staff.push(st); this.spawnStaffAgent(st);
     this.emit('hire', { role: a.role }); return { ok: true, msg: `Hired ${st.name} (${R.name}) - $${R.wage}/day` };
@@ -1086,9 +1102,11 @@ export class Sim {
   // ============================================================ TICK
   step() { // one game minute
     const s = this.s; this.ensure();
+    if (this.mod === FINANCIAL_MINUTE) this.financialBatch(); // includes a fresh game starting at 7:00
     s.t++;
     const mod = this.mod;
     if (mod === 0) this.newDay();
+    if (mod === FINANCIAL_MINUTE) this.financialBatch();
     this.auctionTick();
     if (mod % 5 === 0) this.convoTick();
     // construction
@@ -1120,20 +1138,15 @@ export class Sim {
   newDay() {
     const s = this.s, day = this.day;
     // close out yesterday
+    const owner = s.staff.find((st) => st.role === 'owner');
+    s.today.ownerUsed = owner && owner.workDay === s.today.day ? owner.workUsed || 0 : 0;
+    s.today.ownerOffice = owner && owner.workDay === s.today.day ? owner.officeUsed || 0 : 0;
+    s.today.workMeasured = true;
     s.days.push(s.today); if (s.days.length > 90) s.days.shift();
     s.today = blankDay(day);
     for (const st of s.staff) if (this.workCapacity(st)) { st.workDay = day; st.workUsed = 0; st.officeUsed = 0; }
     for (const t of s.tasks) if (t.workBookedDay && t.workBookedDay !== day) { t.workBooked = null; t.workBookedDay = null; }
-    // operating costs
-    const ox = this.dailyOpex();
-    this.money(-ox.total, 'opex', 'Daily operating cost');
-    const pay = s.staff.reduce((a, st) => a + st.wage, 0); if (pay) this.money(-pay, 'payroll', 'Payroll');
-    if (s.loan.bal > 0) { const int = Math.round(s.loan.bal * 0.0004 * 100) / 100; this.money(-int, 'interest', 'Credit line interest'); }
-    if (!this.unlimited()) this.cashCheck(ox.total + pay);
     if (s.sb && s.sb.goal && !s.sb.goal.done) { const P = this.sbGoalProgress(); if (P && P.met) { s.sb.goal.done = day; this.sbLog('Goal met: ' + s.sb.goal.label); this.emit('sb_goal', { label: s.sb.goal.label }); } }
-    // billing on anniversary days, then the collections ladder (GDD §36)
-    for (const L of Object.values(s.leases)) this.billLease(L, day);
-    this.debtService(day);
     // tenants whose rent was just raised sometimes ask about it (GDD §26 pricing question)
     { const asked = Object.values(s.leases).filter((L) => L.incT != null && !L.asked && s.t - L.incT < 5 * MIN_PER_DAY && s.tenants[L.tenant]);
       for (const L of asked.slice(0, 2)) { L.asked = true; if (this.rnd() < 0.4) this.pricingConvo(L); } }
@@ -1168,9 +1181,42 @@ export class Sim {
     // weather: restrained
     const prev = s.weather; s.weather = this.rnd() < (prev === 'rain' ? 0.45 : 0.12) ? 'rain' : 'fair';
     if (s.weather !== prev) this.emit('weather', { w: s.weather });
-    if (s.scenario && s.scenario.status === 'active') this.scenarioCheck(day);
     this.emit('newday', { day });
   }
+  financialBatch() {
+    const s = this.s, F = s.finance, day = this.day;
+    if (this.mod !== FINANCIAL_MINUTE || day <= F.lastDay) return false;
+    F.lastDay = day; // persisted before all effects; repeat calls/reloads cannot repeat the batch
+    for (const L of Object.values(s.leases)) this.billLease(L, day);
+    const ox = cents(this.dailyOpex().total), pay = cents(s.staff.reduce((a, st) => a + (st.wage || 0), 0));
+    const values = { opex: ox, payroll: pay, interest: cents(s.loan.bal * 0.0004) };
+    for (const [cat, amt] of Object.entries(values)) {
+      F.accrued[cat] = cents(F.accrued[cat] + amt);
+      s.today[cat] = cents((s.today[cat] || 0) + amt);
+    }
+    if (++F.cycle === 7) {
+      for (const [cat, amt] of Object.entries(F.accrued)) if (amt) this.money(-amt, 'settle_' + cat, 'Weekly ' + cat + ' settlement');
+      F.accrued = { opex: 0, payroll: 0, interest: 0 }; F.cycle = 0;
+      this.emit('settlement', { day });
+    }
+    this.debtService(day);
+    if (!this.unlimited()) this.cashCheck(ox + pay);
+    if (s.scenario && s.scenario.status === 'active') this.scenarioCheck(day);
+    this.emit('financial_day', { day });
+    return true;
+  }
+  committedBills() { return committed(this); }
+  financialPosition(options) { return position(this, options); }
+  recommendedReserve(extraDaily = 0) { return reserve(this, extraDaily); }
+  scheduledOutlook(options) { return outlook(this, options); }
+  cashWindow(days = 30) { return cashWindow(this, days); }
+  nextSettlementDay() { return firstFinancialDay(this) + 6 - this.s.finance.cycle; }
+  operations() { return operations(this); }
+  diagnostics() { return diagnostics(this); }
+  staffingEvidence(role) { return staffingEvidence(this, role); }
+  investment(plan, options) { return investment(this, plan, options); }
+  growthReadiness(plan, options) { return growthReadiness(this, plan, options); }
+  planDailyCost(plan) { return planDailyCost(this, plan); }
   // ---------------------------------------------------------------- scenarios (GDD §44): visible goals + fail conditions
   metric(k) {
     const s = this.s, last = s.days.slice(-30);
@@ -1190,14 +1236,15 @@ export class Sim {
   goalMet(g) { const v = this.metric(g.k); return g.cmp === '<' ? v < g.v : v >= g.v; }
   scenarioCheck(day) {
     const s = this.s, sc = s.scenario;
+    // The deadline day's 7:00 batch is the final eligible goal checkpoint.
+    if (day > sc.deadline) { sc.status = 'lost'; sc.endDay = day; sc.why = `Day ${sc.deadline} deadline passed`; this.emit('scenario_end', { won: false }); return; }
     const f = sc.fail; let failing = false;
-    if (f && f.cashBelow != null && s.cash - (s.loan ? s.loan.bal : 0) < f.cashBelow) failing = true;
+    if (f && f.cashBelow != null && this.financialPosition().netLiquid < f.cashBelow) failing = true;
     sc.badDays = failing ? (sc.badDays || 0) + 1 : 0;
     const allMet = sc.goals.every((g) => this.goalMet(g));
     if (allMet) { sc.status = 'won'; sc.endDay = day; this.emit('scenario_end', { won: true }); this.milestone('scenario_' + sc.id); return; }
-    if (f && f.cashDays && sc.badDays >= f.cashDays) { sc.status = 'lost'; sc.endDay = day; sc.why = `Net cash stayed below $${f.cashBelow.toLocaleString()} for ${f.cashDays} days`; this.emit('scenario_end', { won: false }); return; }
-    if (day > sc.deadline) { sc.status = 'lost'; sc.endDay = day; sc.why = `Day ${sc.deadline} deadline passed`; this.emit('scenario_end', { won: false }); return; }
-    if (failing && sc.badDays === 1) this.emit('cash_warn', { msg: `Scenario risk: net cash below $${f.cashBelow.toLocaleString()} - ${f.cashDays} days of this ends the run` });
+    if (f && f.cashDays && sc.badDays >= f.cashDays) { sc.status = 'lost'; sc.endDay = day; sc.why = `Net liquid position stayed below $${f.cashBelow.toLocaleString()} for ${f.cashDays} days`; this.emit('scenario_end', { won: false }); return; }
+    if (failing && sc.badDays === 1) this.emit('cash_warn', { msg: `Scenario risk: net liquid position below $${f.cashBelow.toLocaleString()} - ${f.cashDays} days of this ends the run` });
   }
   genProspects(day, frac) {
     const s = this.s, M = MARKETS[s.market.id]; const rep = this.reputation();
@@ -1220,17 +1267,17 @@ export class Sim {
   }
   creditLimit() { return Math.max(8000, Math.round(this.rentRoll() * 4 / 1000) * 1000); }
   cashCheck(burn) { // financial warnings and a recoverable distress path
-    const s = this.s; const firstNeg = s.cash < 0 && !s.loan.neg; s.loan.neg = s.cash < 0;
+    const s = this.s, P = this.financialPosition(); const firstNeg = P.netLiquid < 0 && !s.loan.neg; s.loan.neg = P.netLiquid < 0;
     if (!firstNeg && s.t - s.loan.warnT < 3 * MIN_PER_DAY) return;
-    if (s.cash < 0) {
+    if (P.netLiquid < 0) {
       s.loan.warnT = s.t;
-      this.emit('cash_warn', { msg: `Cash is negative (${Math.round(s.cash).toLocaleString()}). New construction and hiring are frozen.` });
+      this.emit('cash_warn', { msg: `Bills and credit-line debt exceed cash by $${Math.round(-P.netLiquid).toLocaleString()}. Collect overdue rent, reduce future costs or arrange cash; borrowing adds matching debt.` });
       const room = this.creditLimit() - s.loan.bal;
       if (room >= 1000) this.convo({ key: 'loan', who: 'Community Bank', text: `We can open a credit line for your storage business. Up to $${room.toLocaleString()} at about 1.2% per month.`, sev: 'critical',
         actions: [{ label: `Draw $${Math.min(room, Math.max(5000, Math.ceil(-s.cash / 1000) * 1000 + 3000)).toLocaleString()}`, action: { type: 'loan', amt: Math.min(room, Math.max(5000, Math.ceil(-s.cash / 1000) * 1000 + 3000)) } }, { label: 'Not now' }] });
-    } else if (burn > 0 && s.cash < burn * 10) {
+    } else if (P.available < 0) {
       s.loan.warnT = s.t;
-      this.emit('cash_warn', { msg: `Cash is low: about ${Math.max(0, Math.floor(s.cash / burn))} days of costs left. Consider fewer staff or higher occupancy.` });
+      this.emit('cash_warn', { msg: `Cash covers bills, but is $${Math.round(-P.available).toLocaleString()} below the recommended reserve. Fill ready units or trim future costs before optional spending.` });
     }
   }
   act_loan(a) {
@@ -1243,7 +1290,7 @@ export class Sim {
     if (s.cash < amt) return { ok: false, msg: 'Not enough cash' };
     s.loan.bal -= amt; this.money(-amt, 'debt', 'Credit line repayment'); return { ok: true, msg: `Repaid $${amt.toLocaleString()}` };
   }
-  dailyOpex() {
+  dailyOpex(day = this.day) {
     const s = this.s, o = { base: OPEX.base, units: 0, lights: 0, security: 0, doors: 0, elevators: 0, hvac: 0, amenities: 0, utilities: 0 };
     for (const x of Object.values(s.objects)) {
       if (x.cstate !== 'operating') continue;
@@ -1259,7 +1306,7 @@ export class Sim {
       else if (x.type === 'power') o.utilities += OPEX.power;
     }
     for (const e of Object.values(this.D.hvac)) o.hvac += e.load * OPEX.hvacPerClimateCell;
-    if (this.pressureOn()) { o.tax = 4 + 0.25 * this.objs('unit').filter((u) => u.cstate === 'operating').length; const k = this.costIdx() * ((s.coTier || 1) >= 4 ? 0.92 : 1); for (const key of Object.keys(o)) o[key] = Math.round(o[key] * k * 100) / 100; }
+    if (this.pressureOn()) { o.tax = 4 + 0.25 * this.objs('unit').filter((u) => u.cstate === 'operating').length; const k = this.costIdx(day) * ((s.coTier || 1) >= 4 ? 0.92 : 1); for (const key of Object.keys(o)) o[key] = Math.round(o[key] * k * 100) / 100; }
     { const k = s.opts && s.opts.costs; if (k && k !== 1) for (const key of Object.keys(o)) o[key] = Math.round(o[key] * k * 100) / 100; }
     o.total = Object.values(o).reduce((a, b) => a + b, 0);
     o.payroll = s.staff.reduce((a, st) => a + st.wage, 0);
@@ -1282,7 +1329,7 @@ export class Sim {
   // a well-run one (fair prices, fixed equipment, clean, staffed) keeps pulling ahead.
   // Off in the tutorial (until graduation) and creative mode. Scenarios get seasons, reviews, rising costs and one rival.
   pressureOn() { const s = this.s; return !s.creative && !(s.mode === 'tutorial' && !s.tut.done) && !(s.opts && s.opts.competition === false); }
-  costIdx() { return this.pressureOn() ? 1.04 ** ((this.day - 1) / 365) : 1; }
+  costIdx(day = this.day) { return this.pressureOn() ? 1.04 ** ((day - 1) / 365) : 1; }
   rentIdx() { return this.pressureOn() ? 1.03 ** ((this.day - 1) / 365) : 1; }
   season(day = this.day) { return this.pressureOn() ? 1 + 0.2 * Math.sin(2 * Math.PI * (day - 80) / 365) : 1; } // moving season peaks in early summer
   seasonName(day = this.day) { const v = Math.sin(2 * Math.PI * (day - 80) / 365); return v > 0.5 ? 'Peak moving season' : v < -0.5 ? 'Winter slowdown' : v > 0 ? 'Busy season building' : 'Shoulder season'; }
@@ -1677,7 +1724,7 @@ export class Sim {
     let settling = false;
     if (!cands.length && v.climate) { cands = ready.filter((u) => u.env === 'std'); settling = true; }
     if (!cands.length && !v.climate) { cands = ready.filter((u) => u.env === 'climate'); }
-    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size }); if (s.mkt.lostLog.length > 200) s.mkt.lostLog.shift(); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: 'Nothing ready to rent today.' }[reason] || 'I\'ll keep shopping.', 'bad'); return null; };
+    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: 'Nothing ready to rent today.' }[reason] || 'I\'ll keep shopping.', 'bad'); return null; };
     if (!cands.length) return lose(all.length ? (v.climate ? 'noClimate' : 'noReady') : v.climate && this.objs('unit').some((u) => u.size === v.size) ? 'noClimate' : 'noSize');
     const rep = this.reputation(); const cp = this.compPrice();
     let best = null, bestP = -1;
@@ -1937,7 +1984,7 @@ export class Sim {
           ag.exp.office++;
           if (ag.exp.office > 50) {
             s.officeQ = s.officeQ.filter((x) => x !== ag.id); ag.hidden = false; ag.serveBy = null;
-            s.lost.service = (s.lost.service || 0) + 1; s.today.lost++; this.emit('lost', { reason: 'service' });
+            s.lost.service = (s.lost.service || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: 'service', sz: ag.size, climate: !!ag.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason: 'service' });
             this.thought(ag, 'No one at the office.', 'bad');
             this.goToVehicle(ag);
           }

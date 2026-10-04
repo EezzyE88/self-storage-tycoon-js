@@ -8,7 +8,7 @@ export const SCENARIOS = {
   turnaround: {
     name: 'Maple Turnaround',
     blurb: 'The previous owner let Maple Street slide: broken lights, a failing gate, dirty loading bays and ten empty units. Legacy rents are low and cash is thin.',
-    goals: [{ k: 'occ', v: 0.95, label: 'Occupancy at least 95%', fmt: 'pct' }, { k: 'rep', v: 0.8, label: 'Reputation at least 80%', fmt: 'pct' }, { k: 'roll', v: 3000, label: 'Monthly rent roll at least $3,000', fmt: 'money' }],
+    goals: [{ k: 'occ', v: 0.95, label: 'Occupancy at least 95%', fmt: 'pct' }, { k: 'rep', v: 0.8, label: 'Reputation at least 80%', fmt: 'pct' }, { k: 'roll', v: 3750, label: 'Monthly rent roll at least $3,750', fmt: 'money' }],
     deadline: 150, fail: { cashBelow: -5000, cashDays: 14 },
   },
   vertical: {

@@ -3,6 +3,7 @@ import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIER
 import { fmtTime, dayOf, productKey } from './sim.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
+import { financialTime } from './finance.js';
 import { guideFor } from './handbook.js';
 
 const PIN = {
@@ -216,6 +217,7 @@ export class UI {
 
   // ------------------------------------------------------------ tabs / sheets
   setTab(t) {
+    if (t === 'growth' && this.plan && this.plan.args) this.growthPlanArgs = { ...this.plan.args };
     this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
     if (t) this.sel = null, this.rend.setSelection(null);
     if (t === 'business') this.do({ type: 'tutFlag', flag: 'businessOpened' });
@@ -324,7 +326,9 @@ export class UI {
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
         const after = this.sim.s.cash - R.cost, burn = this.sim.dailyOpex().total + this.sim.s.staff.reduce((a, st) => a + st.wage, 0) + (R.opex || 0);
-        status += `<div class="refund-note">Cash ${money(this.sim.s.cash)} → <b class="${after < 0 ? 'neg' : ''}">${money(after)}</b> after build${this.sim.unlimited() ? (after < 0 ? ' · Free Build funds cover the rest' : '') : burn > 0 ? ` · covers ~${Math.max(0, Math.floor(after / burn))} days of costs` : ''}${R.power ? ` · Power ${R.power.demand.toFixed(1)} / ${R.power.cap} kW` : ''}</div>`;
+        status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
+        const inv = this.sim.investment(R);
+        if (inv) status += `<div class="refund-note">${inv.range ? `Steady-state payback ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months at ${pct(inv.lowOccupancy)}–${pct(inv.highOccupancy)} occupancy` : 'Payback: not enough comparable demand/rent evidence yet'}. Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div>`;
       }
       if (R.status !== 'invalid' && R.dur && !this.sim.instantOn()) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
     }
@@ -348,10 +352,11 @@ export class UI {
     let h = '';
     if (t) {
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? (s.staff.find((x) => x.id === t.assigned) || {}).name || 'Assigned' : 'Waiting in queue';
-      h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small></div></div><div class="row wrap" style="margin-top:6px">`;
+      h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work${t.type === 'repair' && !t.vendor ? ' · Vendor ' + money(t.need === 'repair_complex' ? 650 : 250) + ' cash now' : ''}</small></div></div><div class="row wrap" style="margin-top:6px">`;
       if (!t.assigned && ownerCan) h += `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>${t.type === 'repair' && this.sim.pressureOn() ? `Owner: quick fix · ${hrs}h` : `Send Owner · ${hrs}h`}</button>`;
       if (!t.assigned || (t.assigned !== 'vendor' && !ownerCan)) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Call vendor (${money(t.need === 'repair_complex' ? 650 : 250)})</button>`;
       h += `</div>`;
+      if (!t.vendor) h += this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor');
       if (!ownerCan) h += `<p class="note">The Owner can't service this equipment. Hire a Tech or call a vendor.</p>`;
       else if (!t.assigned && hrs > ownerLeft) h += `<p class="note">Owner has ${ownerLeft}h available today; this job needs ${hrs}h. Wait for tomorrow or delegate it.</p>`;
     } else if (o.cond != null && o.cond < 0.8 && ownerCan) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTaskFor', obj: o.id })}'>Owner: service now</button>`;
@@ -382,7 +387,7 @@ export class UI {
         <div class="row" style="margin-top:10px"><button class="btn danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'cancelOrder', id: ord.id })}'>${undo ? 'Undo' : 'Cancel'} (refund ${money(refund)})</button></div>
         <p class="note">${undo ? 'Undo refunds everything within 30 game-minutes of committing.' : 'Cancelling mid-build refunds 60% of the unbuilt share.'}</p>`);
     }
-    const html = this.objSheet(o, nm);
+    const html = this.objSheet(o, nm).replace('<div class="body">', '<div class="body">' + this.diagnosticHtml(o.id));
     if (!o.unpowered) return html;
     const P = D.power; const warnBox = `<div class="status invalid" style="margin-bottom:10px"><span class="ic">!</span><span>No power - demand ${P ? P.demand.toFixed(1) + ' kW exceeds ' + P.cap + ' kW' : 'exceeds'} service. Add an Electrical Service Upgrade or remove other loads.</span></div>`;
     return html.replace('<div class="body">', '<div class="body">' + warnBox);
@@ -496,13 +501,13 @@ export class UI {
     const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
     const tasks = [...s.tasks].sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
     const owner = s.staff.find((x) => x.role === 'owner'), ownerLeft = owner ? sim.workRemaining(owner) : 0;
-    let h = `<h3>Work queue (${tasks.length})</h3><div class="list">`;
+    let h = this.diagnosticHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
     if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
     for (const t of tasks.slice(0, 14)) {
       const ownerCan = ROLES.owner.can.includes(t.need), hrs = sim.taskHours(t);
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? staffName(t.assigned) + (t.queued ? ' (queued)' : '') : t.unreachable ? 'Unreachable - check routes' : 'Unassigned';
       const loc = t.obj && s.objects[t.obj] ? s.objects[t.obj] : t.x != null ? t : null;
-      h += `<div class="item"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small></div>
+      h += `<div class="item"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small>${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor') : ''}</div>
         ${loc ? `<button class="btn sm" data-a="focus" data-x="${loc.x}" data-y="${loc.y}">View</button>` : ''}
         ${!t.assigned && ownerCan ? `<button class="btn sm pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>Owner · ${hrs}h</button>` : ''}
         ${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Vendor</button>` : ''}
@@ -515,10 +520,10 @@ export class UI {
       const cap = sim.workCapacity(st), officeTxt = st.role === 'owner' && (st.officeUsed || 0) ? ` · ${st.officeUsed}h office` : '', capTxt = cap ? ` · ${sim.workRemaining(st)}h of ${cap}h available today${officeTxt}` : '';
       h += `<div class="item"><div class="grow"><b>${ROLES[st.role].name} · ${esc(st.name)}</b><small>${doing}${ag && ag.queue && ag.queue.length ? ` · ${ag.queue.length} queued` : ''}${capTxt} · ${st.wage ? money(st.wage) + '/day' : 'unpaid'}</small></div>${st.role !== 'owner' ? `<button class="btn sm danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'fire', id: st.id })}'>Let go</button>` : ''}</div>`;
     }
-    const focus = this.tutFocus(), est = sim.estDailyNet();
+    const focus = this.tutFocus();
     const roleWhy = { porter: 'Adds another 8h/day for make-ready, cleaning and carts.', tech: 'Adds another 8h/day for repairs, including elevators and HVAC.', clerk: 'Handles office shoppers so those 0.5h service blocks stop consuming Owner capacity.', manager: 'Automates commissioning, vendor escalation, cart restocking and monthly pricing.' };
-    h += `</div><h3>Hire capacity</h3><div class="list">${['porter', 'tech', 'clerk', 'manager'].map((r) => { const after = est - ROLES[r].wage; return `<div class="item"><div class="grow"><b>${ROLES[r].name} · ${money(ROLES[r].wage)}/day</b><small>${roleWhy[r]} Current estimate ${est >= 0 ? '+' : '-'}${money(Math.abs(est))}/day → ${after >= 0 ? '+' : '-'}${money(Math.abs(after))}/day after this hire.</small></div><button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire</button></div>`; }).join('')}</div>
-      <p class="note">Owner, Porters and Techs each have 8 task-hours per game day. Each in-person office shopper costs the Owner 0.5h when no Clerk is covering the desk. Hiring expands capacity or frees Owner time, but payroll is charged every day. Managers add automation rather than task-hours.</p>`;
+    h += `</div><h3>Hire capacity</h3><div class="list">${['porter', 'tech', 'clerk', 'manager'].map((r) => { const E = sim.staffingEvidence(r); return `<div class="item"><div class="grow"><b>${ROLES[r].name} · ${money(ROLES[r].wage, true)}/day</b><small>${roleWhy[r]} ${esc(E.evidence)} Payroll adds ${money(E.monthlyWages)} over 30 employed days; no guaranteed return.</small>${this.spendingHtml(0, ROLES[r].wage, 'after hire')}</div><button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire</button></div>`; }).join('')}</div>
+      <p class="note">Owner, Porters and Techs each have 8 task-hours per game day. Each in-person office shopper costs the Owner 0.5h without a Clerk. Employed at 7:00 AM: one daily wage accrues. Hire after 7:00 AM: first wage tomorrow. Letting someone go keeps today's accrued wage owed. Routine bills settle weekly.</p>`;
     if (sim.hasManager() || s.mgrLog.length) h += `<h3>Manager log</h3><div class="kv">${s.mgrLog.length ? s.mgrLog.slice(0, 8).map((l) => `<span>Day ${dayOf(l.t)} ${fmtTime(l.t)}</span><span>${esc(l.msg)}</span>`).join('') : '<span>No decisions yet</span><span></span>'}</div>`;
     h += `<h3>Overlays</h3><div class="row wrap">${[['security', 'Security'], ['carts', 'Carts'], ['hvac', 'HVAC'], ['clean', 'Cleanliness'], ['power', 'Power']].map(([k, n]) => `<button class="btn sm ${this.rend.overlay === k ? 'pri' : ''}" data-a="overlay" data-v="${k}">${n}</button>`).join('')}</div>`;
     if (this.rend.overlay === 'security') h += `<p class="note legend">Each patch shows a mark as well as a color. <b>No mark</b> (green): lit and on camera. <b>Dot</b> (blue): camera only. <b>One stripe</b> (yellow): lit only. <b>Cross</b> (red): dark and unwatched - where thieves look first.</p>`;
@@ -567,10 +572,10 @@ export class UI {
       const bySize = {};
       for (const u of ready) (bySize[u.size] ||= []).push(u);
       h += '<p class="note">Ads create more shoppers, not guaranteed leases. Focus on a size you actually have vacant and competitively priced. The simple break-even below is campaign cost ÷ current asking rent.</p><div class="list">';
-      h += '<div class="item"><div class="grow"><b>Local search · 30 days</b><small>+15% shopper traffic across all sizes · $500. Best when several sizes have vacancy.</small></div>' + this.cmdBtn('Run $500', { type: 'ad', kind: 'local' }, '', !s.open) + '</div>';
+      h += '<div class="item"><div class="grow"><b>Local search · 30 days</b><small>+15% shopper traffic across all sizes · $500. Best when several sizes have vacancy.</small>' + this.spendingHtml(500, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $500', { type: 'ad', kind: 'local' }, '', !s.open) + '</div>';
       for (const sz of Object.keys(MARKETS[s.market.id].demand)) {
         const units = bySize[sz] || [], ask = s.market.ask[productKey(sz, 'std')] || MARKETS[s.market.id].rent[sz], be = Math.max(1, Math.ceil(250 / Math.max(1, ask)));
-        h += '<div class="item"><div class="grow"><b>Target ' + esc(sz) + ' · 30 days</b><small>+50% ' + esc(sz) + ' shopper traffic · $250 · ' + units.length + ' rent-ready now · roughly ' + be + ' new lease' + (be === 1 ? '' : 's') + ' at ' + money(ask) + '/mo to cover the spend.</small></div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';
+        h += '<div class="item"><div class="grow"><b>Target ' + esc(sz) + ' · 30 days</b><small>+50% ' + esc(sz) + ' shopper traffic · $250 · ' + units.length + ' rent-ready now · roughly ' + be + ' new lease' + (be === 1 ? '' : 's') + ' at ' + money(ask) + '/mo to cover the spend.</small>' + this.spendingHtml(250, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';
       }
       h += '</div>';
       if (recent) {
@@ -684,8 +689,8 @@ export class UI {
   businessSheet() {
     const sim = this.sim, s = sim.s; const occ = sim.occupancy(), roll = sim.rentRoll(), ox = sim.dailyOpex();
     const pay = s.staff.reduce((a, st) => a + st.wage, 0);
-    const paying = sim.rentRollPaying(), rcv = sim.receivables(), est = sim.estDailyNet();
-    const last = s.days.slice(-30); const sum = (k) => last.reduce((a, d) => a + (d[k] || 0), 0) + (s.today[k] || 0);
+    const paying = sim.rentRollPaying(), rcv = sim.receivables();
+    const last = s.days.slice(-29); const sum = (k) => last.reduce((a, d) => a + (d[k] || 0), 0) + (s.today[k] || 0);
     const collected = sum('rent'), costs = sum('opex') + sum('payroll'), capex = sum('capex');
     let h = s.sb ? this.sandboxHtml() : '';
     h += `<div class="stats">
@@ -694,25 +699,22 @@ export class UI {
       <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${money(paying)} from paying tenants${roll - paying > 0 ? ` · ${money(roll - paying)} past due` : ''} · ${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
       <div class="stat"><small>Rent collected, last 30 days</small><b>${money(collected)}</b><div class="n">Received, already in cash</div></div>
       <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops${ox.tax ? ` (incl. ${money(ox.tax, true)} tax & insurance)` : ''} + ${money(pay)} payroll</div></div>
-      <div class="stat"><small>Estimate: net per day</small><b class="${est < 0 ? 'neg' : ''}">${est >= 0 ? '+' : '-'}${money(Math.abs(est))}</b><div class="n">Projection, not money earned: paying tenants' rent minus today's costs. Shown as "est" under your cash.</div></div></div>`;
+      </div>`;
+    h += this.financialHtml() + this.diagnosticHtml();
     h += this.reportHtml() + this.marketHtml();
     // GDD §63.1–63.2: operating contribution, with capital and financing shown separately
-    const anc = sum('anc'), svc = sum('service'), marketing = sum('marketing'), contrib = collected + anc - costs - svc - marketing, debtSvc = sum('debt') + sum('interest'), fin = sum('fin');
-    const inj = sum('inject'); const net = contrib - capex - debtSvc + fin + sum('other') + inj;
-    h += `<h3>Operating statement · last 30 days</h3><div class="kv stmt">
-      <span>Collected rent</span><span>${money(collected)}</span>
-      <span>Ancillary (late fees, auctions)</span><span>${money(anc)}</span>
-      <span>Operating costs</span><span>${money(-sum('opex'))}</span>
-      <span>Payroll</span><span>${money(-sum('payroll'))}</span>
-      <span>Vendor service</span><span>${money(-svc)}</span>
-      <span>Advertising</span><span>${money(-marketing)}</span>
-      <span class="tot">Operating contribution</span><span class="tot ${contrib < 0 ? 'neg' : ''}">${money(contrib)}</span>
-      <span>Construction (capital)</span><span>${money(-capex)}</span>
-      <span>Debt service</span><span>${money(-debtSvc)}</span>
-      ${fin ? `<span>Loan proceeds</span><span>${money(fin)}</span>` : ''}
-      ${inj ? `<span>Sandbox funds (not income)</span><span>${money(inj)}</span>` : ''}
-      <span class="tot">Net cash change</span><span class="tot ${net < 0 ? 'neg' : ''}">${money(net)}</span></div>
-      <p class="note">Construction is capital spending, so a profitable property doesn't look unprofitable just because you built a new wing.</p>`;
+    const anc = sum('anc'), svc = sum('service'), marketing = sum('marketing');
+    const result = collected + anc - costs - svc - marketing - sum('interest');
+    const C = sim.cashWindow(30);
+    h += `<h3>Operating performance · 30 calendar days</h3><div class="kv stmt">
+      <span>Rent and fees collected</span><span>${money(collected + anc)}</span>
+      <span>Operating expenses incurred</span><span>${money(-sum('opex'))}</span>
+      <span>Payroll incurred</span><span>${money(-sum('payroll'))}</span>
+      <span>Vendors and advertising</span><span>${money(-svc - marketing)}</span>
+      <span>Interest incurred</span><span>${money(-sum('interest'))}</span>
+      <span class="tot">Operating result</span><span class="tot ${result < 0 ? 'neg' : ''}">${money(result)}</span></div>
+      <p class="note">Collected rent and fees minus expenses incurred. Rent remains monthly and lumpy. Weekly payment does not record the same expense again. Construction, principal payments, loans and added funds are separate cash movements.</p>
+      <h3>Actual cash flow · 30 calendar days</h3><div class="kv"><span>Cash in</span><span>${money(C.incoming)}</span><span>Cash out</span><span>${money(-C.outgoing)}</span><span>Net cash change${C.complete ? '' : ' (retained history only)'}</span><span>${money(C.net)}</span></div>`;
     h += this.collectionsHtml();
     if (!sim.unlimited()) h += this.financingHtml();
     h += `
@@ -788,14 +790,13 @@ export class UI {
     }
     h += `<h3>Customer experience</h3><div class="list">${Object.entries(EXP).map(([k, n]) => { const v = s.exp[k]; return `<div class="row" style="font-size:13px"><span style="width:92px;color:var(--muted)">${n}</span><div class="bar"><i class="${v < 0.5 ? 'r' : v < 0.7 ? 'a' : ''}" style="width:${Math.round(v * 100)}%"></i></div><b class="num" style="width:38px;text-align:right">${pct(v)}</b></div>`; }).join('')}</div>
       <p class="note">Reputation ${pct(sim.reputation())}. Built from what customers actually experienced on the property, not from what you built.</p>`;
-    const tips = [];
-    if (s.lost.noClimate) tips.push('Prospects keep asking for climate control. An HVAC plant and climate units would capture them.');
-    if (s.lost.noSize || s.lost.noReady) tips.push('Demand is going unmet because nothing suitable is rent-ready. Consider expanding.');
-    if (s.lost.price) tips.push('Some prospects found rents too high for them.');
-    if (s.exp.convenience < 0.7) tips.push('Interior convenience is suffering. Check carts, elevator waits and walking distance.');
-    if (s.exp.security < 0.6) tips.push('Security is weak. The Security overlay shows dark, unwatched areas.');
-    if (s.exp.cleanliness < 0.7) tips.push('Loading areas and hallways need cleaning more often.');
-    if (tips.length) h += `<h3>Opportunities</h3><div class="list">${tips.map((t) => `<div class="item"><div class="grow">${t}</div></div>`).join('')}</div>`;
+    const growthPlan = this.growthPlanArgs ? sim.plan(this.growthPlanArgs) : null;
+    if (growthPlan && this.growthPlanArgs.rush && (s.coTier || 1) >= 2 && !sim.instantOn() && growthPlan.dur) {
+      growthPlan.cost = Math.round(growthPlan.cost * 1.25); growthPlan.dur *= 0.5;
+    }
+    const readiness = sim.growthReadiness(growthPlan);
+    h += `<h3>Growth Readiness</h3>${growthPlan ? `<p class="note">Selected proposal: ${esc(growthPlan.label)} · ${money(growthPlan.cost)}. Includes selected construction only.</p>` : ''}<p class="note"><b>${readiness.title}</b></p><div class="list">${readiness.checks.map((c) => `<div class="item"><div class="grow"><b>${c.ok ? '&#10003;' : '!'} ${c.label}</b><small>${esc(c.detail)}</small></div></div>`).join('')}</div><p class="note">LAYOUT → OPERATIONS → ECONOMICS → GROWTH. Complete expansion packages aim for 12–18 months; reuse of existing infrastructure and spare capacity can pay back faster. Evidence is advisory, not a hidden score or build restriction.</p>`;
+    h += this.diagnosticHtml();
     h += `<h3>Milestones</h3><div class="list">${Object.entries(MILESTONES).map(([k, n]) => `<div class="item"><div class="grow"><b>${n}</b>${s.milestones[k] != null ? `<small>Day ${dayOf(s.milestones[k])}</small>` : ''}</div><span class="pill ${s.milestones[k] != null ? 'g' : ''}">${s.milestones[k] != null ? 'Done' : '—'}</span></div>`).join('')}</div>`;
     if (s.mode === 'tutorial') {
       const chapters = [...new Set(BEATS.map((b) => b.chapter))];
@@ -1051,13 +1052,13 @@ export class UI {
     box.innerHTML = `<div class="tut scen ${this.scMin ? 'min' : ''} ${again && box.firstChild ? 'noanim' : ''}"><div class="ch"><span>Scenario · ${esc(sc.name)}</span><button class="mini" data-a="scenMin">${this.scMin ? 'Show' : 'Hide'}</button></div>
       <h4>${sc.status === 'won' ? 'Scenario complete' : sc.status === 'lost' ? 'Scenario failed' : `Day ${sim.day} of ${sc.deadline} · ${left} left`}</h4>
       <ul class="goals">${prog.map((g) => `<li class="${g.met ? 'met' : ''}"><span class="ck">${g.met ? '&#10003;' : ''}</span><span>${esc(g.label)}</span><b>${this.fmtGoal(g, g.cur)}</b></li>`).join('')}</ul>
-      <p class="fail ${sc.badDays ? 'on' : ''}">Fail: net cash (cash minus credit line) below ${money(sc.fail.cashBelow)} for ${sc.fail.cashDays} days${sc.badDays ? ` · ${sc.badDays} so far` : ''}, or the deadline passes.</p>
+      <p class="fail ${sc.badDays ? 'on' : ''}">Fail: net liquid position (cash minus committed bills and credit line) below ${money(sc.fail.cashBelow)} for ${sc.fail.cashDays} days${sc.badDays ? ` · ${sc.badDays} so far` : ''}, or the deadline passes. Reserve is advisory.</p>
       ${sc.status !== 'active' ? `<p>${sc.status === 'won' ? `Finished on day ${sc.endDay}. Keep playing this property as a sandbox if you like.` : esc(sc.why || '')}</p><div class="row"><button class="btn pri" data-a="scenarios">Scenarios</button></div>` : ''}</div>`;
   }
   showScenarios() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Scenarios</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
       <p class="note">Each scenario starts with its goals and fail condition in view. Goals are checked every morning.</p>
-      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map((g) => `<li>${esc(g.label)}</li>`).join('')}<li>Deadline: day ${S.deadline}</li><li class="f">Fail: net cash below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li></ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
+      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map((g) => `<li>${esc(g.label)}</li>`).join('')}<li>Deadline: day ${S.deadline}</li><li class="f">Fail: cash minus committed bills and credit line below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li></ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
   }
   showSandbox() {
@@ -1165,10 +1166,8 @@ export class UI {
   slowHud() {
     const sim = this.sim, s = sim.s; const oc = sim.occupancy();
     if (!oc.n || s.creative) { this.cashSub = null; return; }
-    const start = (dayOf(s.t) - 1) * 1440;
-    const actual = s.ledger.filter((x) => x.t >= start).reduce((a, x) => a + x.amt, 0);
-    const n = Math.round(actual);
-    this.cashSub = `${oc.occ}/${oc.n} · today ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;
+    const actual = sim.cashWindow(1), n = Math.round(actual.net);
+    this.cashSub = `${oc.occ}/${oc.n} · today${actual.complete ? '' : ' (partial)'} ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;
   }
   ownerStatus() {
     const s = this.sim.s, owner = s.staff.find((x) => x.role === 'owner'); if (!owner) return '';
@@ -1317,40 +1316,51 @@ export class UI {
     if (c.lastAt) return `Autosave is on (${this.ago(c.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave. Codes and files are backups you can move between devices.`;
     return 'Autosave is on. It saves each in-game day and when you leave. Codes and files are backups you can move between devices.';
   }
-  cashWindow(days) {
-    const s = this.sim.s, from = s.t - days * 1440, rows = s.ledger.filter((x) => x.t >= from);
-    const incoming = rows.filter((x) => x.amt > 0).reduce((a, x) => a + x.amt, 0);
-    const outgoing = -rows.filter((x) => x.amt < 0).reduce((a, x) => a + x.amt, 0);
-    return { rows, incoming, outgoing, net: incoming - outgoing };
+  spendingHtml(spend, extraDaily = 0, label = 'after action') {
+    const P = this.sim.financialPosition({ spend, extraDaily });
+    return `<p class="note spending">Cash ${label}: <b>${money(P.cash)}</b> · committed bills ${money(P.committed)} · reserve ${money(P.reserve)} · <b class="${P.available < 0 ? 'neg' : ''}">Available after bills &amp; reserve: ${money(P.available)}</b>${extraDaily ? ' (includes added daily obligations once operating/employed)' : ''}.</p>`;
   }
+  diagnosticHtml(obj = null) {
+    const rows = this.sim.diagnostics().filter((d) => obj == null || d.obj === obj).slice(0, obj == null ? 4 : 2);
+    if (!rows.length) return '';
+    return `<h3>What needs attention</h3><div class="list">${rows.map((d) => `<div class="item"><div class="grow"><b>${esc(d.cause)}</b><small>${esc(d.effect)} → ${esc(d.consequence)}</small><small><b>Action:</b> ${esc(d.action)}</small></div></div>`).join('')}</div>`;
+  }
+  financialHtml() {
+    const sim = this.sim, P = sim.financialPosition(), F = sim.scheduledOutlook();
+    return `<h3>Bills &amp; reserve</h3><div class="kv"><span>Unpaid committed bills</span><span>${money(P.committed)}</span><span>Next weekly settlement</span><span>Day ${sim.nextSettlementDay()} · 7:00 AM</span><span>Recommended reserve</span><span>${money(P.reserve)}</span><span>Available after bills &amp; reserve</span><span class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</span><span>Net liquid position</span><span>${money(P.netLiquid)}</span></div>
+      <p class="note">Reserve: $500 + 14 future financial days of predictable costs and scheduled loan payments. Accrued bills are separate. Net liquid position subtracts bills and credit-line debt, without subtracting reserve.</p>
+      <h3>Scheduled next 30 days</h3><div class="kv"><span>Current-tenant bills</span><span>${money(F.inflow)}</span><span>Weekly bills &amp; loan payments</span><span>${money(-F.outflow)}</span><span>Scheduled net cash movement</span><span class="${F.net < 0 ? 'neg' : ''}">${money(F.net)}</span><span>Cash at end</span><span>${money(F.cashAfter)}</span><span>Bills still owed at end</span><span>${money(F.committedAfter)}</span><span>At-risk receivables</span><span>${money(F.atRisk)}</span></div>
+      <p class="note">${F.averageBill ? `If one average tenant misses a scheduled payment: ${money(F.downside)} net cash movement, ${money(F.averageBill)} less cushion.` : 'No current-tenant bills scheduled; there is no payment cushion to model.'} Current leases only. New rentals, overdue collections and optional future spending excluded; existing staffing/assets held constant. Scheduled payments are not guaranteed collections.</p>`;
+  }
+  cashWindow(days) { return this.sim.cashWindow(days); }
   showFinances() {
-    const sim = this.sim, s = sim.s, rcv = sim.receivables(), est = sim.estDailyNet();
+    const sim = this.sim, s = sim.s, rcv = sim.receivables();
     const W = [1, 7, 30].map((d) => [d, this.cashWindow(d)]);
-    const cats = { rent: 'Rent collected', anc: 'Late fees & auctions', opex: 'Operating costs', payroll: 'Payroll', service: 'Vendors / service', marketing: 'Advertising', capex: 'Construction / capital', debt: 'Loan principal', interest: 'Interest', loan: 'Loan proceeds', inject: 'Added funds', subsidy: 'Sandbox funds', other: 'Other' };
-    const w30 = W[2][1], grouped = {};
-    for (const x of w30.rows) grouped[x.cat || 'other'] = (grouped[x.cat || 'other'] || 0) + x.amt;
+    const cats = { rent: 'Rent collected', anc: 'Late fees & auctions', opex: 'Operating costs', payroll: 'Payroll', service: 'Vendors / service', marketing: 'Advertising', capex: 'Construction / capital', debt: 'Loan principal', interest: 'Interest', loan: 'Loan proceeds', inject: 'Added funds', subsidy: 'Sandbox funds', other: 'Other', settle_opex: 'Weekly operating bills', settle_payroll: 'Weekly payroll', settle_interest: 'Weekly credit interest' };
+    const w30 = W[2][1], grouped = w30.categories;
     const groupHtml = Object.entries(grouped).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).map(([k,v]) => '<span>' + esc(cats[k] || k) + '</span><span class="' + (v < 0 ? 'neg' : '') + '">' + (v >= 0 ? '+' : '') + money(v) + '</span>').join('');
     const recent = s.ledger.slice(-16).reverse().map((x) => '<div class="item"><div class="grow"><b>' + esc(x.note || cats[x.cat] || 'Cash movement') + '</b><small>Day ' + dayOf(x.t) + ' · ' + fmtTime(x.t) + ' · ' + esc(cats[x.cat] || x.cat || 'Other') + '</small></div><b class="' + (x.amt < 0 ? 'neg' : '') + '">' + (x.amt >= 0 ? '+' : '') + money(x.amt) + '</b></div>').join('');
     this.$('modal').innerHTML = '<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Finances</h2><button class="x" data-a="modalClose" aria-label="Close">' + I.x + '</button></div>' +
-      '<div class="stats"><div class="stat"><small>Cash now</small><b>' + money(s.cash) + '</b><div class="n">What is actually in the account.</div></div><div class="stat"><small>Owed to you</small><b>' + money(rcv.amt) + '</b><div class="n">' + rcv.n + ' account' + (rcv.n === 1 ? '' : 's') + ' behind; not cash until collected.</div></div><div class="stat"><small>Normalized operating estimate</small><b class="' + (est < 0 ? 'neg' : '') + '">' + (est >= 0 ? '+' : '-') + money(Math.abs(est)) + '/day</b><div class="n">Paying rent roll spread across the year minus routine operating cost and payroll. This is profitability guidance, not today&apos;s cash movement.</div></div></div>' +
-      '<h3>Actual cash movement</h3><div class="kv">' + W.map(([d,w]) => '<span>Last ' + d + ' day' + (d === 1 ? '' : 's') + '</span><span class="' + (w.net < 0 ? 'neg' : '') + '">' + (w.net >= 0 ? '+' : '') + money(w.net) + ' · in ' + money(w.incoming) + ' / out ' + money(w.outgoing) + '</span>').join('') + '</div>' +
-      '<p class="note">Cash can fall while the property is operationally profitable because rent arrives on billing dates while construction, vendors, debt, advertising and other expenses hit when they occur.</p>' +
-      '<h3>Where the last 30 days went</h3><div class="kv">' + (groupHtml || '<span>No transactions yet</span><span></span>') + '</div>' +
+      '<div class="stats"><div class="stat"><small>Cash now</small><b>' + money(s.cash) + '</b><div class="n">What is actually in the account.</div></div><div class="stat"><small>Owed to you</small><b>' + money(rcv.amt) + '</b><div class="n">' + rcv.n + ' account' + (rcv.n === 1 ? '' : 's') + ' behind; not cash until collected.</div></div></div>' + this.financialHtml() +
+      '<h3>Actual cash movement</h3><div class="kv">' + W.map(([d,w]) => '<span>' + d + ' calendar day' + (d === 1 ? '' : 's') + (w.complete ? '' : ' (partial history)') + '</span><span class="' + (w.net < 0 ? 'neg' : '') + '">' + (w.net >= 0 ? '+' : '') + money(w.net) + ' · in ' + money(w.incoming) + ' / out ' + money(w.outgoing) + '</span>').join('') + '</div>' +
+      '<p class="note">Rent arrives monthly. Routine expenses accrue at 7:00 AM and settle weekly. Construction, vendors and advertising spend cash immediately.</p>' +
+      '<h3>Where 30 calendar days of cash went</h3><div class="kv">' + (groupHtml || '<span>No transactions yet</span><span></span>') + '</div>' +
       '<h3>Recent transactions</h3><div class="list">' + (recent || '<p class="note">No cash movement recorded yet.</p>') + '</div>' +
       '<div class="row" style="margin-top:10px"><button class="btn" data-a="tabFromModal" data-v="business">Open full Business statement</button></div></div></div>';
   }
   calendarEvents() {
     const s = this.sim.s, now = s.t, day = dayOf(now), E = [];
     const add = (t, label, detail, kind='') => { if (Number.isFinite(t) && t >= now - 1) E.push({ t, label, detail, kind }); };
-    if (s.scenario && s.scenario.status === 'active') add((s.scenario.deadline - 1) * 1440 + 23 * 60 + 59, 'Scenario deadline', s.scenario.name || 'Scenario');
+    if (s.scenario && s.scenario.status === 'active') add((s.scenario.deadline - 1) * 1440 + 7 * 60, 'Final scenario goal checkpoint', s.scenario.name || 'Scenario');
     const bills = new Map();
     for (const L of Object.values(s.leases)) {
-      if (L.nextBill >= day) { const x = bills.get(L.nextBill) || { n:0, amt:0 }; x.n++; x.amt += L.rent; bills.set(L.nextBill, x); }
+      if (L.nextBill >= day && L.status === 'current') { const x = bills.get(L.nextBill) || { n:0, amt:0 }; x.n++; x.amt += L.rent; bills.set(L.nextBill, x); }
       if (L.planDue) add((L.planDue - 1) * 1440 + 7 * 60, 'Payment plan due', (s.objects[L.unit] || {}).name || 'Tenant account');
       if (L.noticeUntil) add((L.noticeUntil - 1) * 1440 + 7 * 60, 'Lien notice period ends', (s.objects[L.unit] || {}).name || 'Tenant account');
       if (L.auctionDay) add((L.auctionDay - 1) * 1440 + 10 * 60, 'Lien auction', (s.objects[L.unit] || {}).name || 'Scheduled unit', 'important');
     }
-    for (const [d,x] of bills) add((d - 1) * 1440 + 7 * 60, 'Tenant billing day', x.n + ' tenant' + (x.n===1?'':'s') + ' · ' + money(x.amt) + ' contracted rent');
+    for (const [d,x] of bills) add((d - 1) * 1440 + 7 * 60, 'Tenant billing day', x.n + ' tenant' + (x.n===1?'':'s') + ' · ' + money(x.amt) + ' current-tenant bills; collection not guaranteed');
+    add(financialTime(this.sim.nextSettlementDay()), 'Weekly expense settlement', money(this.sim.committedBills()) + ' accrued so far; more accrues before settlement');
     for (const d of s.debt || []) if (d.next) add((d.next - 1) * 1440 + 7 * 60, 'Term-loan payment', money(d.pmt) + ' scheduled');
     for (const o of s.orders.filter((x) => x.st === 'construction')) if (!o.waiting) add(now + Math.max(1, Math.ceil((1 - (o.prog || 0)) * o.dur)), 'Estimated construction finish', o.label || 'Construction');
     for (const cp of (s.mkt && s.mkt.comp || [])) if (cp.opens >= day) add((cp.opens - 1) * 1440 + 8 * 60, 'Competitor opens', cp.name);

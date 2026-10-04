@@ -157,9 +157,9 @@ export const NAMES_LAST = ['Alvarez','Brooks','Chen','Diaz','Evans','Flores','Ga
 // Operator career (company progression). Requirements are portfolio-wide.
 export const TIERS = [
   { n: 1, name: 'Owner-operator', roll: 0, props: 1, perks: ['Suburban parcels and operating facilities for sale'] },
-  { n: 2, name: 'Local operator', roll: 3500, props: 1, perks: ['Rush contractors: pay 25% more, build twice as fast', 'Priority vendor contract: repairs in ~5 hours instead of ~10'] },
-  { n: 3, name: 'Regional operator', roll: 7000, props: 2, perks: ['Urban infill and rural highway parcels', 'Better loan rate (6.5%)'] },
-  { n: 4, name: 'Portfolio operator', roll: 15000, props: 3, perks: ['Bulk purchasing: operating costs -8%', 'Premium marketing: +10% shopper traffic'] },
-  { n: 5, name: 'Storage magnate', roll: 30000, props: 4, perks: ['Top of the industry. Keep growing.'] },
+  { n: 2, name: 'Local operator', roll: 4375, props: 1, perks: ['Rush contractors: pay 25% more, build twice as fast', 'Priority vendor contract: repairs in ~5 hours instead of ~10'] },
+  { n: 3, name: 'Regional operator', roll: 8750, props: 2, perks: ['Urban infill and rural highway parcels', 'Better loan rate (6.5%)'] },
+  { n: 4, name: 'Portfolio operator', roll: 18750, props: 3, perks: ['Bulk purchasing: operating costs -8%', 'Premium marketing: +10% shopper traffic'] },
+  { n: 5, name: 'Storage magnate', roll: 37500, props: 4, perks: ['Top of the industry. Keep growing.'] },
 ];
 

@@ -582,3 +582,9 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 @media (max-width: 384px) { .hud .chip:not(.speed) { padding-left: 8px; padding-right: 8px; } }
 @media (max-width: 359px) { .hud { gap: 3px; } .cash small { font-size: 9px; } .hud .clock .sbflag:not([hidden]) { max-width: 56px; overflow: hidden; text-overflow: ellipsis; } }
 @media (max-width: 359px) { .hud .chip:not(.speed), .hud .chip.clock { padding-left: 5px; padding-right: 5px; } .speed button { min-width: 22px; } .hud .clock .sbflag:not([hidden]) { max-width: 46px; } }
+
+/* Phones retain direct rotation and floor controls; pinch/pan and initial fit stay internal. */
+@media (max-width: 700px), (pointer: coarse) {
+  .viewctl .viewmore, .viewctl .viewextra, .viewctl.open .viewextra { display: none; }
+}
+.spending { overflow-wrap: anywhere; }

@@ -28,7 +28,7 @@ const dayCount = (sim) => sim.s.days.length + 1;
   run(sim, 30, (m) => { minCash = Math.min(minCash, m.s.cash); });
   ok(capex > c0 || s.sb.subsidy > 0, 'Free Build: spending beyond starting cash is allowed', `capex day 1 $${Math.round(capex)}, start $${c0}`);
   ok(minCash >= 0, 'Free Build: cash never goes negative (funds cover the gap)', `min $${Math.round(minCash)}`);
-  ok(Math.abs(c0 + flows(sim) - s.cash) < 1, 'Free Build: start cash + recorded flows (incl. Free Build funds) = cash', `${Math.round(c0 + flows(sim))} vs ${Math.round(s.cash)}`);
+  ok(Math.abs(c0 + flows(sim) + sim.committedBills() - s.cash) < 1, 'Free Build: start cash + operating flows + unpaid commitments = cash (incl. Free Build funds)', `${Math.round(c0 + flows(sim) + sim.committedBills())} vs ${Math.round(s.cash)}`);
   const R = sim.opResult(30); const dsum = s.days.slice(-30).reduce((a, d) => a + d.rent + (d.anc || 0) - d.opex - d.payroll - (d.service || 0) - (d.interest || 0), 0);
   ok(Math.round(dsum) === R.amt && s.sb.subsidy > 0, 'Free Build: operating result excludes construction and Free Build funds', `op $${R.amt}, funds $${s.sb.subsidy}`);
   ok(!s.convos.some((c) => c.key === 'loan') && sim.loanLimit() === 0, 'Free Build: no credit-line or cash-shortage prompts');
@@ -77,3 +77,5 @@ const dayCount = (sim) => sim.s.days.length + 1;
   ok(modeLabelFor(b.s) === 'Business sandbox · Funds added' && modeLabelFor(f.s) === 'Free Build · Instant', 'Mode labels', `${modeLabelFor(b.s)} / ${modeLabelFor(f.s)}`);
 }
 console.log(fails ? `${fails} FAILED` : 'ALL PASS');
+
+if (fails) process.exitCode = 1;

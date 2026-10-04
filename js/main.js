@@ -1,4 +1,5 @@
 // Boot, fixed-step simulation loop, input, save/load, test hooks.
+import { FINANCIAL_MINUTE } from './finance.js';
 import { Sim, fmtTime } from './sim.js';
 import { TICKS_PER_SEC_1X, TIERS } from './data.js';
 import { makeMaple, makeEmptyLot } from './maple.js';
@@ -78,7 +79,7 @@ const game = {
     }
     // align to the company clock
     const t = src.s.t, d = src.day, s = sim.s, dt = t - s.t;
-    s.t = t; s.today = { day: d, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 };
+    s.t = t; s.finance.lastDay = t % MIN_PER_DAY <= FINANCIAL_MINUTE ? d - 1 : d; s.finance.observedFrom = d; s.today = { day: d, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 };
     for (const v of s.visits) v.t += dt;
     for (const L of Object.values(s.leases)) { L.nextBill += d - 1; L.start += d - 1; }
     for (const u of sim.objs('unit')) if (u.vacatedAt != null) u.vacatedAt += dt;
@@ -206,6 +207,11 @@ function validState(st) {
   if (!(st.staff || []).every((x) => x && typeof x.role === 'string' && ROLES[x.role])) return false;
   if (typeof st.t !== 'number' || st.t < 0 || typeof st.cash !== 'number') return false;
   if (!st.market || !MARKETS[st.market.id]) return false;
+  if (st.finance) {
+    const F = st.finance;
+    if (F.version !== 1 || !isInt(F.lastDay) || F.lastDay < 0 || F.lastDay > Math.floor(st.t / MIN_PER_DAY) + 1 || !isInt(F.cycle) || F.cycle < 0 || F.cycle > 6) return false;
+    if (!F.accrued || !['opex', 'payroll', 'interest'].every((k) => Number.isFinite(F.accrued[k]) && F.accrued[k] >= 0) || !Array.isArray(F.cashDays)) return false;
+  }
   return true;
 }
 function sanitizeSave(v, depth = 0) {
