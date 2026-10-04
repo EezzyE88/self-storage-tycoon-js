@@ -1010,7 +1010,15 @@ export class Sim {
   act_fire(a) {
     const s = this.s, st = s.staff.find((x) => x.id === a.id); if (!st || st.role === 'owner') return { ok: false };
     const ag = s.agents.find((g) => g.sid === st.id);
-    if (ag) { this.releaseTask(ag); if (ag.cart) this.dropCart(ag); this.leaveElevator(ag); s.agents = s.agents.filter((g) => g !== ag); }
+    if (ag) {
+      this.releaseTask(ag);
+      for (const id of ag.queue || []) {
+        const t = s.tasks.find((x) => x.id === id); if (!t) continue;
+        this.refundTaskWork(st, t); t.assigned = null; t.queued = false;
+      }
+      ag.queue = [];
+      if (ag.cart) this.dropCart(ag); this.leaveElevator(ag); s.agents = s.agents.filter((g) => g !== ag);
+    }
     s.staff = s.staff.filter((x) => x !== st); return { ok: true, msg: `${st.name} let go` };
   }
   act_ownerTask(a) { // player assigns a task to the Owner
@@ -2585,7 +2593,7 @@ export class Sim {
     if (ag.task && !t) { ag.task = null; if (ag.st === 'walk' || ag.st === 'work') ag.st = 'idle'; if (ag.cart) this.dropCart(ag); }
     switch (ag.st) {
       case 'office': case 'idle': {
-        if (ag.queue && ag.queue.length) { const nt = s.tasks.find((x) => x.id === ag.queue[0]); ag.queue.shift(); if (nt) { nt.queued = false; if (this.startTask(ag, nt)) break; } }
+        if (ag.queue && ag.queue.length && (ag.role === 'owner' || this.onShift())) { const nt = s.tasks.find((x) => x.id === ag.queue[0]); ag.queue.shift(); if (nt) { nt.queued = false; if (this.startTask(ag, nt)) break; } }
         if (ag.role !== 'owner' && ag.role !== 'clerk' && s.t % 5 === 0 && this.onShift() && this.pickTask(ag)) break;
         if (ag.role === 'owner' && s.t % 10 === 0 && this.ownerMayAutoWork() && this.pickTask(ag, true)) break;
         if (ag.st === 'idle') { const office = this.objs('office')[0]; if (office && this.goTo(ag, 0, office.door.x, office.door.y)) ag.st = 'home'; else ag.st = 'office'; }
@@ -2614,7 +2622,7 @@ export class Sim {
       }
       case 'home': {
         const r = this.moveAgent(ag, WS);
-        if (ag.queue && ag.queue.length) { ag.st = 'idle'; break; }
+        if (ag.queue && ag.queue.length && (ag.role === 'owner' || this.onShift())) { ag.st = 'idle'; break; }
         if (s.t % 5 === 0 && (ag.role !== 'owner' ? ag.role !== 'clerk' && this.onShift() : this.ownerMayAutoWork()) && this.pickTask(ag, ag.role === 'owner')) break;
         if (r === 'done' || r === 'blocked') { ag.st = 'office'; ag.hidden = true; }
         break;
