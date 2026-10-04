@@ -84,6 +84,10 @@ export class UI {
       <div id="modal"></div>`;
     this.$ = (id) => document.getElementById(id);
     this.root.addEventListener('click', (e) => this.onClick(e));
+    // Observe all surfaces: a second touch on the map must invalidate bubble help too.
+    for(const [event,phase] of [['pointerdown','down'],['pointerup','up'],['pointercancel','cancel']]) document.addEventListener(event,e=>this.trackFeedbackPointer(e,phase),{capture:true,passive:true});
+    window.addEventListener('blur',()=>this.resetFeedbackPointers());
+    document.addEventListener('visibilitychange',()=>{if(document.hidden) this.resetFeedbackPointers();});
     this.root.addEventListener('pointerdown', (e) => { if (e.target.closest('.sheet, .modal, .tut, .actionbar')) this.menuTouch = true; }, true);
     const menuUp = () => { if (this.menuTouch) { this.menuTouch = false; this.menuScrollUntil = performance.now() + 200; } };
     window.addEventListener('pointerup', menuUp, true); window.addEventListener('pointercancel', menuUp, true);
@@ -144,8 +148,8 @@ export class UI {
       case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
-      case 'feedback': this.select(null); this.feedbackFocus=null; this.feedbackRequest=null; this.setTab('feedback'); break;
-      case 'requestHelp': this.select(null); this.feedbackFocus=null; this.feedbackRequest=+el.dataset.id; this.setTab('feedback'); break;
+      case 'feedback': this.select(null); this.feedbackFocus=null; this.feedbackRequest=null; this.sheetKey=null; this.setTab('feedback'); break;
+      case 'requestHelp': this.select(null); this.feedbackFocus=null; this.feedbackRequest=+el.dataset.id; this.sheetKey=null; this.setTab('feedback'); break;
       case 'complaintView': {
         if(el.dataset.property!=null && +el.dataset.property!==this.feedbackEpoch) break;
         let target; try { target=JSON.parse(el.dataset.target); } catch { break; }
@@ -588,9 +592,23 @@ export class UI {
   }
 
   // ------------------------------------------------------------ OPERATE
+  resetFeedbackPointers() {
+    this.feedbackPointers=new Set();
+    this.feedbackGestureVersion=(this.feedbackGestureVersion||0)+1;
+  }
+  trackFeedbackPointer(e,phase) {
+    this.feedbackPointers ||= new Set();
+    if(phase==='down') {
+      this.feedbackPointers.add(e.pointerId);
+      if(this.feedbackPointers.size>1) this.feedbackGestureVersion=(this.feedbackGestureVersion||0)+1;
+    } else {
+      this.feedbackPointers.delete(e.pointerId);
+      if(phase==='cancel') this.feedbackGestureVersion=(this.feedbackGestureVersion||0)+1;
+    }
+  }
   syncFeedbackProperty() {
     if(this.feedbackSim===this.sim) return;
-    this.feedbackSim=this.sim; this.feedbackEpoch=(this.feedbackEpoch||0)+1;
+    this.feedbackSim=this.sim; this.feedbackEpoch=(this.feedbackEpoch||0)+1; this.resetFeedbackPointers();
     for(const b of this.bubbles||[]) b.el.remove();
     this.bubbles=[]; this.bubbleSeen=new Map(); this.feedbackFocus=null; this.feedbackRequest=null;
   }
@@ -607,22 +625,38 @@ export class UI {
   feedbackSheet() {
     this.syncFeedbackProperty();
     const thoughts=[...this.sim.s.thoughts];
-    if(this.feedbackFocus) { const key=complaintKey(this.feedbackFocus),idx=thoughts.findIndex(t=>complaintKey(t)===key && t.t===this.feedbackFocus.t); if(idx>=0) thoughts.splice(idx,1); thoughts.push(this.feedbackFocus); }
+    if(this.feedbackFocus) { const key=complaintKey(this.feedbackFocus),idx=thoughts.findIndex(t=>complaintKey(t)===key && t.t===this.feedbackFocus.t); const focused=idx>=0 ? thoughts.splice(idx,1)[0] : this.feedbackFocus; thoughts.push(focused); }
     const rows=thoughts.map(th=>({th,d:diagnoseComplaint(this.sim,th)})).filter(x=>x.d).reverse();
     const requests=[...this.sim.s.convos].sort((a,b)=>Number(b.id===this.feedbackRequest)-Number(a.id===this.feedbackRequest)).map(c=>({c,d:diagnoseRequest(this.sim,c)})).filter(x=>x.d).map(({c,d})=>`<article class="item"><div class="grow"><b>${esc(c.text||'Customer request')}</b><small>${esc(d.category)} · ${esc(d.location)}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><small>Respond using the existing message choices; they retain their costs and consequences.</small><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('');
     const requestFirst=this.feedbackRequest!=null;
     return this.sheet('Customer feedback', 'Recent reports · current property', `<p class="note">Reports describe what happened at the time, not a live fault alarm. Review the location before spending. The latest 40 thoughts are retained in the save.</p>${requestFirst?requests:''}${rows.length ? rows.map(({th,d})=>`<article class="item"><div class="grow"><b>${esc(th.text)}${th.n>1?' ×'+th.n:''}</b><small>${th.requestedSize?'Requested '+esc(th.requestedSize)+(th.requestedClimate?' climate':'')+' · ':''}${esc(d.category)} · Day ${dayOf(th.t)} ${fmtTime(th.t)}</small><small>${esc(d.location)}${d.legacy?' · older save: exact target unavailable':''}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('') : requests ? '' : '<p>No recent customer complaints.</p>'}${requestFirst?'':requests}`);
   }
   bindComplaintBubble(el,th) {
-    const sim=this.sim; let pointers=new Set(),start=null,eligible=false;
-    const open=()=>{if(this.sim!==sim || this.tool || this.title) return; this.select(null); this.feedbackFocus=th; this.feedbackRequest=null; this.setTab('feedback');};
+    const sim=this.sim; let pointers=new Set(),start=null,eligible=false,pointerSeen=false,blocked=false,releasedVersion=0;
+    const open=()=>{if(this.sim!==sim || this.tool || this.title) return; this.select(null); this.feedbackFocus=th; this.feedbackRequest=null; this.sheetKey=null; this.setTab('feedback');};
     el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label',th.text+' Review cause and remedy');
-    el.addEventListener('pointerdown',e=>{el.setPointerCapture?.(e.pointerId);pointers.add(e.pointerId);eligible=false;if(pointers.size===1 && (e.button==null || e.button===0)){start={id:e.pointerId,x:e.clientX,y:e.clientY};}else start=null;});
+    el.addEventListener('pointerdown',e=>{
+      el.setPointerCapture?.(e.pointerId);
+      // Recover local bookkeeping after capture loss/backgrounding once a fresh solo touch begins.
+      if(this.feedbackPointers?.size===1) pointers.clear();
+      pointers.add(e.pointerId); eligible=false; pointerSeen=true; blocked=true;
+      start=pointers.size===1 && (this.feedbackPointers?.size||1)<=1 && (e.button==null || e.button===0)
+        ? {id:e.pointerId,x:e.clientX,y:e.clientY,version:this.feedbackGestureVersion||0} : null;
+    });
     el.addEventListener('pointermove',e=>{if(start?.id===e.pointerId && Math.hypot(e.clientX-start.x,e.clientY-start.y)>8) start=null;});
-    el.addEventListener('pointerup',e=>{eligible=!!start && start.id===e.pointerId && pointers.size===1 && Math.hypot(e.clientX-start.x,e.clientY-start.y)<=8;pointers.delete(e.pointerId);start=null;});
-    el.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);start=null;eligible=false;});
-    el.addEventListener('click',e=>{if(e.detail===0 || eligible){eligible=false;open();}});
-    el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+    el.addEventListener('pointerup',e=>{
+      eligible=!!start && start.id===e.pointerId && pointers.size===1 && start.version===(this.feedbackGestureVersion||0) && Math.hypot(e.clientX-start.x,e.clientY-start.y)<=8;
+      blocked=!eligible; releasedVersion=this.feedbackGestureVersion||0;
+      pointers.delete(e.pointerId); start=null;
+    });
+    el.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);start=null;eligible=false;blocked=true;});
+    el.addEventListener('lostpointercapture',()=>{if(pointers.size){pointers.clear();start=null;eligible=false;blocked=true;}});
+    el.addEventListener('click',e=>{
+      const current=releasedVersion===(this.feedbackGestureVersion||0);
+      const direct=e.detail===0 && !blocked && (!pointerSeen || current) && !this.feedbackPointers?.size;
+      if(direct || (eligible && current)){eligible=false;open();}
+    });
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();blocked=false;releasedVersion=this.feedbackGestureVersion||0;open();}});
   }
   operateSheet() {
     const sim = this.sim, s = sim.s;

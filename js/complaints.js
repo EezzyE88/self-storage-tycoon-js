@@ -44,7 +44,7 @@ export function complaintContext(sim, ag, text) {
   if(entry[0].startsWith('office')) o=sim.objs('office')[0];
   if(entry[0]==='cart') o=s.objects[ag.corral] || u;
   if(entry[0].startsWith('elevator') || entry[0]==='stairs') o=s.objects[ag.elev] || u;
-  const target=o ? {obj:o.id,x:o.x,y:o.y,f:o.f||0} : {x:ag.x,y:ag.y,f:ag.f||0};
+  const target=o ? {obj:o.id,x:o.x,y:o.y,f:entry[0].startsWith('elevator') ? ag.f||0 : o.f||0} : {x:ag.x,y:ag.y,f:ag.f||0};
   const building=o && sim.D.shellAt[sim.idx(o.x,o.y)];
   return {complaint:entry[0],location:{...target,building:building||null},requestedSize:ag.size||null};
 }
