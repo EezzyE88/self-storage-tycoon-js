@@ -25,6 +25,15 @@ export const COMPLAINTS = [
   ['reputation', /^The reviews put me off\.$/, 'Market outcome', 'Reputation influenced this shopper’s decision.', 'Review recurring service complaints and Customer experience, repair faults and complete cleaning/turnover. Reputation recovery takes time; advertising does not repair access or equipment.', 'growth'],
   ['noReady', /^Nothing ready to rent today\.$/, 'Market / unit availability', 'No accessible operating unit of the requested size was ready to offer this shopper.', 'Review unit states. Check the requested size and blocked access, not just total occupancy. Full occupancy is a capacity outcome, not a cleaning failure. For vacant unready units, complete make-ready; finish and commission new units. Expand only after checking demand, Growth Readiness and cash.', 'business']
 ];
+// Group only equivalent observations; do not discard product or observed overflow differences.
+export function complaintKey(th) {
+  const l=th.location;
+  return JSON.stringify([th.text,th.kind,th.requestedSize??null,th.requestedClimate??null,l?.obj??null,l?.building??null,l?.x??null,l?.y??null,l?.f??null,th.loadingBays??null,th.overflowAvailable??null]);
+}
+export function reportedTarget(sim,l) {
+  if(!l || !Number.isFinite(l.x) || !Number.isFinite(l.y) || l.x<0 || l.y<0 || l.x>=sim.s.W || l.y>=sim.s.H || ![0,1].includes(l.f??0)) return null;
+  return {...l,f:l.f??0};
+}
 export function complaintType(text) { return COMPLAINTS.find(x => x[1].test(text)); }
 export function complaintContext(sim, ag, text) {
   const entry=complaintType(text); if(!entry) return {};
@@ -41,26 +50,26 @@ export function complaintContext(sim, ag, text) {
 }
 export function diagnoseComplaint(sim, th) {
   const e=complaintType(th.text); if(!e || th.kind!=='bad') return null;
-  const l=th.location || {x:th.x,y:th.y,f:th.f||0}, o=sim.s.objects[l.obj], b=sim.s.objects[l.building];
-  const location=[b ? (b.name||'Building '+b.id) : 'Property', o ? (o.name||sim.objName(o)) : 'reported position', 'F'+((l.f||0)+1), Number.isFinite(l.x)&&Number.isFinite(l.y)?`(${Math.floor(l.x)}, ${Math.floor(l.y)})`:''].filter(Boolean).join(' · ');
+  const l=th.location || {x:th.x,y:th.y,f:th.f||0}, target=reportedTarget(sim,l), o=sim.s.objects[l.obj], b=sim.s.objects[l.building];
+  const location=[b ? (b.name||'Building '+b.id) : l.building ? 'Building '+l.building+' (removed)' : 'Property', o ? (o.name||sim.objName(o)) : l.obj ? 'Target '+l.obj+' (removed)' : 'reported position', 'F'+((l.f||0)+1), Number.isFinite(l.x)&&Number.isFinite(l.y)?`(${Math.floor(l.x)}, ${Math.floor(l.y)})`:''].filter(Boolean).join(' · ');
   let cause=e[3];
   if(e[0]==='loading' && Number.isFinite(th.loadingBays)) cause+=` At report time: ${th.loadingBays} reachable bays were occupied; ${th.overflowAvailable?'overflow parking was available':'no free overflow space was found'}.`;
-  if(e[0]==='noReady') { const units=sim.objs('unit'); cause+=` Current inventory: ${units.filter(u=>u.commercial==='occupied').length} occupied, ${units.filter(u=>u.commercial==='reserved').length} reserved, ${units.filter(u=>u.commercial==='unready').length} unready, ${units.filter(u=>u.commercial==='ready').length} rent-ready.`; }
-  return {id:e[0],category:e[2],cause,remedy:e[4],tab:e[5],location,target:l,legacy:!th.location};
+  if(['noReady','noSize','noClimate'].includes(e[0])) { const units=sim.objs('unit').filter(u=>!th.requestedSize || u.size===th.requestedSize); cause+=` Current ${th.requestedSize||'all-size'} inventory: ${units.filter(u=>u.commercial==='occupied').length} occupied, ${units.filter(u=>u.commercial==='reserved').length} reserved, ${units.filter(u=>u.commercial==='unready').length} unready, ${units.filter(u=>u.cstate==='operating' && u.commercial==='ready' && !u.blocked).length} accessible rent-ready, ${units.filter(u=>u.blocked).length} blocked. Ready stock may still differ from the requested climate product.`; }
+  return {id:e[0],category:e[2],cause,remedy:e[4],tab:e[5],location:target?location:location+' · reported location unavailable',target,legacy:!th.location};
 }
 
 // Existing message choices keep their original prices, effects, expiry and automation.
 export function diagnoseRequest(sim,c) {
   const key=c.key||'', o=sim.s.objects[c.obj];
   const common = key.startsWith('gate') ? "My gate code isn't working." : key.startsWith('carts') ? 'No carts at the corral.' : key.startsWith('elev') ? (o?.unpowered ? 'The elevator has no power.' : o && !sim.works(o) ? 'The elevator is out of service.' : "I've been waiting forever for the elevator.") : key.startsWith('light') ? 'The hallway is dark.' : null;
-  if(common) return diagnoseComplaint(sim,{text:common,kind:'bad',location:o?{obj:o.id,x:o.x,y:o.y,f:o.f||0,building:sim.D.shellAt[sim.idx(o.x,o.y)]||null}:{x:0,y:0,f:0}});
+  if(common) return diagnoseComplaint(sim,{text:common,kind:'bad',location:o?{obj:o.id,x:o.x,y:o.y,f:o.f||0,building:sim.D.shellAt[sim.idx(o.x,o.y)]||null}:{obj:c.obj}});
   let category,cause,remedy,tab='business';
   if(key.startsWith('bi')) {category='Security incident';cause='A theft occurred at this unit. Darkness and missing camera coverage increase risk; even a well-run property can be hit.';remedy='Use the existing compensation or police-report response, then review this unit on the security map. Restore failed/unpowered lights and cameras or add missing coverage. Spending reduces risk; it cannot guarantee prevention.';tab='build';}
   else if(key.startsWith('rate')) {category='Price / retention decision';cause='An existing tenant is questioning their changed rent.';remedy='Compare old/new rents and market conditions. Explain the rate or use the existing six-month hold; holding trades revenue for retention. Ignoring has its existing satisfaction consequence.';}
-  else if(key.startsWith('mo')) {category=c.text.includes('more than I want')?'Price / retention decision':'Normal move-out';cause=c.text.includes('more than I want')?'This tenant wants to leave because of rent.':'The tenant has finished using this unit; turnover is a normal business event.';remedy='Use the existing retention offer or explain move-out steps. The 10% discount reduces rent and may not retain them. After departure, review the make-ready job before renting again.';}
+  else if(key.startsWith('mo')) {category=String(c.text||'').includes('more than I want')?'Price / retention decision':'Normal move-out';cause=String(c.text||'').includes('more than I want')?'This tenant wants to leave because of rent.':'The tenant has finished using this unit; turnover is a normal business event.';remedy='Use the existing retention offer or explain move-out steps. The 10% discount reduces rent and may not retain them. After departure, review the make-ready job before renting again.';}
   else if(key.startsWith('size')) {category='Product suitability';cause='The prospect is asking whether their planned contents fit a 10x10.';remedy='Use the existing sizing choices. Recommend the available 10x20 when appropriate; choosing a cramped unit has an existing satisfaction consequence. A recommendation does not create inventory.';}
   else if(key==='secrisk') {category='Security coverage gap';cause='The security check found dark, unwatched occupied areas.';remedy='Review the security map at the reported unit. Add missing lights/cameras and fix power or condition faults. Acknowledging the notice does not improve coverage.';tab='build';}
   else return null; // bank, collections and competitor notices are not customer complaints
   const l=o?{obj:o.id,x:o.x,y:o.y,f:o.f||0,building:sim.D.shellAt[sim.idx(o.x,o.y)]||null}:null;
-  return {category,cause,remedy,tab,location:o?`${o.name||sim.objName(o)} · F${(o.f||0)+1} (${o.x}, ${o.y})`:'Property',target:l};
+  return {category,cause,remedy,tab,location:o?`${o.name||sim.objName(o)} · F${(o.f||0)+1} (${o.x}, ${o.y})`:'Property',target:reportedTarget(sim,l)};
 }

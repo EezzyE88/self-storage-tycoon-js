@@ -1,4 +1,4 @@
-import { diagnoseComplaint, diagnoseRequest } from './complaints.js';
+import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget } from './complaints.js';
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
@@ -144,8 +144,13 @@ export class UI {
       case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
-      case 'feedback': this.select(null); this.setTab('feedback'); break;
-      case 'complaintView': { const th=this.sim.s.thoughts[+el.dataset.v], d=th && diagnoseComplaint(this.sim,th); if(d) { this.setTab(null); this.setView(d.target.f||0); this.rend.lookAt(d.target.x,d.target.y); if(d.target.obj && this.sim.s.objects[d.target.obj]) this.select(d.target.obj); } break; }
+      case 'feedback': this.select(null); this.feedbackFocus=null; this.feedbackRequest=null; this.setTab('feedback'); break;
+      case 'requestHelp': this.select(null); this.feedbackFocus=null; this.feedbackRequest=+el.dataset.id; this.setTab('feedback'); break;
+      case 'complaintView': {
+        if(el.dataset.property!=null && +el.dataset.property!==this.feedbackEpoch) break;
+        let target; try { target=JSON.parse(el.dataset.target); } catch { break; }
+        this.viewReportedTarget(target); break;
+      }
       case 'complaintReview': this.select(null); this.setTab(v); break;
       case 'close': this.select(null); this.setTab(null); break;
       case 'cmd': { const act = JSON.parse(el.dataset.cmd); const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'delegateTask', 'delegateTaskFor', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
@@ -232,6 +237,7 @@ export class UI {
   // ------------------------------------------------------------ tabs / sheets
   setTab(t) {
     if (t === 'growth' && this.plan && this.plan.args) this.growthPlanArgs = { ...this.plan.args };
+    if(t!=='feedback') { this.feedbackFocus=null; this.feedbackRequest=null; }
     this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
     if (t) this.sel = null, this.rend.setSelection(null);
     if (t === 'business') this.do({ type: 'tutFlag', flag: 'businessOpened' });
@@ -253,6 +259,7 @@ export class UI {
     if (id != null) requestAnimationFrame(() => this.keepSelVisible());
   }
   renderSheet(force = false) {
+    this.syncFeedbackProperty();
     const box = this.$('sheet');
     if (this.tool) { box.innerHTML = ''; return; }
     let html = '';
@@ -581,10 +588,41 @@ export class UI {
   }
 
   // ------------------------------------------------------------ OPERATE
+  syncFeedbackProperty() {
+    if(this.feedbackSim===this.sim) return;
+    this.feedbackSim=this.sim; this.feedbackEpoch=(this.feedbackEpoch||0)+1;
+    for(const b of this.bubbles||[]) b.el.remove();
+    this.bubbles=[]; this.bubbleSeen=new Map(); this.feedbackFocus=null; this.feedbackRequest=null;
+  }
+  viewReportedTarget(l) {
+    const target=reportedTarget(this.sim,l); if(!target) return;
+    this.select(null); this.setTab(null);
+    const f=target.f===1 && this.sim.objs('shell').some(o=>o.floors>1) ? 1 : 0;
+    this.setView(f); this.rend.lookAt(target.x,target.y);
+    const o=this.sim.s.objects[target.obj]; if(o && (o.f||0)===f) this.select(o.id);
+  }
+  complaintLocationButton(d) {
+    return d.target ? `<button class="btn sm" data-a="complaintView" data-property="${this.feedbackEpoch}" data-target="${esc(JSON.stringify(d.target))}">View reported location</button>` : '<small>Reported location unavailable</small>';
+  }
   feedbackSheet() {
-    const rows=this.sim.s.thoughts.map((th,i)=>({th,i,d:diagnoseComplaint(this.sim,th)})).filter(x=>x.d).reverse();
-    const requests=this.sim.s.convos.map(c=>({c,d:diagnoseRequest(this.sim,c)})).filter(x=>x.d).map(({c,d})=>`<article class="item"><div class="grow"><b>${esc(c.text)}</b><small>${esc(d.category)} · ${esc(d.location)}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><small>Respond using the existing message choices; they retain their costs and consequences.</small><button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></article>`).join('');
-    return this.sheet('Customer feedback', 'Recent reports · current property', `<p class="note">Reports describe what happened at the time, not a live fault alarm. Review the location before spending. The latest 40 thoughts are retained in the save.</p>${requests}${rows.length ? rows.map(({th,i,d})=>`<article class="item"><div class="grow"><b>${esc(th.text)}${th.n>1?' ×'+th.n:''}</b><small>${th.requestedSize?'Requested '+esc(th.requestedSize)+(th.requestedClimate?' climate':'')+' · ':''}${esc(d.category)} · Day ${dayOf(th.t)} ${fmtTime(th.t)}</small><small>${esc(d.location)}${d.legacy?' · older save: exact target unavailable':''}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><div class="row wrap"><button class="btn sm" data-a="complaintView" data-v="${i}">View reported location</button><button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('') : '<p>No recent customer complaints.</p>'}`);
+    this.syncFeedbackProperty();
+    const thoughts=[...this.sim.s.thoughts];
+    if(this.feedbackFocus) { const key=complaintKey(this.feedbackFocus),idx=thoughts.findIndex(t=>complaintKey(t)===key && t.t===this.feedbackFocus.t); if(idx>=0) thoughts.splice(idx,1); thoughts.push(this.feedbackFocus); }
+    const rows=thoughts.map(th=>({th,d:diagnoseComplaint(this.sim,th)})).filter(x=>x.d).reverse();
+    const requests=[...this.sim.s.convos].sort((a,b)=>Number(b.id===this.feedbackRequest)-Number(a.id===this.feedbackRequest)).map(c=>({c,d:diagnoseRequest(this.sim,c)})).filter(x=>x.d).map(({c,d})=>`<article class="item"><div class="grow"><b>${esc(c.text||'Customer request')}</b><small>${esc(d.category)} · ${esc(d.location)}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><small>Respond using the existing message choices; they retain their costs and consequences.</small><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('');
+    const requestFirst=this.feedbackRequest!=null;
+    return this.sheet('Customer feedback', 'Recent reports · current property', `<p class="note">Reports describe what happened at the time, not a live fault alarm. Review the location before spending. The latest 40 thoughts are retained in the save.</p>${requestFirst?requests:''}${rows.length ? rows.map(({th,d})=>`<article class="item"><div class="grow"><b>${esc(th.text)}${th.n>1?' ×'+th.n:''}</b><small>${th.requestedSize?'Requested '+esc(th.requestedSize)+(th.requestedClimate?' climate':'')+' · ':''}${esc(d.category)} · Day ${dayOf(th.t)} ${fmtTime(th.t)}</small><small>${esc(d.location)}${d.legacy?' · older save: exact target unavailable':''}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('') : requests ? '' : '<p>No recent customer complaints.</p>'}${requestFirst?'':requests}`);
+  }
+  bindComplaintBubble(el,th) {
+    const sim=this.sim; let pointers=new Set(),start=null,eligible=false;
+    const open=()=>{if(this.sim!==sim || this.tool || this.title) return; this.select(null); this.feedbackFocus=th; this.feedbackRequest=null; this.setTab('feedback');};
+    el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label',th.text+' Review cause and remedy');
+    el.addEventListener('pointerdown',e=>{el.setPointerCapture?.(e.pointerId);pointers.add(e.pointerId);eligible=false;if(pointers.size===1 && (e.button==null || e.button===0)){start={id:e.pointerId,x:e.clientX,y:e.clientY};}else start=null;});
+    el.addEventListener('pointermove',e=>{if(start?.id===e.pointerId && Math.hypot(e.clientX-start.x,e.clientY-start.y)>8) start=null;});
+    el.addEventListener('pointerup',e=>{eligible=!!start && start.id===e.pointerId && pointers.size===1 && Math.hypot(e.clientX-start.x,e.clientY-start.y)<=8;pointers.delete(e.pointerId);start=null;});
+    el.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);start=null;eligible=false;});
+    el.addEventListener('click',e=>{if(e.detail===0 || eligible){eligible=false;open();}});
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
   }
   operateSheet() {
     const sim = this.sim, s = sim.s;
@@ -929,7 +967,7 @@ export class UI {
       const defA = c.def != null && c.actions && c.actions[c.def]; const due = c.ttl ? c.t + c.ttl : null;
       const calm = c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. If you leave it: ${defA ? defA.label : 'nothing happens'}.` : defA && c.actions.length > 1 ? `No rush. If you leave it, the game picks: ${defA.label}.` : '';
       const advice=diagnoseRequest(this.sim,c);
-      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<details><summary>Cause &amp; remedy · ${esc(advice.category)}</summary><small>${esc(advice.location)}</small><p>${esc(advice.cause)}</p><p>${esc(advice.remedy)}</p><button class="btn sm" data-a="complaintReview" data-v="${advice.tab}">Review ${esc(advice.tab)}</button></details>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
+      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
       frag.appendChild(el);
     }
     feed.prepend(frag);
@@ -937,8 +975,9 @@ export class UI {
   addBubble(th) {
     // Merge identical customer thoughts without letting rapid repeats pin a bubble on-screen forever.
     // On phones, routine shopper outcomes get a short real-time cooldown; Business still keeps the full lost-demand totals.
-    const now = performance.now();
-    const same = this.bubbles.find((b) => b.th.text === th.text && JSON.stringify(b.th.location) === JSON.stringify(th.location));
+    this.syncFeedbackProperty();
+    const now = performance.now(), key=complaintKey(th);
+    const same = this.bubbles.find((b) => complaintKey(b.th) === key);
     if (same) {
       same.n = (same.n || 1) + 1;
       same.el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)} <b class="n">×${same.n}</b>`;
@@ -946,16 +985,20 @@ export class UI {
     }
     const routine = th.text === 'Nothing ready to rent today.' || th.text === "I'll keep shopping.";
     this.bubbleSeen ||= new Map();
-    const seen = this.bubbleSeen.get(th.text) || 0;
+    const seen = this.bubbleSeen.get(key) || 0;
     if (this.phone() && routine && now - seen < 12000) return;
-    this.bubbleSeen.set(th.text, now);
+    if(routine) {
+      this.bubbleSeen.set(key, now);
+      if(this.bubbleSeen.size>128) this.bubbleSeen.delete(this.bubbleSeen.keys().next().value);
+    }
     if (this.bubbles.length >= (this.phone() ? 2 : 7)) { const o = this.bubbles.shift(); o.el.remove(); }
     const el = document.createElement('div'); el.className = 'bub ' + th.kind;
     el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)}`;
-    if (diagnoseComplaint(this.sim,th)) { el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label',th.text+' Review cause and remedy'); const open=()=>{this.select(null);this.setTab('feedback');}; el.addEventListener('click',open); el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}}); }
+    if (diagnoseComplaint(this.sim,th)) this.bindComplaintBubble(el,th);
     this.bubRoot.appendChild(el); this.bubbles.push({ el, th, t: now, ag: th.ag });
   }
   updateBubbles() {
+    this.syncFeedbackProperty();
     const now = performance.now(), s = this.sim.s; const placed = [];
     for (const b of [...this.bubbles].reverse()) {
       const age = (now - b.t) / 1000;

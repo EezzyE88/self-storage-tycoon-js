@@ -1,4 +1,4 @@
-import { complaintContext } from './complaints.js';
+import { complaintContext, complaintKey } from './complaints.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
 // Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.
 // All mutations go through sim.dispatch(action). Deterministic given seed + action script.
@@ -1957,7 +1957,8 @@ export class Sim {
     if (!text) return;
     const s = this.s;
     extra = { ...complaintContext(this, ag, text), ...extra };
-    const recent = s.thoughts.findLast ? s.thoughts.findLast((x) => x.text === text && JSON.stringify(x.location) === JSON.stringify(extra.location)) : null;
+    const key = complaintKey({text,kind,...extra});
+    const recent = s.thoughts.findLast ? s.thoughts.findLast((x) => x.text === text && complaintKey(x) === key) : null;
     if (recent && s.t - recent.t < 20) { recent.n = (recent.n || 1) + 1; return; } // identical complaints are grouped, not spammed
     const th = { t: s.t, text, kind, f: ag.f || 0, x: ag.x, y: ag.y, ag: ag.id, ...extra };
     s.thoughts.push(th); if (s.thoughts.length > 40) s.thoughts.shift();
