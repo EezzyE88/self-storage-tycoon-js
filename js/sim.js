@@ -1,3 +1,4 @@
+import { complaintContext } from './complaints.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
 // Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.
 // All mutations go through sim.dispatch(action). Deterministic given seed + action script.
@@ -1804,7 +1805,7 @@ export class Sim {
     let settling = false;
     if (!cands.length && v.climate) { cands = ready.filter((u) => u.env === 'std'); settling = true; }
     if (!cands.length && !v.climate) { cands = ready.filter((u) => u.env === 'climate'); }
-    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: 'Nothing ready to rent today.' }[reason] || 'I\'ll keep shopping.', 'bad'); return null; };
+    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: 'Nothing ready to rent today.' }[reason] || 'I\'ll keep shopping.', 'bad', {requestedSize:v.size,requestedClimate:!!v.climate}); return null; };
     if (!cands.length) return lose(all.length ? (v.climate ? 'noClimate' : 'noReady') : v.climate && this.objs('unit').some((u) => u.size === v.size) ? 'noClimate' : 'noSize');
     const rep = this.reputation(); const cp = this.compPrice();
     let best = null, bestP = -1;
@@ -1955,7 +1956,8 @@ export class Sim {
   thought(ag, text, kind = 'bad', extra = {}) {
     if (!text) return;
     const s = this.s;
-    const recent = s.thoughts.findLast ? s.thoughts.findLast((x) => x.text === text) : null;
+    extra = { ...complaintContext(this, ag, text), ...extra };
+    const recent = s.thoughts.findLast ? s.thoughts.findLast((x) => x.text === text && JSON.stringify(x.location) === JSON.stringify(extra.location)) : null;
     if (recent && s.t - recent.t < 20) { recent.n = (recent.n || 1) + 1; return; } // identical complaints are grouped, not spammed
     const th = { t: s.t, text, kind, f: ag.f || 0, x: ag.x, y: ag.y, ag: ag.id, ...extra };
     s.thoughts.push(th); if (s.thoughts.length > 40) s.thoughts.shift();
@@ -2182,7 +2184,7 @@ export class Sim {
     load.sort((a, b) => d.get(a) - d.get(b)); park.sort((a, b) => d.get(a) - d.get(b));
     const l = load.find(free); if (l != null) return l;
     const pk = park.filter((i) => s.ground[i] === G.PARKING).find(free);
-    if (load.length) this.thought(ag, 'Loading bays are full.', 'bad');
+    if (load.length) this.thought(ag, 'Loading bays are full.', 'bad', {location:{obj:u.id,building:D.shellAt[this.idx(u.x,u.y)]||null,x:load[0]%s.W,y:Math.floor(load[0]/s.W),f:0},loadingBays:load.length,overflowAvailable:pk!=null||park.some(free)});
     if (pk != null) { ag.exp.walk += 10; return pk; }
     const any = park.find(free); if (any != null) { ag.exp.walk += 10; return any; }
     return load[0] ?? null;
@@ -2330,7 +2332,7 @@ export class Sim {
         const used = ag.rrUse != null ? ag.rrUse : long || this.rnd() < 0.15;
         if (used && !ag.rrDone) { rr.dirt = Math.min(1, (rr.dirt || 0) + 0.035); rr.uses = (rr.uses || 0) + 1; }
         c = used && rr.dirt > 0.6 ? 0.5 : 0.95;
-        if (used && rr.dirt > 0.6 && this.rnd() < 0.4) this.thought(ag, 'That restroom needs cleaning.', 'bad');
+        if (used && rr.dirt > 0.6 && this.rnd() < 0.4) this.thought(ag, 'That restroom needs cleaning.', 'bad', {location:{obj:rr.id,building:sh,x:rr.x,y:rr.y,f:rr.f||0}});
       } else { c = long ? 0.55 : 0.78; if (long && this.rnd() < 0.12) this.thought(ag, 'No restroom in this building?', 'bad'); }
       if (fo) c += 0.08;
       dims.comfort = clamp(c, 0, 1);

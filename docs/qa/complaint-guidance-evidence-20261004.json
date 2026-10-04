@@ -1,0 +1,379 @@
+{
+  "date": "2026-10-04",
+  "build": "bplus-complaint-guidance-candidate-10",
+  "base_commit": "7fafaebb8b1efd29deb133941f65975c1f31cd86",
+  "accepted_master": "2812abf8d268f9a225e5786d173f95efcbd6223d",
+  "complaint_families": 24,
+  "request_families": 9,
+  "focused_regressions": 38,
+  "full_suite_scripts": 40,
+  "gameplay_comparison": "2880 steps, seed 982: exact candidate9/gameplay equality excluding enriched thought reports",
+  "performance": {
+    "baseline_cpu": {
+      "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+      "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+      "environment": "v24.19.0",
+      "medianDayCpuMs": 19.659999999999997,
+      "p95DayCpuMs": 55.83989600000001,
+      "peakAgentsPerProperty": 18,
+      "days": [
+        54.844415,
+        55.83989600000001,
+        21.114295999999996,
+        19.659999999999997,
+        19.696155000000005,
+        18.831647999999973,
+        18.524039000000016,
+        17.562989000000016,
+        19.073446999999987,
+        16.41244499999999,
+        15.672713999999985,
+        21.143168000000003,
+        23.037840000000017,
+        19.176320000000032
+      ],
+      "finalTimes": [
+        20580,
+        20580,
+        20580
+      ]
+    },
+    "candidate_cpu": {
+      "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+      "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+      "environment": "v24.19.0",
+      "medianDayCpuMs": 22.17279400000001,
+      "p95DayCpuMs": 57.59543799999999,
+      "peakAgentsPerProperty": 18,
+      "days": [
+        57.59543799999999,
+        55.140792000000005,
+        36.425015,
+        22.17279400000001,
+        21.80978399999998,
+        24.43942500000003,
+        22.676304000000016,
+        19.572862999999984,
+        20.037975000000017,
+        16.37113599999998,
+        22.11755199999999,
+        29.997514999999964,
+        19.746211000000017,
+        18.002234999999985
+      ],
+      "finalTimes": [
+        20580,
+        20580,
+        20580
+      ]
+    },
+    "baseline_scene": {
+      "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+      "source": "7fafaebb8b1efd29deb133941f65975c1f31cd86",
+      "scenes": {
+        "maple": {
+          "units": 23,
+          "meshes": 257,
+          "shadowCasters": 155,
+          "sceneTriangles": 2234,
+          "uniqueGeometries": 2,
+          "uniqueMaterialRefs": 49,
+          "rebuildCpuMs": 12.96
+        },
+        "dense": {
+          "units": 550,
+          "meshes": 3039,
+          "shadowCasters": 1233,
+          "sceneTriangles": 19378,
+          "uniqueGeometries": 2,
+          "uniqueMaterialRefs": 663,
+          "rebuildCpuMs": 26.26
+        }
+      },
+      "customerChurn": {
+        "customers": 4000,
+        "peakConcurrent": 20,
+        "createdGroups": 20,
+        "disposedGroups": 0,
+        "retainedGroups": 20,
+        "cpuMs": 5.92
+      }
+    },
+    "candidate_scene": {
+      "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+      "source": "working tree",
+      "scenes": {
+        "maple": {
+          "units": 23,
+          "meshes": 257,
+          "shadowCasters": 155,
+          "sceneTriangles": 2234,
+          "uniqueGeometries": 2,
+          "uniqueMaterialRefs": 49,
+          "rebuildCpuMs": 8.66
+        },
+        "dense": {
+          "units": 550,
+          "meshes": 3039,
+          "shadowCasters": 1233,
+          "sceneTriangles": 19378,
+          "uniqueGeometries": 2,
+          "uniqueMaterialRefs": 663,
+          "rebuildCpuMs": 24.5
+        }
+      },
+      "customerChurn": {
+        "customers": 4000,
+        "peakConcurrent": 20,
+        "createdGroups": 20,
+        "disposedGroups": 0,
+        "retainedGroups": 20,
+        "cpuMs": 9.85
+      }
+    }
+  },
+  "physical_Safari_acceptance": "not verified for candidate10",
+  "browser_visual_acceptance": "unavailable; agent-browser CLI absent; static site has no supported managed preview flow",
+  "full_suite_results": [
+    {
+      "file": "dbg.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "t9.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.8
+    },
+    {
+      "file": "t9b.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.7
+    },
+    {
+      "file": "t9c.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.2
+    },
+    {
+      "file": "t9d.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 46.4
+    },
+    {
+      "file": "t9e.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.5
+    },
+    {
+      "file": "t9f.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.7
+    },
+    {
+      "file": "tads.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tbal.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 10.4
+    },
+    {
+      "file": "tblueprint.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.1
+    },
+    {
+      "file": "tbplus_payback.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 48.4
+    },
+    {
+      "file": "tbplus_scenarios.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6.8
+    },
+    {
+      "file": "tbplus.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tbugs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tcalm.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 8.8
+    },
+    {
+      "file": "tcapacity.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tclim.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.8
+    },
+    {
+      "file": "tcomplaints.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tdelegation.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tdrama.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 17.4
+    },
+    {
+      "file": "tfin.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.9
+    },
+    {
+      "file": "tfinancial_trust.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tfix.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "tfuzz.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 25.4
+    },
+    {
+      "file": "tgestures.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tmanagement.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tmenu_touch.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tp.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 4.9
+    },
+    {
+      "file": "tp2.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 8.3
+    },
+    {
+      "file": "tperformance.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tr.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tsandbox.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.8
+    },
+    {
+      "file": "tsc.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 7.1
+    },
+    {
+      "file": "tstafffirst.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tstaffing_compare.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.7
+    },
+    {
+      "file": "tsystems.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "tv.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tvert.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.2
+    },
+    {
+      "file": "tw.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "twalk.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { diagnoseComplaint, diagnoseRequest } from './complaints.js';
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
@@ -143,6 +144,9 @@ export class UI {
       case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
+      case 'feedback': this.select(null); this.setTab('feedback'); break;
+      case 'complaintView': { const th=this.sim.s.thoughts[+el.dataset.v], d=th && diagnoseComplaint(this.sim,th); if(d) { this.setTab(null); this.setView(d.target.f||0); this.rend.lookAt(d.target.x,d.target.y); if(d.target.obj && this.sim.s.objects[d.target.obj]) this.select(d.target.obj); } break; }
+      case 'complaintReview': this.select(null); this.setTab(v); break;
       case 'close': this.select(null); this.setTab(null); break;
       case 'cmd': { const act = JSON.parse(el.dataset.cmd); const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'delegateTask', 'delegateTaskFor', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
@@ -209,7 +213,7 @@ export class UI {
         break; }
       case 'music': this.g.audio.musicOn = !this.g.audio.musicOn; this.g.audio.applyVol(); this.showMenu(); break;
       case 'fps': this.g.showFps = !this.g.showFps; this.showMenu(); break;
-      case 'focus': this.rend.lookAt(+el.dataset.x, +el.dataset.y); break;
+      case 'focus': if(el.dataset.f!=null) this.setView(+el.dataset.f); this.rend.lookAt(+el.dataset.x, +el.dataset.y); break;
       case 'rent': { const k = el.dataset.k; const cur = this.sim.s.market.ask[k]; this.do({ type: 'setRent', key: k, v: cur + (+v) }); this.renderSheet(true); this.sfx('click'); break; }
       case 'policy': this.do({ type: 'policy', key: v, v: !this.sim.s.policies[v] }); this.renderSheet(true); this.sfx('click'); break;
     }
@@ -254,6 +258,7 @@ export class UI {
     let html = '';
     if (this.sel != null) html = this.inspector();
     else if (this.tab === 'build') html = this.buildSheet();
+    else if (this.tab === 'feedback') html = this.feedbackSheet();
     else if (this.tab === 'operate') html = this.operateSheet();
     else if (this.tab === 'business') html = this.businessSheet();
     else if (this.tab === 'growth') html = this.growthSheet();
@@ -278,6 +283,7 @@ export class UI {
     if (heading) body.scrollTop += heading.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
   }
   sheet(title, sub, body, extra = '') {
+    if (title === 'Operate') extra += '<button class="btn" data-a="feedback">Customer feedback: causes &amp; remedies</button>';
     const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
     if (sections) {
       const jumps = [];
@@ -575,6 +581,11 @@ export class UI {
   }
 
   // ------------------------------------------------------------ OPERATE
+  feedbackSheet() {
+    const rows=this.sim.s.thoughts.map((th,i)=>({th,i,d:diagnoseComplaint(this.sim,th)})).filter(x=>x.d).reverse();
+    const requests=this.sim.s.convos.map(c=>({c,d:diagnoseRequest(this.sim,c)})).filter(x=>x.d).map(({c,d})=>`<article class="item"><div class="grow"><b>${esc(c.text)}</b><small>${esc(d.category)} · ${esc(d.location)}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><small>Respond using the existing message choices; they retain their costs and consequences.</small><button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></article>`).join('');
+    return this.sheet('Customer feedback', 'Recent reports · current property', `<p class="note">Reports describe what happened at the time, not a live fault alarm. Review the location before spending. The latest 40 thoughts are retained in the save.</p>${requests}${rows.length ? rows.map(({th,i,d})=>`<article class="item"><div class="grow"><b>${esc(th.text)}${th.n>1?' ×'+th.n:''}</b><small>${th.requestedSize?'Requested '+esc(th.requestedSize)+(th.requestedClimate?' climate':'')+' · ':''}${esc(d.category)} · Day ${dayOf(th.t)} ${fmtTime(th.t)}</small><small>${esc(d.location)}${d.legacy?' · older save: exact target unavailable':''}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><div class="row wrap"><button class="btn sm" data-a="complaintView" data-v="${i}">View reported location</button><button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('') : '<p>No recent customer complaints.</p>'}`);
+  }
   operateSheet() {
     const sim = this.sim, s = sim.s;
     const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
@@ -917,7 +928,8 @@ export class UI {
       // no countdowns (concept §9): say calmly what happens if the player leaves it; only collections keep a real-world date
       const defA = c.def != null && c.actions && c.actions[c.def]; const due = c.ttl ? c.t + c.ttl : null;
       const calm = c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. If you leave it: ${defA ? defA.label : 'nothing happens'}.` : defA && c.actions.length > 1 ? `No rush. If you leave it, the game picks: ${defA.label}.` : '';
-      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
+      const advice=diagnoseRequest(this.sim,c);
+      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<details><summary>Cause &amp; remedy · ${esc(advice.category)}</summary><small>${esc(advice.location)}</small><p>${esc(advice.cause)}</p><p>${esc(advice.remedy)}</p><button class="btn sm" data-a="complaintReview" data-v="${advice.tab}">Review ${esc(advice.tab)}</button></details>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
       frag.appendChild(el);
     }
     feed.prepend(frag);
@@ -926,7 +938,7 @@ export class UI {
     // Merge identical customer thoughts without letting rapid repeats pin a bubble on-screen forever.
     // On phones, routine shopper outcomes get a short real-time cooldown; Business still keeps the full lost-demand totals.
     const now = performance.now();
-    const same = this.bubbles.find((b) => b.th.text === th.text);
+    const same = this.bubbles.find((b) => b.th.text === th.text && JSON.stringify(b.th.location) === JSON.stringify(th.location));
     if (same) {
       same.n = (same.n || 1) + 1;
       same.el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)} <b class="n">×${same.n}</b>`;
@@ -940,6 +952,7 @@ export class UI {
     if (this.bubbles.length >= (this.phone() ? 2 : 7)) { const o = this.bubbles.shift(); o.el.remove(); }
     const el = document.createElement('div'); el.className = 'bub ' + th.kind;
     el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)}`;
+    if (diagnoseComplaint(this.sim,th)) { el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label',th.text+' Review cause and remedy'); const open=()=>{this.select(null);this.setTab('feedback');}; el.addEventListener('click',open); el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}}); }
     this.bubRoot.appendChild(el); this.bubbles.push({ el, th, t: now, ag: th.ag });
   }
   updateBubbles() {
@@ -954,6 +967,7 @@ export class UI {
       let py = p.y; for (const q of placed) if (Math.abs(q.x - p.x) < 120 && Math.abs(q.y - py) < 26) py = q.y - 28;
       placed.push({ x: p.x, y: py });
       const half=Math.min(b.el.offsetWidth||220,innerWidth-16)/2; const px=Math.max(half+8,Math.min(innerWidth-half-8,p.x));
+      b.el.style.pointerEvents = hide || !p.vis || !this.mapPointClear({x:px,y:py}) || age>3.8 || !b.el.hasAttribute('role') ? 'none' : 'auto';
       b.el.style.left = px + 'px'; b.el.style.top = py + 'px'; b.el.style.opacity = hide || !p.vis || !this.mapPointClear({x:px,y:py}) ? 0 : age > 3.8 ? 0 : 1;
     }
     for (const t of [...this.toasts]) if (now - t.t > 4200) { t.el.classList.add('out'); if (now - t.t > 4600) { t.el.remove(); this.toasts = this.toasts.filter((x) => x !== t); } }
