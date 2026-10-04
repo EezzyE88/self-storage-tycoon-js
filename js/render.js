@@ -251,6 +251,18 @@ export class Renderer {
     b = bb(); this.pan((rect.left + rect.right) / 2 - (b.x0 + b.x1) / 2, (rect.top + rect.bottom) / 2 - (b.y0 + b.y1) / 2);
   }
   zoomBy(k) { this.zoom = Math.max(0.3, Math.min(4.2, this.zoom * k)); this.updateCamera(); }
+  zoomAt(cx, cy, k) {
+    const before = this.cellAt(cx, cy);
+    this.zoom = Math.max(0.3, Math.min(4.2, this.zoom * k)); this.updateCamera();
+    const after = this.cellAt(cx, cy);
+    if (before && after) {
+      this.center.x += before.fx - after.fx; this.center.z += before.fy - after.fy;
+      const s = this.sim.s;
+      this.center.x = Math.max(-4, Math.min(s.W + 4, this.center.x));
+      this.center.z = Math.max(-4, Math.min(s.H + 4, this.center.z));
+      this.updateCamera();
+    }
+  }
   rotate(dir) { this.rot = (this.rot + dir + 4) % 4; this.targetAz = this.targetAz + dir * Math.PI / 2; }
   lookAt(x, y) { this.center.set(x + 0.5, 0, y + 0.5); this.updateCamera(); }
   floorY() { return this.view === 1 ? FLOOR_H : 0; }

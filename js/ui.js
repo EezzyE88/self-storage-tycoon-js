@@ -208,7 +208,7 @@ export class UI {
         try { const pr = navigator.clipboard && navigator.clipboard.writeText(ta.value); if (pr && pr.then) pr.then(() => this.toast('Save code copied', 'good'), fallback); else fallback(); } catch (err) { fallback(); }
         break; }
       case 'music': this.g.audio.musicOn = !this.g.audio.musicOn; this.g.audio.applyVol(); this.showMenu(); break;
-      case 'fps': this.g.showFps = !this.g.showFps; document.getElementById('fps').hidden = !this.g.showFps; this.showMenu(); break;
+      case 'fps': this.g.showFps = !this.g.showFps; this.showMenu(); break;
       case 'focus': this.rend.lookAt(+el.dataset.x, +el.dataset.y); break;
       case 'rent': { const k = el.dataset.k; const cur = this.sim.s.market.ask[k]; this.do({ type: 'setRent', key: k, v: cur + (+v) }); this.renderSheet(true); this.sfx('click'); break; }
       case 'policy': this.do({ type: 'policy', key: v, v: !this.sim.s.policies[v] }); this.renderSheet(true); this.sfx('click'); break;
@@ -315,6 +315,7 @@ export class UI {
   toolFloor() { const v = this.rend.view; return v === 1 ? 1 : 0; }
   placeStart(cell) { if (!this.tool || !cell) return; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
   finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.renderActionBar(); }
+  cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); this.renderActionBar(); }
   placeMove(cell) {
     if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { this.planArgs.a = this.planArgs.b = { x: cell.x, y: cell.y }; this.replan(); return; }
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
@@ -390,21 +391,38 @@ export class UI {
       ? this.cmdBtn(`Delegate to ${name}`, action, 'pri')
       : d.status === 'missing' ? `<button class="btn pri" data-a="staffHelp" data-v="${d.role}">Review ${name} hire · ${money(ROLES[d.role].wage, true)}/day</button>` : '');
   }
+  jobWait(t) {
+    if (t.vendor) return 'Vendor booked; waiting for the scheduled visit.';
+    const st = this.sim.s.staff.find(x => x.id === t.assigned);
+    if (!st) return 'Assigned worker is unavailable; review staffing.';
+    if (t.unreachable != null) return 'Access blocked; fix the aisles and hallways.';
+    if (!t.queued) return t.prog ? 'Work in progress; assignment stays with this worker.' : 'Travelling to the job; assignment stays with this worker.';
+    if (st.role !== 'owner' && !this.sim.onShift()) return 'Queued for the next 7 AM staff shift.';
+    const booked = t.workBooked === st.id && t.workBookedDay === this.sim.day;
+    if (!booked && this.sim.workRemaining(st) < this.sim.taskHours(t)) return 'Queued; insufficient capacity today. Waiting for the daily reset.';
+    return `Queued behind this worker’s current jobs; ${this.sim.workRemaining(st)}h available today${t.ownerOverride ? ' · explicit Owner choice' : ''}.`;
+  }
   officeCoverageHtml() {
     const sim = this.sim, s = sim.s;
-    if (!s.open || (s.tut?.on && !s.tut.done) || s.staff.some(st => st.role === 'clerk')) return '';
-    return `<p class="note">The Owner also runs the office. Sending the Owner out can leave shoppers waiting. A Clerk covers 8 AM–6 PM for ${money(ROLES.clerk.wage)}/day.</p><button class="btn sm" data-a="staffHelp" data-v="clerk">Review office coverage</button>`;
+    if (!s.open || (s.tut?.on && !s.tut.done)) return '';
+    const servers = sim.officeServerAgents();
+    const clerk = s.staff.some(st => st.role === 'clerk');
+    const message = servers.length ? `Office covered by ${servers.map(a => ROLES[a.role].name).join(' + ')} · ${s.officeQ.length} waiting.` : `Office uncovered · ${s.officeQ.length} waiting. ${clerk ? 'Clerk coverage is 8 AM–6 PM.' : 'The Owner is away or lacks office capacity.'}`;
+    return `<p class="note"><b>${esc(message)}</b>${clerk ? ' Clerk coverage is 8 AM–6 PM.' : ' A Clerk covers 8 AM–6 PM for ' + money(ROLES.clerk.wage) + '/day.'}</p>` + (clerk ? '' : '<button class="btn sm" data-a="staffHelp" data-v="clerk">Review office coverage</button>');
   }
   taskActions(o) {
     const s = this.sim.s; const t = s.tasks.find((x) => x.obj === o.id);
     const ownerCan = t ? ROLES.owner.can.includes(t.need) : !(o.type === 'elevator' || o.type === 'hvac');
     const owner = s.staff.find((x) => x.role === 'owner'), hrs = t ? this.sim.taskHours(t) : 0, ownerLeft = owner ? this.sim.workRemaining(owner) : 0;
+    const delegate = t && !t.assigned ? this.sim.staffForTask(t) : null;
+    const delegateSt = delegate && delegate.st;
     let h = '';
     if (t) {
       h += this.delegationHtml(t);
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? (s.staff.find((x) => x.id === t.assigned) || {}).name || 'Assigned' : 'Waiting in queue';
-      h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work${t.type === 'repair' && !t.vendor ? ' · Vendor ' + money(t.need === 'repair_complex' ? 650 : 250) + ' cash now' : ''}</small></div></div><div class="row wrap" style="margin-top:6px">`;
-      if (!t.assigned && ownerCan) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>${t.type === 'repair' && this.sim.pressureOn() ? `Owner: quick fix · ${hrs}h` : `Send Owner · ${hrs}h`}</button>`;
+      h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work${t.type === 'repair' && !t.vendor ? ' · Vendor ' + money(t.need === 'repair_complex' ? 650 : 250) + ' cash now' : ''}</small>${t.assigned ? `<p class="note">${esc(this.jobWait(t))}</p>` : ''}</div></div><div class="row wrap" style="margin-top:6px">`;
+      if (!t.assigned && delegateSt && this.sim.taskDelegation(t)?.status !== 'available') h += `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Queue ${ROLES[delegateSt.role].name} · ${hrs}h</button>`;
+      if (!t.assigned && ownerCan) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id, forceOwner: true })}' ${hrs > ownerLeft ? 'disabled' : ''}>${t.type === 'repair' && this.sim.pressureOn() ? `Owner: quick fix · ${hrs}h` : `Send Owner · ${hrs}h`}</button>`;
       if (!t.assigned || (t.assigned !== 'vendor' && !ownerCan)) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Call vendor (${money(t.need === 'repair_complex' ? 650 : 250)})</button>`;
       h += `</div>`;
       if (!t.assigned && ownerCan) h += this.officeCoverageHtml();
@@ -418,7 +436,7 @@ export class UI {
         h += this.delegationHtml({ need: 'repair_simple', total: this.sim.repairWork(o), prog: 0 }, o.id);
         h += this.cmdBtn('Vendor: full service ($250)', { type: 'cv', op: 'vendorFor', obj: o.id });
         h += this.spendingHtml(250, 0, 'after vendor');
-      } else h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTaskFor', obj: o.id })}'>Owner: service now</button>`;
+      } else h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTaskFor', obj: o.id, forceOwner: true })}'>Owner: service now</button>`;
     }
     return h;
   }
@@ -429,12 +447,12 @@ export class UI {
       const t = s.tasks.find((x) => x.type === 'carts' && x.cart === c.id);
       return this.sheet(c.st === 'damaged' ? 'Damaged cart' : 'Stranded cart', `Floor ${c.f + 1} · left ${Math.round((s.t - (c.since || s.t)) / 60)}h ago`,
         `<p class="note">Carts left away from a corral aren't available to the next customer. Porters recover them automatically when "Porters recover carts" is on.</p>
-        ${t ? `<div class="row wrap">${!t.assigned ? `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Owner: return it</button>` : `<span class="pill b">${t.assigned === 'vendor' ? 'Vendor' : 'Assigned'}</span>`}</div>` : '<p class="note">A recovery task will be created if it stays out.</p>'}`);
+        ${t ? this.delegationHtml(t) : ''}${t ? `<div class="row wrap">${!t.assigned ? `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id, forceOwner: true })}'>Owner: return it</button>` : `<span class="pill b">${t.assigned === 'vendor' ? 'Vendor' : 'Assigned'}</span>`}</div>` : '<p class="note">A recovery task will be created if it stays out.</p>'}`);
     }
     if (typeof this.sel === 'object' && this.sel && this.sel.kind === 'dirt') {
       const c = this.sel; const d = s.dirt[c.f][c.y * s.W + c.x];
       const t = s.tasks.find((x) => x.type === 'clean' && x.f === c.f && Math.abs(x.x - c.x) + Math.abs(x.y - c.y) < 6);
-      return this.sheet('Dirty area', `Dirt ${pct(d)}`, `<p class="note">Customers notice dirty loading areas and hallways (Cleanliness).</p><div class="row wrap">${t ? (t.assigned ? `<span class="pill b">Cleaning assigned</span>` : `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Send Owner to clean</button>`) : `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerClean', f: c.f, x: c.x, y: c.y })}'>Send Owner to clean</button>`}</div>`);
+      return this.sheet('Dirty area', `Dirt ${pct(d)}`, `<p class="note">Customers notice dirty loading areas and hallways (Cleanliness).</p>${t ? this.delegationHtml(t) : ''}<div class="row wrap">${t ? (t.assigned ? `<span class="pill b">Cleaning assigned</span>` : `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id, forceOwner: true })}'>Send Owner to clean</button>`) : `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerClean', f: c.f, x: c.x, y: c.y, forceOwner: true })}'>Send Owner to clean</button>`}</div>`);
     }
     const o = s.objects[this.sel]; if (!o) { this.sel = null; return ''; }
     const nm = sim.objName(o);
@@ -461,7 +479,7 @@ export class UI {
       case 'restroom': {
         const ok = sim.amenityWorks(o), dirt = o.dirt || 0;
         return this.sheet('Restroom', ok ? (dirt > 0.6 ? 'Needs cleaning' : 'Open') : 'Closed', `<div class="kv"><span>Status</span><span>${ok ? 'Open' : !sim.hasWater(D.shellAt[o.y * s.W + o.x]) ? 'No water service' : 'No power'}</span><span>Cleanliness</span><span>${pct(1 - dirt)}</span><span>Uses</span><span>${o.uses || 0}</span><span>Comfort score</span><span>${pct(s.exp.comfort)}</span></div>
-          ${dirt > 0.3 ? `<div class="row" style="margin-top:10px"><button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerRoom', obj: o.id })}'>Owner: clean now</button></div>` : ''}
+          ${dirt > 0.3 ? `<div class="row" style="margin-top:10px"><button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerRoom', obj: o.id, forceOwner: true })}'>Owner: clean now</button></div>` : ''}
           <p class="note">Long visits (move-ins, move-outs, big loads) use it most. Porters clean it once it gets dirty; a dirty restroom hurts comfort.</p>`);
       }
       case 'fountain': return this.sheet('Water Fountain', sim.amenityWorks(o) ? 'Working' : 'Not working', `${this.condBar(o.cond)}${this.taskActions(o)}<p class="note">${sim.hasWater(D.shellAt[o.y * s.W + o.x]) ? 'A small comfort boost for tenants in this building.' : 'This building needs a Water Service hookup.'}</p>`);
@@ -488,7 +506,8 @@ export class UI {
         if (o.cstate === 'ready' && o.order) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: o.order })}'>Commission whole order</button>`);
         if (o.cstate === 'ready') { const allReady = sim.objs('unit').filter((u) => u.cstate === 'ready').length, inOrder = o.order ? sim.objs('unit').filter((u) => u.cstate === 'ready' && u.order === o.order).length : 1; if (allReady > inOrder) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission all ${allReady} ready units</button>`); }
         const mr = s.tasks.find((t) => t.type === 'makeready' && t.obj === o.id);
-        if (mr) { const mh = sim.taskHours(mr), ow = s.staff.find((x) => x.role === 'owner'), left = ow ? sim.workRemaining(ow) : 0; acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id })}' ${mh > left ? 'disabled' : ''}>Owner Make-Ready · ${mh}h</button>`); }
+        if (mr && !mr.assigned) { h += this.delegationHtml(mr); const row = sim.staffForTask(mr); if (row && sim.taskDelegation(mr)?.status !== 'available') h += this.cmdBtn('Queue Porter', { type: 'ownerTask', task: mr.id }, 'pri'); }
+        if (mr) { const mh = sim.taskHours(mr), ow = s.staff.find((x) => x.role === 'owner'), left = ow ? sim.workRemaining(ow) : 0; acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id, forceOwner: true })}' ${mh > left ? 'disabled' : ''}>Owner Make-Ready · ${mh}h</button>`); }
         for (const op of sim.renovateOptions ? sim.renovateOptions(o) : []) acts.push(op.ok ? `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'renovate', unit: o.id, kind: op.kind })}'>${op.label} · ${money(op.cost)}</button>` : `<button class="btn" disabled title="${esc(op.why)}">${op.label} · ${esc(op.why)}</button>`);
         if (acts.length) h += `<div class="row wrap" style="margin-top:8px">${acts.join('')}</div>`;
         return this.sheet(nm, `${o.access === 'drive' ? 'Drive-up' : 'Interior'} ${o.size}`, h);
@@ -565,11 +584,14 @@ export class UI {
     if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
     for (const t of tasks.slice(0, 14)) {
       const ownerCan = ROLES.owner.can.includes(t.need), hrs = sim.taskHours(t);
+      const delegate = !t.assigned ? sim.staffForTask(t) : null;
+      const delegateSt = delegate && delegate.st;
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? staffName(t.assigned) + (t.queued ? ' (queued)' : '') : t.unreachable ? 'Unreachable - check routes' : 'Unassigned';
       const loc = t.obj && s.objects[t.obj] ? s.objects[t.obj] : t.x != null ? t : null;
-      h += `<div class="item job"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small>${!t.assigned ? this.delegationHtml(t) : ''}${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor') : ''}</div><div class="row wrap">
+      h += `<div class="item job"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small>${t.assigned ? `<p class="note">${esc(this.jobWait(t))}</p>` : ''}${!t.assigned ? this.delegationHtml(t) : ''}${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor') : ''}</div><div class="row wrap">
         ${loc ? `<button class="btn sm" data-a="focus" data-x="${loc.x}" data-y="${loc.y}">View</button>` : ''}
-        ${!t.assigned && ownerCan ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>Owner · ${hrs}h</button>` : ''}
+        ${!t.assigned && delegateSt && sim.taskDelegation(t)?.status !== 'available' ? `<button class="btn sm pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Queue ${ROLES[delegateSt.role].name} · ${hrs}h</button>` : ''}
+        ${!t.assigned && ownerCan ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id, forceOwner: true })}' ${hrs > ownerLeft ? 'disabled' : ''}>Send Owner · ${hrs}h</button>` : ''}
         ${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Vendor</button>` : ''}
         <button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'taskPri', task: t.id, pri: t.pri >= 2 ? 0 : 2 })}'>${t.pri >= 2 ? 'Normal' : 'Urgent'}</button></div></div>`;
     }
@@ -597,7 +619,7 @@ export class UI {
     h += `</div><p class="note">${s.carts.length} carts total · ${str} stranded or damaged.</p>`;
     h += `<h3>Policies</h3><div class="list">
       <div class="item"><div class="grow"><b>Porters recover carts</b><small>Porters return stranded carts to their corral</small></div><button class="toggle ${s.policies.porterCarts ? 'on' : ''}" data-a="policy" data-v="porterCarts" aria-label="Toggle"></button></div>
-      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, the Owner automatically spends available daily work hours on make-readies, cleaning and cart runs. Techs automatically handle repairs; without a Tech, choose an Owner quick fix or a vendor.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
+      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, hired staff get routine work first. The Owner only fills make-ready, cleaning and cart gaps that staff cannot cover. Techs automatically handle repairs; without a Tech, choose an Owner quick fix or a vendor.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
       <div class="item"><div class="grow"><b>Preventive maintenance</b><small>Techs service equipment before it fails</small></div><button class="toggle ${s.policies.preventive ? 'on' : ''}" data-a="policy" data-v="preventive" aria-label="Toggle"></button></div></div>`;
     return this.sheet('Operate', `${s.staff.length} staff · ${tasks.length} tasks`, h);
   }
@@ -1496,11 +1518,12 @@ export class UI {
       <div class="menu-list"><button class="btn" data-a="handbook">Builder\'s handbook <small>How, why and when to use every build item</small></button><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}</div>
       <h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
       <div class="row wrap"><button class="btn sm" data-a="music">Music ${a.musicOn ? 'on' : 'off'}</button><button class="btn sm" data-a="fps">Performance stats ${this.g.showFps ? 'on' : 'off'}</button></div>
+      ${this.g.showFps ? `<details class="performance-panel"><summary>Performance samples</summary><pre id="fps">${esc(this.g.performanceText ? this.g.performanceText() : 'Collecting samples…')}</pre><p class="note">CPU submission is not GPU time. Resource counts are not memory bytes. Samples remain separate while this menu is open.</p></details>` : ''}
       <h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button><button class="btn sm" data-a="lens">Miniature lens ${this.g.showcase && this.g.showcase.lensPref ? 'on' : 'off'}</button></div>
       <h3>Showcase</h3><div class="menu-list"><button class="btn" data-a="photo">Photo mode <small>Light, looks, lens and a shutter (P)</small></button><button class="btn" data-a="tour">Cinematic tour <small>The camera wanders your property. Tap to stop.</small></button></div>
       <p class="note">Tip: tap any customer, car or staff member to follow them and read their story.</p>
       <h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="sandboxSetup">Sandbox</button></div>
-      <h3>Controls</h3><p class="note">Drag to pan, pinch or scroll to zoom, rotate with the side buttons (Q/E). On touch, press and hold then drag to place a build; a quick drag pans. Two fingers pan/zoom. Space pauses, 1-3 set speed, Esc cancels.</p>
+      <h3>Controls</h3><p class="note">Drag to pan; double-tap, pinch or scroll to zoom; rotate with the side buttons (Q/E). On touch, press and hold then drag to place a build; a quick drag pans. Two fingers pan/zoom. Space pauses, 1-3 set speed, Esc cancels.</p>
       <p class="note" id="autosaveNote">${this.autosaveNote()}</p>
       <p class="note build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')} · ${esc(this.g.BUILD ? this.g.BUILD.date : '')}. Mention this when you send feedback.</p></div></div>`;
   }

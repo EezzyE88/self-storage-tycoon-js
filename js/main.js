@@ -275,11 +275,14 @@ function loop(now) {
 }
 const diagnostics = new PerformanceStats();
 game.performanceSnapshot = () => diagnostics.snapshot();
+game.performanceText = () => diagnostics.text();
+let diagnosticMode = null;
 function tick(now) {
   if (window.__qaHold) { last = now; return; } // test hook: automated screenshots drive frames manually
   const frameStart = game.showFps ? performance.now() : 0;
   if (diagnostics.enabled !== game.showFps) { diagnostics.enabled = game.showFps; diagnostics.reset(); }
-  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  const rafMs = now - last;
+  const dt = Math.min(0.1, rafMs / 1000); last = now;
   const s = game.sim.s;
   if (s.speed > 0 && !game.ui.title && !game.ui.modalOpen()) {
     game.acc += dt * TICKS_PER_SEC_1X * s.speed;
@@ -298,7 +301,13 @@ function tick(now) {
   game.rdt += dt;
   const idle = (s.speed === 0 || game.ui.title || game.ui.modalOpen()) && now - game.lastInput > 1500 && Math.abs(game.rend.targetAz - game.rend.azimuth) < 1e-3 && game.rend.camV === game.drawCamV;
   const minGap = idle ? 250 : game.battery ? 32 : 0;
-  if (now - game.lastDraw < minGap) return;
+  const mode = idle ? 'idle' : game.battery ? 'battery' : 'active';
+  const transition = diagnosticMode !== mode;
+  if (now - game.lastDraw < minGap) {
+    if (game.showFps) diagnostics.record({ at: now, mode, drawn: false, rafMs, simMs });
+    return;
+  }
+  diagnosticMode = mode;
   const drawInterval = now - game.lastDraw;
   const rdt = Math.min(0.25, game.rdt); game.rdt = 0; game.lastDraw = now; game.drawCamV = game.rend.camV;
   const info = game.rend.r.info, autoReset = info.autoReset;
@@ -309,10 +318,10 @@ function tick(now) {
   const uiStart = game.showFps ? performance.now() : 0;
   game.ui.update(rdt);
   if (game.showFps) {
-    diagnostics.record({ frameMs: drawInterval, simMs, renderMs, uiMs: performance.now() - uiStart,
+    diagnostics.record({ at: now, mode, drawn: true, rafMs, frameMs: transition ? null : drawInterval, simMs, renderMs, uiMs: performance.now() - uiStart,
       info: { calls: info.render.calls, triangles: info.render.triangles, geometries: info.memory.geometries, textures: info.memory.textures },
       quality: game.rend.quality, dpr: game.rend.r.getPixelRatio(), throttled: minGap > 0 });
-    if (now - diagnostics.updatedAt > 1000) { document.getElementById('fps').textContent = diagnostics.text(); diagnostics.updatedAt = now; }
+    if (now - diagnostics.updatedAt > 1000) { const panel = document.getElementById('fps'); if (panel) panel.textContent = diagnostics.text(); diagnostics.updatedAt = now; }
   }
   perfWatch(rdt, idle || minGap > 0);
   const night = game.rend.ambient.intensity / 0.9;
@@ -336,18 +345,42 @@ game.localsave = localsave; game.BUILD = BUILD;
   offer(null); cloud.get().then((d) => offer(d)); }
 
 // ---------------------------------------------------------------- input
-const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null;
+const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null; let lastMapTap = null; let mapTapTimer = null;
 const BUILD_HOLD_MS = 240;
+const DOUBLE_TAP_MS = 320, DOUBLE_TAP_PX = 28;
+const cancelMapTap = () => { if (mapTapTimer) clearTimeout(mapTapTimer); mapTapTimer = null; lastMapTap = null; };
+const normalMap = () => !game.ui.tool && !game.ui.title && !game.ui.modalOpen();
+const mapTap = (e) => {
+  if (!normalMap()) { cancelMapTap(); return; }
+  const now = performance.now(), prev = lastMapTap;
+  const isDouble = prev && now - prev.t <= DOUBLE_TAP_MS && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) <= DOUBLE_TAP_PX;
+  if (isDouble) {
+    cancelMapTap();
+    game.rend.zoomAt(e.clientX, e.clientY, 1.65);
+    return;
+  }
+  // Delay selection until a second tap is ruled out. A double-tap never opens an inspector.
+  if (prev) { clearTimeout(mapTapTimer); game.ui.tapMap(game.rend.cellAt(prev.x, prev.y), prev.x, prev.y); }
+  const tap = { t: now, x: e.clientX, y: e.clientY }; lastMapTap = tap;
+  mapTapTimer = setTimeout(() => {
+    mapTapTimer = null;
+    if (lastMapTap === tap && normalMap()) game.ui.tapMap(game.rend.cellAt(tap.x, tap.y), tap.x, tap.y);
+    lastMapTap = null;
+  }, DOUBLE_TAP_MS);
+};
+// A UI interaction breaks the map gesture sequence; the listener never intercepts controls.
+document.addEventListener('pointerdown', e => { if (e.target !== canvas) cancelMapTap(); }, { capture: true, passive: true });
 const cancelBuildHold = () => { if (buildHold) clearTimeout(buildHold); buildHold = null; };
 canvas.addEventListener('pointerdown', (e) => {
   game.audio.unlock(); canvas.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
   game.ui.pointerBusy = true;
-  if (ptrs.size === 2) { cancelBuildHold(); const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; drag = null; return; }
+  if (ptrs.size >= 2) { cancelMapTap(); cancelBuildHold(); const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; drag = null; return; }
   const panBtn = e.button === 1 || e.button === 2 || e.shiftKey;
   const building = !!game.ui.tool && !panBtn;
+  if (building || panBtn || !normalMap()) cancelMapTap();
   const holdBuild = building && (e.pointerType === 'touch' || e.pointerType === 'pen');
-  drag = { mode: holdBuild ? 'buildPending' : building ? 'build' : 'pan', moved: false, x: e.clientX, y: e.clientY, pointerId: e.pointerId };
+  drag = { mode: holdBuild ? 'buildPending' : building ? 'build' : 'pan', moved: false, x: e.clientX, y: e.clientY, pointerId: e.pointerId, navigation: !panBtn && !building && (e.button == null || e.button === 0) };
   if (building && !holdBuild) game.ui.placeStart(game.rend.cellAt(e.clientX, e.clientY));
   if (holdBuild) {
     cancelBuildHold();
@@ -370,7 +403,7 @@ canvas.addEventListener('pointermove', (e) => {
   }
   if (!drag) return;
   const dist = Math.hypot(e.clientX - p.x0, e.clientY - p.y0);
-  if (dist > 7) drag.moved = true;
+  if (dist > 7) { drag.moved = true; cancelMapTap(); }
   if (drag.mode === 'buildPending') {
     if (drag.moved) { cancelBuildHold(); drag.mode = 'pan'; game.rend.pan(dx, dy); }
     return;
@@ -379,14 +412,17 @@ canvas.addEventListener('pointermove', (e) => {
   else game.ui.placeMove(game.rend.cellAt(e.clientX, e.clientY));
 });
 function up(e) {
+  if (!ptrs.has(e.pointerId)) return; // implicit capture release after a completed tap is harmless
+  const cancelled = e.type === 'pointercancel' || e.type === 'lostpointercapture';
+  if (cancelled) cancelMapTap();
   const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
-  if (ptrs.size === 0) { game.ui.pointerBusy = false; game.ui.finishPlacement(); }
+  if (ptrs.size === 0) { game.ui.pointerBusy = false; if (cancelled) game.ui.cancelPlacement(); else game.ui.finishPlacement(); }
   if (pinch) { if (ptrs.size < 2) pinch = null; cancelBuildHold(); drag = null; return; }
   if (drag && drag.pointerId === e.pointerId && drag.mode === 'buildPending') cancelBuildHold();
-  if (drag && drag.mode === 'pan' && !drag.moved && p && e.type === 'pointerup') game.ui.tapMap(game.rend.cellAt(e.clientX, e.clientY), e.clientX, e.clientY);
+  if (drag && drag.mode === 'pan' && drag.navigation && !drag.moved && p && e.type === 'pointerup') mapTap(e);
   drag = null;
 }
-canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); canvas.addEventListener('lostpointercapture', up);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 // iPhone Safari ignores user-scalable=no: block page pinch/double-tap zoom so gestures drive the camera only
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
@@ -395,8 +431,9 @@ document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: fals
 for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, () => game.audio.unlock(), { capture: true, passive: true });
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* Safari 17+ only */ }
 document.addEventListener('visibilitychange', () => {
+  cancelMapTap(); cancelBuildHold(); ptrs.clear(); drag = null; pinch = null; game.ui.pointerBusy = false;
   if (document.hidden) { game.wasSpeed = game.sim.s.speed; game.sim.s.speed = 0; if (game.audio.ctx) game.audio.ctx.suspend(); game.autosave(true); }
-  else { if (game.wasSpeed != null && game.sim.s.speed === 0) game.sim.s.speed = game.wasSpeed; game.wasSpeed = null; last = performance.now(); game.lastDraw = last; diagnostics.reset(); if (game.ui) game.ui.update && game.ui.update(true); }
+  else { if (game.wasSpeed != null && game.sim.s.speed === 0) game.sim.s.speed = game.wasSpeed; game.wasSpeed = null; last = performance.now(); game.lastDraw = last; diagnostics.reset(); diagnosticMode = null; if (game.ui) game.ui.update && game.ui.update(true); }
 });
 // iOS can drop the WebGL context under memory pressure; rebuild the scene when it comes back
 canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); });
@@ -414,7 +451,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'Escape' && game.showcase && (game.showcase.mode === 'tour' || game.showcase.mode === 'follow')) { game.showcase.stopTour(); game.showcase.stopFollow(); }
   else if (e.key === 'Escape') { if (ui.tool) ui.pickTool(null); else ui.select(null); }
   else if (e.key === 'Enter' && ui.plan) ui.confirmPlan();
-  else if (e.key === 'f' || e.key === 'F') { game.showFps = !game.showFps; document.getElementById('fps').hidden = !game.showFps; }
+  else if (e.key === 'f' || e.key === 'F') { game.showFps = !game.showFps; game.ui.showMenu(); }
   else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) { const k = 40; game.rend.pan(e.key === 'ArrowLeft' ? k : e.key === 'ArrowRight' ? -k : 0, e.key === 'ArrowUp' ? k : e.key === 'ArrowDown' ? -k : 0); }
 });
 

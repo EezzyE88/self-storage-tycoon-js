@@ -1,0 +1,978 @@
+{
+  "environment": "Node CPU/scene construction; stubbed GPU/canvas; seven alternating fresh processes per source; no browser/physical-device timing",
+  "baselineCommit": "69932d0dba33a0cf5913d02a191f2efc3799e3aa",
+  "baselineCapturedBeforeEdits": {
+    "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+    "source": "working tree",
+    "scenes": {
+      "maple": {
+        "units": 23,
+        "meshes": 257,
+        "shadowCasters": 155,
+        "sceneTriangles": 2234,
+        "uniqueGeometries": 2,
+        "uniqueMaterialRefs": 49,
+        "rebuildCpuMs": 8.82
+      },
+      "dense": {
+        "units": 550,
+        "meshes": 3039,
+        "shadowCasters": 1233,
+        "sceneTriangles": 19378,
+        "uniqueGeometries": 2,
+        "uniqueMaterialRefs": 663,
+        "rebuildCpuMs": 21.4
+      }
+    },
+    "customerChurn": {
+      "customers": 4000,
+      "peakConcurrent": 20,
+      "createdGroups": 20,
+      "disposedGroups": 0,
+      "retainedGroups": 20,
+      "cpuMs": 5.51
+    }
+  },
+  "summary": {
+    "baseline": {
+      "mapleRebuildMedianMs": 9.05,
+      "denseRebuildMedianMs": 27.24,
+      "churnMedianMs": 6.76,
+      "portfolioMedianDayMs": 18.930796999999984,
+      "portfolioP95DayMs": 63.54385400000001,
+      "counts": {
+        "maple": {
+          "units": 23,
+          "meshes": 257,
+          "shadowCasters": 155,
+          "sceneTriangles": 2234,
+          "uniqueGeometries": 2,
+          "uniqueMaterialRefs": 49,
+          "rebuildCpuMs": 8.92
+        },
+        "dense": {
+          "units": 550,
+          "meshes": 3039,
+          "shadowCasters": 1233,
+          "sceneTriangles": 19378,
+          "uniqueGeometries": 2,
+          "uniqueMaterialRefs": 663,
+          "rebuildCpuMs": 29.51
+        }
+      },
+      "churnGroups": {
+        "customers": 4000,
+        "peakConcurrent": 20,
+        "createdGroups": 20,
+        "disposedGroups": 0,
+        "retainedGroups": 20,
+        "cpuMs": 7.36
+      },
+      "allPropertiesStepped": true
+    },
+    "candidate": {
+      "mapleRebuildMedianMs": 8.71,
+      "denseRebuildMedianMs": 25.58,
+      "churnMedianMs": 6.58,
+      "portfolioMedianDayMs": 18.60981000000004,
+      "portfolioP95DayMs": 61.919197999999994,
+      "counts": {
+        "maple": {
+          "units": 23,
+          "meshes": 257,
+          "shadowCasters": 155,
+          "sceneTriangles": 2234,
+          "uniqueGeometries": 2,
+          "uniqueMaterialRefs": 49,
+          "rebuildCpuMs": 9.98
+        },
+        "dense": {
+          "units": 550,
+          "meshes": 3039,
+          "shadowCasters": 1233,
+          "sceneTriangles": 19378,
+          "uniqueGeometries": 2,
+          "uniqueMaterialRefs": 663,
+          "rebuildCpuMs": 30.66
+        }
+      },
+      "churnGroups": {
+        "customers": 4000,
+        "peakConcurrent": 20,
+        "createdGroups": 20,
+        "disposedGroups": 0,
+        "retainedGroups": 20,
+        "cpuMs": 6.55
+      },
+      "allPropertiesStepped": true
+    }
+  },
+  "raw": {
+    "baseline": {
+      "scene": [
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 8.92
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 29.51
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 7.36
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 10.64
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 25.47
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 7.13
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 10.36
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 29.36
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 7.48
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 12.21
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 27.41
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.76
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 9.05
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 25.6
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.66
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 8.94
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 27.24
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.41
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 8.2
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 24.31
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.54
+          }
+        }
+      ],
+      "portfolio": [
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 23.973859000000004,
+          "p95DayCpuMs": 70.84050900000001,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            70.84050900000001,
+            66.552741,
+            27.620683000000014,
+            28.918804000000023,
+            23.041913000000022,
+            23.973859000000004,
+            19.912106999999992,
+            23.686960999999997,
+            19.926207999999974,
+            19.598731999999984,
+            25.462113000000045,
+            26.664229999999975,
+            18.670169999999985,
+            16.733429
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 17.307052999999996,
+          "p95DayCpuMs": 58.122360999999984,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            58.122360999999984,
+            53.305688,
+            18.702879000000024,
+            19.282511,
+            17.243156999999997,
+            17.997420000000005,
+            17.307052999999996,
+            16.432172000000037,
+            16.60077100000001,
+            14.58434299999999,
+            14.413368999999989,
+            24.050933000000043,
+            16.18249000000003,
+            15.057747000000006
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 23.31431699999996,
+          "p95DayCpuMs": 70.014099,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            70.014099,
+            66.21102299999998,
+            24.144131999999985,
+            25.54714899999999,
+            23.432964000000027,
+            18.49491899999998,
+            23.19614200000001,
+            23.31431699999996,
+            22.90573999999998,
+            15.024136999999996,
+            15.95585299999999,
+            19.71713699999998,
+            24.330198999999993,
+            19.920349999999985
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 19.116714,
+          "p95DayCpuMs": 63.54385400000001,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            57.03865300000001,
+            63.54385400000001,
+            20.959555000000023,
+            19.689015000000012,
+            17.788918999999993,
+            17.73654099999999,
+            18.366287,
+            17.06820799999997,
+            16.38600200000002,
+            17.51064500000001,
+            19.811577999999997,
+            26.360547999999994,
+            19.116714,
+            15.530599999999993
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 17.819844999999987,
+          "p95DayCpuMs": 54.73373000000001,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            54.73373000000001,
+            51.75516999999999,
+            18.733063999999985,
+            18.00445000000002,
+            17.545367,
+            23.67750799999999,
+            17.915517000000023,
+            16.272414000000026,
+            16.515164999999968,
+            14.156015000000025,
+            13.99072000000001,
+            17.819844999999987,
+            15.82099199999999,
+            14.883578
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 18.658402000000024,
+          "p95DayCpuMs": 69.160904,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            69.160904,
+            55.48100200000002,
+            19.648093999999986,
+            18.658402000000024,
+            18.088865,
+            20.35293200000001,
+            17.121325999999954,
+            16.138224000000037,
+            19.34353100000004,
+            15.419555000000003,
+            15.010897,
+            23.68845399999998,
+            17.233022000000005,
+            15.099850000000004
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 18.930796999999984,
+          "p95DayCpuMs": 58.326199,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            57.13788600000001,
+            58.326199,
+            28.03130299999998,
+            22.155057999999997,
+            18.050499000000002,
+            18.930796999999984,
+            20.041529000000025,
+            16.98413199999999,
+            17.029248999999993,
+            15.958605999999975,
+            15.889969000000008,
+            21.719065,
+            16.887708999999973,
+            17.905303000000004
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        }
+      ]
+    },
+    "candidate": {
+      "scene": [
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 9.98
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 30.66
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.55
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 8.52
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 24.42
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.52
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 8.58
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 24
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.87
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 8.71
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 25.72
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 7.43
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 8.32
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 25.58
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.55
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 8.74
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 23.96
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.58
+          }
+        },
+        {
+          "environment": "Node scene construction; mocked WebGL/canvas, no GPU, no physical Safari",
+          "source": "working tree",
+          "scenes": {
+            "maple": {
+              "units": 23,
+              "meshes": 257,
+              "shadowCasters": 155,
+              "sceneTriangles": 2234,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 49,
+              "rebuildCpuMs": 9.4
+            },
+            "dense": {
+              "units": 550,
+              "meshes": 3039,
+              "shadowCasters": 1233,
+              "sceneTriangles": 19378,
+              "uniqueGeometries": 2,
+              "uniqueMaterialRefs": 663,
+              "rebuildCpuMs": 35.66
+            }
+          },
+          "customerChurn": {
+            "customers": 4000,
+            "peakConcurrent": 20,
+            "createdGroups": 20,
+            "disposedGroups": 0,
+            "retainedGroups": 20,
+            "cpuMs": 6.83
+          }
+        }
+      ],
+      "portfolio": [
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 19.026831000000016,
+          "p95DayCpuMs": 66.492782,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            66.492782,
+            57.561717999999985,
+            21.38658099999998,
+            24.74335400000001,
+            35.15990700000003,
+            30.591552000000036,
+            19.026831000000016,
+            18.938429999999983,
+            18.06225599999999,
+            15.834141999999986,
+            15.093740000000025,
+            18.821796000000006,
+            16.895391000000018,
+            16.399202000000002
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 18.280230000000017,
+          "p95DayCpuMs": 54.935372,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            54.935372,
+            54.17067400000002,
+            19.509669000000002,
+            26.505735000000016,
+            17.81165299999998,
+            18.152720999999985,
+            18.280230000000017,
+            17.238110000000006,
+            16.836682999999994,
+            14.386199000000033,
+            14.863717999999949,
+            18.586095,
+            21.562231999999995,
+            15.982201999999972
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 20.60910400000003,
+          "p95DayCpuMs": 64.79496700000001,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            60.29948999999999,
+            64.79496700000001,
+            28.627301000000017,
+            20.60910400000003,
+            18.231627000000003,
+            21.897830999999996,
+            18.93415299999998,
+            21.069097999999997,
+            17.01753100000002,
+            14.923416999999972,
+            14.444133999999963,
+            22.912378999999987,
+            16.659960000000012,
+            19.020781
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 18.590822000000003,
+          "p95DayCpuMs": 61.919197999999994,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            57.906729,
+            61.919197999999994,
+            23.404021999999998,
+            25.995626000000016,
+            25.12646799999999,
+            17.877860999999996,
+            18.590822000000003,
+            17.890570000000025,
+            17.987203999999963,
+            15.225116000000014,
+            14.861254999999971,
+            18.721406,
+            17.017101000000025,
+            15.930515000000014
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 18.60981000000004,
+          "p95DayCpuMs": 58.127168,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            58.127168,
+            52.878431000000006,
+            19.49085100000002,
+            19.140208,
+            17.94345900000002,
+            19.277458000000024,
+            18.60981000000004,
+            17.125181999999995,
+            17.678804999999954,
+            14.957587999999987,
+            14.843908999999996,
+            18.92555900000002,
+            16.44647200000003,
+            15.46736599999997
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 20.231772000000035,
+          "p95DayCpuMs": 62.13596100000001,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            61.46087600000001,
+            62.13596100000001,
+            29.07665800000001,
+            25.310867000000002,
+            19.952237000000025,
+            20.231772000000035,
+            19.153779999999983,
+            18.697048999999993,
+            19.493704999999977,
+            15.644245000000012,
+            18.724069999999983,
+            34.26586099999997,
+            21.589152000000013,
+            17.11038000000002
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        },
+        {
+          "fixture": "seed 20261004 dense 550-unit lot plus two Maple properties; triple demand; 2 Porter, 2 Tech, Clerk/property; 14 days; every property stepped each minute",
+          "camera": "CPU-only; scene benchmark separate at 393x720/coarse-pointer/DPR3; fixed default camera/quality",
+          "environment": "v24.19.0",
+          "medianDayCpuMs": 17.69404800000001,
+          "p95DayCpuMs": 57.12190199999999,
+          "peakAgentsPerProperty": 18,
+          "days": [
+            57.12190199999999,
+            52.810580999999985,
+            20.06973099999999,
+            18.982124,
+            17.66678799999997,
+            17.69404800000001,
+            17.73461800000001,
+            16.83752400000003,
+            17.389454999999998,
+            14.583201000000031,
+            15.597499999999968,
+            24.209298999999987,
+            17.57320900000002,
+            15.215150999999992
+          ],
+          "finalTimes": [
+            20580,
+            20580,
+            20580
+          ]
+        }
+      ]
+    }
+  }
+}

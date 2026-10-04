@@ -1010,7 +1010,15 @@ export class Sim {
   act_fire(a) {
     const s = this.s, st = s.staff.find((x) => x.id === a.id); if (!st || st.role === 'owner') return { ok: false };
     const ag = s.agents.find((g) => g.sid === st.id);
-    if (ag) { this.releaseTask(ag); if (ag.cart) this.dropCart(ag); this.leaveElevator(ag); s.agents = s.agents.filter((g) => g !== ag); }
+    if (ag) {
+      this.releaseTask(ag);
+      for (const id of ag.queue || []) {
+        const t = s.tasks.find((x) => x.id === id); if (!t) continue;
+        this.refundTaskWork(st, t); t.assigned = null; t.queued = false;
+      }
+      ag.queue = [];
+      if (ag.cart) this.dropCart(ag); this.leaveElevator(ag); s.agents = s.agents.filter((g) => g !== ag);
+    }
     s.staff = s.staff.filter((x) => x !== st); return { ok: true, msg: `${st.name} let go` };
   }
   act_ownerTask(a) { // player assigns a task to the Owner
@@ -1018,18 +1026,27 @@ export class Sim {
     const owner = s.staff.find((x) => x.role === 'owner'); const ag = owner && s.agents.find((g) => g.sid === owner.id);
     if (!ag) { this.emit('refuse'); return { ok: false, msg: 'The Owner needs an operating office first - call a vendor instead' }; }
     if (t.vendor) return { ok: false, msg: 'A vendor is already booked for this' };
-    if (!ROLES.owner.can.includes(t.need)) return { ok: false, msg: 'The Owner cannot do this work - it needs a Tech or vendor' };
     if (t.assigned && t.assigned !== owner.id) return { ok: false, msg: 'Already assigned to someone else' };
     if (ag.task === t.id) return { ok: false, msg: 'Owner is already on it' };
+    const delegated = a.forceOwner ? null : this.assignStaffFirst(t);
+    if (delegated) {
+      this.emit('task_assigned');
+      const R = ROLES[delegated.role];
+      return { ok: true, msg: `${R.name} ${delegated.name} assigned · Owner stays free` };
+    }
+    if (!a.forceOwner && t.unreachable != null) return { ok: false, msg: 'Work is blocked by access. Fix the route before assigning it; the Owner was not sent.' };
+    if (!ROLES.owner.can.includes(t.need)) return { ok: false, msg: 'The Owner cannot do this work - it needs a Tech or vendor' };
     const need = this.taskHours(t), left = this.workRemaining(owner);
     if (left + 1e-9 < need) { this.emit('refuse'); return { ok: false, msg: `Owner has ${left}h available today; this needs ${need}h. Wait for tomorrow, hire staff, or use a vendor.` }; }
     if (ag.task || (ag.queue && ag.queue.length)) {
       if (!this.reserveTaskWork(owner, t)) { this.emit('refuse'); return { ok: false, msg: `Owner has ${this.workRemaining(owner)}h available today; this needs ${need}h.` }; }
+      if (a.forceOwner) t.ownerOverride = true;
       ag.queue = ag.queue || []; if (!ag.queue.includes(t.id)) ag.queue.push(t.id); t.assigned = owner.id; t.queued = true; this.emit('task_assigned'); return { ok: true, msg: `Owner queued this work (${need}h) · ${this.workRemaining(owner)}h left today` };
     }
     t.unreachable = null;
     if (!this.startTask(ag, t)) return { ok: false, msg: 'The Owner has no walkable route to that spot' };
     this.emit('task_assigned');
+    if (a.forceOwner) t.ownerOverride = true;
     return { ok: true, msg: `Owner started this work (${need}h) · ${this.workRemaining(owner)}h left today` };
   }
   repairWork(o) {
@@ -1040,7 +1057,7 @@ export class Sim {
     const role = ['repair_simple', 'repair_complex'].includes(t.need) ? 'tech' : ['makeready', 'clean', 'carts'].includes(t.need) ? 'porter' : null;
     if (!role) return null;
     const staff = this.s.staff.filter(st => st.role === role), name = ROLES[role].name;
-    if (t.assigned) return { role, status: 'assigned', message: 'Already assigned; staff will not take over an active or queued job.' };
+    if (t.assigned) return { role, status: 'assigned', message: 'Already assigned; active work stays assigned. Unstarted Owner queues may transfer to suitable staff.' };
     if (!staff.length) return { role, status: 'missing', message: `${name}s handle this work automatically. Hire one to free the Owner.` };
     if (!this.onShift()) return { role, status: 'offshift', message: `${name} shift is 7 AM–8 PM. Unassigned jobs are picked up during the next shift.` };
     if (t.unreachable) return { role, status: 'route', message: 'No walkable route was found. Fix access before staff can take this job.' };
@@ -1076,7 +1093,7 @@ export class Sim {
     if (d?.status !== 'available') return { ok: false, msg: d?.message || 'Tech unavailable' };
     return this.act_delegateTask({ task: (existing || this.ensureRepairTask(o)).id });
   }
-  act_ownerMakeReady(a) { const t = this.s.tasks.find((x) => x.type === 'makeready' && x.obj === a.unit); if (!t) return { ok: false, msg: 'No make-ready needed' }; return this.act_ownerTask({ task: t.id }); }
+  act_ownerMakeReady(a) { const t = this.s.tasks.find((x) => x.type === 'makeready' && x.obj === a.unit); if (!t) return { ok: false, msg: 'No make-ready needed' }; return this.act_ownerTask({ task: t.id, forceOwner: a.forceOwner }); }
   act_taskPri(a) { const t = this.s.tasks.find((x) => x.id === a.task); if (t) t.pri = a.pri; return { ok: true }; }
   act_callVendor(a) {
     const s = this.s, t = s.tasks.find((x) => x.id === a.task); if (!t) return { ok: false };
@@ -1987,7 +2004,7 @@ export class Sim {
               this.thought(ag, "My gate code isn't working.", 'bad');
               this.ensureRepairTask(gate);
               this.convo({ key: 'gate' + gate.id, who: this.custName(ag), text: "My gate code isn't working.", sev: 'attention', obj: gate.id,
-                actions: [{ label: 'Send Owner to the keypad', action: { type: 'ownerTaskFor', obj: gate.id } }, { label: 'Dismiss' }] });
+                actions: [{ label: 'Assign keypad repair', action: { type: 'ownerTaskFor', obj: gate.id } }, { label: 'Dismiss' }] });
               break;
             }
             if (this.officeServers() > 0) { ag.buzzed = true; this.thought(ag, 'The office buzzed me in.', 'neutral'); }
@@ -2244,7 +2261,7 @@ export class Sim {
     if ((ag.vt === 'access' || ag.vt === 'bigaccess') && this.rnd() < 0.5) { // GDD §26 maintenance complaint
       const lt = this.objs('light').find((l) => (l.f || 0) === (u.f || 0) && l.cstate === 'operating' && !this.works(l) && Math.abs(l.x - u.x) + Math.abs(l.y - u.y) <= 7);
       if (lt) { this.ensureRepairTask(lt); this.convo({ key: 'light' + lt.id, who: this.custName(ag), sev: 'attention', obj: lt.id, ttl: 10 * 60,
-        text: `The light near my unit is out.`, actions: [{ label: 'Send Owner to fix it', action: { type: 'ownerTaskFor', obj: lt.id } }, { label: 'Call an electrician ($250)', action: { type: 'cv', op: 'vendorFor', obj: lt.id } }, { label: 'Log it for later' }] }); }
+        text: `The light near my unit is out.`, actions: [{ label: 'Assign repair', action: { type: 'ownerTaskFor', obj: lt.id } }, { label: 'Call an electrician ($250)', action: { type: 'cv', op: 'vendorFor', obj: lt.id } }, { label: 'Log it for later' }] }); }
     }
     if (u.access === 'drive') { this.depart(ag); return; }
     if (ag.cart) {
@@ -2481,19 +2498,19 @@ export class Sim {
     else if (o.cond < 0.2) t.pri = Math.max(t.pri, 2);
     return t;
   }
-  act_ownerTaskFor(a) { const o = this.s.objects[a.obj]; if (!o) return { ok: false }; const t = this.ensureRepairTask(o); return this.act_ownerTask({ task: t.id }); }
+  act_ownerTaskFor(a) { const o = this.s.objects[a.obj]; if (!o) return { ok: false }; const t = this.ensureRepairTask(o); return this.act_ownerTask({ task: t.id, forceOwner: a.forceOwner }); }
   act_ownerRoom(a) {
     const o = this.s.objects[a.obj]; if (!o || o.type !== 'restroom') return { ok: false };
     let t = this.s.tasks.find((x) => x.type === 'cleanroom' && x.obj === o.id);
     if (!t) t = this.addTask({ type: 'cleanroom', need: 'clean', obj: o.id, label: 'Clean restroom', work: WORK.clean_restroom });
-    return t ? this.act_ownerTask({ task: t.id }) : { ok: false };
+    return t ? this.act_ownerTask({ task: t.id, forceOwner: a.forceOwner }) : { ok: false };
   }
   act_ownerClean(a) {
     const x = Math.floor(Number(a.x)), y = Math.floor(Number(a.y)), f = Math.floor(Number(a.f) || 0); // validate: a bad cell used to crash every later tick
     if (!this.inb(x, y) || f < 0 || f >= this.s.dirt.length) return { ok: false, msg: 'Nothing to clean there' };
     a = { ...a, x, y, f };
     const t = this.addTask({ type: 'clean', need: 'clean', obj: null, f: a.f, x: a.x, y: a.y, label: 'Clean ' + (this.D.shellAt[this.idx(a.x, a.y)] ? 'hallway' : 'loading area'), work: WORK.clean });
-    return t ? this.act_ownerTask({ task: t.id }) : { ok: false };
+    return t ? this.act_ownerTask({ task: t.id, forceOwner: a.forceOwner }) : { ok: false };
   }
   generateTasks() {
     const s = this.s, D = this.D;
@@ -2564,10 +2581,57 @@ export class Sim {
     if (s.staff.some((x) => x.role === 'clerk') ) return true;
     return !s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect');
   }
+  staffForTask(t) {
+    if (!t || t.vendor || t.unreachable != null || !this.onShift()) return null;
+    if (t.need === 'carts' && !this.s.policies.porterCarts) return null;
+    const need = this.taskHours(t);
+    const rows = this.s.staff
+      .filter((st) => st.role !== 'owner' && st.role !== 'clerk' && ROLES[st.role] && ROLES[st.role].can.includes(t.need) && this.workRemaining(st) + 1e-9 >= need)
+      .map((st) => ({ st, ag: this.s.agents.find((a) => a.sid === st.id) }))
+      .filter((x) => x.ag)
+      .sort((a, b) => {
+        const aBusy = a.ag.task || (a.ag.queue && a.ag.queue.length) ? 1 : 0;
+        const bBusy = b.ag.task || (b.ag.queue && b.ag.queue.length) ? 1 : 0;
+        return aBusy - bBusy || this.workRemaining(b.st) - this.workRemaining(a.st) || a.st.id - b.st.id;
+      });
+    return rows.length ? rows[0] : null;
+  }
+  assignStaffFirst(t) {
+    if (!t || t.assigned || t.vendor) return null;
+    const row = this.staffForTask(t); if (!row) return null;
+    const { st, ag } = row;
+    const cell = this.taskCell(t), probe = { ...ag };
+    if (probe.hidden) { const office = this.objs('office')[0]; if (office) { probe.f = 0; probe.x = office.door.x + .5; probe.y = office.door.y + .5; } }
+    if (!cell || !this.goTo(probe, cell.f, cell.x, cell.y)) { t.unreachable = this.s.t; return null; }
+    if (ag.task || (ag.queue && ag.queue.length)) {
+      if (!this.reserveTaskWork(st, t)) return null;
+      ag.queue ||= [];
+      if (!ag.queue.includes(t.id)) ag.queue.push(t.id);
+      t.assigned = st.id; t.queued = true;
+      return st;
+    }
+    return this.startTask(ag, t) ? st : null;
+  }
+  staffCanCover(t) { return !!this.staffForTask(t); }
+  rebalanceOwnerQueue() {
+    const owner = this.s.staff.find((x) => x.role === 'owner');
+    const ag = owner && this.s.agents.find((x) => x.sid === owner.id);
+    if (!owner || !ag || !ag.queue || !ag.queue.length) return;
+    for (const id of [...ag.queue]) {
+      const t = this.s.tasks.find((x) => x.id === id);
+      if (!t || t.prog || t.ownerOverride || t.assigned !== owner.id || !t.queued || ag.task === t.id) continue;
+      if (!this.staffForTask(t)) continue;
+      const booking = { workBooked: t.workBooked, workBookedDay: t.workBookedDay, workHours: t.workHours };
+      this.syncStaffWork(owner); const used = owner.workUsed;
+      this.refundTaskWork(owner, t); t.assigned = null; t.queued = false;
+      if (this.assignStaffFirst(t)) ag.queue = ag.queue.filter((x) => x !== id);
+      else { owner.workUsed = used; Object.assign(t, booking, { assigned: owner.id, queued: true }); }
+    }
+  }
   pickTask(ag, ownerAuto = false) {
     const s = this.s, R = ROLES[ag.role], st = this.staffOf(ag);
     const left = this.workCapacity(st) ? this.workRemaining(st) : Infinity;
-    const cands = s.tasks.filter((t) => !t.assigned && !t.vendor && !t.unreachable && R.can.includes(t.need) && this.taskHours(t) <= left && (t.need !== 'carts' || s.policies.porterCarts || ownerAuto) && (!ownerAuto || (t.need !== 'office' && !t.need.startsWith('repair'))))
+    const cands = s.tasks.filter((t) => !t.assigned && !t.vendor && !t.unreachable && R.can.includes(t.need) && this.taskHours(t) <= left && (t.need !== 'carts' || s.policies.porterCarts || ownerAuto) && (!ownerAuto || ((t.need !== 'office' && !t.need.startsWith('repair')) && !this.staffCanCover(t))))
       .sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
     for (const t of cands) {
       // Hired hands get first refusal before the Owner leaves the desk for automatic chores.
@@ -2578,11 +2642,18 @@ export class Sim {
   }
   updateStaff(ag) {
     const s = this.s; const WS = ag.cart ? 0.19 : 0.24;
+    if (ag.role === 'owner') this.rebalanceOwnerQueue();
     const t = ag.task && s.tasks.find((x) => x.id === ag.task);
     if (ag.task && !t) { ag.task = null; if (ag.st === 'walk' || ag.st === 'work') ag.st = 'idle'; if (ag.cart) this.dropCart(ag); }
     switch (ag.st) {
       case 'office': case 'idle': {
-        if (ag.queue && ag.queue.length) { const nt = s.tasks.find((x) => x.id === ag.queue[0]); ag.queue.shift(); if (nt) { nt.queued = false; if (this.startTask(ag, nt)) break; } }
+        if (ag.queue && ag.queue.length && (ag.role === 'owner' || this.onShift())) {
+          const nt = s.tasks.find((x) => x.id === ag.queue[0]);
+          if (!nt || nt.assigned !== ag.sid) ag.queue.shift();
+          else if (this.reserveTaskWork(this.staffOf(ag), nt)) {
+            ag.queue.shift(); nt.queued = false; if (this.startTask(ag, nt)) break;
+          }
+        }
         if (ag.role !== 'owner' && ag.role !== 'clerk' && s.t % 5 === 0 && this.onShift() && this.pickTask(ag)) break;
         if (ag.role === 'owner' && s.t % 10 === 0 && this.ownerMayAutoWork() && this.pickTask(ag, true)) break;
         if (ag.st === 'idle') { const office = this.objs('office')[0]; if (office && this.goTo(ag, 0, office.door.x, office.door.y)) ag.st = 'home'; else ag.st = 'office'; }
@@ -2611,7 +2682,7 @@ export class Sim {
       }
       case 'home': {
         const r = this.moveAgent(ag, WS);
-        if (ag.queue && ag.queue.length) { ag.st = 'idle'; break; }
+        if (ag.queue && ag.queue.length && (ag.role === 'owner' || this.onShift())) { ag.st = 'idle'; break; }
         if (s.t % 5 === 0 && (ag.role !== 'owner' ? ag.role !== 'clerk' && this.onShift() : this.ownerMayAutoWork()) && this.pickTask(ag, ag.role === 'owner')) break;
         if (r === 'done' || r === 'blocked') { ag.st = 'office'; ag.hidden = true; }
         break;

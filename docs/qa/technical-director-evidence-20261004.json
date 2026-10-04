@@ -1,0 +1,834 @@
+{
+  "date": "2026-10-04",
+  "scope": "EezzyE88/self-storage-tycoon-js only; review only",
+  "live_commit": "69932d0dba33a0cf5913d02a191f2efc3799e3aa",
+  "secondary_commit": "44df37b84f95db33b52971e912a22ef31cc3d4fc",
+  "master": "2812abf8d268f9a225e5786d173f95efcbd6223d",
+  "fresh_live_suite": [
+    {
+      "file": "dbg.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "t9.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.1
+    },
+    {
+      "file": "t9b.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1
+    },
+    {
+      "file": "t9c.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3
+    },
+    {
+      "file": "t9d.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 37.1
+    },
+    {
+      "file": "t9e.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "t9f.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 4.5
+    },
+    {
+      "file": "tads.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tbal.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 10.8
+    },
+    {
+      "file": "tblueprint.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2
+    },
+    {
+      "file": "tbplus_payback.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 39.3
+    },
+    {
+      "file": "tbplus_scenarios.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6.4
+    },
+    {
+      "file": "tbplus.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "tbugs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tcalm.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6.9
+    },
+    {
+      "file": "tcapacity.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tclim.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.5
+    },
+    {
+      "file": "tdelegation.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tdrama.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 13.1
+    },
+    {
+      "file": "tfin.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.7
+    },
+    {
+      "file": "tfinancial_trust.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tfix.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tfuzz.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 20.2
+    },
+    {
+      "file": "tmenu_touch.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tp.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.4
+    },
+    {
+      "file": "tp2.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6.8
+    },
+    {
+      "file": "tperformance.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tr.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tsandbox.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.4
+    },
+    {
+      "file": "tsc.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6
+    },
+    {
+      "file": "tstaffing_compare.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.3
+    },
+    {
+      "file": "tsystems.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "tv.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tvert.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2
+    },
+    {
+      "file": "tw.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "twalk.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    }
+  ],
+  "fresh_secondary_suite": [
+    {
+      "file": "dbg.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "t9.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.7
+    },
+    {
+      "file": "t9b.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "t9c.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.1
+    },
+    {
+      "file": "t9d.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 36.4
+    },
+    {
+      "file": "t9e.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "t9f.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.3
+    },
+    {
+      "file": "tads.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tbal.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 9.2
+    },
+    {
+      "file": "tblueprint.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.1
+    },
+    {
+      "file": "tbplus_payback.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 39.1
+    },
+    {
+      "file": "tbplus_scenarios.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6.4
+    },
+    {
+      "file": "tbplus.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tbugs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tcalm.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 7.1
+    },
+    {
+      "file": "tcapacity.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tclim.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "tdrama.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 14.1
+    },
+    {
+      "file": "tfin.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.7
+    },
+    {
+      "file": "tfinancial_trust.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tfix.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "tfuzz.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 21.8
+    },
+    {
+      "file": "tmenu_touch.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tp.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.2
+    },
+    {
+      "file": "tp2.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 7.2
+    },
+    {
+      "file": "tr.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tsandbox.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.9
+    },
+    {
+      "file": "tsc.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 8
+    },
+    {
+      "file": "tstafffirst.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tstaffing_compare.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.6
+    },
+    {
+      "file": "tsystems.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.9
+    },
+    {
+      "file": "tv.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tvert.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.2
+    },
+    {
+      "file": "tw.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "twalk.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    }
+  ],
+  "served": {
+    "candidate": "69932d0dba33a0cf5913d02a191f2efc3799e3aa",
+    "build": "bplus-staff-delegation-candidate-8",
+    "matched": 26,
+    "total": 26,
+    "files": [
+      {
+        "path": "css/game.css",
+        "matched": true
+      },
+      {
+        "path": "icon-180.png",
+        "matched": true
+      },
+      {
+        "path": "icon-512.png",
+        "matched": true
+      },
+      {
+        "path": "index.html",
+        "matched": true
+      },
+      {
+        "path": "js/audio.js",
+        "matched": true
+      },
+      {
+        "path": "js/blueprint.js",
+        "matched": true
+      },
+      {
+        "path": "js/cloud.js",
+        "matched": true
+      },
+      {
+        "path": "js/data.js",
+        "matched": true
+      },
+      {
+        "path": "js/economics.js",
+        "matched": true
+      },
+      {
+        "path": "js/finance.js",
+        "matched": true
+      },
+      {
+        "path": "js/fx.js",
+        "matched": true
+      },
+      {
+        "path": "js/handbook.js",
+        "matched": true
+      },
+      {
+        "path": "js/localsave.js",
+        "matched": true
+      },
+      {
+        "path": "js/main.js",
+        "matched": true
+      },
+      {
+        "path": "js/maple.js",
+        "matched": true
+      },
+      {
+        "path": "js/performance.js",
+        "matched": true
+      },
+      {
+        "path": "js/post.js",
+        "matched": true
+      },
+      {
+        "path": "js/render.js",
+        "matched": true
+      },
+      {
+        "path": "js/scenarios.js",
+        "matched": true
+      },
+      {
+        "path": "js/showcase.js",
+        "matched": true
+      },
+      {
+        "path": "js/sim.js",
+        "matched": true
+      },
+      {
+        "path": "js/tutorial.js",
+        "matched": true
+      },
+      {
+        "path": "js/ui.js",
+        "matched": true
+      },
+      {
+        "path": "js/version.js",
+        "matched": true
+      },
+      {
+        "path": "manifest.webmanifest",
+        "matched": true
+      },
+      {
+        "path": "vendor/three.module.min.js",
+        "matched": true
+      }
+    ]
+  },
+  "payback": [
+    {
+      "kind": "infill",
+      "seed": 2026,
+      "units": 4,
+      "invested": 4170,
+      "paidBackDay": 215,
+      "monthsFromCommit": 6.13,
+      "rentCollected": 4680,
+      "incrementalOpex": 371,
+      "vendors": 0,
+      "netContribution": 4309,
+      "finalNewLeased": 4,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "infill",
+      "seed": 4401,
+      "units": 4,
+      "invested": 4170,
+      "paidBackDay": 222,
+      "monthsFromCommit": 6.37,
+      "rentCollected": 4680,
+      "incrementalOpex": 385,
+      "vendors": 0,
+      "netContribution": 4295,
+      "finalNewLeased": 4,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "infill",
+      "seed": 424242,
+      "units": 4,
+      "invested": 4170,
+      "paidBackDay": 213,
+      "monthsFromCommit": 6.07,
+      "rentCollected": 4644,
+      "incrementalOpex": 367,
+      "vendors": 0,
+      "netContribution": 4277,
+      "finalNewLeased": 4,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete6",
+      "seed": 2026,
+      "units": 6,
+      "invested": 16406,
+      "paidBackDay": 625,
+      "monthsFromCommit": 19.8,
+      "rentCollected": 29542,
+      "incrementalOpex": 6951,
+      "vendors": 5850,
+      "netContribution": 16741,
+      "finalNewLeased": 6,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete6",
+      "seed": 4401,
+      "units": 6,
+      "invested": 16406,
+      "paidBackDay": null,
+      "monthsFromCommit": null,
+      "rentCollected": 28577,
+      "incrementalOpex": 7024,
+      "vendors": 5850,
+      "netContribution": 15703,
+      "finalNewLeased": 6,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete6",
+      "seed": 424242,
+      "units": 6,
+      "invested": 16406,
+      "paidBackDay": 615,
+      "monthsFromCommit": 19.47,
+      "rentCollected": 29187,
+      "incrementalOpex": 6830,
+      "vendors": 5850,
+      "netContribution": 16507,
+      "finalNewLeased": 6,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete10",
+      "seed": 2026,
+      "units": 10,
+      "invested": 19802,
+      "paidBackDay": 400,
+      "monthsFromCommit": 12.3,
+      "rentCollected": 29486,
+      "incrementalOpex": 6282,
+      "vendors": 3250,
+      "netContribution": 19954,
+      "finalNewLeased": 9,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete10",
+      "seed": 4401,
+      "units": 10,
+      "invested": 19442,
+      "paidBackDay": 419,
+      "monthsFromCommit": 12.93,
+      "rentCollected": 30087,
+      "incrementalOpex": 6614,
+      "vendors": 3900,
+      "netContribution": 19573,
+      "finalNewLeased": 10,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete10",
+      "seed": 424242,
+      "units": 10,
+      "invested": 19442,
+      "paidBackDay": 393,
+      "monthsFromCommit": 12.07,
+      "rentCollected": 28911,
+      "incrementalOpex": 6160,
+      "vendors": 3250,
+      "netContribution": 19501,
+      "finalNewLeased": 10,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete12",
+      "seed": 2026,
+      "units": 12,
+      "invested": 21434,
+      "paidBackDay": 357,
+      "monthsFromCommit": 10.87,
+      "rentCollected": 31093,
+      "incrementalOpex": 6327,
+      "vendors": 3250,
+      "netContribution": 21516,
+      "finalNewLeased": 12,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete12",
+      "seed": 4401,
+      "units": 12,
+      "invested": 21794,
+      "paidBackDay": 361,
+      "monthsFromCommit": 11,
+      "rentCollected": 31534,
+      "incrementalOpex": 6407,
+      "vendors": 3250,
+      "netContribution": 21877,
+      "finalNewLeased": 11,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    },
+    {
+      "kind": "complete12",
+      "seed": 424242,
+      "units": 12,
+      "invested": 21434,
+      "paidBackDay": 355,
+      "monthsFromCommit": 10.8,
+      "rentCollected": 31140,
+      "incrementalOpex": 6287,
+      "vendors": 3250,
+      "netContribution": 21603,
+      "finalNewLeased": 11,
+      "blockedSamples": 0,
+      "ownerExhausted": 0
+    }
+  ],
+  "staffing": [
+    {
+      "name": "Owner only",
+      "roles": "owner",
+      "payrollPerDay": 0,
+      "cashDelta": 5959,
+      "taskStarts": 38,
+      "avgBacklog": 0.08,
+      "avgOwnerUsed": 0.71,
+      "avgOwnerOffice": 0.24,
+      "lostService": 3,
+      "occupancy": 1,
+      "rentRoll": 3227,
+      "estDailyNet": 65
+    },
+    {
+      "name": "Owner + Porter",
+      "roles": "porter",
+      "payrollPerDay": 12.5,
+      "cashDelta": 4612,
+      "taskStarts": 37,
+      "avgBacklog": 0.07,
+      "avgOwnerUsed": 0.69,
+      "avgOwnerOffice": 0.23,
+      "lostService": 0,
+      "occupancy": 1,
+      "rentRoll": 3203,
+      "estDailyNet": 51
+    },
+    {
+      "name": "Owner + Tech",
+      "roles": "tech",
+      "payrollPerDay": 20,
+      "cashDelta": 3930,
+      "taskStarts": 37,
+      "avgBacklog": 0.07,
+      "avgOwnerUsed": 0.69,
+      "avgOwnerOffice": 0.23,
+      "lostService": 0,
+      "occupancy": 1,
+      "rentRoll": 3203,
+      "estDailyNet": 44
+    },
+    {
+      "name": "Fully staffed",
+      "roles": "porter+tech+clerk+manager",
+      "payrollPerDay": 72.5,
+      "cashDelta": -698,
+      "taskStarts": 46,
+      "avgBacklog": 0.04,
+      "avgOwnerUsed": 0.51,
+      "avgOwnerOffice": 0.04,
+      "lostService": 1,
+      "occupancy": 1,
+      "rentRoll": 3177,
+      "estDailyNet": -6
+    }
+  ],
+  "fuzz": {
+    "days": 120,
+    "seeds": 3,
+    "modes": 9,
+    "actions": 58413,
+    "accepted": 11917,
+    "issues": 0
+  },
+  "fresh_scene_probe": {
+    "environment": "Node actual Three.js scene construction with mocked canvas/WebGL; no GPU",
+    "maple": {
+      "units": 23,
+      "meshes": 257,
+      "shadowCasters": 155,
+      "triangles": 2234,
+      "uniqueGeometries": 2,
+      "materialRefs": 49,
+      "singleRunRebuildCpuMs": 8.63
+    },
+    "dense": {
+      "units": 550,
+      "meshes": 3039,
+      "shadowCasters": 1233,
+      "triangles": 19378,
+      "uniqueGeometries": 2,
+      "materialRefs": 663,
+      "singleRunRebuildCpuMs": 22.47
+    },
+    "churn": {
+      "customers": 4000,
+      "peak": 20,
+      "created": 20,
+      "disposed": 0,
+      "retained": 20,
+      "singleRunCpuMs": 6.38
+    }
+  },
+  "physical_testing_this_pass": false,
+  "gameplay_changed": false,
+  "deployment_changed": false,
+  "commands": [
+    "node tests/run-headless.mjs /tmp/sst-director-live-suite (69932d0)",
+    "node tests/run-headless.mjs /tmp/sst-director-suite (44df37b)",
+    "node tests/performance/render-workload.mjs (69932d0)"
+  ]
+}
