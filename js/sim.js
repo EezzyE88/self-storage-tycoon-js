@@ -1021,6 +1021,12 @@ export class Sim {
     if (!ROLES.owner.can.includes(t.need)) return { ok: false, msg: 'The Owner cannot do this work - it needs a Tech or vendor' };
     if (t.assigned && t.assigned !== owner.id) return { ok: false, msg: 'Already assigned to someone else' };
     if (ag.task === t.id) return { ok: false, msg: 'Owner is already on it' };
+    const delegated = this.assignStaffFirst(t);
+    if (delegated) {
+      this.emit('task_assigned');
+      const R = ROLES[delegated.role];
+      return { ok: true, msg: `${R.name} ${delegated.name} assigned · Owner stays free` };
+    }
     const need = this.taskHours(t), left = this.workRemaining(owner);
     if (left + 1e-9 < need) { this.emit('refuse'); return { ok: false, msg: `Owner has ${left}h available today; this needs ${need}h. Wait for tomorrow, hire staff, or use a vendor.` }; }
     if (ag.task || (ag.queue && ag.queue.length)) {
@@ -2520,16 +2526,60 @@ export class Sim {
     if (s.staff.some((x) => x.role === 'clerk') ) return true;
     return !s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect');
   }
+  staffForTask(t) {
+    if (!t || t.vendor || !this.onShift()) return null;
+    const need = this.taskHours(t);
+    const rows = this.s.staff
+      .filter((st) => st.role !== 'owner' && st.role !== 'clerk' && ROLES[st.role] && ROLES[st.role].can.includes(t.need) && this.workRemaining(st) + 1e-9 >= need)
+      .map((st) => ({ st, ag: this.s.agents.find((a) => a.sid === st.id) }))
+      .filter((x) => x.ag)
+      .sort((a, b) => {
+        const aBusy = a.ag.task || (a.ag.queue && a.ag.queue.length) ? 1 : 0;
+        const bBusy = b.ag.task || (b.ag.queue && b.ag.queue.length) ? 1 : 0;
+        return aBusy - bBusy || this.workRemaining(b.st) - this.workRemaining(a.st) || a.st.id - b.st.id;
+      });
+    return rows.length ? rows[0] : null;
+  }
+  assignStaffFirst(t) {
+    if (!t || t.assigned || t.vendor) return null;
+    const row = this.staffForTask(t); if (!row) return null;
+    const { st, ag } = row;
+    t.unreachable = null;
+    if (ag.task || (ag.queue && ag.queue.length)) {
+      if (!this.reserveTaskWork(st, t)) return null;
+      ag.queue ||= [];
+      if (!ag.queue.includes(t.id)) ag.queue.push(t.id);
+      t.assigned = st.id; t.queued = true;
+      return st;
+    }
+    return this.startTask(ag, t) ? st : null;
+  }
+  staffCanCover(t) { return !!this.staffForTask(t); }
+  rebalanceOwnerQueue() {
+    const owner = this.s.staff.find((x) => x.role === 'owner');
+    const ag = owner && this.s.agents.find((x) => x.sid === owner.id);
+    if (!owner || !ag || !ag.queue || !ag.queue.length) return;
+    for (const id of [...ag.queue]) {
+      const t = this.s.tasks.find((x) => x.id === id);
+      if (!t || t.prog) continue;
+      if (!this.staffForTask(t)) continue;
+      ag.queue = ag.queue.filter((x) => x !== id);
+      this.refundTaskWork(owner, t);
+      t.assigned = null; t.queued = false;
+      this.assignStaffFirst(t);
+    }
+  }
   pickTask(ag, ownerAuto = false) {
     const s = this.s, R = ROLES[ag.role], st = this.staffOf(ag);
     const left = this.workCapacity(st) ? this.workRemaining(st) : Infinity;
-    const cands = s.tasks.filter((t) => !t.assigned && !t.vendor && !t.unreachable && R.can.includes(t.need) && this.taskHours(t) <= left && (t.need !== 'carts' || s.policies.porterCarts || ownerAuto) && (!ownerAuto || (t.need !== 'office' && !t.need.startsWith('repair'))))
+    const cands = s.tasks.filter((t) => !t.assigned && !t.vendor && !t.unreachable && R.can.includes(t.need) && this.taskHours(t) <= left && (t.need !== 'carts' || s.policies.porterCarts || ownerAuto) && (!ownerAuto || ((t.need !== 'office' && !t.need.startsWith('repair')) && !this.staffCanCover(t))))
       .sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
     for (const t of cands) if (this.startTask(ag, t)) return true;
     return false;
   }
   updateStaff(ag) {
     const s = this.s; const WS = ag.cart ? 0.19 : 0.24;
+    if (ag.role === 'owner') this.rebalanceOwnerQueue();
     const t = ag.task && s.tasks.find((x) => x.id === ag.task);
     if (ag.task && !t) { ag.task = null; if (ag.st === 'walk' || ag.st === 'work') ag.st = 'idle'; if (ag.cart) this.dropCart(ag); }
     switch (ag.st) {
