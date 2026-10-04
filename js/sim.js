@@ -1018,7 +1018,6 @@ export class Sim {
     const owner = s.staff.find((x) => x.role === 'owner'); const ag = owner && s.agents.find((g) => g.sid === owner.id);
     if (!ag) { this.emit('refuse'); return { ok: false, msg: 'The Owner needs an operating office first - call a vendor instead' }; }
     if (t.vendor) return { ok: false, msg: 'A vendor is already booked for this' };
-    if (!ROLES.owner.can.includes(t.need)) return { ok: false, msg: 'The Owner cannot do this work - it needs a Tech or vendor' };
     if (t.assigned && t.assigned !== owner.id) return { ok: false, msg: 'Already assigned to someone else' };
     if (ag.task === t.id) return { ok: false, msg: 'Owner is already on it' };
     const delegated = this.assignStaffFirst(t);
@@ -1027,6 +1026,7 @@ export class Sim {
       const R = ROLES[delegated.role];
       return { ok: true, msg: `${R.name} ${delegated.name} assigned · Owner stays free` };
     }
+    if (!ROLES.owner.can.includes(t.need)) return { ok: false, msg: 'The Owner cannot do this work - it needs a Tech or vendor' };
     const need = this.taskHours(t), left = this.workRemaining(owner);
     if (left + 1e-9 < need) { this.emit('refuse'); return { ok: false, msg: `Owner has ${left}h available today; this needs ${need}h. Wait for tomorrow, hire staff, or use a vendor.` }; }
     if (ag.task || (ag.queue && ag.queue.length)) {
@@ -2528,6 +2528,7 @@ export class Sim {
   }
   staffForTask(t) {
     if (!t || t.vendor || !this.onShift()) return null;
+    if (t.need === 'carts' && !this.s.policies.porterCarts) return null;
     const need = this.taskHours(t);
     const rows = this.s.staff
       .filter((st) => st.role !== 'owner' && st.role !== 'clerk' && ROLES[st.role] && ROLES[st.role].can.includes(t.need) && this.workRemaining(st) + 1e-9 >= need)
