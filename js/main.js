@@ -93,14 +93,14 @@ const game = {
     return { ok: true, msg: `Acquired ${name}. Open the Portfolio to switch to it and send it cash.` };
   },
   transfer(from, to, amt) {
-    const C = this.company; const A = C && C.props[from], B = C && C.props[to]; if (!A || !B || from === to) return { ok: false, msg: 'Invalid transfer' };
+    const C = this.company; const A = C && C.props[from], B = C && C.props[to]; if (!A || !B || from === to || !Number.isFinite(amt) || amt <= 0) return { ok: false, msg: 'Invalid transfer' };
     if (A.sim.s.cash < amt) return { ok: false, msg: 'Not enough cash' };
     A.sim.money(-amt, 'other', 'Transfer to ' + B.name); B.sim.money(amt, 'other', 'Transfer from ' + A.name);
     return { ok: true, msg: `Sent $${amt.toLocaleString()} to ${B.name}` };
   },
   note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },
   attach(sim, kind) {
-    this.sim = sim; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)
+    this.sim = sim; this.acc = 0; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)
     if (this.rend) this.rend.setSim(sim);
     if (this.ui) {
       this.ui.tool = null; this.ui.sel = null; this.ui.plan = null; this.ui.setTab(null); this.ui.renderActionBar();
@@ -113,14 +113,17 @@ const game = {
     sim.events.length = 0; sim.poll(); this.drain();
   },
   drain() { const ev = this.sim.events; if (!ev.length) return; this.sim.events = []; if (this.sim === this.demo && this.ui && this.ui.title) return; /* the living title screen stays quiet */ for (const e of ev) this.ui.onEvent(e); },
-  async saveCode() {
+  saveJSON() {
     const C = this.company;
-    const json = C && C.props.length > 1 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: p.sim.s })) }) : JSON.stringify(this.sim.s);
+    return C && C.props.length > 1 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: p.sim.s })) }) : JSON.stringify(this.sim.s);
+  },
+  rawSaveCode(json) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); },
+  async saveCode(json = this.saveJSON()) {
     try {
       const cs = new CompressionStream('gzip'); const buf = await new Response(new Blob([json]).stream().pipeThrough(cs)).arrayBuffer();
       let bin = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
       return 'SST1.' + btoa(bin);
-    } catch (e) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); }
+    } catch (e) { return this.rawSaveCode(json); }
   },
   async loadCode(code) {
     try {
@@ -131,9 +134,9 @@ const game = {
       const st = sanitizeSave(JSON.parse(json));
       if (!st || typeof st !== 'object') return false;
       if (st && st.company && Array.isArray(st.props) && st.props.length) {
-        if (st.props.length > 12 || !st.props.every((p) => p && validState(p.s))) return false;
+        if (st.props.length > 12 || !st.props.every((p) => p && typeof p.name === 'string' && validState(p.s)) || !Number.isInteger(st.active ?? 0) || (st.active ?? 0) < 0 || (st.active ?? 0) >= st.props.length || (st.feed != null && !Array.isArray(st.feed))) return false;
         const props = st.props.map((p) => ({ name: p.name, sim: new Sim(p.s) })); for (const p of props) p.sim.s.speed = 0;
-        this.company = { props, active: Math.min(st.active || 0, props.length - 1), feed: st.feed || [] };
+        this.company = { props, active: st.active ?? 0, feed: st.feed || [] };
         this.attach(props[this.company.active].sim); this.ui.title = false; return true;
       }
       if (!validState(st)) return false;
@@ -148,22 +151,29 @@ const game = {
   },
   // autosave: whenever a game is running (not on the title screen); `hide` uses a keepalive request
   async autosave(hide) {
-    if (!this.ui || this.ui.title || this.saving) return false;
+    if (!this.ui || this.ui.title || (this.saving && !hide)) return false;
+    const seq = this.saveSeq = (this.saveSeq || 0) + 1;
+    const company = this.company, sim = this.sim;
+    // Capture both before compression yields. Leaving must reach local storage synchronously.
+    const json = this.saveJSON(), meta = this.saveMeta(), day = sim.day;
     this.saving = true;
     try {
-      const code = await this.saveCode(); const meta = this.saveMeta();
-      const local = localsave.put(code, meta); // browser storage first: it works on any normal host, including GitHub Pages
-      if (hide) { if (cloud.ok !== false || !local) cloud.beacon(code, meta); return local || true; }
+      const code = hide ? this.rawSaveCode(json) : await this.saveCode(json);
+      if (seq !== this.saveSeq || company !== this.company) return false;
+      const local = localsave.put(code, meta);
+      if (hide) { if (cloud.ok !== false || !local) cloud.beacon(code, meta); return local; }
       const remote = cloud.ok === false && local ? false : await cloud.put(code, meta);
       return local || remote;
     }
-    catch (e) { return false; } finally { this.saving = false; this.lastAuto = performance.now(); this.lastAutoDay = this.sim.day; }
+    catch (e) { return false; } finally {
+      if (seq === this.saveSeq) { this.saving = false; this.lastAuto = performance.now(); this.lastAutoDay = company === this.company ? day : -1; }
+    }
   },
   cloud,
   // before New game / Load replaces what the player has: copy it to the kept slot (browser storage only)
   async keepCurrent(fallback) {
     if (!localsave.ok) return false;
-    if (this.sim !== this.demo && this.ui && !this.ui.title) { const code = await this.saveCode(); return localsave.keep({ code, meta: this.saveMeta(), at: Math.floor(Date.now() / 1000) }); }
+    if (this.sim !== this.demo && this.ui && !this.ui.title) { const meta = this.saveMeta(), json = this.saveJSON(); const code = await this.saveCode(json); return localsave.keep({ code, meta, at: Math.floor(Date.now() / 1000) }); }
     const L = localsave.get(); return localsave.keep(L.main || fallback);
   },
   modeLabel,
@@ -200,7 +210,7 @@ function validState(st) {
   if (!isInt(W) || !isInt(H) || W < 12 || H < 12 || W > 96 || H > 96) return false;
   const WH = W * H, arr = (a, n) => Array.isArray(a) && a.length === n && a.every((x) => typeof x === 'number');
   if (!arr(st.ground, WH)) return false;
-  for (const k of ['hall', 'dirt']) if (st[k] && !(Array.isArray(st[k]) && st[k].every((l) => arr(l, WH)))) return false;
+  for (const k of ['hall', 'dirt']) if (st[k] && !(Array.isArray(st[k]) && st[k].length === 2 && st[k].every((l) => arr(l, WH)))) return false;
   if (!st.objects || typeof st.objects !== 'object' || Array.isArray(st.objects)) return false;
   for (const o of Object.values(st.objects)) { if (!o || typeof o !== 'object' || typeof o.type !== 'string' || !isInt(o.x) || !isInt(o.y) || o.x < -2 || o.y < -2 || o.x > W + 2 || o.y > H + 2) return false; }
   for (const k of ['orders', 'carts', 'vehicles', 'agents', 'staff', 'tasks', 'ledger', 'days']) if (st[k] != null && !Array.isArray(st[k])) return false;

@@ -1395,6 +1395,7 @@ export class UI {
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
   autosaveNote() {
     const L = this.g.localsave;
+    if (L?.lastErr === 'storage full') return 'Latest autosave failed: browser storage is full. Export a save code or file now to keep your progress.';
     if (L && L.ok) return L.lastAt ? `Autosave is on in this browser (${this.ago(L.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave, and keeps the previous save as a backup.${L.lastErr ? ' Note: ' + L.lastErr + '.' : ''} Codes and files move a game between devices.` : 'Autosave is on in this browser. It saves each in-game day and when you leave, and keeps the previous save as a backup. Codes and files move a game between devices.';
     const c = this.g.cloud;
     if (c.ok === false) return 'Autosave is offline right now. Save with a code or a file to keep your progress.';

@@ -12,7 +12,7 @@ export const localsave = {
     if (!store) return false;
     const rec = JSON.stringify({ code, meta, at: Math.floor(Date.now() / 1000), v: 1 });
     try {
-      const prev = store.getItem(MAIN); if (prev) store.setItem(BAK, prev); // keep the previous good save
+      const prev = store.getItem(MAIN); if (prev && read(MAIN)) store.setItem(BAK, prev); // keep the previous good save
       store.setItem(MAIN, rec); this.lastAt = Date.now(); this.lastErr = ''; return true;
     } catch (e) { // storage full: drop the backup and try once more
       try { store.removeItem(BAK); store.setItem(MAIN, rec); this.lastAt = Date.now(); this.lastErr = 'backup dropped (storage full)'; return true; } catch (e2) { this.lastErr = 'storage full'; return false; }

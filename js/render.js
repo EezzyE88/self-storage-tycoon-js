@@ -333,7 +333,7 @@ export class Renderer {
 
   // ================================================================ STATIC SCENE
   isShared(x) {
-    if (!this._shared) { this._shared = new Set([...Object.values(this.geo), ...Object.values(this.mat)]); }
+    if (!this._shared) { this._shared = new Set([...Object.values(this.geo), ...Object.values(this.mat).flat()]); }
     return this._shared.has(x) || Object.values(this.tx.plaques).includes(x) || Object.values(this.ringGeo).includes(x);
   }
   disposeTree(root) { // free per-instance GPU resources; shared geometries/materials/textures stay cached

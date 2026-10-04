@@ -1,0 +1,244 @@
+{
+  "suite": [
+    {
+      "file": "dbg.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "t9.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.7
+    },
+    {
+      "file": "t9b.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.7
+    },
+    {
+      "file": "t9c.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.9
+    },
+    {
+      "file": "t9d.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 37.4
+    },
+    {
+      "file": "t9e.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "t9f.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.5
+    },
+    {
+      "file": "tads.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tbal.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 9.9
+    },
+    {
+      "file": "tblueprint.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.6
+    },
+    {
+      "file": "tbplus_payback.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 41.1
+    },
+    {
+      "file": "tbplus_scenarios.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 5.9
+    },
+    {
+      "file": "tbplus.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tbugs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tcalm.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 7.9
+    },
+    {
+      "file": "tcapacity.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tclim.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "tdrama.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 14.2
+    },
+    {
+      "file": "tfin.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.8
+    },
+    {
+      "file": "tfinancial_trust.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tfix.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tfuzz.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 21.1
+    },
+    {
+      "file": "tmenu_touch.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tp.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.7
+    },
+    {
+      "file": "tp2.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6.6
+    },
+    {
+      "file": "tr.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tsandbox.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.5
+    },
+    {
+      "file": "tsc.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 6.1
+    },
+    {
+      "file": "tstaffing_compare.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.2
+    },
+    {
+      "file": "tsystems.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "tv.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tvert.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.8
+    },
+    {
+      "file": "tw.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "twalk.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    }
+  ],
+  "focused_regressions": [
+    "PASS legacy raw and gzip saves round-trip actual game factories",
+    "PASS invalid portfolio index/feed/layers leaves current company untouched",
+    "PASS portfolio saves preserve active property and all cash",
+    "PASS autosave metadata describes the captured property despite switching",
+    "PASS replaced company cannot be overwritten by a delayed autosave",
+    "PASS leaving saves synchronously and supersedes pending compression",
+    "PASS failed local leave save does not claim confirmed persistence",
+    "PASS invalid transfers never alter cash or ledgers; valid transfer conserves cash",
+    "PASS shared skin materials survive instance disposal",
+    "Dependency benchmark: cached 1.2ms, original 25.1ms / 30000 queries",
+    "PASS dependency cache matches original scan across mutations and save restore",
+    "PASS door-first vertical lesson returns to missing connected aisle and recovers",
+    "PASS storage-full message explicitly advises saving a code or file",
+    "PASS corrupt main does not replace a valid backup",
+    "PASS removed corral releases returned cart into recoverable stranded state",
+    "PASS blocked corral outbound and return paths both escape their waiting states",
+    "PASS cached construction dependencies preserve complete simulation state",
+    "ALL PASS: 16 systems regression checks"
+  ],
+  "extended_fuzz_final": [
+    "",
+    "474034 actions (74886 accepted), 144.3s in sim steps, 158s total",
+    "NO ISSUES"
+  ],
+  "dense_lot": {
+    "units": 550,
+    "initial_operating": 525,
+    "staff": 10,
+    "demand_multiplier": 3,
+    "days": 365,
+    "peak_agents": 71,
+    "peak_save_kb": 613,
+    "worst_day_ms": 80
+  },
+  "browser_gameplay_verified": false
+}

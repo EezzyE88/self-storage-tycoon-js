@@ -217,6 +217,7 @@ export function curBeat(sim) { return sim.s.lesson ? lessonById(sim.s.lesson.id)
 export function stepState(sim, ui) {
   const b = curBeat(sim); if (!b || !b.steps) return { b, cur: -1, done: [] };
   const done = b.steps.map((st) => { try { return !!st.done(sim, ui); } catch (e) { return false; } });
+  if (b.id === 'up') { const missing = done.indexOf(false); return { b, cur: missing < 0 ? done.length - 1 : missing, done, all: missing < 0 }; }
   let last = -1; for (let i = 0; i < done.length; i++) if (done[i]) last = i;
   return { b, cur: Math.min(last + 1, b.steps.length - 1), done, all: last === b.steps.length - 1 };
 }

@@ -869,8 +869,18 @@ export class Sim {
     return cells.size>0 && b.tiles.some(t=>t.k==='ground'&&cells.has(t.i));
   }
   groundPredecessor(ord) {
-    if(!ord.tiles.some(t=>t.k==='ground')) return null;
-    return this.s.orders.find(o=>o.st==='construction'&&o.id<ord.id&&this.groundOrdersOverlap(o,ord));
+    // Derived only: invalidate on build, completion, cancellation or restore.
+    if (this._groundDepsV !== this.s.structV) {
+      const active = this.s.orders.filter(o => o.st === 'construction');
+      const cells = new Map(active.map(o => [o, new Set(o.tiles.filter(t => t.k === 'ground').map(t => t.i))]));
+      const deps = new Map();
+      for (const o of active) {
+        const own = cells.get(o);
+        deps.set(o.id, own.size ? active.find(p => p.id < o.id && [...cells.get(p)].some(i => own.has(i))) || null : null);
+      }
+      this._groundDeps = deps; this._groundDepsV = this.s.structV;
+    }
+    return this._groundDeps.get(ord.id) || null;
   }
   completeOrder(ord) {
     const s = this.s;
@@ -2001,7 +2011,9 @@ export class Sim {
         break;
       }
       case 'toCorral': {
-        if (this.moveAgent(ag, WS) === 'done') { if (!this.claimCart(ag)) { ag.st = 'waitCart'; } else this.walkToUnit(ag, u); }
+        const r = this.moveAgent(ag, WS);
+        if (r === 'done') { if (!this.claimCart(ag)) { ag.st = 'waitCart'; } else this.walkToUnit(ag, u); }
+        else if (r === 'blocked') { ag.exp.noCart = true; if (u) this.walkToUnit(ag, u); else this.goToVehicle(ag); }
         break;
       }
       case 'waitCart': {
@@ -2043,9 +2055,12 @@ export class Sim {
       }
       case 'inRest': { if (--ag.wait <= 0) { ag.hidden = false; this.goToVehicle(ag); } break; }
       case 'retCart': {
-        if (this.moveAgent(ag, WS) === 'done') {
+        const r = this.moveAgent(ag, WS);
+        if (r === 'blocked') { this.dropCart(ag); this.goToVehicle(ag); }
+        else if (r === 'done') {
           const c = this.cartById(ag.cart), corral = s.objects[ag.corral];
-          if (c && corral) { c.st = 'corral'; c.corral = corral.id; c.f = corral.f || 0; c.x = corral.x; c.y = corral.y; this.emit('cart_return', { x: corral.x, y: corral.y, f: corral.f || 0 }); }
+          if (c && corral && corral.cstate === 'operating') { c.st = 'corral'; c.corral = corral.id; c.f = corral.f || 0; c.x = corral.x; c.y = corral.y; this.emit('cart_return', { x: corral.x, y: corral.y, f: corral.f || 0 }); }
+          else if (c) this.dropCart(ag);
           ag.cart = null; this.goToVehicle(ag);
         }
         break;

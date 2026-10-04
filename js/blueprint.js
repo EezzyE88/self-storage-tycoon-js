@@ -24,7 +24,7 @@ function deriveLayout(sim) {
     if(!sh) return null;
   }
   const entry=sim.objs('door').filter(o=>inside(sh,o)).sort((a,b)=>a.id-b.id)[0];
-  const ac=entry ? {door:{x:entry.x,y:entry.y},dir:entry.dir,road:null} : access(sim,sh);
+  const ac=access(sim,sh,entry);
   if(!ac) return {sh,proposed,blocked:'No clear access route beside this building. Add a connected aisle, then recheck.'};
   const d=ac.dir, t={x:d[1],y:-d[0]}, door=ac.door;
   // Follow an existing full hallway to its entrance where possible, rather than impose a new origin.
@@ -41,12 +41,15 @@ function deriveLayout(sim) {
   if(up.units?.[0]?.dir && (up.units[0].dir[0]!==want.x||up.units[0].dir[1]!==want.y)) plans.units.flip=true;
   return {sh,proposed,plans,door,outer,point};
 }
-function access(sim,sh) {
+function access(sim,sh,entry=null) {
   const cx=sh.x+Math.floor(sh.w/2),cy=sh.y+Math.floor(sh.h/2);
-  const edges=[{door:{x:cx,y:sh.y+sh.h-1},dir:[0,1]},{door:{x:cx,y:sh.y},dir:[0,-1]},{door:{x:sh.x+sh.w-1,y:cy},dir:[1,0]},{door:{x:sh.x,y:cy},dir:[-1,0]}];
+  const edges=entry ? [{door:{x:entry.x,y:entry.y},dir:entry.dir}] : [{door:{x:cx,y:sh.y+sh.h-1},dir:[0,1]},{door:{x:cx,y:sh.y},dir:[0,-1]},{door:{x:sh.x+sh.w-1,y:cy},dir:[1,0]},{door:{x:sh.x,y:cy},dir:[-1,0]}];
   let best=null;
   for(const a of edges) {
     const out={x:a.door.x+a.dir[0],y:a.door.y+a.dir[1]};
+    const pending = entry && sim.s.orders.find(o=>o.st==='construction' && o.tool==='aisle' && o.cells.some(c=>c.x===out.x && c.y===out.y));
+    if (pending) return {...a,road:null};
+    if (entry && sim.D.vehReach[sim.idx(out.x,out.y)]) return {...a,road:null};
     for(let y=sim.s.parcel.y0;y<=sim.s.parcel.y1;y++) for(let x=sim.s.parcel.x0;x<=sim.s.parcel.x1;x++) {
       const i=sim.idx(x,y); if(!sim.D.vehReach[i]) continue;
       // A continuous paved rectangle; validate every cell against real structures.
