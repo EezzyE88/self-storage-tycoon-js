@@ -319,14 +319,27 @@ game.localsave = localsave; game.BUILD = BUILD;
   offer(null); cloud.get().then((d) => offer(d)); }
 
 // ---------------------------------------------------------------- input
-const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null;
+const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null; let lastMapTap = null;
 const BUILD_HOLD_MS = 240;
+const DOUBLE_TAP_MS = 320, DOUBLE_TAP_PX = 28;
+const mapTap = (e) => {
+  const now = performance.now();
+  const prev = lastMapTap;
+  const isDouble = prev && now - prev.t <= DOUBLE_TAP_MS && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) <= DOUBLE_TAP_PX;
+  if (isDouble) {
+    lastMapTap = null;
+    game.rend.zoomAt(e.clientX, e.clientY, 1.65);
+    return;
+  }
+  lastMapTap = { t: now, x: e.clientX, y: e.clientY };
+  game.ui.tapMap(game.rend.cellAt(e.clientX, e.clientY), e.clientX, e.clientY);
+};
 const cancelBuildHold = () => { if (buildHold) clearTimeout(buildHold); buildHold = null; };
 canvas.addEventListener('pointerdown', (e) => {
   game.audio.unlock(); canvas.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
   game.ui.pointerBusy = true;
-  if (ptrs.size === 2) { cancelBuildHold(); const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; drag = null; return; }
+  if (ptrs.size === 2) { lastMapTap = null; cancelBuildHold(); const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; drag = null; return; }
   const panBtn = e.button === 1 || e.button === 2 || e.shiftKey;
   const building = !!game.ui.tool && !panBtn;
   const holdBuild = building && (e.pointerType === 'touch' || e.pointerType === 'pen');
@@ -366,7 +379,7 @@ function up(e) {
   if (ptrs.size === 0) { game.ui.pointerBusy = false; game.ui.finishPlacement(); }
   if (pinch) { if (ptrs.size < 2) pinch = null; cancelBuildHold(); drag = null; return; }
   if (drag && drag.pointerId === e.pointerId && drag.mode === 'buildPending') cancelBuildHold();
-  if (drag && drag.mode === 'pan' && !drag.moved && p && e.type === 'pointerup') game.ui.tapMap(game.rend.cellAt(e.clientX, e.clientY), e.clientX, e.clientY);
+  if (drag && drag.mode === 'pan' && !drag.moved && p && e.type === 'pointerup') mapTap(e);
   drag = null;
 }
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
