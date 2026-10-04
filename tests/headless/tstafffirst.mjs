@@ -140,5 +140,104 @@ function readySim(seed) {
   check('Save/resume preserves Porter reserved capacity', resumed.workRemaining(rp) === beforePorter);
 }
 
+// Save/resume after Owner fallback work preserves the Owner reservation.
+{
+  const sim = readySim(9208), s = sim.s;
+  const owner = s.staff.find((x) => x.role === 'owner');
+  const seeded = s.tasks.find((t) => t.type === 'makeready');
+  sim.dispatch({ type: 'ownerTask', task: seeded.id });
+  const before = sim.workRemaining(owner);
+  const resumed = new Sim(JSON.parse(JSON.stringify(s)));
+  const ro = resumed.s.staff.find((x) => x.role === 'owner');
+  const rt = resumed.s.tasks.find((x) => x.id === seeded.id);
+  check('Save/resume preserves Owner fallback assignee', rt.assigned === ro.id);
+  check('Save/resume preserves Owner fallback reservation', resumed.workRemaining(ro) === before, String(resumed.workRemaining(ro)));
+}
+
+// Save/resume immediately after Owner-queue migration keeps the refunded Owner and reserved Porter totals.
+{
+  const sim = readySim(9209), s = sim.s;
+  const owner = s.staff.find((x) => x.role === 'owner');
+  const ownerAg = s.agents.find((a) => a.sid === owner.id);
+  const first = s.tasks.find((t) => t.type === 'makeready');
+  const spare = sim.objs('unit').find((u) => u.id !== first.obj);
+  const second = sim.addTask({ type: 'makeready', need: 'makeready', obj: spare.id, label: 'Migrated then saved', work: 150 });
+  sim.dispatch({ type: 'ownerTask', task: first.id });
+  sim.dispatch({ type: 'ownerTask', task: second.id });
+  sim.dispatch({ type: 'hire', role: 'porter' });
+  sim.updateStaff(ownerAg);
+  const porter = s.staff.find((x) => x.role === 'porter');
+  const ownerLeft = sim.workRemaining(owner), porterLeft = sim.workRemaining(porter);
+  const resumed = new Sim(JSON.parse(JSON.stringify(s)));
+  const ro = resumed.s.staff.find((x) => x.role === 'owner'), rp = resumed.s.staff.find((x) => x.role === 'porter');
+  const rt = resumed.s.tasks.find((x) => x.id === second.id);
+  check('Save/resume preserves migrated staff assignee', rt.assigned === rp.id);
+  check('Save/resume does not double-refund Owner migration', resumed.workRemaining(ro) === ownerLeft, String(resumed.workRemaining(ro)));
+  check('Save/resume does not double-reserve Porter migration', resumed.workRemaining(rp) === porterLeft, String(resumed.workRemaining(rp)));
+}
+
+// Tech takes both simple and complex repair work before Owner/vendor; Owner remains unable to do complex repair.
+{
+  const sim = readySim(9210), s = sim.s;
+  sim.dispatch({ type: 'hire', role: 'tech' });
+  const tech = s.staff.find((x) => x.role === 'tech');
+  const owner = s.staff.find((x) => x.role === 'owner');
+  const light = sim.objs('light')[0]; light.cond = 0.1;
+  const simple = sim.ensureRepairTask(light);
+  const r1 = sim.dispatch({ type: 'ownerTask', task: simple.id });
+  check('Tech receives simple repair before Owner', r1.ok && simple.assigned === tech.id, r1.msg);
+  check('Simple repair delegation preserves Owner capacity', sim.workRemaining(owner) === 8, String(sim.workRemaining(owner)));
+
+  const elevator = sim.objs('elevator')[0];
+  if (elevator) {
+    elevator.cond = 0.1;
+    const complex = sim.ensureRepairTask(elevator);
+    const r2 = sim.dispatch({ type: 'ownerTask', task: complex.id });
+    check('Tech receives complex repair Owner cannot perform', r2.ok && complex.assigned === tech.id, r2.msg);
+  }
+}
+
+// Vendor takeover releases a staff reservation and becomes the sole assignee.
+{
+  const sim = readySim(9211), s = sim.s;
+  sim.dispatch({ type: 'hire', role: 'tech' });
+  const tech = s.staff.find((x) => x.role === 'tech');
+  const light = sim.objs('light')[0]; light.cond = 0.1;
+  const task = sim.ensureRepairTask(light);
+  sim.dispatch({ type: 'ownerTask', task: task.id });
+  const before = sim.workRemaining(tech);
+  const r = sim.dispatch({ type: 'callVendor', task: task.id });
+  check('Vendor can take over assigned repair', r.ok && task.assigned === 'vendor');
+  check('Vendor takeover refunds staff reservation once', sim.workRemaining(tech) > before && task.workBooked == null, String(sim.workRemaining(tech)));
+}
+
+// Cart policy off means Porter is not considered for cart work, leaving Owner as the explicit fallback.
+{
+  const sim = readySim(9212), s = sim.s;
+  sim.dispatch({ type: 'hire', role: 'porter' });
+  const porter = s.staff.find((x) => x.role === 'porter');
+  s.policies.porterCarts = false;
+  const cart = s.carts[0]; cart.st = 'stranded'; cart.since = s.t - 60;
+  sim.generateTasks();
+  const task = s.tasks.find((x) => x.type === 'carts' && x.cart === cart.id);
+  const r = task && sim.dispatch({ type: 'ownerTask', task: task.id });
+  const owner = s.staff.find((x) => x.role === 'owner');
+  check('Cart policy off prevents Porter assignment', !!task && task.assigned === owner.id && task.assigned !== porter.id, r ? r.msg : 'no task');
+}
+
+// With multiple qualified Porters, dispatch chooses an available worker without double booking.
+{
+  const sim = readySim(9213), s = sim.s;
+  sim.dispatch({ type: 'hire', role: 'porter' });
+  sim.dispatch({ type: 'hire', role: 'porter' });
+  const [p1, p2] = s.staff.filter((x) => x.role === 'porter');
+  const first = s.tasks.find((t) => t.type === 'makeready');
+  sim.dispatch({ type: 'ownerTask', task: first.id });
+  const spare = sim.objs('unit').find((u) => u.id !== first.obj);
+  const second = sim.addTask({ type: 'makeready', need: 'makeready', obj: spare.id, label: 'Second Porter', work: 150 });
+  sim.dispatch({ type: 'ownerTask', task: second.id });
+  check('Two eligible jobs can split across two Porters', first.assigned !== second.assigned && [p1.id,p2.id].includes(first.assigned) && [p1.id,p2.id].includes(second.assigned));
+}
+
 console.log(ok ? 'ALL PASS' : 'SOME FAILED');
 if (!ok) process.exitCode = 1;
