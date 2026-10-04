@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {makeMaple} from '../../js/maple.js';
+import {Sim} from '../../js/sim.js';
+import {UI} from '../../js/ui.js';
+import {installTutorial, LESSONS, stepState} from '../../js/tutorial.js';
+import {verticalLayout,verticalDone,verticalCheck,lessonShell} from '../../js/blueprint.js';
+import {readFileSync} from 'node:fs';
+let n=0;const test=(name,fn)=>{fn();n++;console.log('PASS '+name);};
+const fixture=(mirror=false)=>{const sim=makeMaple(20260929,{mirror});sim.s.tut={on:false,done:true,flags:{}};sim.s.lesson={id:'up',idMark:sim.s.nextId,built:[],flags:{},entered:true};sim.s.creative=true;return sim;};
+const build=(s,a)=>{const r=s.dispatch({type:'build',...a});assert.ok(r.ok,`${a.tool}: ${r.msg}`);return r;};
+const complete=s=>{for(const k of ['aisle','shell2','hall','doorWide','loading','hall2','elevator','light','light2','units']){if(k==='shell2'&&lessonShell(s))continue;if(k==='aisle'&&verticalDone(s,k))continue;build(s,verticalLayout(s).plans[k]);}assert.ok(verticalDone(s,'finished'),verticalCheck(s));const l=verticalLayout(s);for(const u of s.objs('unit').filter(u=>u.f===1&&u.x>=l.sh.x&&u.x<l.sh.x+l.sh.w&&u.y>=l.sh.y&&u.y<l.sh.y+l.sh.h))assert.ok(s.dispatch({type:'commission',unit:u.id}).ok);assert.ok(verticalDone(s,'commissioned'),verticalCheck(s));};
+test('suggested full layout commissions working upstairs inventory',()=>complete(fixture()));
+for(const [x,y] of [[28,4],[30,5],[29,7]])test(`offset building ${x},${y} receives working adapted blueprint`,()=>{const s=fixture();build(s,{tool:'shell2',a:{x,y},b:{x:x+8,y:y+8},f:0});assert.equal(verticalLayout(s).sh.x,x);complete(s);});
+test('mirrored plot generates a valid working blueprint',()=>complete(fixture(true)));
+test('save/resume recovers offset shell and preserves finances',()=>{const s=fixture();build(s,{tool:'shell2',a:{x:30,y:5},b:{x:38,y:13},f:0});build(s,verticalLayout(s).plans.aisle);const snapshot=JSON.stringify(s.s);const r=new Sim(JSON.parse(snapshot));assert.equal(r.s.cash,s.s.cash);assert.deepEqual(r.s.ledger,s.s.ledger);assert.deepEqual(verticalLayout(r).plans,verticalLayout(s).plans);complete(r);});
+test('work elsewhere, wrong floor and historic first_upper cannot graduate this building',()=>{const s=fixture();s.s.milestones.first_upper=true;build(s,verticalLayout(s).plans.aisle);build(s,verticalLayout(s).plans.shell2);build(s,{tool:'light',a:{x:20,y:7},b:{x:20,y:7},f:0});assert.equal(verticalDone(s,'lights'),false);assert.equal(verticalDone(s,'commissioned'),false);const b=LESSONS.find(x=>x.id==='up');assert.equal(b.check(s),false);build(s,verticalLayout(s).plans.hall);assert.equal(verticalDone(s,'hall2'),false);});
+test('suggested UI placement reviews money without spending or building',()=>{const s=fixture();s.s.creative=false;const ui=Object.create(UI.prototype),box={innerHTML:'',firstChild:null};ui.g={sim:s,rend:{view:0,setPreview(){},setSelection(){},lookAt(){}}};ui.$=()=>box;ui.setView=v=>ui.rend.view=v;ui.renderSheet=()=>{};ui.sfx=()=>{};ui.toast=()=>{};const cash=s.s.cash,bills=s.committedBills(),orders=s.s.orders.length;ui.suggestPlacement();assert.equal(ui.tool,'aisle');assert.match(box.innerHTML,/Available after bills/);assert.equal(s.s.cash,cash);assert.equal(s.committedBills(),bills);assert.equal(s.s.orders.length,orders);});
+test('one-cell drag assistance snaps only near the suggested rectangle',()=>{const s=fixture();const ui=Object.create(UI.prototype);ui.g={sim:s,rend:{view:0}};const p=verticalLayout(s).plans.aisle;ui.tool='aisle';ui.planArgs={a:{...p.a},b:{...p.a}};ui.replan=()=>{};ui.placeMove({x:p.b.x+1,y:p.b.y});assert.deepEqual(ui.planArgs.b,p.b);ui.placeMove({x:p.b.x+3,y:p.b.y});assert.equal(ui.planArgs.b.x,p.b.x+3);});
+test('missing power or broken customer route prevents readiness',()=>{const s=fixture();complete(s);const e=s.objs('elevator').find(o=>o.x===verticalLayout(s).plans.elevator.a.x);e.cond=0;s.markDirty();s.ensure();assert.equal(verticalDone(s,'commissioned'),false);assert.match(verticalCheck(s),/Elevator/);});
+test('Confirm footer and tutorial primary action are outside scroll bodies',()=>{const code=readFileSync(new URL('../../js/ui.js',import.meta.url),'utf8'),css=readFileSync(new URL('../../css/game.css',import.meta.url),'utf8');assert.match(code,/review-body[\s\S]*<\/div>\n      <div class="bot">/);assert.match(code,/<\/div><div class="row tut-actions">/);assert.match(css,/\.review-body \{ overflow-y: auto/);assert.match(css,/\.tut\.min \.tut-actions,[^\n]*display: flex/);});
+test('blueprint start/end labels follow all four camera rotations',()=>{
+  const s=fixture(), ui=Object.create(UI.prototype),box={innerHTML:'',firstChild:null,setAttribute(){}};ui.g={sim:s,rend:{view:0}};ui.$=()=>box;ui.modalOpen=()=>false;
+  globalThis.innerWidth=393;globalThis.innerHeight=720;
+  for(let rot=0;rot<4;rot++){ui.rend.project=(x,y,f)=>({x:rot%2?y*4:x*4,y:rot<2?x*3:y*3,vis:true});ui.updateBlueprint();assert.match(box.innerHTML,/Start here/);assert.match(box.innerHTML,/End here/);assert.match(box.innerHTML,/Entrance/);const a=verticalLayout(s).plans.aisle.a,p=ui.rend.project(a.x+.5,a.y+.5);assert.ok(box.innerHTML.includes(`cx="${p.x}" cy="${p.y}"`));}
+});
+test('clipped, covered and disabled menu targets never get a false Tap here',()=>{
+  const ui=Object.create(UI.prototype);globalThis.innerWidth=393;globalThis.innerHeight=720;const hit={};globalThis.document={elementFromPoint:()=>hit};
+  const el={disabled:false,closest:()=>null,matches:()=>false,contains:x=>x===hit,getBoundingClientRect:()=>({width:44,height:44,left:10,right:54,top:200,bottom:244})};assert.ok(ui.guideVisible(el));el.disabled=true;assert.equal(ui.guideVisible(el),false);el.disabled=false;el.closest=()=>({getBoundingClientRect:()=>({left:0,right:393,top:220,bottom:600})});assert.equal(ui.guideVisible(el),false);el.closest=()=>null;el.contains=()=>false;assert.equal(ui.guideVisible(el),false);
+});
+console.log(`ALL PASS: ${n} blueprint/recovery checks`);

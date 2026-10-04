@@ -1,6 +1,7 @@
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
 import { TOOLS } from './data.js';
+import { verticalDone, verticalLayout } from './blueprint.js';
 
 const unitByNum = (sim, n) => sim.objs('unit').find((u) => u.num === n);
 const createdSince = (sim, type, t) => sim.objs(type).some((o) => o.cstate === 'operating' && o.id > (ctx(sim).idMark || 0));
@@ -49,7 +50,7 @@ export const BEATS = [
     body: 'You own a small, working self-storage property. Most units are rented. Time is <b>paused</b> until you start the clock, so explore freely.',
     why: 'Everything on the map is real: customers drive in, open doors, use carts and pay rent. Each tutorial step tells you exactly where to tap.',
     steps: [
-      { t: 'Look around the property', d: '<b>Drag</b> to pan (two fingers on a phone). <b>Pinch</b> or use the <b>+</b> / <b>−</b> buttons on the right to zoom. The curved arrows rotate the view.', done: (sim, ui) => ui && ui.tutLooked },
+      { t: 'Look around the property', d: '<b>Drag</b> to pan (two fingers on a phone). <b>Pinch</b> to zoom. The curved arrows rotate the view.', done: (sim, ui) => ui && ui.tutLooked },
       { t: 'Tap <b>Look around</b> when ready', d: 'It\'s the yellow button below.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.welcome },
     ],
     button: 'Look around', check: (sim) => sim.s.tut.flags.welcome },
@@ -76,7 +77,7 @@ export const BEATS = [
     check: (sim) => !!sim.s.milestones.first_lease_after_turnover },
   { id: 'money', chapter: 'Take Control', title: 'Money without a spreadsheet',
     body: 'Your first new lease is signed. Here\'s where to see how the business is doing.',
-    why: 'Rent bills <b>monthly</b> on each lease\'s anniversary, while operating costs are charged <b>daily</b>. A quiet week can look negative while the business is healthy - watch the <b>rent roll</b> and <b>occupancy</b>.',
+    why: 'Rent bills <b>monthly</b> on each lease\'s anniversary, while operating costs accrue <b>daily at 7:00 AM</b> and settle weekly. A quiet week can look negative while the business is healthy - watch the <b>rent roll</b> and <b>occupancy</b>.',
     focus: () => ({ tab: 'business' }),
     steps: [
       { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar (the bar-chart icon).', sel: TAB('business'), done: (sim, ui) => sim.s.tut.flags.businessOpened },
@@ -167,24 +168,26 @@ export const LESSONS = [
       commissionStep((u) => u.env === 'climate', (sim) => !!sim.s.milestones.first_climate),
     ],
     check: (sim) => !!sim.s.milestones.first_climate },
-  { id: 'up', chapter: 'Lesson', offer: (sim) => ((sim.lostRecent(30).noReady || 0) + (sim.lostRecent(30).noSize || 0)) >= 8 && sim.objs('unit').length > 26, title: 'Land pressure: build vertically',
-    body: 'Build a <b>two-floor</b> building on the empty land to the east. Each piece is one step; the rings show where.',
-    why: 'Two floors double the rentable area per cell of land. Floor 2 customers need an <b>elevator</b>, and carts take elevator space, so place it next to the hallway near the door.',
-    focus: () => ({ cell: { x: 33, y: 11 } }),
+  { id: 'up', chapter: 'Lesson', offer: (sim) => ((sim.lostRecent(30).noReady || 0) + (sim.lostRecent(30).noSize || 0)) >= 8 && sim.objs('unit').length > 26, title: 'Build a working two-floor property',
+    body: 'The blueprint shows the whole layout. Use suggested placement to prepare each piece, or hold and drag from Start to End. Nothing is charged until Confirm.',
+    why: 'Customers need a connected route: gate → loading → entrance → elevator → upstairs unit. Markers follow the building you actually place.',
+    focus: (sim) => { const l=verticalLayout(sim); return l ? {cell:{x:l.sh.x+l.sh.w/2,y:l.sh.y+l.sh.h/2}} : null; },
     steps: [
-      ...buildSteps({ cat: 'roads', catName: 'Roads & Loading', tool: 'aisle', toolName: 'Drive Aisle', cell: { x: 33, y: 16 }, placed: (sim) => ordered(sim, 'aisle'), place: '<b>Drag</b> east from the end of the cross aisle', placeD: 'Press on the grass right where the cross aisle ends (east of the interior building) and drag east about 10 cells, the same 3 rows tall as the cross aisle.' }),
-      ...buildSteps({ cat: 'buildings', catName: 'Buildings', tool: 'shell2', toolName: 'Building Shell (2 floors)', cell: { x: 33, y: 10 }, after: (sim) => built(sim, 'aisle'), placed: (sim) => ordered(sim, 'shell2'), place: '<b>Drag</b> a rectangle north of the new aisle', placeD: 'Drag a rectangle about 9 wide by 9 tall on the grass directly above the new aisle, so its south wall touches the aisle.' }).slice(0).map((st, i) => i === 0 ? { ...st, done: (sim, ui) => (tabIs(ui, 'build') && ordered(sim, 'aisle')) || ordered(sim, 'shell2') || toolIs(ui, 'shell2') } : st),
-      { t: 'Build a <b>Hallway</b> on floor 1', d: 'Tap <b>F1</b> on the right rail. Then <b>Build &rarr; Interior &rarr; Hallway</b> and drag a line north-south through the middle of the shell to its south wall, then <b>Confirm</b>.', sel: TOOL('hall'), cell: { x: 33, y: 10 }, f: 0, done: (sim) => ordered(sim, 'hall') },
-      { t: 'Add a <b>Wide Sliding Door</b>', d: '<b>Build &rarr; Interior &rarr; Wide Sliding Door</b>. Tap the hallway\'s end on the south wall, then <b>Confirm</b>.', sel: TOOL('doorWide'), cell: { x: 33, y: 14 }, done: (sim) => ordered(sim, 'doorWide') },
-      { t: 'Add a <b>Loading Zone</b>', d: '<b>Build &rarr; Roads & Loading &rarr; Loading Zone</b>. Drag 3 cells on the new aisle right below the door, then <b>Confirm</b>.', sel: TOOL('loading'), cell: { x: 33, y: 15 }, done: (sim) => ordered(sim, 'loading') },
-      { t: 'Switch to <b>F2</b> and build its hallway', d: 'Tap <b>F2</b> on the right rail. <b>Build &rarr; Interior &rarr; Hallway</b>, drag the same line as floor 1, then <b>Confirm</b>.', sel: '#floors [data-v="1"]', cell: { x: 33, y: 10 }, f: 1, done: (sim) => built(sim, 'hall', 1) },
-      { t: 'Add an <b>Elevator</b>', d: '<b>Build &rarr; Interior &rarr; Elevator</b>. Tap the cell right beside the hallway near the door, then <b>Confirm</b>. It serves both floors.', sel: TOOL('elevator'), cell: { x: 34, y: 13 }, done: (sim) => ordered(sim, 'elevator') },
-      { t: 'Light <b>both</b> hallways', d: '<b>Build &rarr; Access & Security &rarr; Light</b>. Tap the hallway on F2, <b>Confirm</b>; switch to <b>F1</b> and do the same.', sel: TOOL('light'), cell: { x: 33, y: 9 }, done: (sim) => built(sim, 'light', 0) && built(sim, 'light', 1) },
-      { t: 'Build units on <b>F2</b>', d: 'Tap <b>F2</b>. <b>Build &rarr; Interior &rarr; Interior 5x5</b> and drag a column along one side of the hallway, then <b>Confirm</b>. Repeat on the other side if you like.', sel: '#floors [data-v="1"]', cell: { x: 32, y: 10 }, f: 1, done: (sim) => newUnits(sim, (u) => (u.f || 0) > 0).length > 0 },
-      waitBuild('Let construction finish', (sim) => newUnits(sim, (u) => (u.f || 0) > 0).some((u) => u.cstate !== 'construction') || !!sim.s.milestones.first_upper),
-      commissionStep((u) => (u.f || 0) > 0, (sim) => !!sim.s.milestones.first_upper),
+      ...[
+        ['aisle','Connected drive aisle','roads','Connect the highlighted access strip to the existing aisle.'],
+        ['shell2','Two-floor building footprint','buildings','Use the outlined footprint: 9 × 9 cells. Review its dimensions and access before Confirm.'],
+        ['hall','F1 hallway','interior','The hallway must reach the highlighted entrance wall.'],
+        ['doorWide','Wide entrance','interior','Place the door at the hallway end, facing the highlighted loading area.'],
+        ['loading','Loading zone','roads','Place the three highlighted loading cells outside the entrance.'],
+        ['hall2','F2 hallway','interior','Switch to F2; follow the highlighted line on this same building.'],
+        ['elevator','Elevator','interior','Place the shaft beside both hallways, near the entrance.'],
+        ['lights','Light both hallways','security','Place a light in each highlighted hallway: F1 and F2.'],
+        ['units','F2 units','interior','Place units beside this hallway. Suggested placement faces their doors toward it.'],
+      ].map(([blueprint,t,cat,d]) => ({blueprint,cat,t,d:d+' Use suggested placement, review, then Confirm. You can also place manually.',done:(sim)=>verticalDone(sim,blueprint)})),
+      {t:'Finish construction and check access',d:'Run time to finish construction. Recheck my layout lists any missing connection, lighting or power.',blueprint:'finished',sel:FAST,done:(sim)=>verticalDone(sim,'finished')},
+      {t:'Commission upstairs units',d:'Tap a ready upstairs unit in this building and Commission whole order.',obj:(sim)=>{const l=verticalLayout(sim);return l&&!l.proposed&&sim.objs('unit').find(u=>u.f===1&&u.x>=l.sh.x&&u.x<l.sh.x+l.sh.w&&u.y>=l.sh.y&&u.y<l.sh.y+l.sh.h&&u.cstate==='ready')?.id;},sel:COMMISSION,done:(sim)=>verticalDone(sim,'commissioned')},
     ],
-    check: (sim) => !!sim.s.milestones.first_upper },
+    check:(sim)=>verticalDone(sim,'commissioned') },
 
   { id: 'collections', chapter: 'Lesson', title: 'When rent goes unpaid', generic: true,
     body: 'An account is falling behind. Unpaid rent climbs a ladder: past due, delinquent (locked out), lien, notice, then auction.',

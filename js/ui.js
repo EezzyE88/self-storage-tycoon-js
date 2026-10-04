@@ -5,6 +5,7 @@ import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonByI
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
 import { guideFor } from './handbook.js';
+import { verticalLayout, verticalDone, verticalCheck } from './blueprint.js';
 
 const PIN = {
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-8.3 8.3a2 2 0 0 1-2.8-2.8l8.3-8.3"/><path d="M14.5 5.5 17 3"/></svg>',
@@ -49,7 +50,7 @@ export class UI {
     this.tab = null; this.cat = 'units'; this.tool = null; this.plan = null; this.planArgs = null; this.climate = false; this.flip = false;
     this.sel = null; this.toasts = []; this.bubbles = []; this.lastSheet = 0; this.tutMin = false; this.modal = null; this.title = true;
     this.root.innerHTML = `
-      <div id="pins"></div>
+      <div id="pins"></div><svg id="blueprint" aria-label="Suggested building placement"></svg>
       <div class="hud">
         <div class="chip brand">${I.logo}<div class="nm" id="pname">Maple Street Storage<small id="pmode">Tutorial</small></div></div>
         <div class="chip" data-a="finances" role="button" aria-label="Open finances"><div class="cash num" id="cash">$0<small>Cash</small></div><i id="goalbar" class="goalbar" hidden aria-hidden="true"><b></b></i></div>
@@ -153,6 +154,9 @@ export class UI {
       case 'lessonEnd': this.do({ type: 'lesson', op: 'end' }); this.renderTut(true); break;
       case 'lessonLater': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'dismiss', id: v }); this.renderTut(true); break;
       case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
+      case 'suggestPlacement': this.suggestPlacement(); break;
+      case 'showPlacement': this.autoPanKey=null; this.guideScrolled=null; this.setTab(null); this.sel=null; this.renderSheet(true); this.showBlueprintTarget(); break;
+      case 'recheckLayout': this.toast(verticalCheck(this.sim)); break;
       case 'tutWhy': this.tutWhy = !this.tutWhy; this.renderTut(true); break;
       case 'menu': this.showMenu(); break;
       case 'handbook': this.showHandbook(); this.sfx('click'); break;
@@ -303,16 +307,18 @@ export class UI {
   }
   pickTool(k) {
     if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
-    this.buildPlacing = false; this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
+    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
   }
   toolFloor() { const v = this.rend.view; return v === 1 ? 1 : 0; }
-  placeStart(cell) { if (!this.tool || !cell) return; this.buildPlacing = true; this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
-  finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.renderActionBar(); }
+  placeStart(cell) { if (!this.tool || !cell) return; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
+  finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.renderActionBar(); }
   placeMove(cell) {
     if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { this.planArgs.a = this.planArgs.b = { x: cell.x, y: cell.y }; this.replan(); return; }
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
+    const hint=this.currentBlueprintPlan();
+    if(hint && Math.abs(cell.x-hint.b.x)<=1 && Math.abs(cell.y-hint.b.y)<=1 && Math.abs(this.planArgs.a.x-hint.a.x)<=1 && Math.abs(this.planArgs.a.y-hint.a.y)<=1) { this.planArgs.a={...hint.a}; cell=hint.b; }
     this.planArgs.b = { x: cell.x, y: cell.y }; this.replan();
   }
   replan() {
@@ -346,10 +352,11 @@ export class UI {
       box.innerHTML = `<div class="actionbar placing" aria-live="polite"><b>${R?.count || 0}${T.unit ? ' units' : ' cells'} · ${money(R?.cost || 0)}</b><span>${R?.status === 'valid' ? 'Valid' : R?.status === 'incomplete' ? 'Needs setup' : 'Invalid'} · Lift finger to review</span></div>`;
       return;
     }
+    if(!R) { box.innerHTML=`<div class="actionbar idle-strip"><b>${T.name}</b><span>Hold to place${this.toolFloor()?' · F2':''}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ' Placing on Floor 2.' : ''}</span></div>`;
     if (R) {
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
-      const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Valid - ready to confirm') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
+      const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
       status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
@@ -362,7 +369,7 @@ export class UI {
     const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
     const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
     const wasOpen = !!box.firstChild;
-    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>${status}
+    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Flip doors or move the row beside the aisle.</p>' : ''}</div>
       <div class="bot"><div class="cost">${costTxt}</div>
       ${isUnit ? `<button class="btn sm" data-a="flip">Flip doors</button>` : ''}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
@@ -898,7 +905,8 @@ export class UI {
       const hide = (this.rend.view === 0 && y > 1) || (m && !m.visible && this.rend.view !== 'ext');
       let py = p.y; for (const q of placed) if (Math.abs(q.x - p.x) < 120 && Math.abs(q.y - py) < 26) py = q.y - 28;
       placed.push({ x: p.x, y: py });
-      b.el.style.left = p.x + 'px'; b.el.style.top = py + 'px'; b.el.style.opacity = hide || !p.vis ? 0 : age > 3.8 ? 0 : 1;
+      const half=Math.min(b.el.offsetWidth||220,innerWidth-16)/2; const px=Math.max(half+8,Math.min(innerWidth-half-8,p.x));
+      b.el.style.left = px + 'px'; b.el.style.top = py + 'px'; b.el.style.opacity = hide || !p.vis || !this.mapPointClear({x:px,y:py}) ? 0 : age > 3.8 ? 0 : 1;
     }
     for (const t of [...this.toasts]) if (now - t.t > 4200) { t.el.classList.add('out'); if (now - t.t > 4600) { t.el.remove(); this.toasts = this.toasts.filter((x) => x !== t); } }
   }
@@ -989,25 +997,63 @@ export class UI {
     if (!force && key === this.tutKey) return; this.tutKey = key;
     // map focus follows the current step
     const oid = step && step.obj ? step.obj(this.sim) : null;
-    const f = oid ? { obj: oid } : step && step.cell ? { cell: step.cell, f: step.f || 0 } : this.tutFocus();
+    const bp=step?.blueprint&&this.currentBlueprintPlan();
+    const cell=bp ? bp.a : step?.cell;
+    const f = oid ? { obj: oid } : cell ? { cell, f: bp?.f ?? step.f ?? 0 } : this.tutFocus();
     this.rend.setFocus(f);
     const n = b.steps.length, doneN = st.done.filter((x, i) => x || i < cur).length;
-    const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<span class="how">${x.d}</span>` : ''}</span></li>`;
+    const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details>` : ''}</span></li>`;
     let items = '';
-    if (cur >= 2) items += `<li class="done more"><span class="ck">&#10003;</span><span class="tx">${cur - 1} step${cur > 2 ? 's' : ''} done</span></li>`;
-    b.steps.forEach((x, i) => { if (i === cur - 1) items += li(x, i, 'done'); else if (i === cur) items += li(x, i, 'cur'); else if (i > cur && i <= cur + 2) items += li(x, i, 'todo'); });
-    if (n - cur - 3 > 0) items += `<li class="todo more"><span class="ck"></span><span class="tx">+${n - cur - 3} more step${n - cur - 3 > 1 ? 's' : ''}</span></li>`;
+    b.steps.forEach((x, i) => { if (i === cur) items += li(x, i, 'cur');  });
     box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}`}</span><button class="mini" data-a="tutMin">${this.tutMin ? 'Show' : 'Hide'}</button></div>
-      <h4>${b.title}</h4><p class="intro">${b.body}</p>
+      <div class="tut-body"><h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
-      <div class="row">${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : '<span class="mini">Follow the steps - the ring shows where to tap</span>'}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
+      </div><div class="row tut-actions">${b.id==='up' ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button><button class="btn sm" data-a="showPlacement">Show me where</button><button class="skip" data-a="recheckLayout">Recheck my layout</button>' : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : '<span class="mini">Follow the steps - the ring shows where to tap</span>'}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
+  }
+  currentBlueprintPlan() {
+    if(this.sim.s.lesson?.id!=='up') return null;
+    const step=stepState(this.sim,this).cur, key=curBeat(this.sim)?.steps[step]?.blueprint;
+    const l=verticalLayout(this.sim); if(!l?.plans) return null;
+    return l.plans[key==='lights' ? (verticalDone(this.sim,'lights') ? 'light2' : this.sim.objs('light').some(o=>o.f===0&&o.x>=l.sh.x&&o.x<l.sh.x+l.sh.w&&o.y>=l.sh.y&&o.y<l.sh.y+l.sh.h) ? 'light2' : 'light') : key] || null;
+  }
+  suggestPlacement() {
+    const a=this.currentBlueprintPlan(); if(!a) { this.toast(verticalCheck(this.sim)); return; }
+    this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=false;
+    this.planArgs={a:{...a.a},b:{...a.b}}; this.replan(); this.showBlueprintTarget();
+  }
+  showBlueprintTarget() {
+    const a=this.currentBlueprintPlan(); if(!a) return;
+    this.rend.lookAt((a.a.x+a.b.x)/2,(a.a.y+a.b.y)/2);
+    this.autoPanKey=null;
+  }
+  guideVisible(el) {
+    if(!el || el.disabled || (el.closest('details:not([open])') && !el.matches('summary'))) return false; const r=el.getBoundingClientRect();
+    if(r.width<2||r.height<2||r.top<0||r.bottom>innerHeight||r.left<0||r.right>innerWidth) return false;
+    const body=el.closest('.body, .review-body, .tut-body');
+    if(body) {const b=body.getBoundingClientRect(); if(r.top<b.top||r.bottom>b.bottom||r.left<b.left||r.right>b.right)return false;}
+    const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+    return !!hit && (el===hit||el.contains(hit));
+  }
+  mapPointClear(p) {
+    return !['.tut','.sheet','.actionbar','.hud','.viewctl','.tabs','#feed .convo','.modal','#celebrate.on'].some(sel=>[...this.root.ownerDocument.querySelectorAll(sel)].some(el=>{const r=el.getBoundingClientRect();return r.width>0&&p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom;}));
+  }
+  updateBlueprint() {
+    const box=this.$('blueprint'); if(!box) return;
+    if(this.title||this.modalOpen()||this.sim.s.lesson?.id!=='up'||this.menuTouch||this.buildPlacing) {box.innerHTML='';return;}
+    const l=verticalLayout(this.sim),a=this.currentBlueprintPlan(); if(!l?.plans) {box.innerHTML='';return;}
+    const project=(x,y,f=0)=>this.rend.project(x,y,f*3);
+    const polygon=(a,b,f,color,label)=>{const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1; const pts=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(([x,y])=>project(x,y,f)); if(!pts.every(p=>p.vis))return '';const c=project(x+w/2,y+h/2,f);return `<polygon points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="${color}" fill-opacity=".12" stroke="${color}" stroke-width="2" stroke-dasharray="6 4"/><text x="${c.x}" y="${c.y}" class="bp-label">${label}</text>`;};
+    let html=polygon(l.plans.shell2.a,l.plans.shell2.b,0,'#7adbe8',`${l.sh.w} × ${l.sh.h} · 2 floors`)+polygon(l.plans.aisle.a,l.plans.aisle.b,0,'#7adbe8','Drive aisle');
+    if(a) { html+=polygon(a.a,a.b,a.f,'#ffd23a',TOOLS[a.tool].name);for(const [c,label] of [[a.a,'Start here'],[a.b,'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(p.vis)html+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/><text x="${p.x}" y="${p.y+(label==='Start here'?-15:23)}" class="bp-label">${a.a.x===a.b.x&&a.a.y===a.b.y ? (label==='Start here'?'Place here':'') : label}</text>`;}}
+    for(const [c,label] of [[l.door,'Entrance'],[l.outer,'Loading'],[l.plans.elevator.a,'Elevator']]) {const p=project(c.x+.5,c.y+.5,a?.f||0);if(p.vis)html+=`<text x="${p.x}" y="${p.y-9}" class="bp-label secondary">${label}</text>`;}
+    box.setAttribute('viewBox',`0 0 ${innerWidth} ${innerHeight}`); if(box.innerHTML!==html)box.innerHTML=html;
   }
   // Coach ring: points at the current step's DOM control, or the control that leads to it, or its map spot.
   guideTarget() {
     const step = this.guideStep; if (!step || this.title || this.modalOpen()) return null;
-    const vis = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight ? el : null; };
+    const vis = (el) => this.guideVisible(el) ? el : null;
     const q = (sel) => vis(this.root.querySelector(sel));
     let sel = step.sel;
     if (sel) {
@@ -1024,11 +1070,12 @@ export class UI {
       if (el) return { el, lbl: step.lbl || (sel === '#speed [data-v="4"]' ? 'Speed up' : 'Tap here') };
     }
     const oid = step.obj && step.obj(this.sim); const o = oid && this.sim.s.objects[oid];
-    const c = o ? { x: o.x + (o.w || 1) / 2, y: o.y + (o.h || 1) / 2, f: o.f || 0 } : step.cell ? { x: step.cell.x + 0.5, y: step.cell.y + 0.5, f: step.f || 0 } : null;
+    const bp=this.currentBlueprintPlan(); const sc=bp?.a||step.cell;
+    const c = o ? { x: o.x + (o.w || 1) / 2, y: o.y + (o.h || 1) / 2, f: o.f || 0 } : sc ? { x: sc.x + 0.5, y: sc.y + 0.5, f: bp?.f ?? step.f ?? 0 } : null;
     if (c) {
       let p = this.rend.project(c.x, c.y, c.f * 3);
       if (this.autoPanKey !== this.guideKey && !this.pointerBusy) { this.autoPanKey = this.guideKey; if (this.panClear(p, c)) p = this.rend.project(c.x, c.y, c.f * 3); }
-      if (p.vis) return { x: p.x, y: p.y, lbl: step.lbl || (/drag/i.test(step.t) ? 'Drag here' : 'Tap here'), map: true };
+      if (p.vis && this.mapPointClear(p)) return { x: p.x, y: p.y, lbl: step.lbl || (/drag/i.test(step.t) ? 'Drag here' : 'Tap here'), map: true };
     }
     return null;
   }
@@ -1046,7 +1093,7 @@ export class UI {
       else if (r.left < W / 2 && r.right < W * 0.6) left = Math.max(left, r.right);
       else if (r.bottom > H * 0.45 && r.top > H * 0.3) bot = Math.min(bot, r.top);
     }
-    if (bot - top < 80) { top = 64; bot = H - 96; }
+    if (bot - top < 80) return false;
     if (!p.vis) { this.rend.lookAt(c.x - 0.5, c.y - 0.5); p = this.rend.project(c.x, c.y, c.f * 3); }
     this.rend.pan((left + right) / 2 - p.x, (top + bot) / 2 - p.y);
     return true;
@@ -1167,7 +1214,7 @@ export class UI {
     if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy && !this.menuTouch && now >= (this.menuScrollUntil || 0)) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
     if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.renderTut(); }
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
-    this.updateBubbles(); this.updatePins(); this.updateGuide();
+    this.updateBubbles(); this.updatePins(); this.updateGuide(); this.updateBlueprint();
   }
   setMeta(name, mode) {
     this.$('pname').innerHTML = `${esc(name)}<small>${esc(mode)}</small>`;
