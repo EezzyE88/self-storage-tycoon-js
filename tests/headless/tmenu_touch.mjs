@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { UI } from '../../js/ui.js';
 import { makeMaple } from '../../js/maple.js';
 import { installTutorial } from '../../js/tutorial.js';
@@ -43,5 +44,14 @@ test('guide never moves targets while touching or scrolling menus', () => {
   const { ui, box } = fixture(); ui.guideTarget = () => { throw new Error('target should remain untouched'); };
   ui.menuTouch = true; ui.updateGuide(); assert.equal(box.hidden, true);
   ui.menuTouch = false; ui.menuScrollUntil = performance.now() + 500; ui.updateGuide(); assert.equal(box.hidden, true);
+});
+test('map input wires a bounded double-tap to anchored camera zoom', () => {
+  const main = readFileSync(new URL('../../js/main.js', import.meta.url), 'utf8');
+  const render = readFileSync(new URL('../../js/render.js', import.meta.url), 'utf8');
+  assert.match(main, /DOUBLE_TAP_MS\s*=\s*320/);
+  assert.match(main, /DOUBLE_TAP_PX\s*=\s*28/);
+  assert.match(main, /game\.rend\.zoomAt\(e\.clientX, e\.clientY, 1\.65\)/);
+  assert.match(render, /zoomAt\(cx, cy, k\)/);
+  assert.match(render, /before\.fx - after\.fx/);
 });
 console.log(`ALL PASS: ${n} menu/touch checks`);
