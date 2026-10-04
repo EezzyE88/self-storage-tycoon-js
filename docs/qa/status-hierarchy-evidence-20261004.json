@@ -13,7 +13,7 @@
     "baysStatic": true,
     "tutorialHeight393x852": 243.59375
   },
-  "focusedStatusChecks": 22,
+  "focusedStatusChecks": 23,
   "fullSuite": [
     {
       "file": "dbg.mjs",
@@ -452,5 +452,12 @@
     },
     "errors": []
   },
-  "physicalSafari": "Not observed; acceptance pending"
+  "physicalSafari": "Not observed; acceptance pending",
+  "finalScrutiny": {
+    "reproducedSharedMaterialDisposals": 69,
+    "expectedAfterFix": 0,
+    "initialImmutableSuite": "43/43",
+    "initialImmutableBrowser": "14 layout states and interaction smoke passed",
+    "release": "Supersedes initial checkpoint; rerun final immutable commit before publication"
+  }
 }

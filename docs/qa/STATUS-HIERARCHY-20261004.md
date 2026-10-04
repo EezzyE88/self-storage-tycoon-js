@@ -15,9 +15,11 @@ Workspace execution succeeded. Live GitHub refs matched the supplied master and 
 - At 393×852 the opening tutorial measured about 244px high. Its default compact version is 134px, retains the current step and primary action, and has a 44px Details control exposing instructions, secondary placement controls and Skip. Expanded details still scroll. Quiet coach notices have a lighter surface; the redundant Owner subtitle is suppressed, with staffing information retained in management views. The no-action “All caught up” banner is suppressed.
 - Browser testing reproduced an expanded tutorial overlap at 320×568, a cramped management reading area, and a tablet overlap at 1024×768. Compact constraints, horizontally scrolling section shortcuts and tablet panel docking resolve these. Status details and shortcut scroll positions survive live sheet refresh.
 
+Final resource review reproduced 69 erroneous disposal calls across scene rebuild/cleanup for the new shared palette. The palette is now registered with the renderer’s shared-resource cache; an added regression requires zero disposals across those operations. The initial immutable checkpoint was superseded before publication.
+
 ## Verification
 
-New `tests/headless/tstatus_hierarchy.mjs`: **22 checks**, including five live unit states, construction/commissioning, bay reservations before arrival, departure, disconnected routes, read-only state, property isolation, JSON save/resume, real renderer material updates, retained badges/floor visibility, calm occupied units and location-specific guidance.
+New `tests/headless/tstatus_hierarchy.mjs`: **23 checks**, including five live unit states, construction/commissioning, bay reservations before arrival, departure, disconnected routes, read-only state, property isolation, JSON save/resume, real renderer material updates, retained badges/floor visibility, calm occupied units and location-specific guidance.
 
 Retained focused suites pass: feedback interactions **16** (including all 36 three-touch press/release orders), complaint hardening **33**, complaint causes **38**, anchored gestures **10**, blueprint/recovery **26**, menu/touch **8**, performance/UI **11**. These include bubbles, dragging, pinch, double-tap, cancellation, selection, construction, stale/historical reports, property/floor changes and save/resume. VM/mocked-event tests do not establish native Safari event synthesis.
 
