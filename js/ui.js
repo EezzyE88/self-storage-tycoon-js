@@ -1,5 +1,5 @@
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
-import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS } from './data.js';
+import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
@@ -1045,7 +1045,7 @@ export class UI {
     const box=this.$('blueprint'); if(!box) return;
     if(this.title||this.modalOpen()||!curBeat(this.sim)||this.menuTouch) {box.innerHTML='';return;}
     const l=this.sim.s.lesson?.id==='up'?verticalLayout(this.sim):null,a=this.currentBlueprintPlan(); if(!a&&!l?.plans) {box.innerHTML='';return;}
-    const project=(x,y,f=0)=>this.rend.project(x,y,f*3);
+    const project=(x,y,f=0)=>this.rend.project(x,y,f*FLOOR_H);
     const polygon=(a,b,f,color,label)=>{const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1; const pts=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(([x,y])=>project(x,y,f)); if(!pts.every(p=>p.vis))return '';const c=project(x+w/2,y+h/2,f);return `<polygon points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="${color}" fill-opacity=".12" stroke="${color}" stroke-width="2" stroke-dasharray="6 4"/><text x="${c.x}" y="${c.y}" class="bp-label">${label}</text>`;};
     let html=l?.plans ? polygon(l.plans.shell2.a,l.plans.shell2.b,0,'#7adbe8',`${l.sh.w} × ${l.sh.h} · 2 floors`)+polygon(l.plans.aisle.a,l.plans.aisle.b,0,'#7adbe8','Drive aisle') : '';
     if(a) { const planned=this.sim.plan(a),items=planned.items||[], cells=items.filter(c=>c.x!=null&&c.y!=null); const start=cells.length?{x:Math.min(...cells.map(c=>c.x)),y:Math.min(...cells.map(c=>c.y))}:a.a,end=cells.length?{x:Math.max(...cells.map(c=>c.x)),y:Math.max(...cells.map(c=>c.y))}:a.b; html+=polygon(start,end,a.f,'#ffd23a',TOOLS[a.tool].name); for(const u of planned.units||[]) {html+=polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,'#ffd23a','');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)html+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="#ffd23a" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="#ffd23a"/>`; }for(const [c,label] of [[a.a,'Start here'],[a.b,'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(p.vis)html+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/><text x="${p.x}" y="${p.y+(label==='Start here'?-15:23)}" class="bp-label">${a.a.x===a.b.x&&a.a.y===a.b.y ? (label==='Start here'?'Place here':'') : label}</text>`;}}
@@ -1075,8 +1075,8 @@ export class UI {
     const bp=this.currentBlueprintPlan(); const sc=bp?.a||step.cell;
     const c = o ? { x: o.x + (o.w || 1) / 2, y: o.y + (o.h || 1) / 2, f: o.f || 0 } : sc ? { x: sc.x + 0.5, y: sc.y + 0.5, f: bp?.f ?? step.f ?? 0 } : null;
     if (c) {
-      let p = this.rend.project(c.x, c.y, c.f * 3);
-      if (this.autoPanKey !== this.guideKey && !this.pointerBusy) { this.autoPanKey = this.guideKey; if (this.panClear(p, c)) p = this.rend.project(c.x, c.y, c.f * 3); }
+      let p = this.rend.project(c.x, c.y, c.f * FLOOR_H);
+      if (this.autoPanKey !== this.guideKey && !this.pointerBusy) { this.autoPanKey = this.guideKey; if (this.panClear(p, c)) p = this.rend.project(c.x, c.y, c.f * FLOOR_H); }
       if (p.vis && this.mapPointClear(p)) return { x: p.x, y: p.y, lbl: step.lbl || (/drag/i.test(step.t) ? 'Drag here' : 'Tap here'), map: true };
     }
     return null;
@@ -1096,7 +1096,7 @@ export class UI {
       else if (r.bottom > H * 0.45 && r.top > H * 0.3) bot = Math.min(bot, r.top);
     }
     if (bot - top < 80) return false;
-    if (!p.vis) { this.rend.lookAt(c.x - 0.5, c.y - 0.5); p = this.rend.project(c.x, c.y, c.f * 3); }
+    if (!p.vis) { this.rend.lookAt(c.x - 0.5, c.y - 0.5); p = this.rend.project(c.x, c.y, c.f * FLOOR_H); }
     this.rend.pan((left + right) / 2 - p.x, (top + bot) / 2 - p.y);
     return true;
   }

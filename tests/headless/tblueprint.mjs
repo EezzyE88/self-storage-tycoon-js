@@ -4,6 +4,7 @@ import {Sim} from '../../js/sim.js';
 import {UI} from '../../js/ui.js';
 import {installTutorial, LESSONS, BEATS, stepState} from '../../js/tutorial.js';
 import {verticalLayout,verticalDone,verticalCheck,lessonShell,authoredPlacement} from '../../js/blueprint.js';
+import {FLOOR_H} from '../../js/data.js';
 import {readFileSync} from 'node:fs';
 let n=0;const test=(name,fn)=>{fn();n++;console.log('PASS '+name);};
 const fixture=(mirror=false)=>{const sim=makeMaple(20260929,{mirror});sim.s.tut={on:false,done:true,flags:{}};sim.s.lesson={id:'up',idMark:sim.s.nextId,built:[],flags:{},entered:true};sim.s.creative=true;return sim;};
@@ -39,4 +40,5 @@ test('every authored construction group exposes a footprint and confirmation tar
 test('expansion guide shows four valid units with aisle-facing doors',()=>{const s=makeMaple(1),st=BEATS.find(b=>b.id==='expand').steps.find(st=>st.placement),a=authoredPlacement(s,st),r=s.plan(a);assert.equal(r.status,'valid');assert.equal(r.units.length,4);assert.ok(r.units.every(u=>u.dir[0]===-1));assert.deepEqual(a.b,{x:13,y:28});});
 test('climate suggestions commission a lit climate row without changing unrelated accounts',()=>{const s=makeMaple(1);s.s.tut={on:false,done:true,flags:{}};s.s.lesson={id:'climate',idMark:s.s.nextId,built:[],flags:{}};s.s.creative=true;const leases=JSON.stringify(s.s.leases);const b=LESSONS.find(b=>b.id==='climate');for(const st of b.steps.filter(st=>st.placement&& !st.sel)){const a=authoredPlacement(s,st);assert.ok(a,a?.tool);assert.ok(s.dispatch({type:'build',...a}).ok);}const units=s.objs('unit').filter(u=>u.env==='climate');assert.equal(units.length,7);for(const u of units)assert.ok(s.dispatch({type:'commission',unit:u.id}).ok);assert.equal(JSON.stringify(s.s.leases),leases);});
 test('blocked authored row relocates to valid nearby frontage',()=>{const s=makeMaple(1);s.s.creative=true;const st=BEATS.find(b=>b.id==='expand').steps.find(st=>st.placement);build(s,{tool:'du10x10',a:{x:13,y:21},b:{x:13,y:22},axis:'y',f:0});const a=authoredPlacement(s,st);assert.ok(a);assert.equal(s.plan(a).status,'valid');assert.notDeepEqual(a.a,st.placement.a);});
+test('upstairs blueprint uses the same elevation as the rendered floor',()=>{const s=fixture();for(const k of ['aisle','shell2','hall','doorWide','loading'])build(s,verticalLayout(s).plans[k]);const ui=Object.create(UI.prototype),heights=[];ui.g={sim:s,rend:{view:1,project:(x,y,h)=>{heights.push(h);return {x,y,vis:true};}}};ui.$=()=>({innerHTML:'',setAttribute(){}});ui.modalOpen=()=>false;ui.updateBlueprint();assert.ok(heights.includes(FLOOR_H));assert.ok(!heights.includes(3));});
 console.log(`ALL PASS: ${n} blueprint/recovery checks`);
