@@ -384,7 +384,7 @@ export class UI {
     const s = this.sim.s; const t = s.tasks.find((x) => x.obj === o.id);
     const ownerCan = t ? ROLES.owner.can.includes(t.need) : !(o.type === 'elevator' || o.type === 'hvac');
     const owner = s.staff.find((x) => x.role === 'owner'), hrs = t ? this.sim.taskHours(t) : 0, ownerLeft = owner ? this.sim.workRemaining(owner) : 0;
-    const delegate = t && !t.assigned ? sim.staffForTask(t) : null;
+    const delegate = t && !t.assigned ? this.sim.staffForTask(t) : null;
     const delegateSt = delegate && delegate.st;
     let h = '';
     if (t) {
