@@ -366,7 +366,7 @@ canvas.addEventListener('pointermove', (e) => {
   }
   if (!drag) return;
   const dist = Math.hypot(e.clientX - p.x0, e.clientY - p.y0);
-  if (dist > 7) drag.moved = true;
+  if (dist > 7) { drag.moved = true; lastMapTap = null; }
   if (drag.mode === 'buildPending') {
     if (drag.moved) { cancelBuildHold(); drag.mode = 'pan'; game.rend.pan(dx, dy); }
     return;
