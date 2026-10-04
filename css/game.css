@@ -648,3 +648,6 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
   .report .grade { flex: none; width: 44px; height: 44px; font-size: 24px; }
   .report .rgrow { width: 100%; }
 }
+
+.item.job { display: block; }
+.item.job > .row { margin-top: 8px; }

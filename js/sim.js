@@ -1032,6 +1032,50 @@ export class Sim {
     this.emit('task_assigned');
     return { ok: true, msg: `Owner started this work (${need}h) · ${this.workRemaining(owner)}h left today` };
   }
+  repairWork(o) {
+    const kind = { light: 'repair_light', camera: 'repair_camera', hvac: 'repair_hvac', elevator: 'repair_elevator', door: 'repair_door', gate: 'repair_keypad', fountain: 'repair_fountain' }[o.type] || 'repair_light';
+    return WORK[kind];
+  }
+  taskDelegation(t) {
+    const role = ['repair_simple', 'repair_complex'].includes(t.need) ? 'tech' : ['makeready', 'clean', 'carts'].includes(t.need) ? 'porter' : null;
+    if (!role) return null;
+    const staff = this.s.staff.filter(st => st.role === role), name = ROLES[role].name;
+    if (t.assigned) return { role, status: 'assigned', message: 'Already assigned; staff will not take over an active or queued job.' };
+    if (!staff.length) return { role, status: 'missing', message: `${name}s handle this work automatically. Hire one to free the Owner.` };
+    if (!this.onShift()) return { role, status: 'offshift', message: `${name} shift is 7 AM–8 PM. Unassigned jobs are picked up during the next shift.` };
+    if (t.unreachable) return { role, status: 'route', message: 'No walkable route was found. Fix access before staff can take this job.' };
+    if (t.need === 'carts' && !this.s.policies.porterCarts) return { role, status: 'policy', message: 'Porter cart recovery is switched off in Policies.' };
+    const withAgent = staff.map(st => ({ st, ag: this.s.agents.find(a => a.kind === 'staff' && a.sid === st.id) })).filter(x => x.ag);
+    if (!withAgent.length) return { role, status: 'office', message: `${name} needs an operating office to start work.` };
+    const capable = withAgent.filter(({st}) => {
+      const used = st.workDay === this.day ? st.workUsed || 0 : 0;
+      return this.workCapacity(st) - used + 1e-9 >= this.taskHours(t);
+    });
+    if (!capable.length) return { role, status: 'capacity', message: `${name} has insufficient work-hours today. This job waits for tomorrow or another hire.` };
+    const free = capable.find(({ag}) => !ag.task && !ag.queue?.length && ['office', 'idle', 'home'].includes(ag.st));
+    if (!free) return { role, status: 'busy', message: `${name} is already working. Unassigned jobs are picked up automatically when capacity is available.` };
+    return { role, status: 'available', staff: free.st.id, message: `${name} can take this job now; the Owner stays available.` };
+  }
+  act_delegateTask(a) {
+    const t = this.s.tasks.find(t => t.id === a.task);
+    if (!t) return { ok: false, msg: 'Task gone' };
+    const d = this.taskDelegation(t);
+    if (!d || d.status !== 'available') return { ok: false, msg: d?.message || 'No staff role can handle this job' };
+    const ag = this.s.agents.find(ag => ag.kind === 'staff' && ag.sid === d.staff);
+    if (!this.startTask(ag, t)) return { ok: false, msg: 'Staff could not reach this job. Check routes.' };
+    this.emit('task_assigned');
+    return { ok: true, msg: `${ROLES[d.role].name} assigned · Owner capacity unchanged` };
+  }
+  act_delegateTaskFor(a) {
+    const o = this.s.objects[a.obj];
+    if (!o || !['light', 'camera', 'gate', 'door', 'hvac', 'elevator', 'fountain'].includes(o.type) || o.cstate !== 'operating') return { ok: false, msg: 'No operating equipment here' };
+    // Never create a new chore when a Tech cannot start it now.
+    const existing = this.s.tasks.find(t => t.obj === o.id && ['repair', 'pm'].includes(t.type));
+    const probe = existing || { need: ['hvac', 'elevator'].includes(o.type) ? 'repair_complex' : 'repair_simple', total: this.repairWork(o), prog: 0 };
+    const d = this.taskDelegation(probe);
+    if (d?.status !== 'available') return { ok: false, msg: d?.message || 'Tech unavailable' };
+    return this.act_delegateTask({ task: (existing || this.ensureRepairTask(o)).id });
+  }
   act_ownerMakeReady(a) { const t = this.s.tasks.find((x) => x.type === 'makeready' && x.obj === a.unit); if (!t) return { ok: false, msg: 'No make-ready needed' }; return this.act_ownerTask({ task: t.id }); }
   act_taskPri(a) { const t = this.s.tasks.find((x) => x.id === a.task); if (t) t.pri = a.pri; return { ok: true }; }
   act_callVendor(a) {
@@ -2525,7 +2569,11 @@ export class Sim {
     const left = this.workCapacity(st) ? this.workRemaining(st) : Infinity;
     const cands = s.tasks.filter((t) => !t.assigned && !t.vendor && !t.unreachable && R.can.includes(t.need) && this.taskHours(t) <= left && (t.need !== 'carts' || s.policies.porterCarts || ownerAuto) && (!ownerAuto || (t.need !== 'office' && !t.need.startsWith('repair'))))
       .sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
-    for (const t of cands) if (this.startTask(ag, t)) return true;
+    for (const t of cands) {
+      // Hired hands get first refusal before the Owner leaves the desk for automatic chores.
+      if (ownerAuto && this.taskDelegation(t)?.status === 'available') continue;
+      if (this.startTask(ag, t)) return true;
+    }
     return false;
   }
   updateStaff(ag) {

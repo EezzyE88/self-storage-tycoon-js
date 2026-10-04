@@ -125,6 +125,7 @@ export class UI {
       case 'finances': this.showFinances(); this.sfx('click'); break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
+      case 'staffHelp': this.hireRoleFocus = ROLES[v] ? v : null; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); this.sfx('click'); break;
       case 'section': this.jumpSection(v); this.sfx('click'); break;
       case 'cat': this.cat = v; this.renderSheet(true); this.sfx('click'); break;
       case 'tool': this.pickTool(v); break;
@@ -143,7 +144,7 @@ export class UI {
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
       case 'close': this.select(null); this.setTab(null); break;
-      case 'cmd': { const act = JSON.parse(el.dataset.cmd); const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
+      case 'cmd': { const act = JSON.parse(el.dataset.cmd); const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'delegateTask', 'delegateTaskFor', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
       case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); if (!this.sim.s.convos.length) this.resumePopup('convo'); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
@@ -380,21 +381,45 @@ export class UI {
 
   // ------------------------------------------------------------ INSPECTOR
   condBar(c) { const cl = c < 0.2 ? 'r' : c < 0.45 ? 'a' : ''; return `<div class="row"><div class="bar"><i class="${cl}" style="width:${Math.round(c * 100)}%"></i></div><span class="pill ${c < 0.2 ? 'r' : c < 0.45 ? 'a' : 'g'}">${c < 0.2 ? 'Failed' : c < 0.45 ? 'Needs repair' : 'Good'} · ${pct(c)}</span></div>`; }
+  delegationHtml(t, obj = null) {
+    if (this.sim.s.tut?.on && !this.sim.s.tut.done) return '';
+    const d = this.sim.taskDelegation(t); if (!d || d.status === 'assigned') return '';
+    const name = ROLES[d.role].name;
+    const action = obj != null ? { type: 'delegateTaskFor', obj } : { type: 'delegateTask', task: t.id };
+    return `<p class="note">${esc(d.message)}</p>` + (d.status === 'available'
+      ? this.cmdBtn(`Delegate to ${name}`, action, 'pri')
+      : d.status === 'missing' ? `<button class="btn pri" data-a="staffHelp" data-v="${d.role}">Review ${name} hire · ${money(ROLES[d.role].wage, true)}/day</button>` : '');
+  }
+  officeCoverageHtml() {
+    const sim = this.sim, s = sim.s;
+    if (!s.open || (s.tut?.on && !s.tut.done) || s.staff.some(st => st.role === 'clerk')) return '';
+    return `<p class="note">The Owner also runs the office. Sending the Owner out can leave shoppers waiting. A Clerk covers 8 AM–6 PM for ${money(ROLES.clerk.wage)}/day.</p><button class="btn sm" data-a="staffHelp" data-v="clerk">Review office coverage</button>`;
+  }
   taskActions(o) {
     const s = this.sim.s; const t = s.tasks.find((x) => x.obj === o.id);
     const ownerCan = t ? ROLES.owner.can.includes(t.need) : !(o.type === 'elevator' || o.type === 'hvac');
     const owner = s.staff.find((x) => x.role === 'owner'), hrs = t ? this.sim.taskHours(t) : 0, ownerLeft = owner ? this.sim.workRemaining(owner) : 0;
     let h = '';
     if (t) {
+      h += this.delegationHtml(t);
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? (s.staff.find((x) => x.id === t.assigned) || {}).name || 'Assigned' : 'Waiting in queue';
       h += `<div class="item"><div class="grow"><b>${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work${t.type === 'repair' && !t.vendor ? ' · Vendor ' + money(t.need === 'repair_complex' ? 650 : 250) + ' cash now' : ''}</small></div></div><div class="row wrap" style="margin-top:6px">`;
-      if (!t.assigned && ownerCan) h += `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>${t.type === 'repair' && this.sim.pressureOn() ? `Owner: quick fix · ${hrs}h` : `Send Owner · ${hrs}h`}</button>`;
+      if (!t.assigned && ownerCan) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>${t.type === 'repair' && this.sim.pressureOn() ? `Owner: quick fix · ${hrs}h` : `Send Owner · ${hrs}h`}</button>`;
       if (!t.assigned || (t.assigned !== 'vendor' && !ownerCan)) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Call vendor (${money(t.need === 'repair_complex' ? 650 : 250)})</button>`;
       h += `</div>`;
+      if (!t.assigned && ownerCan) h += this.officeCoverageHtml();
+      if (t.type === 'repair' && this.sim.pressureOn()) h += `<p class="note">Owner quick fix restores at least 72% condition. A Tech or vendor restores 100%.</p>`;
       if (!t.vendor) h += this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor');
       if (!ownerCan) h += `<p class="note">The Owner can't service this equipment. Hire a Tech or call a vendor.</p>`;
       else if (!t.assigned && hrs > ownerLeft) h += `<p class="note">Owner has ${ownerLeft}h available today; this job needs ${hrs}h. Wait for tomorrow or delegate it.</p>`;
-    } else if (o.cond != null && o.cond < 0.8 && ownerCan) h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTaskFor', obj: o.id })}'>Owner: service now</button>`;
+    } else if (o.cond != null && o.cond < 0.8 && ownerCan) {
+      if (o.quickFix && this.sim.pressureOn() && o.cond >= 0.45) {
+        h += `<p class="note">Temporary Owner repair · ${pct(o.cond)} condition. Another quick fix will not restore full condition. A Tech can restore it fully.</p>`;
+        h += this.delegationHtml({ need: 'repair_simple', total: this.sim.repairWork(o), prog: 0 }, o.id);
+        h += this.cmdBtn('Vendor: full service ($250)', { type: 'cv', op: 'vendorFor', obj: o.id });
+        h += this.spendingHtml(250, 0, 'after vendor');
+      } else h += `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTaskFor', obj: o.id })}'>Owner: service now</button>`;
+    }
     return h;
   }
   inspector() {
@@ -536,17 +561,17 @@ export class UI {
     const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
     const tasks = [...s.tasks].sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
     const owner = s.staff.find((x) => x.role === 'owner'), ownerLeft = owner ? sim.workRemaining(owner) : 0;
-    let h = this.diagnosticHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
+    let h = this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
     if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
     for (const t of tasks.slice(0, 14)) {
       const ownerCan = ROLES.owner.can.includes(t.need), hrs = sim.taskHours(t);
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? staffName(t.assigned) + (t.queued ? ' (queued)' : '') : t.unreachable ? 'Unreachable - check routes' : 'Unassigned';
       const loc = t.obj && s.objects[t.obj] ? s.objects[t.obj] : t.x != null ? t : null;
-      h += `<div class="item"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small>${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor') : ''}</div>
+      h += `<div class="item job"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small>${!t.assigned ? this.delegationHtml(t) : ''}${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor') : ''}</div><div class="row wrap">
         ${loc ? `<button class="btn sm" data-a="focus" data-x="${loc.x}" data-y="${loc.y}">View</button>` : ''}
-        ${!t.assigned && ownerCan ? `<button class="btn sm pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>Owner · ${hrs}h</button>` : ''}
+        ${!t.assigned && ownerCan ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}' ${hrs > ownerLeft ? 'disabled' : ''}>Owner · ${hrs}h</button>` : ''}
         ${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Vendor</button>` : ''}
-        <button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'taskPri', task: t.id, pri: t.pri >= 2 ? 0 : 2 })}'>${t.pri >= 2 ? 'Normal' : 'Urgent'}</button></div>`;
+        <button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'taskPri', task: t.id, pri: t.pri >= 2 ? 0 : 2 })}'>${t.pri >= 2 ? 'Normal' : 'Urgent'}</button></div></div>`;
     }
     h += `</div><h3>Staff</h3><div class="list">`;
     for (const st of s.staff) {
@@ -557,7 +582,7 @@ export class UI {
     }
     const focus = this.tutFocus();
     const roleWhy = { porter: 'Adds another 8h/day for make-ready, cleaning and carts.', tech: 'Adds another 8h/day for repairs, including elevators and HVAC.', clerk: 'Handles office shoppers so those 0.5h service blocks stop consuming Owner capacity.', manager: 'Automates commissioning, vendor escalation, cart restocking and monthly pricing.' };
-    h += `</div><h3>Hire capacity</h3><div class="list">${['porter', 'tech', 'clerk', 'manager'].map((r) => { const E = sim.staffingEvidence(r); return `<div class="item"><div class="grow"><b>${ROLES[r].name} · ${money(ROLES[r].wage, true)}/day</b><small>${roleWhy[r]} ${esc(E.evidence)} Payroll adds ${money(E.monthlyWages)} over 30 employed days; no guaranteed return.</small>${this.spendingHtml(0, ROLES[r].wage, 'after hire')}</div><button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire</button></div>`; }).join('')}</div>
+    h += `</div><h3>Hire capacity</h3><div class="list">${['porter', 'tech', 'clerk', 'manager'].sort((a, b) => Number(b === this.hireRoleFocus) - Number(a === this.hireRoleFocus)).map((r) => { const E = sim.staffingEvidence(r); return `<div class="item"><div class="grow"><b>${ROLES[r].name} · ${money(ROLES[r].wage, true)}/day</b><small>${roleWhy[r]} ${esc(E.evidence)} Payroll adds ${money(E.monthlyWages)} over 30 employed days; no guaranteed return.</small>${this.spendingHtml(0, ROLES[r].wage, 'after hire')}</div><button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire</button></div>`; }).join('')}</div>
       <p class="note">Owner, Porters and Techs each have 8 task-hours per game day. Each in-person office shopper costs the Owner 0.5h without a Clerk. Employed at 7:00 AM: one daily wage accrues. Hire after 7:00 AM: first wage tomorrow. Letting someone go keeps today's accrued wage owed. Routine bills settle weekly.</p>`;
     if (sim.hasManager() || s.mgrLog.length) h += `<h3>Manager log</h3><div class="kv">${s.mgrLog.length ? s.mgrLog.slice(0, 8).map((l) => `<span>Day ${dayOf(l.t)} ${fmtTime(l.t)}</span><span>${esc(l.msg)}</span>`).join('') : '<span>No decisions yet</span><span></span>'}</div>`;
     h += `<h3>Overlays</h3><div class="row wrap">${[['security', 'Security'], ['carts', 'Carts'], ['hvac', 'HVAC'], ['clean', 'Cleanliness'], ['power', 'Power']].map(([k, n]) => `<button class="btn sm ${this.rend.overlay === k ? 'pri' : ''}" data-a="overlay" data-v="${k}">${n}</button>`).join('')}</div>`;
@@ -572,7 +597,7 @@ export class UI {
     h += `</div><p class="note">${s.carts.length} carts total · ${str} stranded or damaged.</p>`;
     h += `<h3>Policies</h3><div class="list">
       <div class="item"><div class="grow"><b>Porters recover carts</b><small>Porters return stranded carts to their corral</small></div><button class="toggle ${s.policies.porterCarts ? 'on' : ''}" data-a="policy" data-v="porterCarts" aria-label="Toggle"></button></div>
-      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, the Owner automatically spends available daily work hours on make-readies, cleaning and cart runs. Repairs still wait for you or a vendor.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
+      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, the Owner automatically spends available daily work hours on make-readies, cleaning and cart runs. Techs automatically handle repairs; without a Tech, choose an Owner quick fix or a vendor.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
       <div class="item"><div class="grow"><b>Preventive maintenance</b><small>Techs service equipment before it fails</small></div><button class="toggle ${s.policies.preventive ? 'on' : ''}" data-a="policy" data-v="preventive" aria-label="Toggle"></button></div></div>`;
     return this.sheet('Operate', `${s.staff.length} staff · ${tasks.length} tasks`, h);
   }
@@ -1269,7 +1294,7 @@ export class UI {
     if (el) return T('The freight elevator is out of service. Upper units cannot rent.', { sel: el.id }, 'bad');
     const open = s.tasks.filter((t) => !t.assigned);
     const rep = open.filter((t) => (t.type === 'repair') && s.objects[t.obj]).sort((a, b) => b.pri - a.pri)[0];
-    if (rep) return T(`${sim.objName(s.objects[rep.obj])} needs repair. Tap it to fix it.`, { sel: rep.obj });
+    if (rep) { const d = sim.taskDelegation(rep); return T(`${sim.objName(s.objects[rep.obj])} needs repair. ${d && d.status === 'missing' ? 'A Tech can handle repairs for you.' : d ? d.message : 'Review repair options.'}`, { sel: rep.obj }); }
     const mr = open.find((t) => t.type === 'makeready' && s.objects[t.obj]);
     if (mr) return T(`${sim.objName(s.objects[mr.obj])} needs a make-ready before it can rent again.`, { sel: mr.obj });
     const ready = objs.filter((o) => o.type === 'unit' && o.cstate === 'ready');
