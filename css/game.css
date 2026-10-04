@@ -588,3 +588,20 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
   .viewctl .viewmore, .viewctl .viewextra, .viewctl.open .viewextra { display: none; }
 }
 .spending { overflow-wrap: anywhere; }
+
+/* Phone menu headers remain outside sheet body scrolling. */
+.sheet .body { min-height: 0; overscroll-behavior: contain; }
+.sheet header, .section-shortcuts { flex-shrink: 0; }
+.section-shortcuts { display: flex; gap: 6px; overflow-x: auto; padding: 4px 12px 8px; border-bottom: 1px solid var(--line); background: var(--paper); touch-action: pan-x; }
+.section-shortcuts button { flex: none; min-height: 44px; padding: 0 12px; border-radius: 10px; background: var(--paper2); font-weight: 700; }
+.modal > .row:first-child { position: sticky; top: -18px; z-index: 2; background: var(--paper); margin: -18px -18px 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.modal .x, .sheet .x { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+.modal { overscroll-behavior: contain; }
+.actionbar.placing { pointer-events: none; flex-direction: row; align-items: center; justify-content: space-between; font-size: 12px; min-height: 44px; }
+.actionbar.placing span { color: var(--muted); }
+.actionbar:not(.placing) { max-height: calc(100dvh - 170px - var(--safe-t) - var(--safe-b)); overflow-y: auto; }
+.actionbar .top { position: sticky; top: -10px; z-index: 1; background: var(--paper); padding: 4px 0; }
+.actionbar .bot { position: sticky; bottom: -10px; background: var(--paper); padding: 6px 0; z-index: 1; }
+.build-details summary, .finance-details summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; gap: 6px; }
+.build-details summary::before, .finance-details summary::before { content: '▸'; }
+.build-details[open] summary::before, .finance-details[open] summary::before { content: '▾'; }

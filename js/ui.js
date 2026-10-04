@@ -82,6 +82,10 @@ export class UI {
       <div id="modal"></div>`;
     this.$ = (id) => document.getElementById(id);
     this.root.addEventListener('click', (e) => this.onClick(e));
+    this.root.addEventListener('pointerdown', (e) => { if (e.target.closest('.sheet, .modal, .tut, .actionbar')) this.menuTouch = true; }, true);
+    const menuUp = () => { if (this.menuTouch) { this.menuTouch = false; this.menuScrollUntil = performance.now() + 200; } };
+    window.addEventListener('pointerup', menuUp, true); window.addEventListener('pointercancel', menuUp, true);
+    this.root.addEventListener('scroll', () => { this.menuScrollUntil = performance.now() + 200; }, { capture: true, passive: true });
     // phone sheets: swipe the grab bar / header up to expand, down to shrink or close
     let sw = null;
     this.root.addEventListener('pointerdown', (e) => { const h = e.target.closest('.sheet .grab, .sheet header'); if (!h || e.target.closest('button.x')) return; sw = { y: e.clientY, id: e.pointerId }; }, true);
@@ -120,6 +124,7 @@ export class UI {
       case 'finances': this.showFinances(); this.sfx('click'); break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
+      case 'section': this.jumpSection(v); this.sfx('click'); break;
       case 'cat': this.cat = v; this.renderSheet(true); this.sfx('click'); break;
       case 'tool': this.pickTool(v); break;
       case 'goTool': if (TOOLS[v]) { this.select(null); this.cat = TOOLS[v].cat; this.setTab('build'); this.pickTool(v); } break; // opening checklist shortcuts
@@ -137,7 +142,7 @@ export class UI {
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
       case 'close': this.select(null); this.setTab(null); break;
-      case 'cmd': { const act = JSON.parse(el.dataset.cmd); this.do(act, true); if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
+      case 'cmd': { const act = JSON.parse(el.dataset.cmd); const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
       case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); if (!this.sim.s.convos.length) this.resumePopup('convo'); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
@@ -248,7 +253,8 @@ export class UI {
     else if (this.tab === 'business') html = this.businessSheet();
     else if (this.tab === 'growth') html = this.growthSheet();
     if (!html) { box.innerHTML = ''; return; }
-    const body = box.querySelector('.body'); const st = body ? body.scrollTop : 0;
+    const key = this.sel != null ? 'sel:' + JSON.stringify(this.sel) : this.tab;
+    const body = box.querySelector('.body'); const st = body && this.sheetKey === key ? body.scrollTop : 0; this.sheetKey = key;
     const cats = box.querySelector('.cats'); const cs = cats ? cats.scrollLeft : 0;
     if (!force && this.sheetHtml === html) return;
     const wasOpen = !!box.firstChild; this.sheetHtml = html; box.innerHTML = html;
@@ -261,7 +267,24 @@ export class UI {
       if (btn && !btn.closest('.primary')) { const w = document.createElement('div'); w.className = 'primary'; const row = btn.parentElement; w.appendChild(btn); nb.prepend(w); if (row && row.classList.contains('row') && !row.children.length) row.remove(); }
     }
   }
+  jumpSection(label) {
+    const body = this.$('sheet').querySelector('.body'); if (!body) return;
+    const heading = [...body.querySelectorAll('h3[data-section]')].find((h) => h.dataset.section === label);
+    if (heading) body.scrollTop += heading.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+  }
   sheet(title, sub, body, extra = '') {
+    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
+    if (sections) {
+      const jumps = [];
+      body = body.replace(/<h3>(.*?)<\/h3>/g, (html, text) => {
+        const section = sections.find(([prefix]) => text.startsWith(prefix)); if (!section) return html;
+        jumps.push(`<button data-a="section" data-v="${section[0]}">${section[1]}</button>`);
+        return `<h3 data-section="${section[0]}">${text}</h3>`;
+      });
+      const order = title === 'Business' ? ['Bills', 'Financing', 'Pricing', 'Demand', 'Collections', 'Statement'] : sections.map(([, label]) => label);
+      jumps.sort((a, b) => order.findIndex((label) => a.endsWith(`>${label}</button>`)) - order.findIndex((label) => b.endsWith(`>${label}</button>`)));
+      extra += `<nav class="section-shortcuts" aria-label="${title} sections">${jumps.join('')}</nav>`;
+    }
     return `<div class="sheet${this.sheetTall ? ' tall' : ''}"><button class="grab" data-a="sheetGrow" aria-label="Expand or shrink panel"><i></i></button><header><h2>${esc(title)}${sub ? `<span class="sub">${sub}</span>` : ''}</h2><button class="x" data-a="close" aria-label="Close">${I.x}</button></header>${extra}<div class="body">${body}</div></div>`;
   }
 
@@ -280,12 +303,13 @@ export class UI {
   }
   pickTool(k) {
     if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
-    this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
+    this.buildPlacing = false; this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
   }
   toolFloor() { const v = this.rend.view; return v === 1 ? 1 : 0; }
-  placeStart(cell) { if (!this.tool || !cell) return; this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
+  placeStart(cell) { if (!this.tool || !cell) return; this.buildPlacing = true; this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
+  finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.renderActionBar(); }
   placeMove(cell) {
     if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { this.planArgs.a = this.planArgs.b = { x: cell.x, y: cell.y }; this.replan(); return; }
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
@@ -318,6 +342,10 @@ export class UI {
     const box = this.$('abar'); if (!this.tool) { box.innerHTML = ''; return; }
     const T = TOOLS[this.tool], R0 = this.plan; const rush = this.canRush() && this.rush && R0 && R0.dur;
     const R = R0 && rush ? { ...R0, cost: Math.round(R0.cost * 1.25), dur: R0.dur * 0.5 } : R0;
+    if (this.buildPlacing) {
+      box.innerHTML = `<div class="actionbar placing" aria-live="polite"><b>${R?.count || 0}${T.unit ? ' units' : ' cells'} · ${money(R?.cost || 0)}</b><span>${R?.status === 'valid' ? 'Valid' : R?.status === 'incomplete' ? 'Needs setup' : 'Invalid'} · Lift finger to review</span></div>`;
+      return;
+    }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ' Placing on Floor 2.' : ''}</span></div>`;
     if (R) {
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
@@ -325,12 +353,11 @@ export class UI {
       status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
-        const after = this.sim.s.cash - R.cost, burn = this.sim.dailyOpex().total + this.sim.s.staff.reduce((a, st) => a + st.wage, 0) + (R.opex || 0);
         status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
         const inv = this.sim.investment(R);
-        if (inv) status += `<div class="refund-note">${inv.range ? `Steady-state payback ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months at ${pct(inv.lowOccupancy)}–${pct(inv.highOccupancy)} occupancy` : 'Payback: not enough comparable demand/rent evidence yet'}. Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div>`;
+        if (inv) status += `<details class="build-details"><summary>Payback &amp; build terms</summary><div class="refund-note">${inv.range ? `Steady-state payback ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months at ${pct(inv.lowOccupancy)}–${pct(inv.highOccupancy)} occupancy` : 'Payback: not enough comparable demand/rent evidence yet'}. Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class="note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;
       }
-      if (R.status !== 'invalid' && R.dur && !this.sim.instantOn()) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
+      if (R.status !== 'invalid' && R.dur && !this.sim.instantOn() && (this.sim.s.creative || !R.cost)) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
     }
     const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
     const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
@@ -781,6 +808,12 @@ export class UI {
       h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)} ${fix(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
     }
     if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>Deadline</span><span>Day ${s.scenario.deadline} (${s.scenario.status})</span></div>`; }
+    const growthPlan = this.growthPlanArgs ? sim.plan(this.growthPlanArgs) : null;
+    if (growthPlan && this.growthPlanArgs.rush && (s.coTier || 1) >= 2 && !sim.instantOn() && growthPlan.dur) {
+      growthPlan.cost = Math.round(growthPlan.cost * 1.25); growthPlan.dur *= 0.5;
+    }
+    const readiness = sim.growthReadiness(growthPlan);
+    h += `<h3>Growth Readiness</h3>${growthPlan ? `<p class="note">Selected proposal: ${esc(growthPlan.label)} · ${money(growthPlan.cost)}. Includes selected construction only.</p>` : ''}<p class="note"><b>${readiness.title}</b></p><div class="list">${readiness.checks.map((c) => `<div class="item"><div class="grow"><b>${c.ok ? '&#10003;' : '!'} ${c.label}</b><small>${esc(c.detail)}</small></div></div>`).join('')}</div><p class="note">LAYOUT → OPERATIONS → ECONOMICS → GROWTH. Complete expansion packages aim for 12–18 months; reuse of existing infrastructure and spare capacity can pay back faster. Evidence is advisory, not a hidden score or build restriction.</p>`;
     if (this.g.tierInfo && !s.creative && !s.scenario && !(s.mode === 'tutorial' && !s.tut.done)) {
       const ti = this.g.tierInfo(), nx = ti.next;
       h += `<h3>Operator career</h3><div class="career"><div class="tier"><small>Level ${ti.cur.n} of ${TIERS.length}</small><b>${ti.cur.name}</b></div>`;
@@ -790,12 +823,6 @@ export class UI {
     }
     h += `<h3>Customer experience</h3><div class="list">${Object.entries(EXP).map(([k, n]) => { const v = s.exp[k]; return `<div class="row" style="font-size:13px"><span style="width:92px;color:var(--muted)">${n}</span><div class="bar"><i class="${v < 0.5 ? 'r' : v < 0.7 ? 'a' : ''}" style="width:${Math.round(v * 100)}%"></i></div><b class="num" style="width:38px;text-align:right">${pct(v)}</b></div>`; }).join('')}</div>
       <p class="note">Reputation ${pct(sim.reputation())}. Built from what customers actually experienced on the property, not from what you built.</p>`;
-    const growthPlan = this.growthPlanArgs ? sim.plan(this.growthPlanArgs) : null;
-    if (growthPlan && this.growthPlanArgs.rush && (s.coTier || 1) >= 2 && !sim.instantOn() && growthPlan.dur) {
-      growthPlan.cost = Math.round(growthPlan.cost * 1.25); growthPlan.dur *= 0.5;
-    }
-    const readiness = sim.growthReadiness(growthPlan);
-    h += `<h3>Growth Readiness</h3>${growthPlan ? `<p class="note">Selected proposal: ${esc(growthPlan.label)} · ${money(growthPlan.cost)}. Includes selected construction only.</p>` : ''}<p class="note"><b>${readiness.title}</b></p><div class="list">${readiness.checks.map((c) => `<div class="item"><div class="grow"><b>${c.ok ? '&#10003;' : '!'} ${c.label}</b><small>${esc(c.detail)}</small></div></div>`).join('')}</div><p class="note">LAYOUT → OPERATIONS → ECONOMICS → GROWTH. Complete expansion packages aim for 12–18 months; reuse of existing infrastructure and spare capacity can pay back faster. Evidence is advisory, not a hidden score or build restriction.</p>`;
     h += this.diagnosticHtml();
     h += `<h3>Milestones</h3><div class="list">${Object.entries(MILESTONES).map(([k, n]) => `<div class="item"><div class="grow"><b>${n}</b>${s.milestones[k] != null ? `<small>Day ${dayOf(s.milestones[k])}</small>` : ''}</div><span class="pill ${s.milestones[k] != null ? 'g' : ''}">${s.milestones[k] != null ? 'Done' : '—'}</span></div>`).join('')}</div>`;
     if (s.mode === 'tutorial') {
@@ -1026,13 +1053,20 @@ export class UI {
   }
   updateGuide() {
     const g = this.$('guide'); if (!g) return;
+    if (this.menuTouch || this.pointerBusy || performance.now() < (this.menuScrollUntil || 0)) { g.hidden = true; return; }
     const s = this.sim.s;
     if (s.tut && s.tut.on && s.tut.beat === 0 && !this.title) { const sig = [this.rend.zoom.toFixed(3), this.rend.rot, this.rend.center.x.toFixed(2), this.rend.center.z.toFixed(2)].join(','); if (this.lookSig == null) this.lookSig = sig; else if (performance.now() - (this.lookT0 || (this.lookT0 = performance.now())) < 2500) this.lookSig = sig; else if (sig !== this.lookSig) this.tutLooked = true; }
     const t = curBeat(this.sim) ? this.guideTarget() : null;
     if (!t) { if (!g.hidden) g.hidden = true; return; }
     let x, y, w, h;
     if (t.el) {
-      if (this.guideScrolled !== this.guideKey && t.el.closest('.sheet .body, .sheet')) { this.guideScrolled = this.guideKey; try { t.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+      if (this.guideScrolled !== this.guideKey) {
+        this.guideScrolled = this.guideKey;
+        const body = t.el.closest('.sheet .body');
+        if (body) { const r = t.el.getBoundingClientRect(), br = body.getBoundingClientRect(); if (r.top < br.top || r.bottom > br.bottom) body.scrollTop += r.top - br.top - 8; }
+      }
+      const body = t.el.closest('.sheet .body');
+      if (body) { const r = t.el.getBoundingClientRect(), br = body.getBoundingClientRect(); if (r.top < br.top || r.bottom > br.bottom) { g.hidden = true; return; } }
       const r = t.el.getBoundingClientRect(); x = r.left - 4; y = r.top - 4; w = r.width + 8; h = r.height + 8;
     } else { w = h = 46; x = t.x - 23; y = t.y - 23; }
     g.hidden = false; g.classList.toggle('map', !!t.map);
@@ -1130,7 +1164,7 @@ export class UI {
     const open = s.tasks.filter((t) => !t.assigned).length; if (open !== this.hTasks) { this.hTasks = open; const b = this.$('taskBadge'); b.hidden = !open; b.textContent = open; }
     this.root.classList.toggle('has-sheet', !!(this.$('sheet').firstChild || this.$('abar').firstChild));
     document.body.classList.toggle('sheet-open', this.root.classList.contains('has-sheet')); // lets the milestone banner move clear of the sheet
-    if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
+    if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy && !this.menuTouch && now >= (this.menuScrollUntil || 0)) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
     if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.renderTut(); }
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
     this.updateBubbles(); this.updatePins(); this.updateGuide();
@@ -1199,7 +1233,9 @@ export class UI {
     const cart = open.find((t) => t.type === 'carts'); if (cart) return T('A cart was left away from its corral.', { sel: { kind: 'cart', id: cart.cart } });
     if (s.cash < 0 && !s.creative) return T('Cash is negative. Check Business for the credit line and costs.', { tab: 'business' }, 'bad');
     const oc = sim.occupancy();
-    if (oc.n >= 4 && oc.pct >= 0.95) { const lost = s.lostToday || {}; return T(lost.noSize ? 'You are full and turning customers away. Build more units.' : 'You are full. Demand remains - consider adding units.', { tab: 'build', cat: 'units' }, 'good'); }
+    if (oc.n >= 4 && oc.pct >= 0.95) { const lost = s.lostToday || {}; return T(lost.noSize ? 'You are full and turning customers away. Review Growth Readiness.' : 'You are full. Check demand and Growth Readiness before adding units.', { tab: 'growth', section: 'Growth Readiness' }, 'good'); }
+    const vacancies = sim.operations().ready.length;
+    if (vacancies && s.open) return T(`${vacancies} rent-ready units vacant. Check demand and asking rents before expanding.`, { tab: 'business', section: 'Asking rents' }, 'ok');
     return T('All caught up.', null, 'ok');
   }
   renderCoach() {
@@ -1214,7 +1250,7 @@ export class UI {
   issueBtn(label, tool) { return `<button class="btn sm" data-a="goTool" data-v="${tool}">${label}</button>`; }
   runCoach() {
     const a = this.coachAct; if (!a) return; this.sfx('click');
-    if (a.tab) { if (a.cat) this.cat = a.cat; this.select(null); this.setTab(a.tab); return; }
+    if (a.tab) { if (a.cat) this.cat = a.cat; this.select(null); this.setTab(a.tab); if (a.section) this.jumpSection(a.section); return; }
     const sel = a.sel ?? a.dirt; this.select(sel);
     const o = typeof sel === 'number' ? this.sim.s.objects[sel] : sel.kind === 'cart' ? this.sim.s.carts.find((c) => c.id === sel.id) : sel;
     if (o && (o.f || 0) === 1 && this.rend.view !== 1 && this.sim.objs('shell').some((x) => x.floors > 1)) this.setView(1);
@@ -1345,7 +1381,7 @@ export class UI {
       '<h3>Actual cash movement</h3><div class="kv">' + W.map(([d,w]) => '<span>' + d + ' calendar day' + (d === 1 ? '' : 's') + (w.complete ? '' : ' (partial history)') + '</span><span class="' + (w.net < 0 ? 'neg' : '') + '">' + (w.net >= 0 ? '+' : '') + money(w.net) + ' · in ' + money(w.incoming) + ' / out ' + money(w.outgoing) + '</span>').join('') + '</div>' +
       '<p class="note">Rent arrives monthly. Routine expenses accrue at 7:00 AM and settle weekly. Construction, vendors and advertising spend cash immediately.</p>' +
       '<h3>Where 30 calendar days of cash went</h3><div class="kv">' + (groupHtml || '<span>No transactions yet</span><span></span>') + '</div>' +
-      '<h3>Recent transactions</h3><div class="list">' + (recent || '<p class="note">No cash movement recorded yet.</p>') + '</div>' +
+      '<details class="finance-details"><summary>Recent transactions</summary><div class="list">' + (recent || '<p class="note">No cash movement recorded yet.</p>') + '</div></details>' +
       '<div class="row" style="margin-top:10px"><button class="btn" data-a="tabFromModal" data-v="business">Open full Business statement</button></div></div></div>';
   }
   calendarEvents() {

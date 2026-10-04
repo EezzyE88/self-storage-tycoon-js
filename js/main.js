@@ -353,7 +353,7 @@ canvas.addEventListener('pointermove', (e) => {
 });
 function up(e) {
   const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
-  if (ptrs.size === 0) game.ui.pointerBusy = false;
+  if (ptrs.size === 0) { game.ui.pointerBusy = false; game.ui.finishPlacement(); }
   if (pinch) { if (ptrs.size < 2) pinch = null; cancelBuildHold(); drag = null; return; }
   if (drag && drag.pointerId === e.pointerId && drag.mode === 'buildPending') cancelBuildHold();
   if (drag && drag.mode === 'pan' && !drag.moved && p && e.type === 'pointerup') game.ui.tapMap(game.rend.cellAt(e.clientX, e.clientY), e.clientX, e.clientY);

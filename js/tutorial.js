@@ -202,10 +202,10 @@ export const LESSONS = [
     offer: (sim) => sim.day >= (ctx(sim).gradDay || 0) + 12 || sim.s.cash < 3000,
     steps: [
       { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || ctx(sim).flags.finAck },
-      { t: 'Find <b>Financing</b>', d: 'Scroll to <b>Financing</b>. Each loan option shows the amount, the monthly payment and your cash after. Borrowing is optional.', sel: '.loanopts', done: (sim) => ctx(sim).flags.finAck },
-      { t: 'Tap <b>Got it</b>', d: 'The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => ctx(sim).flags.finAck },
+      { t: 'Find <b>Financing</b>', d: 'Tap the <b>Financing</b> shortcut. Each option shows the payment and cash after. Take an optional loan, or tap <b>Continue without borrowing</b> on this lesson.', sel: '.loanopts button', lbl: 'Optional loan', done: (sim) => ctx(sim).flags.finAck },
+      { t: 'Continue without borrowing', d: 'Borrowing is optional. Use the button on this lesson.', sel: '.tut [data-a="tutNext"]', lbl: 'Continue', done: (sim) => ctx(sim).flags.finAck },
     ],
-    button: 'Got it', flag: 'finAck', check: (sim) => ctx(sim).flags.finAck },
+    button: 'Continue without borrowing', flag: 'finAck', check: (sim) => ctx(sim).flags.finAck },
 ];
 export const lessonById = (id) => LESSONS.find((l) => l.id === id);
 
