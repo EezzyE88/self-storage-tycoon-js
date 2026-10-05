@@ -1,6 +1,6 @@
 // Read-only explanations. No dispatch, routing, randomness or economy changes.
 export const COMPLAINTS = [
-  ['loading', /^Loading bays are full\.$/, 'Temporary congestion', 'All reachable marked loading bays were occupied when this visitor parked. Overflow parking may still work.', 'Keep time running for vehicles to leave. If this repeats, paint more Loading Zone on vehicle-connected pavement near this building. Keep its door and hallway reachable. A canopy gives weather protection, not extra capacity.', 'build'],
+  ['loading', /^Loading bays are full\.$/, 'Temporary congestion', 'All reachable marked loading bays were occupied and no free reachable overflow parking was found. This is a temporary space shortage, not proof of a disconnected route.', 'Keep time running for vehicles to leave. If this repeats, paint more Loading Zone on vehicle-connected pavement near this building. Keep its door and hallway reachable. A canopy gives weather protection, not extra capacity.', 'build'],
   ['gate_queue', /^Gate line is backing up\.$/, 'Temporary congestion', 'Several vehicles are waiting for keypad service.', 'Let the queue clear. Inspect the keypad and power if delays persist; repair faults rather than adding unrelated loading bays.', 'operate'],
   ['gate_fault', /^My gate code isn't working\.$/, 'Access failure', 'The keypad failed or lacked power when this visitor arrived.', 'Inspect the gate condition and power supply. Review its repair job and Tech capacity; the existing repair request supports assignment. Office coverage can buzz visitors in while repairs wait.', 'operate'],
   ['gate_office', /^Nobody answered\. I'm leaving\.$/, 'Staffing gap', 'The failed gate needed office assistance and no server was available.', 'Restore the gate and check office coverage. Keep the Owner available or hire a Clerk for office hours; check shifts and remaining capacity before spending.', 'operate'],
@@ -11,7 +11,7 @@ export const COMPLAINTS = [
   ['cart', /^No carts at .+\.$/, 'Capacity or distribution shortage', 'The requested corral had no claimable cart; carts may be in use, misplaced or damaged.', 'Inspect this corral and cart status. Wait for busy carts to return; use Porter cart recovery and review repair jobs for displaced or damaged stock. Buy carts here only if shortages persist. Other corrals do not guarantee stock at this one.', 'operate'],
   ['stairs', /^Elevator is down - carrying it up the stairs\.$/, 'Access failure', 'The elevator route failed and this customer used stairs without the cart.', 'Inspect this building’s elevator power, condition and repair queue. Techs handle complex repairs; stairs are a fallback, not an equivalent cart route.', 'operate'],
   ['dark', /^The hallway is dark\.$/, 'Service or coverage gap', 'Lighting at the unit visit was below the comfort threshold.', 'Inspect lights on this floor and the power map. Repair failed lights with available staff, restore electrical capacity if shed, or add hall lighting where coverage is missing.', 'build'],
-  ['restroom_dirty', /^That restroom needs cleaning\.$/, 'Staffing or maintenance gap', 'The restroom used by this visitor was dirty.', 'Review cleaning jobs and Porter capacity, shifts and routes. The restroom inspector also offers explicit Owner cleaning. More restrooms do not clean this one.', 'operate'],
+  ['restroom_dirty', /^That restroom needs cleaning\.$/, 'Staffing or maintenance gap', 'The restroom used by this visitor was dirty.', 'Review cleaning jobs and Porter capacity, shifts and routes. The restroom inspector also offers explicit Owner cleaning. More restrooms do not clean this one. For dirty halls or loading areas, use the Cleanliness map to inspect the exact dirty spot and its cleaning job; check staff routes and remaining work-hours before hiring more.', 'operate'],
   ['restroom_missing', /^No restroom in this building\?$/, 'Amenity availability gap', 'No working restroom served this visitor’s building. One elsewhere does not satisfy this check.', 'Inspect existing restrooms here first: finish construction, restore power and provide this building’s Water Service. If none exists, build a restroom beside a built hall in this building. Then keep it clean.', 'build'],
   ['elevator_power', /^The elevator has no power\.$/, 'Access failure', 'This elevator was without power while passengers waited.', 'Review the power map and electrical load/capacity. Restore power to this building; a repair or another unpowered elevator will not solve power shedding.', 'build'],
   ['elevator_fault', /^The elevator is out of service\.$/, 'Access failure', 'This elevator was not working while passengers waited.', 'Inspect condition and its repair job. Review Tech shift, remaining capacity and route, or the existing paid vendor option. Preserve access to its landings.', 'operate'],
@@ -52,10 +52,21 @@ export function diagnoseComplaint(sim, th) {
   const e=complaintType(th.text); if(!e || th.kind!=='bad') return null;
   const l=th.location || {x:th.x,y:th.y,f:th.f||0}, target=reportedTarget(sim,l), o=sim.s.objects[l.obj], b=sim.s.objects[l.building];
   const location=[b ? (b.name||'Building '+b.id) : l.building ? 'Building '+l.building+' (removed)' : 'Property', o ? (o.name||sim.objName(o)) : l.obj ? 'Target '+l.obj+' (removed)' : 'reported position', 'F'+((l.f||0)+1), Number.isFinite(l.x)&&Number.isFinite(l.y)?`(${Math.floor(l.x)}, ${Math.floor(l.y)})`:''].filter(Boolean).join(' · ');
-  let cause=e[3];
+  let cause=e[3], remedy=e[4];
+  if(e[0]==='loading' && th.overflowAvailable==null) cause='Historical bay-full report: exact overflow availability was not recorded. Review current local parking before adding capacity.';
+  if(e[0]==='loading' && th.overflowAvailable===true) cause='Historical report: marked bays were occupied, but overflow parking was available. This did not prevent parking.';
+  if(e[0]==='cart' && o?.type==='corral') {
+    const local=sim.s.carts.filter(c=>c.home===o.id || c.corral===o.id);
+    cause+=` Current local stock: ${sim.cartsAt(o.id).length} claimable here, ${local.filter(c=>c.st==='inuse').length} in use, ${local.filter(c=>c.st==='stranded').length} stranded, ${local.filter(c=>c.st==='damaged'||c.cond<0.2).length} damaged or worn. These are current counts, not the original observation.`;
+    if(!sim.s.policies.porterCarts) remedy+=' Porter cart recovery is currently switched off; review Policies before buying more stock.';
+  }
+  if(['cart','restroom_dirty'].includes(e[0]) && o) {
+    const tasks=sim.s.tasks.filter(t=>e[0]==='cart' ? t.type==='carts' && sim.cartById(t.cart)?.home===o.id : t.type==='cleanroom' && t.obj===o.id);
+    if(tasks.length) remedy+=' Current local jobs: '+tasks.slice(0,5).map(t=>sim.taskDelegation(t)?.message || 'Review this job in Operate.').join(' ') ;
+  }
   if(e[0]==='loading' && Number.isFinite(th.loadingBays)) cause+=` At report time: ${th.loadingBays} reachable bays were occupied; ${th.overflowAvailable?'overflow parking was available':'no free overflow space was found'}.`;
   if(['noReady','noSize','noClimate'].includes(e[0])) { const units=sim.objs('unit').filter(u=>!th.requestedSize || u.size===th.requestedSize); cause+=` Current ${th.requestedSize||'all-size'} inventory: ${units.filter(u=>u.commercial==='occupied').length} occupied, ${units.filter(u=>u.commercial==='reserved').length} reserved, ${units.filter(u=>u.commercial==='unready').length} unready, ${units.filter(u=>u.cstate==='operating' && u.commercial==='ready' && !u.blocked).length} accessible rent-ready, ${units.filter(u=>u.blocked).length} blocked. Ready stock may still differ from the requested climate product.`; }
-  return {id:e[0],category:e[2],cause,remedy:e[4],tab:e[5],location:target?location:location+' · reported location unavailable',target,legacy:!th.location};
+  return {id:e[0],category:e[2],cause,remedy,tab:e[5],location:target?location:location+' · reported location unavailable',target,legacy:!th.location};
 }
 
 // Existing message choices keep their original prices, effects, expiry and automation.
@@ -72,4 +83,16 @@ export function diagnoseRequest(sim,c) {
   else return null; // bank, collections and competitor notices are not customer complaints
   const l=o?{obj:o.id,x:o.x,y:o.y,f:o.f||0,building:sim.D.shellAt[sim.idx(o.x,o.y)]||null}:null;
   return {category,cause,remedy,tab,location:o?`${o.name||sim.objName(o)} · F${(o.f||0)+1} (${o.x}, ${o.y})`:'Property',target:reportedTarget(sim,l)};
+}
+
+// Reviews are property-wide scores, not recorded observations of a particular unit.
+export function reviewRemedy(dim) {
+  return ({
+    security: 'Review the Security map: restore failed lights/cameras and cover dark, unwatched areas.',
+    cleanliness: 'Review the Cleanliness map and exact dirty-area jobs. Check Porter shifts, routes, busy jobs and remaining work-hours; hiring alone does not complete cleaning.',
+    convenience: 'Inspect local cart stock, recovery policy, routes and elevator power/queues before adding capacity.',
+    service: 'Check office coverage, hours and Owner capacity; a Clerk serves during office hours.',
+    value: 'Compare asking rents, market rents and service quality. A price cut trades income for possible retention.',
+    access: 'Inspect gate power/condition, doors and connected routes. Repair faults before adding capacity.'
+  })[dim] || '';
 }

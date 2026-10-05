@@ -1,4 +1,4 @@
-import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget } from './complaints.js';
+import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget, reviewRemedy } from './complaints.js';
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
@@ -771,14 +771,14 @@ export class UI {
     h += this.advertisingHtml();
     // why shoppers didn't sign
     const lost = sim.lostRecent(30); const tot = Object.values(lost).reduce((a, b) => a + b, 0);
-    const WHY = { noReady: ['Nothing ready to rent', 'Turn vacant units over faster, or build more of what sells out.'], noSize: ['Size not offered', 'You have no units of the size they wanted. Build some.'], noClimate: ['Needed climate control', 'Add an HVAC plant and climate units.'], price: ['Too expensive', 'Your asking rent is well above market for them.'], competitor: ['Went to a competitor', 'A cheaper facility nearby. Close the price gap or out-compete on quality.'], convenience: ['Inconvenient', 'Long walks, cart shortages or elevator waits.'], reputation: ['Put off by reputation', 'Low reputation and reviews. Fix what customers complain about.'], shopping: ['Kept shopping', 'Normal: some shoppers always compare.'], service: ['Gave up waiting', 'Nobody at the counter. A Clerk keeps the office covered.'] };
+    const WHY = { noReady: ['Nothing ready to rent', 'Review the requested size: occupied/reserved, unfinished, unready and blocked units are different causes. Inspect access and make-ready before expanding.'], noSize: ['Size not offered', 'No suitable ready unit of the requested size was available. Review inventory and repeated size demand before building.'], noClimate: ['Needed climate control', 'Review ready climate inventory and existing HVAC capacity/eligibility before adding climate units.'], price: ['Too expensive', 'This shopper rejected the asking rent. Compare market rents and quality; one refusal does not require a price cut.'], competitor: ['Went to a competitor', 'A cheaper facility nearby. Close the price gap or out-compete on quality.'], convenience: ['Inconvenient', 'Long walks, cart shortages or elevator waits.'], reputation: ['Put off by reputation', 'Low reputation and reviews. Fix what customers complain about.'], shopping: ['Kept shopping', 'Normal: some shoppers always compare.'], service: ['Gave up waiting', 'Check office coverage, hours and Owner capacity. A Clerk serves during office hours; hiring does not recover departed shoppers.'] };
     h += `<h3>Why shoppers didn't sign · 30 days</h3>`;
     if (!tot) h += `<p class="note">No lost shoppers in the last 30 days.</p>`;
     else h += `<div class="list">${Object.entries(lost).sort((a, b) => b[1] - a[1]).map(([k, n]) => { const w = WHY[k] || [k, '']; return `<div class="item"><div class="grow"><b>${w[0]}</b><small>${w[1]}</small></div><b class="num">${n}</b></div>`; }).join('')}</div>`;
     // reviews
     const rv = (s.mkt.reviews || []).slice(-3).reverse(); const r = sim.rating();
     h += `<h3>Reviews${r != null ? ` · ${r.toFixed(1)} ★` : ''}</h3>`;
-    h += rv.length ? `<div class="list">${rv.map((x) => `<div class="item"><div class="grow"><b class="stars">${'★'.repeat(x.stars)}<i>${'★'.repeat(5 - x.stars)}</i></b><small>"${esc(x.text)}" · ${esc(x.name)}, Day ${dayOf(x.t)}</small></div></div>`).join('')}</div><p class="note">About 40% of shoppers look online first. Good reviews bring more of them in; bad ones turn them away.</p>` : `<p class="note">Tenants post reviews over time. They reflect what they actually experienced on the property.</p>`;
+    h += rv.length ? `<div class="list">${rv.map((x) => `<div class="item"><div class="grow"><b class="stars">${'★'.repeat(x.stars)}<i>${'★'.repeat(5 - x.stars)}</i></b><small>"${esc(x.text)}" · ${esc(x.name)}, Day ${dayOf(x.t)}</small>${reviewRemedy(x.dim) ? `<small>Property-wide feedback · ${esc(reviewRemedy(x.dim))} Exact complaint locations are in Customer feedback.</small>` : ''}</div></div>`).join('')}</div><p class="note">About 40% of shoppers look online first. Good reviews bring more of them in; bad ones turn them away.</p>` : `<p class="note">Tenants post reviews over time. Scores use tenant satisfaction and property-wide service measures; reviews do not record an exact fault location.</p>`;
     return h;
   }
   collectionsHtml() { // GDD §36

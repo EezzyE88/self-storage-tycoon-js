@@ -1,3 +1,2 @@
-// Shown in the menu and stored in save metadata so playtest feedback can be matched to a build.
-// Update `name` for every build that reaches the playtest link.
-export const BUILD = { name: 'bplus-status-hierarchy-candidate-13', date: '2026-10-04' };
+// Displayed build identity for isolated Safari acceptance.
+export const BUILD = { name: 'bplus-complaint-capacity-candidate-14', date: '2026-10-05' };

@@ -1958,6 +1958,11 @@ export class Sim {
     const s = this.s;
     extra = { ...complaintContext(this, ag, text), ...extra };
     const key = complaintKey({text,kind,...extra});
+    // One equivalent complaint per visitor, including after JSON save/resume.
+    if (ag.kind === 'cust' && kind === 'bad' && extra.complaint) {
+      if (ag.complaintKeys?.includes(key)) return;
+      ag.complaintKeys = [...(ag.complaintKeys || []), key].slice(-32);
+    }
     const recent = s.thoughts.findLast ? s.thoughts.findLast((x) => x.text === text && complaintKey(x) === key) : null;
     if (recent && s.t - recent.t < 20) { recent.n = (recent.n || 1) + 1; return; } // identical complaints are grouped, not spammed
     const th = { t: s.t, text, kind, f: ag.f || 0, x: ag.x, y: ag.y, ag: ag.id, ...extra };
@@ -2185,9 +2190,9 @@ export class Sim {
     load.sort((a, b) => d.get(a) - d.get(b)); park.sort((a, b) => d.get(a) - d.get(b));
     const l = load.find(free); if (l != null) return l;
     const pk = park.filter((i) => s.ground[i] === G.PARKING).find(free);
-    if (load.length) this.thought(ag, 'Loading bays are full.', 'bad', {location:{obj:u.id,building:D.shellAt[this.idx(u.x,u.y)]||null,x:load[0]%s.W,y:Math.floor(load[0]/s.W),f:0},loadingBays:load.length,overflowAvailable:pk!=null||park.some(free)});
     if (pk != null) { ag.exp.walk += 10; return pk; }
     const any = park.find(free); if (any != null) { ag.exp.walk += 10; return any; }
+    if (load.length) this.thought(ag, 'Loading bays are full.', 'bad', {location:{obj:u.id,building:D.shellAt[this.idx(u.x,u.y)]||null,x:load[0]%s.W,y:Math.floor(load[0]/s.W),f:0},loadingBays:load.length,overflowAvailable:false});
     return load[0] ?? null;
   }
   nearestVehCell(i0, taken) {
