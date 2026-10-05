@@ -1247,6 +1247,12 @@ export class UI {
       if (this.sheetTall && this.$('sheet').firstChild) return { ...step, redirect: 'back', t: 'Tap <b>Back to map</b>', d: 'Time stays paused while this panel is expanded, so the clock controls do not respond. Tap <b>Back to map</b> at the top of the panel; the clock resumes at 1x.', sel: '.sheet [data-a="sheetGrow"][aria-expanded="true"]', lbl: 'Back to map' };
       if (this.modalOpen()) return { ...step, redirect: 'modal', t: 'Close this window', d: 'Time stays paused while this window is open. Close it with <b>×</b>; the clock resumes at 1x.', sel: '.modal [data-a="modalClose"]', lbl: 'Close' };
     }
+    // The panels use a section selector: when the required control is not on screen yet, the instruction names the section.
+    const section = /"role":"porter"/.test(sel) ? ['operate', 'Hire capacity', 'Hire'] : /data-a="overlay"/.test(sel) ? ['operate', 'Overlays', 'Overlays'] : sel === '.ladder' ? ['business', 'Collections', 'Collections'] : null;
+    if (section && this.tab === section[0] && typeof document !== 'undefined' && this.root.querySelector) {
+      const el = this.root.querySelector(sel), picker = this.root.querySelector('.sheet [data-section-picker]');
+      if (picker && !(el && this.guideVisible(el))) return { ...step, redirect: 'section', t: `Choose <b>${section[2]}</b> in the section selector`, d: `The ${section[0] === 'operate' ? 'Operate' : 'Business'} panel is split into sections. Choose <b>${section[2]}</b> in the selector at the top of the panel; then ${step.t.replace(/<[^>]+>/g, '')}.`, sel: '.sheet [data-section-picker]', lbl: 'Choose ' + section[2] };
+    }
     const buildStep = step.placement || step.blueprint || /#abar|data-a="tool"|^\.cats|data-v="build"|^#speed /.test(sel);
     if (this.tool && !buildStep && TOOLS[this.tool]) return { ...step, redirect: 'tool', t: 'Put away the build tool', d: `The <b>${TOOLS[this.tool].name}</b> tool is still armed, so map taps would place it. Tap <b>×</b> on the build bar first.`, sel: '#abar [data-a="cancelTool"]', lbl: 'Stop building' };
     return step;
