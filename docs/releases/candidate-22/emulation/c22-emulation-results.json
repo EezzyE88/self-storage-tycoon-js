@@ -1,0 +1,41 @@
+{
+  "environment": "headless Chromium (Playwright) device emulation; not a physical iPhone",
+  "results": [
+    {
+      "name": "tutorial 1x is never targeted while inert; Back to map resumes 1x",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "selected Units category advances to the revealed Drive-Up 10x10 card; staff uses the section selector",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "Requests: security map and Cause & remedy open above, paused, and return predictably",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "new game and import isolate transient UI; import is validated and confirmed; saved floor restores",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "F2/F3 floor selection, labels, completion and save/reload agree",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "iPhone expansion review: full terms, preview on map keeps the quote, single charge",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "landscape 734x343: rotate prompt pauses; portrait resumes at 1x",
+      "viewport": "393x659",
+      "pass": true
+    }
+  ],
+  "consoleErrors": []
+}

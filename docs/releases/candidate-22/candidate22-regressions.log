@@ -1,0 +1,24 @@
+PASS 1. unit floor identity: F1, F2 and F3 units never share a label (Unit 307 vs Unit 315)
+PASS 1. EXT/F1/Floors highlight follows the rendered view, including direct renderer changes
+PASS 1. saved floor restores when valid, otherwise falls back to an existing view
+PASS 2. completion reports defined order counts, separately labelled extras, and order-only commissioning
+PASS 2. full package arithmetic, single charge and full grace-period refund
+PASS 3. handover topology is held, not reported; a real disconnection still warns after handover
+PASS 6. import validates fully with no slot writes; a valid import keeps the outgoing game and archives the displaced one
+PASS 6. legacy Candidate-21 saves (no view field) and expanded saves load; reload after import restores the saved floor
+PASS 6. import confirmation names incoming, running, stored-previous and displaced games
+PASS 7. switching games clears transient overlay, review and panel state; only the saved view carries over
+PASS 4. tutorial step is the first incomplete step; restored lessons never skip an unmet step
+PASS 4. an already-selected tab or category completes its navigation step
+PASS 4. clock steps never target an inert 1x: an expanded panel redirects to Back to map, which resumes at 1x
+PASS 4. an armed build tool redirects map/commission steps to putting the tool away
+PASS 4. instructions use current UI terms and navigation
+PASS 4. passive watch steps are labelled as watching, not tapping
+PASS 5. Requests navigation closes the dialog first, keeps time paused and returns predictably
+PASS 8/12. review keeps full terms, exact price, preview on map without losing the quote, and demand evidence
+PASS 12. evidence verdicts follow observed history only
+PASS 13. destroying a construction order needs a deliberate second tap even for a full refund
+PASS 13. wage copy matches the Porter wage and does not silently round $12.50
+PASS 9. orientation policy: portrait manifest and a pausing rotate prompt for phone-height landscape
+PASS 10. suite runs without hidden Git history
+23 candidate-22 regression checks passed
