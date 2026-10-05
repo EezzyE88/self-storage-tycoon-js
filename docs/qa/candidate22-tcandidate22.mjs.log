@@ -1,0 +1,21 @@
+PASS legacy elevator at F2, priced F3 package, no mandatory stairs
+PASS complete package charged exactly once; stale quote and duplicate refused
+PASS occupied legacy IDs/leases survive staged expansion; commissioning explicit
+PASS deterministic construction reload with no second charge
+PASS cart/person slot capacity, mixed directions, eventual pickup and save midflight
+PASS freight failure blocks F3 rental; cart cannot substitute stairs; repair retains riders
+PASS actual outbound/return cart path uses F3 elevator and ground wide door
+PASS cancellation does not strand a completed floor
+PASS migration waits for an occupied legacy cab, retaining passenger and queue identities
+PASS actual customer claims a cart, visits F3, returns cart and departs
+PASS multiple working shafts choose congestion then ID and rebalance waiting freight after failure
+PASS duplicate join preserves original waiting tick; stale callers do not survive
+ALL PASS: 12 three-floor gameplay checks
+PASS dynamic F1/F2/F3 identity and Unit 107 compact/Details action continuity
+PASS completion order count, scoped zero-charge commissioning, atomic handover and real disconnected-unit incident
+PASS exact F2/F3 full/structure-only prices, full undo, proportional partial refund, retained reinforcement, re-quote and separate ledger facts
+PASS real import parser/migration is non-mutating; outgoing and earlier games retained separately
+PASS committed immutable Candidate 21 F3 save migration preserves cash, objects and orders
+PASS atomic import quota rollback and reload from the persisted incoming slot
+{"candidate22OrdinaryGameplay":[{"seed":1,"minutes":43200,"drainMinutes":0,"selected":5,"entered":44,"waiting":44,"riding":44,"visited":42,"cart":4,"returned":42,"cartReturned":4,"reloadStages":["waiting","riding","travelling"],"failures":0},{"seed":2,"minutes":43200,"drainMinutes":129,"selected":7,"entered":76,"waiting":76,"riding":76,"visited":75,"cart":6,"returned":75,"cartReturned":6,"reloadStages":["waiting","riding","travelling"],"failures":0},{"seed":3,"minutes":43200,"drainMinutes":206,"selected":3,"entered":36,"waiting":36,"riding":35,"visited":35,"cart":14,"returned":35,"cartReturned":14,"reloadStages":["waiting","riding","travelling"],"failures":0},{"seed":4,"minutes":43200,"drainMinutes":0,"selected":5,"entered":58,"waiting":57,"riding":57,"visited":57,"cart":4,"returned":57,"cartReturned":4,"reloadStages":["waiting","riding","travelling"],"failures":0}]}
+PASS four ordinary 30-day fixed-seed runs with matching F3 leases, correct-building visits, freight/cart round trips and actual SST1 waiting/riding/travelling reload replay

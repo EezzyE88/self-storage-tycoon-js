@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {loadRenderer} from '../performance/renderer-fixture.mjs';
 import {makeMaple} from '../../js/maple.js';
 import {UI} from '../../js/ui.js';
-const Renderer=await loadRenderer(), Previous=await loadRenderer('54d432f');
+const Renderer=await loadRenderer(), Previous=await loadRenderer('tests/fixtures/legacy-layout-render.js');
 const sim=makeMaple(19), saved=JSON.stringify(sim.s), canvas={clientWidth:393,clientHeight:720};
 const r=new Renderer(canvas,sim), old=new Previous(canvas,sim), rect={left:8,right:385,top:160,bottom:645};
 r.fitProperty(rect);old.fitProperty(rect);assert.ok(r.zoom>old.zoom*1.05,`overview must be measurably tighter: ${r.zoom}/${old.zoom}`);

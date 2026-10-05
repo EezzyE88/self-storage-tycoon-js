@@ -953,3 +953,11 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 }
 
 #ui .viewctl .floorseg button[data-a="floorChoose"] {width:58px;min-width:58px;font-size:12px;}
+
+/* Candidate 22: retain review configuration while inspecting the proposed floor. */
+#ui .preview-return {pointer-events:auto;position:fixed;bottom:calc(76px + var(--safe-b));left:8px;right:8px;display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--panel,#16202b);border:1px solid var(--line);border-radius:12px;}
+#ui .preview-return b {flex-basis:100%;}
+#ui .preview-return button,#ui .modal button {min-height:44px;}
+#ui .panel-guidance {flex-shrink:0;padding:6px 10px;color:#ffe38a;font-size:13px;}
+#rotateNotice {display:none;}
+@media (orientation:landscape) and (max-height:520px) {#rotateNotice {display:grid;place-items:center;position:fixed;inset:0;z-index:10000;background:#16202b;color:white;font:18px system-ui;padding:24px;text-align:center;}}

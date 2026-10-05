@@ -1,4 +1,3 @@
-import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
 // Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.
@@ -94,7 +93,6 @@ export class Sim {
         bucket.categories[row.cat] = cents((bucket.categories[row.cat] || 0) + row.amt);
       }
     }
-    ensureFloors(state,floorCount(state));
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -150,13 +148,13 @@ export class Sim {
 
   // ============================================================ DERIVED CACHES
   rebuild() {
-    const s = this.s, W = s.W, H = s.H, WH = W * H, layers = Type => Array.from({length:floorCount(s)},()=>new Type(WH));
+    const s = this.s, W = s.W, H = s.H, WH = W * H;
     const D = {
-      byType: {}, shellAt: new Int32Array(WH), solid: new Uint8Array(WH), unitAt: layers(Int32Array),
-      at: new Map(), doorEdge: new Map(), elevAt: new Int32Array(WH), walk: layers(Uint8Array),
-      lit: layers(Float32Array), cam: layers(Uint8Array),
+      byType: {}, shellAt: new Int32Array(WH), solid: new Uint8Array(WH), unitAt: [new Int32Array(WH), new Int32Array(WH)],
+      at: new Map(), doorEdge: new Map(), elevAt: new Int32Array(WH), walk: [new Uint8Array(WH), new Uint8Array(WH)],
+      lit: [new Float32Array(WH), new Float32Array(WH)], cam: [new Uint8Array(WH), new Uint8Array(WH)],
       hvac: {}, vehReach: new Uint8Array(WH), pendingGround: new Map(),
-      stairAt: new Int32Array(WH), roomAt: layers(Int32Array), water: new Set(), power: null,
+      stairAt: new Int32Array(WH), roomAt: [new Int32Array(WH), new Int32Array(WH)], water: new Set(), power: null,
     };
     this.D = D;
     for (const o of Object.values(s.objects)) {
@@ -179,10 +177,10 @@ export class Sim {
         for (let x = o.x - 1; x <= o.x + 1; x++) addAt(this.idx(x, o.y));
       } else addAt(this.idx(o.x, o.y));
     }
-    for (const o of this.objs('stairs')) { D.stairAt[this.idx(o.x, o.y)] = o.id; for (const f of served(this,o)) { const k = f * WH + this.idx(o.x, o.y); if (!D.at.has(k)) D.at.set(k, []); if (!D.at.get(k).includes(o.id)) D.at.get(k).push(o.id); } }
+    for (const o of this.objs('stairs')) { D.stairAt[this.idx(o.x, o.y)] = o.id; for (let f = 0; f < 2; f++) { const k = f * WH + this.idx(o.x, o.y); if (!D.at.has(k)) D.at.set(k, []); if (!D.at.get(k).includes(o.id)) D.at.get(k).push(o.id); } }
     for (const o of this.objs('water')) if (o.cstate === 'operating') D.water.add(o.serves);
     this.computePower();
-    for (const o of this.objs('elevator')) { D.elevAt[this.idx(o.x, o.y)] = o.id; for (const f of served(this,o)) { const k = f * WH + this.idx(o.x, o.y); if (!D.at.has(k)) D.at.set(k, []); if (!D.at.get(k).includes(o.id)) D.at.get(k).push(o.id); } }
+    for (const o of this.objs('elevator')) { D.elevAt[this.idx(o.x, o.y)] = o.id; for (let f = 0; f < 2; f++) { const k = f * WH + this.idx(o.x, o.y); if (!D.at.has(k)) D.at.set(k, []); if (!D.at.get(k).includes(o.id)) D.at.get(k).push(o.id); } }
     for (const o of this.objs('door')) if (o.cstate === 'operating') {
       const i = this.idx(o.x, o.y), j = this.idx(o.x + o.dir[0], o.y + o.dir[1]);
       D.doorEdge.set(Math.min(i, j) + ',' + Math.max(i, j), o.id);
@@ -196,7 +194,7 @@ export class Sim {
       if (sh) {
         const shell = s.objects[sh];
         if (shell.cstate !== 'operating') continue;
-        for (let f = 0; f < shell.floors; f++) if (s.hall[f][i] === 1 || (D.elevAt[i] && this.obj(D.elevAt[i]).cstate === 'operating' && served(this,this.obj(D.elevAt[i])).includes(f)) || (D.stairAt[i] && this.obj(D.stairAt[i]).cstate === 'operating' && served(this,this.obj(D.stairAt[i])).includes(f))) D.walk[f][i] = 1;
+        for (let f = 0; f < shell.floors; f++) if (s.hall[f][i] === 1 || (D.elevAt[i] && this.obj(D.elevAt[i]).cstate === 'operating') || (D.stairAt[i] && this.obj(D.stairAt[i]).cstate === 'operating')) D.walk[f][i] = 1;
       } else if (y <= p.y1 + 1 && PED_GROUND.has(s.ground[i]) && !D.solid[i]) D.walk[0][i] = 1;
     }
     // lighting + camera coverage
@@ -319,12 +317,12 @@ export class Sim {
       out.push(f * WH + j);
     }
     const e = D.elevAt[i];
-    if (e&&!this.navNoVertical) { const el = s.objects[e]; if (this.works(el) && !el.extensionDrain && !(el.serviceTestUntil>s.t)) for (const g of served(this,el)) if (g !== f && served(this,el).includes(f) && D.walk[g][i]) out.push(g * WH + i); }
+    if (e) { const el = s.objects[e]; if (this.works(el)) for (let g = 0; g < 2; g++) if (g !== f && D.walk[g][i]) out.push(g * WH + i); }
     const st = D.stairAt[i]; // stairs: people only, never carts (GDD §21)
-    if (st && !this.navNoVertical && !this.navCart && s.objects[st].cstate === 'operating') for (const g of served(this,s.objects[st])) if (Math.abs(g-f)===1 && served(this,s.objects[st]).includes(f) && D.walk[g][i]) out.push(g * WH + i);
+    if (st && !this.navCart && s.objects[st].cstate === 'operating') for (let g = 0; g < 2; g++) if (g !== f && D.walk[g][i]) out.push(g * WH + i);
     return out;
   }
-  bfs(starts, isGoal, nbr, maxN = Math.max(20000,this.s.W*this.s.H*floorCount(this.s))) {
+  bfs(starts, isGoal, nbr, maxN = 20000) {
     const prev = new Map(); const q = [];
     for (const st of starts) { prev.set(st, -1); q.push(st); }
     let head = 0;
@@ -393,7 +391,7 @@ export class Sim {
         if (s.hall[f][this.idx(fc.x, fc.y)] !== 1) miss.push('Unit door needs hallway frontage');
         else if (!dAccess.has(n)) {
           const els = this.objs('elevator').filter((e) => e.cstate === 'operating' && D.shellAt[this.idx(e.x, e.y)] === shell.id);
-          if (f > 0 && !els.length) miss.push('Floor '+(f+1)+' has no elevator connection');
+          if (f > 0 && !els.length) miss.push('Floor 2 has no elevator connection');
           else if (f > 0 && !els.some((e) => this.works(e))) miss.push(els.some((e) => e.unpowered) ? 'Elevator has no power' : 'Elevator is out of service');
           else miss.push('Hallway has no route to a building entrance');
         }
@@ -408,8 +406,6 @@ export class Sim {
         u.dist = dl ?? da ?? 99;
         u.conv = clamp(1.04 - u.dist * 0.011, 0.55, 1) * (f > 0 ? 0.93 : 1) * (loadStarts.length ? 1 : 0.9);
       }
-      const transitioning = u.access==='interior' && s.orders.some(o=>o.st==='construction'&&o.vertical?.shell===D.shellAt[this.idx(u.x,u.y)]&&o.vertical.phase===4&&s.objects[o.vertical.elevator]?.extensionDrain);
-      if(transitioning && u.cstate==='operating' && miss.length===1 && miss[0]==='Hallway has no route to a building entrance') continue;
       u.missing = miss;
       if (u.cstate === 'built' || u.cstate === 'ready') u.cstate = miss.length ? 'built' : 'ready';
       // operating units keep their status, but lose access when their route or frontage breaks
@@ -451,10 +447,8 @@ export class Sim {
   planCore(a) {
     this.ensure();
     const s = this.s, D = this.D, T = TOOLS[a.tool]; const f = a.f || 0;
-    if(!Number.isInteger(f)||f<0||f>=s.hall.length)return {tool:a.tool,status:'invalid',reasons:['No floor here'],items:[],creates:[],tiles:[]};
     const R = { tool: a.tool, status: 'valid', reasons: [], missing: [], cost: 0, count: 0, dur: 0, opex: 0, items: [], creates: [], tiles: [], label: T ? T.name : a.tool };
     if (!T) return { ...R, status: 'invalid', reasons: ['Unknown tool'] };
-    if(s.orders.some(o=>o.st==='construction'&&o.vertical&&(()=>{const sh=s.objects[o.vertical.shell],a0=a.a||{},b=a.b||a0;return sh&&Math.max(a0.x,b.x)>=sh.x&&Math.min(a0.x,b.x)<sh.x+sh.w&&Math.max(a0.y,b.y)>=sh.y&&Math.min(a0.y,b.y)<sh.y+sh.h||o.vertical.creates.some(c=>c.f===0&&c.x>=Math.min(a0.x,b.x)&&c.x<=Math.max(a0.x,b.x)&&c.y>=Math.min(a0.y,b.y)&&c.y<=Math.max(a0.y,b.y));})()))return {...R,status:'invalid',reasons:['Reserved by the committed vertical package. Finish it before editing this building.']};
     const bad = (m) => { R.status = 'invalid'; if (!R.reasons.includes(m)) R.reasons.push(m); };
     const inc = (m) => { if (R.status === 'valid') R.status = 'incomplete'; if (!R.missing.includes(m)) R.missing.push(m); };
     const x0 = Math.min(a.a.x, a.b.x), x1 = Math.max(a.a.x, a.b.x), y0 = Math.min(a.a.y, a.b.y), y1 = Math.max(a.a.y, a.b.y);
@@ -607,12 +601,12 @@ export class Sim {
         if (!shell) { failItem('Elevators go inside a building'); return R; }
         if (shell.floors < 2) { failItem('This building has only one floor'); return R; }
         if (shell.cstate === 'construction') R.waitShell = shell.id;
-        for (let g = 0; g < shell.floors; g++) if (D.unitAt[g][i] || D.roomAt[g][i]) { failItem('Blocked on floor ' + (g + 1) + ' by a unit'); return R; }
+        for (let g = 0; g < 2; g++) if (D.unitAt[g][i]) { failItem('Blocked on floor ' + (g + 1) + ' by a unit'); return R; }
         if (D.elevAt[i]) { failItem('An elevator is already here'); return R; }
-        for (let g = 0; g < shell.floors; g++) if (!DIRS.some(([dx, dy]) => this.inb(x + dx, y + dy) && s.hall[g][this.idx(x + dx, y + dy)] === 1)) inc(`No hallway beside the shaft on floor ${g + 1}`);
-        R.items = Array.from({length:shell.floors},(_,f)=>({x,y,f,ok:true}));
-        R.cost = T.cost + Math.max(0,shell.floors-2)*1900; R.dur = 2160 + Math.max(0,shell.floors-2)*720; R.count = 1; R.opex = OPEX.elevator;
-        R.creates.push({ type: 'elevator', x, y, f: 0, cond: 1, ...(shell.floors>2?{servedFloors:Array.from({length:shell.floors},(_,f)=>f),dispatchMode:'sweep-v1'}:{}) });
+        for (let g = 0; g < 2; g++) if (!DIRS.some(([dx, dy]) => this.inb(x + dx, y + dy) && s.hall[g][this.idx(x + dx, y + dy)] === 1)) inc(`No hallway beside the shaft on floor ${g + 1}`);
+        R.items = [{ x, y, f: 0, ok: true }, { x, y, f: 1, ok: true }];
+        R.cost = T.cost; R.dur = 2160; R.count = 1; R.opex = OPEX.elevator;
+        R.creates.push({ type: 'elevator', x, y, f: 0, cond: 1 });
         return R;
       }
       case 'stairs': {
@@ -620,12 +614,12 @@ export class Sim {
         if (!shell) { failItem('Stairwells go inside a building'); return R; }
         if (shell.floors < 2) { failItem('This building has only one floor'); return R; }
         if (shell.cstate === 'construction') R.waitShell = shell.id;
-        for (let g = 0; g < shell.floors; g++) if (D.unitAt[g][i] || D.roomAt[g][i]) { failItem('Blocked on floor ' + (g + 1)); return R; }
+        for (let g = 0; g < 2; g++) if (D.unitAt[g][i] || D.roomAt[g][i]) { failItem('Blocked on floor ' + (g + 1)); return R; }
         if (D.elevAt[i] || D.stairAt[i]) { failItem('Already a shaft or stairwell here'); return R; }
-        for (let g = 0; g < shell.floors; g++) if (!DIRS.some(([dx, dy]) => this.inb(x + dx, y + dy) && s.hall[g][this.idx(x + dx, y + dy)] === 1)) inc(`No hallway beside the stairs on floor ${g + 1}`);
-        R.items = Array.from({length:shell.floors},(_,f)=>({x,y,f,ok:true}));
-        R.cost = T.cost + Math.max(0,shell.floors-2)*560; R.dur = 720 + Math.max(0,shell.floors-2)*240; R.count = 1;
-        R.creates.push({ type: 'stairs', x, y, f: 0, cond: 1, ...(shell.floors>2?{servedFloors:Array.from({length:shell.floors},(_,f)=>f)}:{}) });
+        for (let g = 0; g < 2; g++) if (!DIRS.some(([dx, dy]) => this.inb(x + dx, y + dy) && s.hall[g][this.idx(x + dx, y + dy)] === 1)) inc(`No hallway beside the stairs on floor ${g + 1}`);
+        R.items = [{ x, y, f: 0, ok: true }, { x, y, f: 1, ok: true }];
+        R.cost = T.cost; R.dur = 720; R.count = 1;
+        R.creates.push({ type: 'stairs', x, y, f: 0, cond: 1 });
         return R;
       }
       case 'power': case 'water': {
@@ -780,7 +774,7 @@ export class Sim {
     R.doorDir = units[0] && units[0].dir;
     if (!anyBad && T.access === 'interior') {
       const sh = D.shellAt[this.idx(units[0].x, units[0].y)];
-      if (f > 0 && !this.objs('elevator').some((e) => D.shellAt[this.idx(e.x, e.y)] === sh)) inc('Floor '+(f+1)+' has no elevator connection');
+      if (f > 0 && !this.objs('elevator').some((e) => D.shellAt[this.idx(e.x, e.y)] === sh)) inc('Floor 2 has no elevator connection');
       const dark = units.some((u) => { const c = this.unitFront(u).find((c) => s.hall[f][this.idx(c.x, c.y)] === 1); return c && D.lit[f][this.idx(c.x, c.y)] < 0.5; });
       if (dark) inc('Hallway is dark - add a light');
       if (climate) { const hv = D.hvac[sh]; const need = units.length * sz.sqft / 25; if (!hv || hv.cap <= 0) inc('Climate zone has no HVAC capacity'); else if (hv.load + need > hv.cap) inc('HVAC capacity would be exceeded'); }
@@ -799,8 +793,6 @@ export class Sim {
     this.ensure();
     return r;
   }
-  verticalPlan(id,options) { return verticalPlan(this,id,options); }
-  act_verticalUpgrade(a) { return beginVertical(this,a); }
   act_speed(a) { this.s.speed = a.v; this.emit('speed', { v: a.v }); return { ok: true }; }
   act_build(a) {
     const s = this.s, R = this.plan(a);
@@ -820,7 +812,7 @@ export class Sim {
         { const base = { drive: 100, interior: 200, upper: 300 }[key], k = s.unitNo[key]++ - base - 1; o.num = base + Math.floor(k / 99) * 1000 + (k % 99) + 1; } o.name = 'Unit ' + o.num;
       }
       if (o.type === 'corral') { o.name = this.corralName(o); }
-      if (o.type === 'elevator') Object.assign(o, { pos: 0, tgt: null, door: 0, riders: [], q: Array.from({length:o.servedFloors?.length||2},()=>[]), cap: 4, trips: 0 });
+      if (o.type === 'elevator') Object.assign(o, { pos: 0, tgt: null, door: 0, riders: [], q: [[], []], cap: 4, trips: 0 });
       if (o.type === 'gate') Object.assign(o, { open: 0 });
       s.objects[o.id] = o; ord.objs.push(o.id);
     }
@@ -851,7 +843,6 @@ export class Sim {
   act_cancelOrder(a) {
     const s = this.s, ord = s.orders.find((o) => o.id === a.id);
     if (!ord || ord.st !== 'construction') return { ok: false, msg: 'Nothing to cancel' };
-    if(ord.vertical)return cancelVertical(this,ord);
     const pavingDependents=s.orders.filter(o=>o.st==='construction'&&o.id>ord.id&&this.groundOrdersOverlap(ord,o));
     const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     const refund = undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6);
@@ -871,7 +862,6 @@ export class Sim {
     return { ok: true, refund, msg: `${undo ? 'Undone' : 'Cancelled'}${nDep ? ` (+${nDep} dependent order${nDep > 1 ? 's' : ''})` : ''} - refunded $${total.toLocaleString()}` };
   }
   cancelRefund(ord) {
-    if(ord.vertical)return verticalRefund(this,ord);
     const s = this.s; const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     return { undo, refund: undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6) };
   }
@@ -895,7 +885,6 @@ export class Sim {
   }
   completeOrder(ord) {
     const s = this.s;
-    if(ord.vertical)return;
     ord.st = 'done'; ord.prog = 1;
     for (const tl of ord.tiles) {
       if (tl.k === 'ground') s.ground[tl.i] = tl.v;
@@ -1203,7 +1192,6 @@ export class Sim {
     if (mod % 5 === 0) this.convoTick();
     // construction
     for (const ord of s.orders) if (ord.st === 'construction') {
-      if(ord.vertical){tickVertical(this,ord);continue;}
       if (ord.waitShell && !s.objects[ord.waitShell]) { this.act_cancelOrder({ id: ord.id, cascade: true }); continue; }
       if ((ord.waitShell && s.objects[ord.waitShell] && s.objects[ord.waitShell].cstate === 'construction') || this.groundPredecessor(ord)) { ord.waiting = true; continue; }
       ord.waiting = false;
@@ -1956,7 +1944,7 @@ export class Sim {
   goTo(ag, f, x, y) {
     const from = this.node(ag.f, Math.floor(ag.x), Math.floor(ag.y));
     const to = this.node(f, x, y);
-    this.navCart = !!ag.cart; const p = Math.max(ag.f,f)>=2&&ag.f!==f ? (freightPath(this,from,to)||(!ag.cart?this.pedPath(from,to):null)) : this.pedPath(from, to); this.navCart = false;
+    this.navCart = !!ag.cart; const p = this.pedPath(from, to); this.navCart = false;
     ag.path = p; ag.pi = 0; return !!p;
   }
   goToAny(ag, targets) { // targets: array of nodes
@@ -2404,9 +2392,7 @@ export class Sim {
 
   // ============================================================ ELEVATORS
   joinElevator(ag, el, destF) {
-    if(ag.elev===el.id&&(ag.inElev||el.q.some(q=>q.includes(ag.id))))return;
-    if(ag.elev)this.leaveElevator(ag);
-    ag.prevSt = ag.st; ag.st = 'elev'; ag.elev = el.id; ag.elevDest = destF; ag.elevT0 = ag.elevQueuedAt??this.s.t;delete ag.elevQueuedAt;
+    ag.prevSt = ag.st; ag.st = 'elev'; ag.elev = el.id; ag.elevDest = destF; ag.elevT0 = this.s.t;
     if (!el.q[ag.f].includes(ag.id)) el.q[ag.f].push(ag.id);
   }
   leaveElevator(ag) {
@@ -2417,13 +2403,6 @@ export class Sim {
     const s = this.s; if (el.cstate !== 'operating') return;
     const agent = (id) => s.agents.find((a) => a.id === id);
     for (const q of el.q) for (const id of q) { const a = agent(id); if (a) { a.exp && a.exp.elev++; } }
-    if(el.dispatchMode==='sweep-v1')for(const id of el.q.flat()){
-      const a=agent(id);if(!a||!a.path||a.inElev||(this.works(el)&&s.t-a.elevT0<120))continue;
-      const goal=this.unnode(a.path.at(-1)),from=this.node(a.f,Math.floor(a.x),Math.floor(a.y)),to=this.node(goal.f,goal.x,goal.y);
-      const path=freightPath(this,from,to);if(!path)continue;
-      const crossing=path.find((n,k)=>k>0&&this.unnode(n).f!==this.unnode(path[k-1]).f);
-      if(crossing!=null&&this.D.elevAt[crossing%(s.W*s.H)]!==el.id){const t=a.elevT0;this.leaveElevator(a);a.st=a.prevSt;a.path=path;a.pi=0;a.elevQueuedAt=t;}
-    }
     if (!this.works(el)) {
       // people without carts give up on the elevator and take the stairs if the building has them
       if (s.t % 3 === 0) for (const q of el.q) for (const id of [...q]) {
@@ -2442,8 +2421,6 @@ export class Sim {
       return;
     }
     el.convoed = false;
-    if(el.serviceTestUntil>s.t)return;
-    if(el.dispatchMode==='sweep-v1'){sweepElevator(this,el);return;}
     for (const r of el.riders) { const a = agent(r.a); if (a) { a.inElev = true; a.f = Math.round(el.pos); a.x = el.x + 0.5; a.y = el.y + 0.5; if (a.cart) { const c = this.cartById(a.cart); if (c) { c.f = a.f; c.x = a.x; c.y = a.y; } } } }
     if (el.door > 0) { el.door--; return; }
     const atFloor = Math.abs(el.pos - Math.round(el.pos)) < 1e-6; const fl = Math.round(el.pos);
@@ -2561,11 +2538,11 @@ export class Sim {
       }
     }
     const WH = s.W * s.H;
-    for (let f = 0; f < s.dirt.length; f++) for (let i = 0; i < WH; i++) {
+    for (let f = 0; f < 2; f++) for (let i = 0; i < WH; i++) {
       if (s.dirt[f][i] < 0.55) continue;
       const x = i % s.W, y = (i / s.W) | 0;
       if (s.tasks.some((t) => t.type === 'clean' && t.f === f && Math.abs(t.x - x) + Math.abs(t.y - y) < 6)) continue;
-      this.addTask({ type: 'clean', need: 'clean', obj: null, f, x, y, label: 'Clean ' + (D.shellAt[i] ? (f > 0 ? `Floor ${f+1} hallway` : 'hallway') : 'loading area'), work: WORK.clean });
+      this.addTask({ type: 'clean', need: 'clean', obj: null, f, x, y, label: 'Clean ' + (D.shellAt[i] ? (f > 0 ? 'Floor 2 hallway' : 'hallway') : 'loading area'), work: WORK.clean });
     }
     for (const t of s.tasks) if (t.unreachable && s.t - t.unreachable > 120) t.unreachable = null;
   }

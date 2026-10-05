@@ -102,7 +102,8 @@ const game = {
   note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },
   attach(sim, kind) {
     this.sim = sim; this.acc = 0; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)
-    if (this.rend) this.rend.setSim(sim);
+    if (this.rend) {this.rend.setSim(sim);this.rend.setOverlay(null);this.rend.setView('ext');this.rend.tapZoom=null;}
+    if(this.ui){const u=this.ui;u.popupBlocks?.clear();u.requestPanel=false;u.verticalReview=null;u.verticalQuote=null;u.verticalPreviousView=null;u.floorBuilding=null;u.guideStep=null;u.guideKey=null;u.tutKey=null;u.tutMin=true;u.sheetTall=false;u.planArgs=null;u.guideScrolled=null;u.autoPanKey=null;u.pendingImport=null;u.importToken=(u.importToken||0)+1;u.cancelReviewId=null;u.verticalMapPreview=false;u.$('modal').innerHTML='';u.$('guide').hidden=true;}
     if (this.ui) {
       this.ui.tool = null; this.ui.sel = null; this.ui.plan = null; this.ui.setTab(null); this.ui.renderActionBar();
       const s = sim.s; this.ui.setMeta(this.metaName() || (s.mode === 'tutorial' ? 'Maple Street Storage' : s.creative ? 'Creative Lot' : 'Empty Lot'), modeLabel(s));
@@ -126,7 +127,7 @@ const game = {
       return 'SST1.' + btoa(bin);
     } catch (e) { return this.rawSaveCode(json); }
   },
-  async loadCode(code) {
+  async loadCode(code, prepareOnly = false) {
     try {
       code = (code || '').trim(); let json;
       if (code.startsWith('SST1.')) { const bin = atob(code.slice(5)); const b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); json = await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
@@ -137,12 +138,12 @@ const game = {
       if (st && st.company && Array.isArray(st.props) && st.props.length) {
         if (st.props.length > 12 || !st.props.every((p) => p && typeof p.name === 'string' && validState(p.s)) || !Number.isInteger(st.active ?? 0) || (st.active ?? 0) < 0 || (st.active ?? 0) >= st.props.length || (st.feed != null && !Array.isArray(st.feed))) return false;
         const props = st.props.map((p) => ({ name: p.name, sim: new Sim(p.s) })); for (const p of props) p.sim.s.speed = 0;
-        this.company = { props, active: st.active ?? 0, feed: st.feed || [] };
+        const prepared = { props, active: st.active ?? 0, feed: st.feed || [] }; if(prepareOnly)return prepared; this.company = prepared;
         this.attach(props[this.company.active].sim); this.ui.title = false; return true;
       }
       if (!validState(st)) return false;
       st.speed = 0; const sim = new Sim(st);
-      this.company = { props: [{ name: st.scenario ? st.scenario.name : st.mode === 'tutorial' ? 'Maple Street Storage' : st.creative ? 'Creative Lot' : sandboxName(st) || 'My Property', sim }], active: 0, feed: [] };
+      const prepared = { props: [{ name: st.scenario ? st.scenario.name : st.mode === 'tutorial' ? 'Maple Street Storage' : st.creative ? 'Creative Lot' : sandboxName(st) || 'My Property', sim }], active: 0, feed: [] };if(prepareOnly)return prepared;this.company = prepared;
       this.attach(sim); this.ui.title = false; return true;
     } catch (e) { console.warn(e); return false; }
   },
@@ -303,6 +304,7 @@ game.performanceText = () => diagnostics.text();
 let diagnosticMode = null;
 function tick(now) {
   if (window.__qaHold) { last = now; return; } // test hook: automated screenshots drive frames manually
+  if(matchMedia('(orientation:landscape) and (max-height:520px)').matches)game.sim.s.speed=0;
   const frameStart = game.showFps ? performance.now() : 0;
   if (diagnostics.enabled !== game.showFps) { diagnostics.enabled = game.showFps; diagnostics.reset(); }
   const rafMs = now - last;
@@ -490,3 +492,7 @@ window.advanceTime = (ms) => {
   const s = game.sim.s; const n = Math.round((ms / 1000) * TICKS_PER_SEC_1X * Math.max(1, s.speed));
   stepTicks(n); game.rend.frame(ms / 1000); game.ui.update(ms / 1000);
 };
+
+let rotatedSpeed=null;
+function portraitPolicy(){const land=matchMedia('(orientation:landscape) and (max-height:520px)').matches;if(land){if(rotatedSpeed===null)rotatedSpeed=game.sim.s.speed;game.sim.s.speed=0;}else if(rotatedSpeed!==null){game.sim.s.speed=0;rotatedSpeed=null;}}
+window.addEventListener('resize',portraitPolicy);portraitPolicy();

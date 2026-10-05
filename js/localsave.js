@@ -19,6 +19,25 @@ export const localsave = {
     }
   },
   getKept() { return read(KEPT); },
+  archives() { try{return JSON.parse(store?.getItem('sst.kept.archives')||'[]');}catch{return [];} },
+  activateImport(outgoing, incoming) {
+    if(!store || !incoming || typeof incoming.code!=='string')return false;
+    const keys=[MAIN,BAK,KEPT,'sst.kept.archives'],before=keys.map(k=>store.getItem(k));
+    try {
+      if(outgoing && !this.keepPreserving(outgoing))throw Error('Cannot preserve outgoing game');
+      if(before[0])store.setItem(BAK,before[0]);
+      store.setItem(MAIN,JSON.stringify({...incoming,at:Math.floor(Date.now()/1000),v:1}));
+      this.lastAt=Date.now();this.lastErr='';return true;
+    }catch {
+      for(let i=0;i<keys.length;i++)try{if(before[i]===null)store.removeItem(keys[i]);else store.setItem(keys[i],before[i]);}catch{}
+      this.lastErr='Import refused: storage full';return false;
+    }
+  },
+  keepPreserving(rec) {
+    if(!store || !rec)return false;const previous=store.getItem(KEPT),oldArchives=store.getItem('sst.kept.archives');
+    try { if(previous){const a=this.archives();a.push(JSON.parse(previous));store.setItem('sst.kept.archives',JSON.stringify(a));}if(!this.keep(rec))throw Error('Storage full');return true; }
+    catch {try{if(oldArchives===null)store.removeItem('sst.kept.archives');else store.setItem('sst.kept.archives',oldArchives);if(previous===null)store.removeItem(KEPT);else store.setItem(KEPT,previous);}catch{}return false;}
+  },
   keep(rec) { // the game being replaced by New game or Load, kept in its own slot until the next replacement
     if (!store || !rec || typeof rec.code !== 'string') return false;
     try { store.setItem(KEPT, JSON.stringify({ code: rec.code, meta: rec.meta || {}, at: rec.at || Math.floor(Date.now() / 1000), keptAt: Math.floor(Date.now() / 1000), v: 1 })); return true; } catch (e) { return false; }

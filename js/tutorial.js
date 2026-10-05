@@ -59,8 +59,8 @@ export const BEATS = [
     why: 'Vacant units earn nothing until they are rent-ready. Make-ready is the most common job on a storage property.',
     focus: (sim) => ({ obj: unitByNum(sim, 107).id }),
     steps: [
-      { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin (the ring points at it). Tap the unit itself.', obj: (sim) => unitByNum(sim, 107).id, done: (sim, ui) => (ui && ui.sel === unitByNum(sim, 107).id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
-      { t: 'Tap <b>Start Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the big <b>Start Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
+      { t: 'Inspect <b>Unit 107</b> using the button below', d: 'The Inspect Unit 107 button opens the correct unit even when a customer vehicle overlaps it on the map.', obj: (sim) => unitByNum(sim, 107).id, done: (sim, ui) => (ui && ui.sel === unitByNum(sim, 107).id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
+      { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the <b>Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
       { t: 'Start the clock: tap <b>1x</b>', d: 'The speed controls are at the <b>top right</b>. <b>1x</b> is normal, <b>2x</b> and <b>4x</b> are faster, the pause icon stops time.', sel: PLAY, done: (sim) => running(sim) || unitByNum(sim, 107).commercial === 'ready' },
       { t: 'Watch the Owner finish', d: 'The Owner walks from the office to Unit 107. The pin fills as work progresses (about 2-3 game hours). Use <b>4x</b> to hurry.', obj: (sim) => unitByNum(sim, 107).id, done: (sim) => unitByNum(sim, 107).commercial === 'ready' || !!unitByNum(sim, 107).lease },
     ],
@@ -115,7 +115,7 @@ export const BEATS = [
     focus: () => ({ tab: 'operate' }),
     steps: [
       { t: 'Open <b>Operate</b>', d: 'Tap <b>Operate</b> in the bottom bar (the person icon; the red badge counts waiting jobs).', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || sim.s.staff.some((x) => x.role === 'porter') },
-      { t: 'Tap <b>Hire Porter</b>', d: 'Scroll down to <b>Staff</b> in the Operate panel and tap <b>Hire Porter</b>. The price shows the daily wage.', sel: `[data-cmd*='"role":"porter"']`, done: (sim) => sim.s.staff.some((x) => x.role === 'porter') },
+      { t: 'Tap <b>Hire Porter</b>', d: 'Choose <b>Hire</b> in the Operate section selector and tap <b>Hire Porter</b>. The price shows the daily wage.', sel: `[data-cmd*='"role":"porter"']`, done: (sim) => sim.s.staff.some((x) => x.role === 'porter') },
       { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', sel: PLAY, done: (sim) => !!sim.s.milestones.first_delegated },
     ],
     check: (sim) => !!sim.s.milestones.first_delegated },
@@ -217,7 +217,7 @@ export function curBeat(sim) { return sim.s.lesson ? lessonById(sim.s.lesson.id)
 export function stepState(sim, ui) {
   const b = curBeat(sim); if (!b || !b.steps) return { b, cur: -1, done: [] };
   const done = b.steps.map((st) => { try { return !!st.done(sim, ui); } catch (e) { return false; } });
-  if (b.id === 'up') { const missing = done.indexOf(false); return { b, cur: missing < 0 ? done.length - 1 : missing, done, all: missing < 0 }; }
+  if (sim.s.lesson) { const missing = done.indexOf(false); return { b, cur: missing < 0 ? done.length - 1 : missing, done, all: missing < 0 }; }
   let last = -1; for (let i = 0; i < done.length; i++) if (done[i]) last = i;
   return { b, cur: Math.min(last + 1, b.steps.length - 1), done, all: last === b.steps.length - 1 };
 }

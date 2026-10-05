@@ -9,7 +9,7 @@ const sim=clone(base), sh=sim.objs('shell')[0], modal={innerHTML:''};
 const ui=Object.create(UI.prototype);ui.g={sim};ui.$=()=>modal;ui.pauseForPopup=()=>{};ui.resumePopup=()=>{};ui.renderTut=()=>{};ui.spendingHtml=()=>'';
 ui.g.rend={view:1,setView(v){this.view=v;},setPreview(v){this.preview=v;}};
 ui.showVertical(sh.id);assert.ok(ui.verticalQuote);assert.ok(ui.rend.preview);assert.equal(ui.rend.view,2);
-ui.onInput({target:{dataset:{verticalOption:'stairs'},checked:true}});assert.equal(ui.verticalQuote,null);assert.equal(ui.rend.preview,null);assert.match(modal.innerHTML,/data-vertical-option="stairs"/);
+ui.onInput({target:{dataset:{verticalOption:'stairs'},checked:true}});assert.ok(ui.verticalQuote);assert.ok(ui.rend.preview);assert.equal(ui.verticalReview.stairs,false);assert.match(modal.innerHTML,/No existing stairwell/);
 ui.onInput({target:{dataset:{verticalOption:'stairs'},checked:false}});assert.ok(ui.verticalQuote);ui.closeModal();assert.equal(ui.rend.preview,null);assert.equal(ui.rend.view,1);
 for(const u of sim.objs('unit').filter(u=>u.f===1))delete sim.s.objects[u.id];sim.markDirty();sim.ensure();ui.showVertical(sh.id);assert.equal(ui.verticalQuote,null);assert.match(modal.innerHTML,/data-vertical-option="fitout"/);ui.onInput({target:{dataset:{verticalOption:'fitout'},checked:false}});assert.ok(ui.verticalQuote);assert.equal(ui.verticalQuote.fitout,false);ui.closeModal();
 console.log('PASS invalid optional-stair and empty-layout quotes remain recoverable; abandoned ghosts and future floor selection cleared');
