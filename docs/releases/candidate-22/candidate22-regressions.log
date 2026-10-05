@@ -21,4 +21,9 @@ PASS 13. destroying a construction order needs a deliberate second tap even for 
 PASS 13. wage copy matches the Porter wage and does not silently round $12.50
 PASS 9. orientation policy: portrait manifest and a pausing rotate prompt for phone-height landscape
 PASS 10. suite runs without hidden Git history
-23 candidate-22 regression checks passed
+PASS A. map rings require the point itself to be the map, never an interface layer or off-screen
+PASS B. make-ready action stays in compact and detailed unit views until accepted, then shows status only
+PASS D. floor chooser shows live in-progress state, never "not built yet", never counts it complete
+PASS E. cancellation is kept apart from navigation and routine actions, with an itemised confirmation
+PASS F. expansion review is accessible: stable labels, automation selectors, Escape, no keyboard bypass of the pause
+28 candidate-22 regression checks passed

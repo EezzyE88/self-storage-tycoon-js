@@ -30,21 +30,22 @@ No economy, construction price, demand coefficient, wage, build duration or acce
 
 ## Test evidence
 
-All results come from a **fresh depth-1 clone** of the final code commit. That clone has a single commit; `54d432f` and `da4c72a` do not exist in it. No build artifacts were present.
+All results come from a **fresh depth-1 clone** of the final code commit, `df1100d7b09bb4bc81f5d4566efda4af79539541`, which includes the addendum fixes. That clone has a single commit; `54d432f` and `da4c72a` do not exist in it. No build artifacts were present.
 
 ```sh
 node tests/run-headless.mjs /tmp/c22                      # complete headless suite
 node tests/headless/tthreefloor_journeys.mjs              # seeded F3 journeys
 node tests/headless/tcandidate22.mjs                      # candidate-22 regressions
+node tests/headless/tcancellation.mjs                     # deterministic cancellation arithmetic
 python3 -m http.server 5173 & node tests/browser-qa/c22-emulation.cjs /tmp/c22-shots
 ```
 
 | Check | Result |
 | --- | --- |
 | Base Candidate 21 suite (full-history clone, before changes) | 51/51 |
-| Final headless suite, fresh depth-1 clone | **53/53** scripts (51 existing + 2 new). [results.json](releases/candidate-22/results.json) |
-| Candidate-22 regressions | 23/23 checks. [log](releases/candidate-22/candidate22-regressions.log) |
-| Browser emulation (headless Chromium, 393×659 and 734×343; **not** Safari, **not** a physical iPhone) | 7/7 scenarios, 0 console errors, 0 unhandled rejections. [results + screenshots](releases/candidate-22/emulation/) |
+| Final headless suite, fresh depth-1 clone | **54/54** scripts (51 existing + 3 new). [results.json](releases/candidate-22/results.json) |
+| Candidate-22 regressions | 28/28 checks (23 original + 5 for the addendum). [log](releases/candidate-22/candidate22-regressions.log); cancellation: [log](releases/candidate-22/cancellation.log) |
+| Browser emulation (headless Chromium: 393×659 and 734×343 with touch, 1280×720 with a mouse; **not** Safari, **not** a physical iPhone) | 14/14 scenarios (7 original + 7 addendum), 0 console errors, 0 unhandled rejections. [results + screenshots](releases/candidate-22/emulation/) |
 | Stress script `tests/stress/tstress.mjs` | Completed; worst game-day 164 ms, peak save 671 KB |
 
 ### Seeded F3 journeys (`tthreefloor_journeys.mjs`, seeds 1–4)
@@ -82,6 +83,45 @@ The handover block ran with seed 7. F2 units were held during the F3 service tes
 - Candidate-21 saves load unchanged; they carry no `uiView` and open at EXT.
 - Malformed imports change no slot and leave the running game in place. Valid imports confirm first, keep the outgoing game, and archive the displaced previous game.
 - Loads start paused. Closing the paused popup still resumes at 1x.
+
+## Independent playtest addendum (A–F)
+
+A second independent playtest of public Candidate 21 reported these issues. They are treated as confirmed or corroborated, and each is repaired in commits `00893cf` and `df1100d`.
+
+| # | Requirement | Repair | Evidence |
+| --- | --- | --- | --- |
+| A | "Tap here" must sit on the visible, tappable Unit 107 | **Ring binding.** The ring now binds to the object's own pin, a real `<button data-a="pin">` that selects it, whenever that pin is visible and uncovered.<br>**Map points.** A map point is only used if a hit test lands on the map (canvas, pins or blueprint). It is rejected if any interface layer covers it or it is outside the viewport. If neither works, no label is rendered.<br>**No sliding.** The ring no longer slides across the interface between distant targets. | Emulation at 393×659 (touch) and 1280×720 (mouse): the element at the ring centre is Unit 107's own pin, the label sits above the bottom navigation, and a real tap at the ring selects Unit 107 and advances to "Tap Owner Make-Ready". Headless check: `mapPointClear` rejects covered and off-screen points. |
+| B | Make-ready must stay in Details until the job is accepted | The task-action rail persists in both compact and Details views. After assignment the action is replaced by "Make-ready assigned" or a progress figure. Staff-first routing ("Queue Porter") and explicit Owner assignment are unchanged. | Emulation: the action is visible in Details; tapping it removes it and shows the assigned status. Headless check covers both views before and after acceptance, plus the Porter route. |
+| C | Optional stairs must not invalidate the package | With no stairwell in the building, the option is disabled. Its note says a Stairwell must be built separately and that the package below is unaffected. A stairs request that arrives anyway is reverted, with a status note. The quote, price ($17,810) and Confirm are unchanged; stairs are never added silently. | Emulation; Candidate-21 hardening test updated to this contract (it previously asserted that the quote became invalid). |
+| D | The floor chooser must show live progress | The chooser and building sheet derive completed floors from handover. An active order shows as "F2 · 28% · fit-out · under construction", never "not built yet". The chooser refreshes while open. "Plan next floor" is replaced by a disabled "after F2 handover" control, and `verticalPlan` still refuses a second order. | Emulation: still "1 completed floor" after the structure stage, and the text changes while open without a reload. Headless check covers the same. |
+| E | Cancel must be separate from navigation, itemised, and cover the ledger | **Placement.** Construction cancel is no longer in the routine task-action rail. It sits in a separate red "Cancel construction" panel, and "Keep building" is the first and primary choice.<br>**Labels.** Review "Cancel" is now "Close review"; the preview's is "Discard preview".<br>**Confirmation contents.** The confirmation lists the original charge, completed (retained) work, in-progress work, unbuilt work, the 40% non-refundable share, the exact refund, total non-refundable, cash after, and how the next quote changes. | New deterministic `tcancellation.mjs` (below); emulation: "Keep building" changes nothing, and confirming produces separate −17,810 / +17,810 ledger entries. |
+| F | Review must be accessible | **Labels.** The review is a `role="dialog"` with an aria-labelled title and stable "Close review" labels on both the × and the footer button. It states that the game is paused during review.<br>**Selectors.** `data-qa` hooks: `vr-close`, `vr-close-review`, `vr-opt-fitout`, `vr-opt-stairs`, `vr-preview`, `vr-confirm`, `vp-back`, `vp-confirm`, `vp-discard`, `cancel-construction`, `cc-keep`, `cc-confirm`, `floors-close`.<br>**Keyboard.** No native select is needed. Escape closes the review or discards the preview. The Space and 1/2/3 speed keys can no longer bypass a paused review, which they previously could. Closing returns to 1x. | Emulation (keyboard); headless source and markup checks. |
+
+The tutorial also now names the section to choose ("Choose Hire in the section selector") whenever the required control is still behind the panel's section selector. Ring labels are suppressed if they would cover status text, so the instruction itself carries this.
+
+### Deterministic cancellation arithmetic (`tests/headless/tcancellation.mjs`)
+
+Only construction is ticked, so no other cash movement is mixed in.
+
+| Step | Result |
+| --- | --- |
+| 1. Original F2 commitment | −$17,810. The $396 reinforcement is included, and the stage costs sum exactly to the package. |
+| 2. Full undo after 20 minutes, inside the 30-minute window | +$17,810; penalty $0; cash restored exactly; next quote $17,810. |
+| 3. Recommit, then cancel 100 minutes into the structure stage | Unbuilt $17,284.39. Refund round(0.6 × 17,284.39) = **$10,371**. Non-refundable 40% share $6,913.39. In-progress structure consumed $129.61. Total non-refundable $7,439. |
+| 4. Retained reinforcement | **$396** (`structuralRightsPaid` 396, `plannedMaxFloors` 2); no floor added. |
+| 5. Second quote | **$17,414** (= 17,810 − 396), with no reinforcement line. |
+| 6. No duplicated charge | The second order's reinforcement stage costs $0; −$17,414 is charged once. |
+| 7. Reload | Production SST1 reload mid-build: cash unchanged and no new capex entry. Completion, handover and commissioning charge nothing. |
+
+The capex ledger holds five separate entries: −17,810 (commit), +17,810 (undo), −17,810 (recommit), +10,371 (cancel), −17,414 (second commit). Net spent is $24,853.
+
+This establishes the expected arithmetic under the unchanged Candidate-20/21 refund rule: full undo inside 30 minutes, otherwise 60% of unbuilt work. Grok's uncertain cancellation is therefore **not** classified as an economy defect.
+
+### Not tested in Grok's run (and covered here)
+
+The following were untested in Grok's run, not failed: F3 completion and commissioning, F3 customer and cart journeys, elevator travel, capacity, and save/reload during elevator travel. They are covered by `tthreefloor_journeys.mjs` above.
+
+Still outside this environment: physical iPhone Safari, staff performance effects in play, and vendor/fault handling in play beyond the existing regression scripts.
 
 ## Remaining limitations
 

@@ -35,6 +35,41 @@
       "name": "landscape 734x343: rotate prompt pauses; portrait resumes at 1x",
       "viewport": "393x659",
       "pass": true
+    },
+    {
+      "name": "A. Tap Unit 107 ring is on the unit's pin and a real tap completes the step (393x659)",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "A. Tap Unit 107 ring is on the unit's pin and a real tap completes the step (1280x720)",
+      "viewport": "1280x720",
+      "pass": true
+    },
+    {
+      "name": "B. Owner Make-Ready stays available in Details until accepted, then shows assigned status",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "C. unavailable optional stairs cannot invalidate the $17,810 package",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "D. floor chooser shows live in-progress F2 and blocks a second order",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "E. cancel is separated, itemised, confirmable, and recorded as separate ledger entries",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "F. review closes by labelled control and Escape; keyboard cannot bypass the paused review",
+      "viewport": "393x659",
+      "pass": true
     }
   ],
   "consoleErrors": []
