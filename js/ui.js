@@ -63,9 +63,9 @@ export class UI {
       </div>
       <div class="viewctl">
         <div class="seg floorseg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="view" data-v="1">F2</button></div>
-        <div class="seg rotseg"><button data-a="rot" data-v="-1" aria-label="Rotate view left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate view right">${I.rotR}</button></div>
         <button class="viewmore" data-a="viewMore" aria-label="More camera controls" aria-expanded="false">${I.view}</button>
         <div class="viewextra">
+        <div class="seg rotseg"><button data-a="rot" data-v="-1" aria-label="Rotate view left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate view right">${I.rotR}</button></div>
           <div class="seg"><button data-a="zoom" data-v="1.25" aria-label="Zoom in">${I.plus}</button><button data-a="zoom" data-v="0.8" aria-label="Zoom out">${I.minus}</button><button data-a="fit" aria-label="Fit property">${PIN.fit}</button></div>
           <div class="seg"><button data-a="photo" aria-label="Photo mode" title="Photo mode (P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.6"/></svg></button></div>
         </div>
@@ -1400,7 +1400,7 @@ export class UI {
       const ti = on && this.g.tierInfo(), nx = ti && ti.next; gb.hidden = !nx;
       if (nx) { const pr = Math.min(1, Math.min(ti.roll / nx.roll, ti.n / nx.props)); gb.firstChild.style.width = Math.round(pr * 100) + '%'; gb.title = `Next: ${nx.name} - rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? `, ${ti.n} of ${nx.props} properties` : ''}`; }
     }
-    const tm = fmtTime(s.t); if (tm !== this.hTime) { this.hTime = tm; this.$('clock').textContent = tm; const d = dayOf(s.t); this.$('date').textContent = `Day ${d} · ${DOW[(d - 1) % 7]}${s.weather === 'rain' ? ' · Rain' : ''}`; }
+    const tm = fmtTime(s.t); if (tm !== this.hTime) { this.hTime = tm; this.$('clock').textContent = tm; const d = dayOf(s.t); this.$('date').textContent = `Day ${d} · ${DOW[(d - 1) % 7]}${s.weather === 'rain' ? ' ☂' : ''}`; this.$('date').title = `Day ${d} · ${DOW[(d - 1) % 7]} · ${s.weather === 'rain' ? 'Rain' : 'Clear'}`; }
     if (s.speed !== this.hSpeed) { this.hSpeed = s.speed; for (const b of this.root.querySelectorAll('#speed button')) b.classList.toggle('on', +b.dataset.v === s.speed); }
     const hasF2 = this.sim.objs('shell').some((x) => x.floors > 1);
     if (hasF2 !== this.hF2) { this.hF2 = hasF2; this.root.querySelector('#floors [data-v="1"]').disabled = !hasF2; if (!hasF2 && this.rend.view === 1) this.setView(0); }
@@ -1427,7 +1427,7 @@ export class UI {
     const W = innerWidth, H = innerHeight, land = innerHeight <= 520 && innerWidth > innerHeight;
     const tabs = this.$('tabs').getBoundingClientRect();
     let top = 8, bottom = tabs.top - 8, left = 8, right = W - 8;
-    for (const selector of ['.hud', '.speed', '.viewctl', '#coach', '#feed']) {
+    for (const selector of ['.hud', '.speed', '.viewctl', '.viewextra', '#coach', '#feed']) {
       const el = this.root.querySelector(selector); if (!el || el.hidden) continue;
       const r = el.getBoundingClientRect(); if (r.width && r.height) top = Math.max(top, r.bottom + 8);
     }
@@ -1494,14 +1494,19 @@ export class UI {
     if (vacancies && s.open) return T(`${vacancies} rent-ready units vacant. Check demand and asking rents before expanding.`, { tab: 'business', section: 'Asking rents' }, 'ok');
     return T('All caught up.', null, 'ok');
   }
+  coachLabel(text) {
+    const vacant = text.match(/^(\d+) rent-ready units vacant\./);
+    if (vacant) return `${vacant[1]} vacant · Review demand & rents →`;
+    return text;
+  }
   renderCoach() {
     const s = this.sim.s, el = this.$('coach');
-    const hide = this.title || this.modalOpen() || (s.tut && s.tut.on && !s.tut.done) || !!s.lesson || !!s.lessonOffer || this.root.classList.contains('has-sheet');
+    const hide = this.title || this.modalOpen() || (s.tut && s.tut.on && !s.tut.done) || !!s.lesson || !!s.lessonOffer || this.root.classList.contains('has-sheet') || !!this.toasts?.length;
     const h = hide ? null : this.coachHint(); this.coachAct = h && h.act;
     if (!h) { if (!el.hidden) { el.hidden = true; this.root.classList.remove('has-coach'); } return; }
     if(h.kind==='ok' && !h.act) { el.hidden=true; this.root.classList.remove('has-coach'); return; }
     const key = h.text + '|' + h.kind + '|' + this.ownerStatus();
-    if (key !== this.coachKey || el.hidden) { this.coachKey = key; el.className = 'coach ' + h.kind + (h.act ? ' act' : ''); this.$('coachT').textContent = h.text; this.$('coachO').textContent = this.ownerStatus(); }
+    if (key !== this.coachKey || el.hidden) { this.coachKey = key; el.className = 'coach ' + h.kind + (h.act ? ' act' : ''); this.$('coachT').textContent = this.coachLabel(h.text); el.title = h.text; el.setAttribute('aria-label', h.text); this.$('coachO').textContent = this.ownerStatus(); }
     if (el.hidden) { el.hidden = false; this.root.classList.add('has-coach'); }
   }
   issueBtn(label, tool) { return `<button class="btn sm" data-a="goTool" data-v="${tool}">${label}</button>`; }

@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {loadRenderer} from '../performance/renderer-fixture.mjs';
+import {makeMaple} from '../../js/maple.js';
+import {UI} from '../../js/ui.js';
+const Renderer=await loadRenderer();
+const sim=makeMaple(18), before=JSON.stringify(sim.s);
+const r=new Renderer({clientWidth:393,clientHeight:720},sim);
+r.rebuildStatic();r.updateSky(.016);r.updateAnim(.016,r.nightK);
+assert.equal(JSON.stringify(sim.s),before,'architecture and lighting must never alter the save');
+assert.equal(r.mat.roof.map,r.tx.roof);assert.equal(r.mat.shellRoof.map,r.tx.roof);
+assert.equal(r.mat.unitWall.map,r.tx.wall);assert.equal(r.mat.unitWall2.map,r.tx.wall);
+let disposed=0;for(const m of [r.mat.roof,r.mat.unitWall,r.mat.unitWall2])m.addEventListener('dispose',()=>disposed++);
+const firstCount=r.staticG.children.length;
+for(let i=0;i<3;i++)r.rebuildStatic();
+assert.equal(r.staticG.children.length,firstCount,'rebuild must not accumulate architectural meshes');
+assert.equal(disposed,0,'shared architecture materials must survive rebuild');
+const leaves=r.envG.children.find(m=>m.isInstancedMesh&&m.material===r.mat.leaf);
+assert.ok(leaves);assert.ok(leaves.geometry.attributes.position.count<300,'softer trees remain bounded instanced geometry');
+for(const h of [0,6.5,12,18.4,23]){r.todOverride=h;r.updateSky(.016);assert.ok(Number.isFinite(r.hemi.intensity));assert.ok(r.hemi.intensity>=.62);}
+assert.equal(JSON.stringify(sim.s),before);
+const ui=Object.create(UI.prototype);
+assert.equal(ui.coachLabel('4 rent-ready units vacant. Check demand and asking rents before expanding.'),'4 vacant · Review demand & rents →');
+assert.equal(ui.coachLabel('Access blocked. Restore the aisle.'),'Access blocked. Restore the aisle.');
+console.log('PASS architecture reuse, bounded trees, read-only lighting and concise vacancy guidance; visual acceptance pending');

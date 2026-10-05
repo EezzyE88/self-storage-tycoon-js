@@ -6,10 +6,10 @@ import { G, FLOOR_H, TOOLS } from './data.js';
 const CELL = 32; // px per cell on ground textures
 const WALL_H = 1.25; // drive-up unit height
 const COL = {
-  grass: '#7fa35a', grass2: '#739852', asphalt: '#4a4d52', concrete: '#c9c4b8', street: '#3b3e43', sidewalk: '#d8d3c7',
+  grass: '#82996b', grass2: '#7b9364', asphalt: '#515a5d', concrete: '#d2ccbc', street: '#3d474e', sidewalk: '#ded8c9',
   loading: '#4f5257', parking: '#4c4f54', stripe: '#f1efe6', yellow: '#e8b923', hall: '#e4e0d6', shellFloor: '#bdb8ad',
-  unitWall: '#e7dfcf', unitWall2: '#d9cfbb', roof: '#6d747c', roofTrim: '#565c63', door: '#d9772b', doorInt: '#2f5e8e',
-  shellWall: '#d4ccbb', shellRoof: '#7b8288', office: '#f0ebe0', officeTrim: '#1f3a5f', glass: '#8fb3c8',
+  unitWall: '#e7dfcf', unitWall2: '#d9cfbb', roof: '#788995', roofTrim: '#405763', door: '#d9772b', doorInt: '#2f5e8e',
+  shellWall: '#ded5c3', shellRoof: '#6c808b', office: '#f0ebe0', officeTrim: '#1f3a5f', glass: '#8fb3c8',
 };
 function tex(canvas, repeat = false) {
   const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
@@ -25,6 +25,28 @@ function rollupTexture() {
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 64);
   for (let y = 0; y < 64; y += 5) { g.fillStyle = 'rgba(0,0,0,0.16)'; g.fillRect(0, y, 64, 1.4); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, y + 1.5, 64, 1); }
   g.fillStyle = 'rgba(0,0,0,0.28)'; g.fillRect(0, 60, 64, 4); g.fillRect(28, 52, 8, 3);
+  return tex(c);
+}
+// Shared architecture textures add legible detail without a mesh per seam or frame.
+function architectureTexture(kind) {
+  const c = mkCanvas(128, 128), g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 128, 128);
+  if (kind === 'roof') {
+    for (let x = 0; x < 128; x += 32) {
+      g.fillStyle = 'rgba(25,43,56,.25)'; g.fillRect(x, 0, 2, 128);
+      g.fillStyle = 'rgba(255,255,255,.30)'; g.fillRect(x + 2, 0, 1, 128);
+    }
+  } else {
+    for (let i = 0; i < 360; i++) { g.fillStyle = 'rgba(72,62,43,.035)'; g.fillRect(hash(i * 3) * 128, hash(i * 7) * 128, 2, 2); }
+    g.fillStyle = '#c8ccca'; g.fillRect(0, 105, 128, 23);
+    g.fillStyle = '#71838a'; g.fillRect(0, 0, 128, 8);
+    if (kind === 'facade') {
+      g.fillStyle = '#637f8a'; g.fillRect(12, 42, 104, 36);
+      g.fillStyle = '#d8e5e7';
+      for (let x = 36; x < 116; x += 24) g.fillRect(x, 42, 3, 36);
+      g.fillStyle = 'rgba(255,255,255,.20)'; g.fillRect(12, 42, 104, 6);
+    }
+  }
   return tex(c);
 }
 function badgeTexture(kind) {
@@ -93,7 +115,7 @@ export class Renderer {
     const r = new THREE.WebGLRenderer({ canvas, antialias: !(touch && dpr >= 2), powerPreference: 'high-performance' });
     r.setPixelRatio(Math.min(dpr, 2));
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
-    r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+    r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
     this.r = r; this.quality = 2;
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0xcfd8dc, 80, 160);
@@ -103,7 +125,7 @@ export class Renderer {
     this.zoom = 1; this.center = new THREE.Vector3(sim.s.W / 2, 0, sim.s.H / 2 + 1);
     this.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -200, 400);
     this.frustum = 30;
-    this.tx = { rollup: rollupTexture(), glow: glowTexture(), glowCool: glowTexture('rgba(210,230,255,0.8)'), ring: ringTexture(), badges: {}, plaques: {} };
+    this.tx = { rollup: rollupTexture(), glow: glowTexture(), glowCool: glowTexture('rgba(210,230,255,0.8)'), ring: ringTexture(), roof: architectureTexture('roof'), wall: architectureTexture('wall'), facade: architectureTexture('facade'), badges: {}, plaques: {} };
     for (const k of ['rent', 'turn', 'fault', 'commission', 'missing', 'unready', 'reserved', 'lien', 'task']) this.tx.badges[k] = badgeTexture(k);
     this.mat = this.makeMaterials();
     this.statusMaterials = Object.fromEntries(Object.entries(UNIT_STATUS).map(([k,v])=>[k,new THREE.MeshStandardMaterial({color:v.color,map:this.tx.rollup,roughness:.65})]));
@@ -116,7 +138,7 @@ export class Renderer {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(sim.s.W, sim.s.H), new THREE.MeshStandardMaterial({ map: this.groundTex, roughness: 0.95 }));
     ground.rotation.x = -Math.PI / 2; ground.position.set(sim.s.W / 2, 0, sim.s.H / 2); ground.receiveShadow = true;
     this.scene.add(ground); this.ground = ground;
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x6f944f, roughness: 1 }));
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x7b9364, roughness: 1 }));
     outer.rotation.x = -Math.PI / 2; outer.position.set(sim.s.W / 2, -0.02, sim.s.H / 2); outer.receiveShadow = true; this.scene.add(outer); this.outer = outer; this.worldW = sim.s.W; this.worldH = sim.s.H;
     // floor-2 plate
     this.f2Canvas = mkCanvas(sim.s.W * CELL, sim.s.H * CELL); this.f2Tex = tex(this.f2Canvas);
@@ -145,10 +167,10 @@ export class Renderer {
   makeMaterials() {
     const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o });
     return {
-      unitWall: std(COL.unitWall), unitWall2: std(COL.unitWall2), roof: std(COL.roof, { roughness: 0.6, metalness: 0.3 }), roofTrim: std(COL.roofTrim),
+      unitWall: std(COL.unitWall, {map:this.tx.wall}), unitWall2: std(COL.unitWall2, {map:this.tx.wall}), roof: std(COL.roof, { map:this.tx.roof, roughness: 0.75, metalness: 0.15 }), roofTrim: std(COL.roofTrim),
       door: std(COL.door, { map: this.tx.rollup, roughness: 0.55, metalness: 0.2 }), doorInt: std(COL.doorInt, { map: this.tx.rollup, roughness: 0.55, metalness: 0.2 }),
-      doorDark: std('#2a2c30'), shellWall: std(COL.shellWall), shellWallCut: std('#b8ae9b'), shellRoof: std(COL.shellRoof, { roughness: 0.55, metalness: 0.35 }),
-      office: std(COL.office), officeTrim: std(COL.officeTrim), glass: std(COL.glass, { roughness: 0.15, metalness: 0.4, transparent: true, opacity: 0.75 }),
+      doorDark: std('#2a2c30'), shellWall: std(COL.shellWall, {map:this.tx.wall}), shellWallCut: std('#b8ae9b'), shellRoof: std(COL.shellRoof, { map:this.tx.roof, roughness: 0.75, metalness: 0.15 }),
+      office: std(COL.office, {map:this.tx.wall}), officeTrim: std(COL.officeTrim), glass: std(COL.glass, { roughness: 0.15, metalness: 0.4, transparent: true, opacity: 0.75 }),
       metal: std('#9aa1a8', { metalness: 0.6, roughness: 0.4 }), darkMetal: std('#3c4046', { metalness: 0.5, roughness: 0.5 }), yellow: std('#e8b923'),
       lamp: new THREE.MeshStandardMaterial({ color: 0xfff4d6, emissive: 0xffd88a, emissiveIntensity: 0 }), lampOff: std('#555'),
       trunk: std('#6b4f35'), leaf: std('#4f7a3a'), leaf2: std('#5e8a41'), fence: std('#8b9096', { metalness: 0.5, roughness: 0.5 }),
@@ -194,21 +216,22 @@ export class Renderer {
       spots.push([x, y, 0.8 + hash(k * 11) * 0.9]);
     }
     for (let x = 1; x < s.W; x += 5) spots.push([x + 0.5, p.y1 + 4.8, 0.55]);
-    const trunkG = new THREE.CylinderGeometry(0.08, 0.12, 1, 6), leafG = new THREE.IcosahedronGeometry(0.7, 0);
+    const trunkG = new THREE.CylinderGeometry(0.08, 0.12, 1, 6), leafG = new THREE.IcosahedronGeometry(0.7, 1);
     const trunks = new THREE.InstancedMesh(trunkG, this.mat.trunk, spots.length), leaves = new THREE.InstancedMesh(leafG, this.mat.leaf, spots.length);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3();
     spots.forEach(([x, y, k], i) => {
       m.compose(v.set(x, 0.5 * k, y), q.identity(), sc.set(k, k, k)); trunks.setMatrixAt(i, m);
       q.setFromEuler(new THREE.Euler(hash(i) * 3, hash(i + 9) * 3, 0));
       m.compose(v.set(x, 1.25 * k, y), q, sc.set(k * 1.1, k * 1.25, k * 1.1)); leaves.setMatrixAt(i, m);
-      leaves.setColorAt(i, new THREE.Color().setHSL(0.26 + hash(i * 5) * 0.06, 0.38, 0.3 + hash(i * 13) * 0.1));
+      leaves.setColorAt(i, new THREE.Color().setHSL(0.25 + hash(i * 5) * 0.04, 0.26, 0.34 + hash(i * 13) * 0.09));
     });
     trunks.castShadow = leaves.castShadow = true; this.envG.add(trunks, leaves);
     // neighbours: a couple of simple buildings across the street for context
     for (let k = 0; k < 5; k++) {
-      const b = new THREE.Mesh(this.geo.box, new THREE.MeshStandardMaterial({ color: ['#c9b79c', '#b7c0c7', '#d8cbb3', '#a9b3a0', '#cfc2b0'][k], roughness: 0.9 }));
+      const b = new THREE.Mesh(this.geo.box, new THREE.MeshStandardMaterial({ color: ['#d6cbb6', '#c3d0d0', '#dcd2c0', '#c4cbbd', '#d2c5b5'][k], map:this.tx.facade, roughness: 0.9 }));
       const w = 5 + hash(k) * 4, h = 1.6 + hash(k + 3) * 1.8;
       b.scale.set(w, h, 4); b.position.set(3 + k * 9 + hash(k + 7) * 2, h / 2, p.y0 - 7); b.castShadow = b.receiveShadow = true; this.envG.add(b);
+      const roof = new THREE.Mesh(this.geo.box, this.mat.roof); roof.scale.set(w + .16, .12, 4.16); roof.position.set(b.position.x, h + .06, b.position.z); roof.castShadow = true; this.envG.add(roof);
     }
   }
   // graphics level: 2 = full, 1 = lighter (lower resolution + smaller shadows), 0 = lowest (DPR 1, no shadows)
@@ -306,7 +329,11 @@ export class Renderer {
         default: base = COL.grass;
       }
       g.fillStyle = base; g.fillRect(px, py, C, C);
-      if (gv === G.GRASS) { g.fillStyle = `rgba(${h < 0.5 ? '30,60,10' : '210,230,140'},0.05)`; g.fillRect(px, py, C, C); for (let k = 0; k < 6; k++) { g.fillStyle = hash(i * 31 + k) < 0.5 ? 'rgba(40,70,20,0.18)' : 'rgba(200,220,120,0.14)'; g.fillRect(px + hash(i * 7 + k) * C, py + hash(i * 13 + k) * C, 2, 3); } }
+      if (gv === G.GRASS) {
+        const shade = (Math.sin(x * .22) + Math.cos(y * .19)) * .012 + .025;
+        g.fillStyle = `rgba(45,66,34,${shade})`; g.fillRect(px, py, C, C);
+        for (let k = 0; k < 6; k++) { g.fillStyle = hash(i * 31 + k) < .5 ? 'rgba(43,66,32,.07)' : 'rgba(220,224,175,.08)'; g.fillRect(px + hash(i * 7 + k) * C, py + hash(i * 13 + k) * C, 1, 2); }
+      }
       else if (gv === G.ASPHALT || gv === G.STREET || gv === G.PARKING || gv === G.LOADING) { for (let k = 0; k < 5; k++) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(px + hash(i * 5 + k) * C, py + hash(i * 3 + k) * C, 1.5, 1.5); } }
       else if (gv === G.CONCRETE || gv === G.SIDEWALK) { g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1); }
       if (gv === G.LOADING) {
@@ -814,9 +841,9 @@ export class Renderer {
     const flash = lf < 85 ? 1 : lf > 130 && lf < 210 ? 0.45 : 0;
     this.sun.intensity = (0.15 + dayK * 2.3) * (1 - rain * 0.45) + flash * 2.8;
     this.sun.color.setRGB(1, 0.93 - golden * 0.2, 0.84 - golden * 0.35);
-    this.hemi.intensity = 0.55 + dayK * 0.45 - rain * 0.1 + flash * 1.25;
+    this.hemi.intensity = 0.72 + dayK * 0.28 - rain * 0.1 + flash * 1.25;
     this.hemi.color.setRGB(0.55 + dayK * 0.35, 0.62 + dayK * 0.3, 0.8 + dayK * 0.15);
-    this.ambient.intensity = night * 0.9 + flash * 0.75;
+    this.ambient.intensity = night * 1.05 + flash * 0.75;
     const sky = new THREE.Color().setRGB(0.12 + dayK * 0.57 + golden * 0.12 - rain * 0.12, 0.09 + dayK * 0.7 - rain * 0.1, 0.17 + dayK * 0.72 - rain * 0.05);
     if (flash) sky.lerp(new THREE.Color(0xe8efff), flash * 0.62);
     this.scene.background = sky; this.scene.fog.color.copy(sky);

@@ -845,3 +845,92 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 @media (max-width:380px) {
  #ui .viewctl .rotseg { position:absolute; top:48px; right:0; }
 }
+
+/* Candidate 18 — slate instruments, warm workspaces, quieter property presentation. */
+:root { --ink:#233943; --ink2:#344c56; --paper:#faf7ef; --paper2:#ebece4; --line:#d6ddd6; --muted:#62747b; --navy:#274b58; --yellow:#f3c66b; --green:#3c8e73; --r:10px; --shadow:0 4px 16px #101e2630; }
+#ui .hud .chip, #ui .hud > .iconbtn, #ui .viewctl .seg, #ui .viewmore { background:#203740f2; color:#f5f4ec; border:1px solid #ffffff20; box-shadow:0 3px 10px #14262d25; backdrop-filter:none; -webkit-backdrop-filter:none; border-radius:9px; }
+#ui .hud { gap:5px; }
+#ui .hud .cash { color:#fbf7ed; font-size:17px; font-weight:750; letter-spacing:-.025em; }
+#ui .hud .cash.neg { color:#ffaaa0; }
+#ui .hud .cash small, #ui .hud .clock span:not(.sbflag) { color:#c5d1d1; font-size:11px; }
+#ui .hud .clock b { font-size:14px; font-weight:650; }
+#ui .speed button, #ui .viewctl .seg button { color:#d9e2df; border-radius:6px; font-size:13px; }
+#ui .speed button.on, #ui .viewctl .seg button.on { color:#243b44; background:#f3c66b; box-shadow:none; }
+#ui .speed { padding:2px; }
+#ui .tabs { background:#203740f2; border:1px solid #ffffff20; box-shadow:0 3px 14px #14262d25; border-radius:10px; }
+#ui .tabs button { color:#d5dedb; font-size:13px; font-weight:650; border-radius:7px; }
+#ui .tabs button.on { color:#243b44; background:#f3c66b; }
+#ui .sheet, #ui .modal { background:var(--paper); border:1px solid #d5dcd5; border-radius:12px; box-shadow:0 8px 24px #122b3540; }
+#ui .sheet header { background:#f1f0e7; border-bottom-color:var(--line); }
+#ui .sheet header h2 { font-weight:750; font-size:16px; }
+#ui .panel-size, #ui .sheet .x, #ui .modal .x { background:#e5ebe5; color:#29434d; border-radius:7px; }
+#ui .sheet .btn, #ui .modal .btn { border-radius:8px; font-weight:650; }
+#ui .sheet .btn.pri, #ui .modal .btn.pri { background:#294b57; color:#fff8e8; }
+#ui .sheet .btn.go { background:#387f66; color:#ffffff; }
+#ui .sheet .btn:disabled, #ui .modal .btn:disabled { opacity:.5; }
+#ui .item, #ui .stat { border-radius:8px; box-shadow:none; }
+#ui .section-shortcuts button, #ui .cats button { border-radius:6px; background:#e9eee6; color:#354d55; font-size:13px; }
+#ui .section-shortcuts button.on, #ui .cats button.on { background:#294b57; color:#fff8e8; }
+#ui .sheet .body h3 { font-size:13px; letter-spacing:.04em; font-weight:750; color:#526971; }
+#ui .sheet .note { font-size:13px; line-height:1.45; }
+#ui .sheet .tool { border-radius:8px; box-shadow:none; border:1px solid #d0dbd3; }
+#ui .dock-actions { background:#f1f0e7; }
+#ui .coach { background:#f9f6edf5; color:#29434d; border:1px solid #d5ded5; border-left:3px solid #6a9a8b; min-height:44px; border-radius:8px; font-size:13px; padding:7px 10px; }
+#ui .coach .ct { white-space:normal; text-overflow:clip; overflow:visible; line-height:1.35; }
+#ui .coach.warn { border-left-color:#daaa50; }
+#ui .inbox-chip { background:#f9f6edf5; color:#29434d; border-radius:8px; font-size:13px; box-shadow:0 3px 12px #14262d25; }
+#ui .feed .toast { background:#f9f6ed; color:#29434d; border-radius:8px; font-size:13px; line-height:1.35; max-height:none; }
+#ui .tut { background:#203740f5; color:#f4f4e9; border-top-color:#d7ad58; box-shadow:0 3px 14px #14262d25; }
+#ui .tut .mini, #ui .tut .skip { color:#d4dfdb; }
+#ui .tut.offer .x { color:#203740; background:#f3c66b; border-radius:7px; }
+#ui .lesson-chip small { color:#c3d1ce; }
+#ui .lesson-chip b, #ui .tut.min .tx { font-size:13px; }
+#ui .modal-bg { background:#12283050; }
+#ui .modal .convo { box-shadow:none; background:#fffdf7; border-radius:9px; }
+#ui .modal h3 { font-size:18px; font-weight:750; }
+#ui .modal p, #ui .modal .convo .q { line-height:1.4; }
+@media (max-width:700px) {
+ #ui .hud { grid-template-columns:minmax(0,1fr) 94px 44px; top:calc(6px + var(--safe-t)); }
+ #ui .hud > .chip:not(.speed) { padding:5px 9px; min-height:46px; }
+ #ui .hud .clock { gap:1px; }
+ #ui .hud .clock #date { white-space:nowrap; font-size:10px; }
+ #ui .hud > .iconbtn { height:46px; }
+ #ui .hud .speed { top:51px; }
+ #ui .viewctl { top:calc(57px + var(--safe-t)); flex-direction:row; gap:4px; }
+ #ui .viewctl .floorseg { flex-direction:row; }
+ #ui .viewctl .floorseg button { width:36px; min-width:36px; }
+ #ui .viewctl .floorseg button:disabled { display:none; }
+ #ui .viewctl .viewmore { display:grid; width:44px; height:50px; color:#f4f4e9; }
+ #ui .viewctl .viewextra { display:none; position:absolute; top:56px; right:0; flex-direction:row; padding:5px; background:#203740f5; border:1px solid #ffffff20; border-radius:9px; box-shadow:0 4px 16px #14262d35; }
+ #ui .viewctl.open .viewextra { display:flex; }
+ #ui .viewctl .viewextra .seg { background:transparent; box-shadow:none; border:0; padding:0; flex-direction:row; }
+ #ui .viewctl .viewextra .seg button { width:44px; min-width:44px; height:44px; }
+ #ui .viewctl .viewextra .rotseg { position:static; display:flex; }
+ #ui .viewctl.open .viewmore { background:#f3c66b; color:#243b44; }
+ #ui .coach, #ui .feed { top:calc(112px + var(--safe-t)); left:8px; right:8px; width:auto; }
+ #ui .coach { max-width:340px; }
+ #ui .feed { align-items:flex-start; }
+ #ui .sheet.tall { max-height:calc(100dvh - 176px - var(--safe-t) - var(--safe-b)); }
+}
+@media (max-height:520px) and (orientation:landscape) {
+ #ui .viewctl { top:calc(6px + var(--safe-t)); }
+ #ui .viewctl .viewextra { top:56px; }
+ #ui .coach, #ui .feed { top:calc(112px + var(--safe-t)); max-width:40vw; }
+ #ui .sheet.tall { max-height:calc(100dvh - 134px - var(--safe-b)); }
+}
+
+#ui .goalbar { background:#ffffff22; bottom:2px; height:2px; }
+#ui .hud .clock .sbflag:not([hidden]) { color:#f3c66b; background:#ffffff12; }
+@media (max-height:520px) and (orientation:landscape) {
+ #ui .hud { width:min(360px,calc(100vw - 184px)); right:auto; }
+ #ui .viewctl { flex-direction:row; gap:4px; }
+ #ui .viewctl .floorseg { flex-direction:row; }
+ #ui .viewctl .floorseg button { width:36px; height:44px; }
+ #ui .viewctl .floorseg button:disabled { display:none; }
+ #ui .viewctl .viewmore { display:grid; width:44px; height:50px; color:#f4f4e9; }
+ #ui .viewctl .viewextra { display:none; position:absolute; top:56px; right:0; flex-direction:row; padding:5px; background:#203740f5; border-radius:9px; }
+ #ui .viewctl.open .viewextra { display:flex; }
+ #ui .viewctl .viewextra .seg { display:flex; flex-direction:row; background:transparent; border:0; padding:0; }
+ #ui .viewctl .viewextra .seg button { width:44px; height:44px; }
+ #ui .viewctl .viewextra .rotseg { display:flex; position:static; }
+}
