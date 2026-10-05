@@ -10,7 +10,7 @@ import {makeMaple} from '../../js/maple.js';
 import {Sim,fmtTime} from '../../js/sim.js';
 import {MARKETS,ROLES,MIN_PER_DAY,FLOOR_H} from '../../js/data.js';
 import {modeLabel,sandboxName} from '../../js/scenarios.js';
-import {expansionEvidence} from '../../js/vertical.js';
+import {expansionEvidence,tickVertical} from '../../js/vertical.js';
 let n=0;const test=async(name,f)=>{await f();console.log('PASS '+name);n++;};
 const clone=sim=>new Sim(JSON.parse(JSON.stringify(sim.s)));
 
@@ -148,7 +148,7 @@ await test('12. evidence verdicts follow observed history only',()=>{
 
 await test('13. destroying a construction order needs a deliberate second tap even for a full refund',()=>{
   const s=makeMaple(3);s.s.cash=1e6;const R=s.verticalPlan(SH);s.dispatch({type:'verticalUpgrade',...R});const ord=s.s.orders.at(-1);const {ui,boxes}=fixture(s);ui.closeModal=()=>{boxes.modal.innerHTML='';};
-  const cmd=JSON.stringify({type:'cancelOrder',id:ord.id});ui.onClick({target:{closest:()=>({dataset:{a:'cmd',cmd}})}});assert.equal(ord.st,'construction');assert.match(boxes.modal.innerHTML,/Cancel this construction\?/);assert.match(boxes.modal.innerHTML,/Full undo: <b>\$17,810<\/b>/);assert.match(boxes.modal.innerHTML,/Keep building/);
+  const cmd=JSON.stringify({type:'cancelOrder',id:ord.id});ui.onClick({target:{closest:()=>({dataset:{a:'cmd',cmd}})}});assert.equal(ord.st,'construction');assert.match(boxes.modal.innerHTML,/Cancel this construction\?/);for(const re of [/Original package charge<\/span><b class="">\$17,810/,/Exact refund<\/span><b class="good">\$17,810/,/Cancellation penalty<\/span><b class="">\$0/,/full undo within the grace period/,/Cash after cancelling<\/span><b class="">\$1,000,000/])assert.match(boxes.modal.innerHTML,re);assert.match(boxes.modal.innerHTML,/Keep building/);
   ui.onClick({target:{closest:()=>({dataset:{a:'cmd',cmd,confirmed:'1'}})}});assert.equal(ord.st,'cancelled');assert.equal(s.s.cash,1e6);});
 await test('13. wage copy matches the Porter wage and does not silently round $12.50',()=>{
   const src=readFileSync('js/ui.js','utf8');assert.doesNotMatch(src,/\$55\/day/);assert.match(src,/Owner \+ porter \(\$\{money\(ROLES\.porter\.wage, true\)\}\/day\)/);assert.equal(ROLES.porter.wage,12.5);
@@ -158,4 +158,37 @@ await test('9. orientation policy: portrait manifest and a pausing rotate prompt
   assert.equal(JSON.parse(readFileSync('manifest.webmanifest','utf8')).orientation,'portrait');assert.match(readFileSync('index.html','utf8'),/id="rotate"/);assert.match(readFileSync('css/game.css','utf8'),/@media \(orientation: landscape\) and \(max-height: 500px\) \{\n  #rotate \{ display:flex/);
   const {ui,sim}=fixture(makeMaple(3),2);let land=true;globalThis.matchMedia=()=>({matches:land});ui.syncOrientation();assert.equal(sim.s.speed,0);ui.onClick({target:{closest:()=>({dataset:{a:'speed',v:'4'}})}});assert.equal(sim.s.speed,0);land=false;ui.syncOrientation();assert.equal(sim.s.speed,1);delete globalThis.matchMedia;});
 await test('10. suite runs without hidden Git history',()=>{for(const f of ['tests/headless/tlayout_hierarchy.mjs','tests/headless/tthreefloor_parity.mjs'])assert.doesNotMatch(readFileSync(f,'utf8'),/execFileSync\('git'|54d432f/);readFileSync('tests/fixtures/render-pre-layout-hierarchy.js');readFileSync('tests/fixtures/candidate19/sim.js');});
+
+// ---- Grok addendum (A-F) ----
+await test('A. map rings require the point itself to be the map, never an interface layer or off-screen',()=>{
+  const {ui}=fixture();globalThis.innerWidth=393;globalThis.innerHeight=659;let hit={id:'view'};ui.root.ownerDocument={elementFromPoint:()=>hit,querySelectorAll:()=>[]};
+  assert.equal(ui.mapPointClear({x:200,y:300}),true);hit={id:'',closest:s=>/#pins/.test(s)?{}:null};assert.equal(ui.mapPointClear({x:200,y:300}),true);
+  hit={id:'',closest:()=>null,className:'tabs'};assert.equal(ui.mapPointClear({x:200,y:620}),false,'covered by bottom navigation');assert.equal(ui.mapPointClear({x:200,y:700}),false,'outside viewport');
+  const src=readFileSync('js/ui.js','utf8');assert.match(src,/#pins \.pin\[data-k="obj"\]\[data-id="\$\{o\.id\}"\]/,'ring binds to the object pin');assert.match(src,/g\.style\.transition = jump \|\| g\.hidden \? 'none' : ''/);});
+await test('B. make-ready action stays in compact and detailed unit views until accepted, then shows status only',()=>{
+  const s=makeMaple(3);const u=s.objs('unit').find(u=>u.num===107);if(u.lease)s.endLease(s.s.leases[u.lease],'moveout');assert.ok(s.s.tasks.some(t=>t.type==='makeready'&&t.obj===u.id));const {ui}=fixture(s);ui.sel=u.id;
+  for(const tall of [false,true]){ui.sheetTall=tall;const h=ui.inspector(),rail=h.slice(h.indexOf('class="dock-actions"'),h.indexOf('class="body"'));assert.match(rail,/ownerMakeReady/,`action present when ${tall?'detailed':'compact'}`);}
+  assert.ok(s.dispatch({type:'ownerMakeReady',unit:u.id,forceOwner:true}).ok);for(const tall of [false,true]){ui.sheetTall=tall;const h=ui.inspector();assert.doesNotMatch(h,/"type":"ownerMakeReady"/,'no stale action');assert.match(h,/Make-ready assigned|Make-ready \d+%/);}
+  const p=makeMaple(3);const v=p.objs('unit').find(u=>u.num===107);if(v.lease)p.endLease(p.s.leases[v.lease],'moveout');p.dispatch({type:'hire',role:'porter'});const f=fixture(p).ui;f.sel=v.id;assert.match(f.inspector(),/Queue Porter|ownerMakeReady/,'staff-first route still offered');});
+await test('D. floor chooser shows live in-progress state, never "not built yet", never counts it complete',()=>{
+  const s=makeMaple(3);s.s.cash=1e6;const R=s.verticalPlan(SH);s.dispatch({type:'verticalUpgrade',...R});const ord=s.s.orders.at(-1);const {ui}=fixture(s);
+  let h=ui.floorsHtml();assert.match(h,/Building 12 · 1 completed floor</);assert.match(h,/F2 · 0% · reinforcement/);assert.doesNotMatch(h,/F2 not built yet/);assert.match(h,/Plan next floor · after F2 handover/);assert.doesNotMatch(h,/data-a="verticalReview"/);
+  while(ord.vertical.phase<2){s.s.t++;tickVertical(s,ord);}for(let i=0;i<50;i++){s.s.t++;tickVertical(s,ord);}assert.equal(s.objs('shell')[0].floors,2,'structure raised the shell');
+  h=ui.floorsHtml();assert.match(h,/1 completed floor</);assert.match(h,new RegExp(`F2 · ${Math.floor(ord.prog*100)}% · fit-out`));assert.doesNotMatch(h,/data-v="1">F2<\/button>/,'not offered as a completed floor');assert.match(h,/under construction/);
+  assert.equal(ui.floorState(s.objs('shell')[0]).done,1);assert.equal(s.verticalPlan(SH).ok,false,'another vertical order stays blocked');
+  ui.floorsOpen=true;ui.floorsKey=null;const box=ui.$('modal');box.querySelector=q=>q==='.modal.floors'?{}:null;ui.refreshFloors();const first=box.innerHTML;for(let i=0;i<600;i++){s.s.t++;tickVertical(s,ord);}ui.refreshFloors();assert.notEqual(box.innerHTML,first,'chooser updates live without reload');});
+await test('E. cancellation is kept apart from navigation and routine actions, with an itemised confirmation',()=>{
+  const s=makeMaple(3);s.s.cash=1e6;const R=s.verticalPlan(SH);s.dispatch({type:'verticalUpgrade',...R});const ord=s.s.orders.at(-1);while(ord.vertical.phase<1){s.s.t++;tickVertical(s,ord);}for(let i=0;i<100;i++){s.s.t++;tickVertical(s,ord);}
+  const {ui,boxes}=fixture(s);ui.sel=SH;const h=ui.inspector(),rail=h.indexOf('class="dock-actions"')>=0?h.slice(h.indexOf('class="dock-actions"'),h.indexOf('class="body"')):'';
+  assert.doesNotMatch(rail,/cancelOrder/,'cancel is not in the routine action rail');assert.match(h,/class="danger-zone"><h3>Cancel construction<\/h3>/);assert.match(h,/Cancel construction… \(refund/);assert.match(h,/Plan next floor · after F2 handover/);
+  ui.confirmCancelOrder(ord.id);const m=boxes.modal.innerHTML;for(const re of [/Original package charge<\/span><b class="">\$17,810/,/Completed: Reinforcement \(retained\)<\/span><b class="">\$396/,/Work in progress: Structure/,/Unbuilt work/,/Non-refundable share of unbuilt work \(40%\)/,/Exact refund<\/span><b class="good">\$10,371/,/Non-refundable in total<\/span><b class="">\$7,439/,/Cash after cancelling/,/Paid reinforcement \(396\) is kept with the building; the next F2 quote omits it/,/data-qa="cc-keep"/,/data-qa="cc-confirm"/])assert.match(m,re);
+  assert.ok(m.indexOf('cc-keep')<m.indexOf('cc-confirm'),'safe action first');
+  const v=readFileSync('js/ui.js','utf8');assert.match(v,/data-qa="vr-close-review">Close review</);assert.match(v,/data-qa="vp-discard">Discard preview</);assert.doesNotMatch(v,/data-a="verticalCancel">Cancel</);});
+await test('F. expansion review is accessible: stable labels, automation selectors, Escape, no keyboard bypass of the pause',()=>{
+  const s=makeMaple(3);s.s.cash=1e6;const {ui,boxes}=fixture(s);ui.syncFloorUi=()=>{};ui.spendingHtml=()=>'';ui.showVertical(SH);const h=boxes.modal.innerHTML;
+  for(const qa of ['vr-close','vr-close-review','vr-preview','vr-confirm','vr-opt-fitout','vr-opt-stairs'])assert.match(h,new RegExp(`data-qa="${qa}"`));
+  assert.match(h,/aria-label="Close review"/);assert.match(h,/role="dialog" aria-modal="true" aria-labelledby="vr-title"/);assert.match(h,/Paused while you review/);assert.doesNotMatch(h,/<select/,'no native select needed in the review');
+  assert.match(h,/data-vertical-option="stairs"[^>]*disabled/);assert.match(h,/Not available: this building has no stairwell/);assert.match(h,/Confirm · \$17,810/);
+  ui.previewVertical();assert.match(ui.verticalBarHtml(),/data-qa="vp-back"[\s\S]*data-qa="vp-confirm"[\s\S]*data-qa="vp-discard"/);
+  const main=readFileSync('js/main.js','utf8');assert.match(main,/e\.key === 'Escape' && !ui\.title && ui\.modalOpen\(\)\) \{ ui\.closeModal\(\); return; \}/);assert.match(main,/const runSpeed = \(v\) => \{ if \(!\(v > 0 && ui\.timeLocked\(\)\)\) ui\.do/);});
 console.log(`${n} candidate-22 regression checks passed`);

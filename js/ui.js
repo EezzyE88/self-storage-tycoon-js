@@ -8,7 +8,7 @@ import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios
 import { financialTime } from './finance.js';
 import { guideFor } from './handbook.js';
 import { verticalLayout, verticalDone, verticalCheck, authoredPlacement } from './blueprint.js';
-import { expansionEvidence } from './vertical.js';
+import { expansionEvidence, cancellationBreakdown } from './vertical.js';
 
 const PIN = {
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-8.3 8.3a2 2 0 0 1-2.8-2.8l8.3-8.3"/><path d="M14.5 5.5 17 3"/></svg>',
@@ -385,7 +385,7 @@ export class UI {
       const cmd = button.match(/data-cmd='([^']*)'/);
       if (!cmd) { if (/data-a="(?:staffHelp|verticalReview)"/.test(button)) { actions.push(button); return ''; } return button; }
       let type; try { type = JSON.parse(cmd[1]).type; } catch { return button; }
-      if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor', 'cancelOrder'].includes(type)) return button;
+      if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor'].includes(type)) return button; // construction cancel is kept apart from routine actions
       actions.push(button); return '';
     });
     const actionRail = actions.length ? `<div class="dock-actions" aria-label="Task actions">${actions.join('')}</div>` : '';
@@ -574,8 +574,7 @@ export class UI {
       const { undo, refund } = sim.cancelRefund(ord);
       return this.sheet(nm, 'Under construction', `<div class="kv"><span>Order</span><span>${esc(ord.label)}</span><span>Progress</span><span>${ord.waiting ? (sim.groundPredecessor(ord) ? 'Waiting for earlier paving' : 'Waiting for building shell') : pct(ord.prog)}</span><span>Cost</span><span>${money(ord.cost)}</span></div>
         <div class="bar"><i style="width:${Math.round(ord.prog * 100)}%"></i></div>
-        <div class="row" style="margin-top:10px"><button class="btn danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'cancelOrder', id: ord.id })}'>${undo ? 'Undo' : 'Cancel'} (refund ${money(refund)})</button></div>
-        <p class="note">${undo ? 'Undo refunds everything within 30 game-minutes of committing.' : 'Cancelling mid-build refunds 60% of the unbuilt share.'}</p>`);
+        <div class="danger-zone"><h3>Cancel construction</h3><p class="note">${undo ? 'Undo refunds everything within 30 game-minutes of committing.' : 'Cancelling mid-build refunds 60% of the unbuilt share.'} You will be asked to confirm.</p><button class="btn danger" data-qa="cancel-construction" data-a="cmd" data-cmd='${JSON.stringify({ type: 'cancelOrder', id: ord.id })}'>${undo ? 'Undo construction…' : 'Cancel construction…'} (refund ${money(refund)})</button></div>`);
     }
     const html = this.objSheet(o, nm).replace('<div class="body">', '<div class="body">' + this.diagnosticHtml(o.id));
     if (!o.unpowered) return html;
@@ -656,7 +655,7 @@ export class UI {
       case 'shell': {
         const units = sim.objs('unit').filter((u) => D.shellAt[u.y * s.W + u.x] === o.id);
         const hv = D.hvac[o.id];
-        return this.sheet(nm, `${o.w}x${o.h} cells`, `<div class="kv"><span>Completed floors</span><span>${o.floors}</span><span>Units</span><span>${units.length}</span><span>Occupied</span><span>${units.filter((u) => u.lease).length}</span><span>HVAC</span><span>${hv && hv.cap ? Math.round(hv.load) + ' / ' + Math.round(hv.cap) : 'None'}</span></div><button class="btn pri" data-a="verticalReview" data-v="${o.id}">Plan next floor</button>${s.orders.filter(q=>q.vertical?.shell===o.id&&q.st==='construction').map(q=>`<p class="note">${esc(q.label)} · ${Math.round(q.prog*100)}% · ${esc(q.vertical.stages[q.vertical.phase]?.kind||'complete')}${q.waiting?' · waiting for elevator to clear':''}</p>${q.vertical.phase<2?`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({type:'cancelOrder',id:q.id})}'>Cancel unfinished package · refund ${money(sim.cancelRefund(q).refund)}</button>`:''}`).join('')}<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({type:'commission',all:true})}'>Commission ready units</button><p class="note">Choose Floors to see inside. Upper-floor rentals require working freight access; stairs are optional.</p>`);
+        return this.sheet(nm, `${o.w}x${o.h} cells`, `<div class="kv"><span>Completed floors</span><span>${this.floorState(o).done}${this.floorState(o).ord ? ` · F${this.floorState(o).f + 1} ${this.floorState(o).pct}% (${this.floorState(o).stage})` : ''}</span><span>Units</span><span>${units.length}</span><span>Occupied</span><span>${units.filter((u) => u.lease).length}</span><span>HVAC</span><span>${hv && hv.cap ? Math.round(hv.load) + ' / ' + Math.round(hv.cap) : 'None'}</span></div>${this.floorState(o).ord?`<button class="btn" disabled>Plan next floor · after F${this.floorState(o).f+1} handover</button>`:`<button class="btn pri" data-a="verticalReview" data-v="${o.id}">Plan next floor</button>`}${s.orders.filter(q=>q.vertical?.shell===o.id&&q.st==='construction').map(q=>`<p class="note">${esc(q.label)} · ${this.floorState(o).pct}% · ${esc(this.floorState(o).stage)}</p>${q.vertical.phase<2?`<div class="danger-zone"><h3>Cancel construction</h3><p class="note">Stops the unfinished package. You will see the exact refund and what is retained before anything changes.</p><button class="btn danger" data-qa="cancel-construction" data-a="cmd" data-cmd='${JSON.stringify({type:'cancelOrder',id:q.id})}'>Cancel construction… (refund ${money(sim.cancelRefund(q).refund)})</button></div>`:'<p class="note">Structure is complete; this package must finish.</p>'}`).join('')}<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({type:'commission',all:true})}'>Commission ready units</button><p class="note">Choose Floors to see inside. Upper-floor rentals require working freight access; stairs are optional.</p>`);
       }
       case 'canopy': return this.sheet('Covered Canopy', '', '<p class="note">Loading under cover keeps interior customers dry on rainy days.</p>');
       default: return this.sheet(nm, '', '');
@@ -1114,9 +1113,16 @@ export class UI {
     const r = this.sim.cancelRefund(ord);
     if (r.locked) { this.toast('Structure is complete; this package must finish.', 'bad'); return; }
     this.pauseForPopup('modal');
-    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal confirm-cancel"><h2>Cancel this construction?</h2><p><b>${esc(ord.label)}</b> will be cancelled and its unfinished work removed.</p><p>${r.undo ? `Full undo: <b>${money(r.refund)}</b> refunded.` : `Refund: <b>${money(r.refund)}</b> (60% of unbuilt work)${ord.vertical ? '; paid reinforcement is retained' : ''}.`} This cannot be reversed.</p>
-      <div class="row wrap" style="margin-top:10px"><button class="btn danger" data-a="cmd" data-confirmed="1" data-cmd='${JSON.stringify({ type: 'cancelOrder', id })}'>Cancel construction · ${money(r.refund)} back</button><button class="btn pri" data-a="modalClose">Keep building</button></div></div></div>`;
+    const row = (k, v, cls = '') => `<span>${k}</span><b class="${cls}">${v}</b>`;
+    let detail;
+    if (ord.vertical) {
+      const B = cancellationBreakdown(this.sim, ord), names = { reinforce: 'Reinforcement', structure: 'Structure', fitout: 'Fit-out', shaft: 'Freight extension', test: 'Service test' };
+      detail = `<div class="kv cancel-kv">${row('Original package charge', money(B.original))}${B.completed.map((t) => row(`Completed: ${names[t.kind]}${B.retained.some((x) => x.kind === t.kind) ? ' (retained)' : ''}`, money(t.cost))).join('')}${B.inProgressBuilt > 0 ? row(`Work in progress: ${names[B.inProgressKind]}`, money(B.inProgressBuilt)) : ''}${row('Unbuilt work', money(B.unbuilt))}${row(B.undo ? 'Cancellation penalty' : 'Non-refundable share of unbuilt work (40%)', money(B.penalty))}${row('Exact refund', money(B.refund), 'good')}${row('Non-refundable in total', money(B.nonRefundable))}${row('Cash after cancelling', money(B.cashAfter))}</div><p class="note">${esc(B.requote)}</p>`;
+    } else detail = `<div class="kv cancel-kv">${row('Original charge', money(ord.cost))}${row('Exact refund', money(r.refund), 'good')}${row('Non-refundable', money(ord.cost - r.refund))}${row('Cash after cancelling', money(this.sim.s.cash + (this.sim.s.creative ? 0 : r.refund)))}</div>`;
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal confirm-cancel" role="alertdialog" aria-labelledby="cc-title"><h2 id="cc-title">Cancel this construction?</h2><p><b>${esc(ord.label)}</b> will be cancelled and its unfinished work removed. ${r.undo ? 'This is a full undo within the grace period.' : ''} This cannot be reversed.</p>${detail}
+      <div class="row wrap cc-acts" style="margin-top:10px"><button class="btn pri" data-a="modalClose" data-qa="cc-keep">Keep building</button><span class="cc-gap"></span><button class="btn danger" data-qa="cc-confirm" data-a="cmd" data-confirmed="1" data-cmd='${JSON.stringify({ type: 'cancelOrder', id })}'>Cancel construction · ${money(r.refund)} back</button></div></div></div>`;
   }
+
   // Close Requests without resuming time: pending requests keep their own pause, and the destination decides the rest.
   leaveRequests(returnAfter) {
     this.syncPopupProperty(); this.popupBlocks?.delete('modal');
@@ -1324,6 +1330,10 @@ export class UI {
     return !!hit && (el===hit||el.contains(hit));
   }
   mapPointClear(p) {
+    // The point itself must be the map (canvas, its pins or blueprint), not any interface layer.
+    if (p.x < 0 || p.y < 0 || p.x > innerWidth || p.y > innerHeight) return false;
+    const hit = this.root.ownerDocument.elementFromPoint && this.root.ownerDocument.elementFromPoint(p.x, p.y);
+    if (hit && !(hit.id === 'view' || (hit.closest && hit.closest('#pins, #blueprint, #bubbles')))) return false;
     return !['.tut','.sheet','.actionbar','.hud','.viewctl','.tabs','#feed .convo','.modal','#celebrate.on'].some(sel=>[...this.root.ownerDocument.querySelectorAll(sel)].some(el=>{const r=el.getBoundingClientRect();return r.width>0&&p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom;}));
   }
   updateBlueprint() {
@@ -1362,6 +1372,9 @@ export class UI {
       if (el) return { el, lbl: step.lbl || (sel === '#speed [data-v="4"]' ? 'Speed up' : 'Tap here') };
     }
     const oid = step.obj && step.obj(this.sim); const o = oid && this.sim.s.objects[oid];
+    const passive = /^(Watch|Let|Keep)\b/.test(step.t);
+    // Prefer the object's own tappable pin (a real button that selects it) when it is visible and uncovered.
+    if (o) { const pin = this.root.querySelector(`#pins .pin[data-k="obj"][data-id="${o.id}"]`); if (pin && !pin.dataset.n && this.guideVisible(pin)) return { el: pin, lbl: step.lbl || (passive ? 'Watch here' : 'Tap here'), passive }; }
     const bp=this.currentBlueprintPlan(); const sc=bp?.a||step.cell;
     const c = o ? { x: o.x + (o.w || 1) / 2, y: o.y + (o.h || 1) / 2, f: o.f || 0 } : sc ? { x: sc.x + 0.5, y: sc.y + 0.5, f: bp?.f ?? step.f ?? 0 } : null;
     if (c) {
@@ -1396,7 +1409,7 @@ export class UI {
     const s = this.sim.s;
     if (s.tut && s.tut.on && s.tut.beat === 0 && !this.title) { const sig = [this.rend.zoom.toFixed(3), this.rend.rot, this.rend.center.x.toFixed(2), this.rend.center.z.toFixed(2)].join(','); if (this.lookSig == null) this.lookSig = sig; else if (performance.now() - (this.lookT0 || (this.lookT0 = performance.now())) < 2500) this.lookSig = sig; else if (sig !== this.lookSig) this.tutLooked = true; }
     const t = curBeat(this.sim) ? this.guideTarget() : null;
-    if (!t) { if (!g.hidden) g.hidden = true; return; }
+    if (!t) { if (!g.hidden) g.hidden = true; this.guidePos = null; return; }
     let x, y, w, h;
     if (t.el) {
       if (this.guideScrolled !== this.guideKey) {
@@ -1408,12 +1421,15 @@ export class UI {
       if (body) { const r = t.el.getBoundingClientRect(), br = body.getBoundingClientRect(); if (br.top - r.top > r.height / 3 || r.bottom - br.bottom > r.height / 3) { g.hidden = true; return; } }
       const r = t.el.getBoundingClientRect(); x = r.left - 4; y = r.top - 4; w = r.width + 8; h = r.height + 8;
     } else { w = h = 46; x = t.x - 23; y = t.y - 23; }
+    // A ring never slides across the interface between distant targets (it would point at the wrong control mid-flight).
+    const jump = this.guidePos && Math.hypot(this.guidePos[0] - x, this.guidePos[1] - y) > 120; this.guidePos = [x, y];
+    g.style.transition = jump || g.hidden ? 'none' : '';
     g.hidden = false; g.classList.toggle('map', !!t.map);
     g.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; g.style.width = Math.round(w) + 'px'; g.style.height = Math.round(h) + 'px';
     const lb = g.lastChild; if (lb.textContent !== t.lbl) lb.textContent = t.lbl;
     // The label must not hide the instruction, HUD, status text or toasts: use the clear side, else drop the label.
     const lw = Math.max(70, t.lbl.length * 7 + 20), lx = x + w / 2 - lw / 2;
-    const blockers = [...this.root.querySelectorAll('#tut .tut, .hud > .chip, .hud > .iconbtn, .viewctl, #feed .toast, .sheet header, .sheet .cats, #tabs, .actionbar .status')].filter((e) => !(t.el && (e.contains(t.el) || t.el.contains(e)))).map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
+    const blockers = [...this.root.querySelectorAll('#tut .tut, .hud > .chip, .hud > .iconbtn, .viewctl, #feed .toast, .sheet header, .sheet .cats, .sheet .pill, .sheet .kv, .sheet .dock-summary, .sheet .miss, #tabs, .actionbar .status')].filter((e) => !(t.el && (e.contains(t.el) || t.el.contains(e)))).map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
     const clear = (top) => top >= 0 && top + 30 <= innerHeight && !blockers.some((r) => lx < r.right && lx + lw > r.left && top < r.bottom && top + 30 > r.top);
     const above = clear(y - 38), below = clear(y + h + 8);
     g.classList.toggle('below', !above && below); g.classList.toggle('nolabel', !above && !below); g.classList.toggle('passive', !!t.passive);
@@ -1511,7 +1527,7 @@ export class UI {
     this.root.classList.toggle('has-sheet', !!(this.$('sheet').firstChild || this.$('abar').firstChild));
     document.body.classList.toggle('sheet-open', this.root.classList.contains('has-sheet')); // lets the milestone banner move clear of the sheet
     if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy && !this.menuTouch && now >= (this.menuScrollUntil || 0)) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
-    if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.syncOrientation(); this.renderTut(); }
+    if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.syncOrientation(); this.renderTut(); if (this.floorsOpen) this.refreshFloors(); }
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
     this.updateBubbles(); this.updatePins(); this.updateGuide(); this.updateBlueprint();
   }
@@ -1780,22 +1796,44 @@ export class UI {
       '<p class="note">Day ' + dayOf(now) + ' · ' + fmtTime(now) + '</p><details class="explanation"><summary>How scheduled dates work</summary><p class="note">Dates below come from current leases, collections, loans, construction, competitors and scenario state; estimated construction dates can move if prerequisites block work.</p></details>' +
       '<div class="list">' + (rows || '<p class="note">No important scheduled dates yet.</p>') + '</div></div></div>';
   }
+  // Live floor state per building: completed (handed over) floors, and any vertical order in progress.
+  floorState(sh) {
+    const ord = this.sim.s.orders.find((o) => o.st === 'construction' && o.vertical && o.vertical.shell === sh.id), V = ord && ord.vertical;
+    if (!V) return { done: sh.floors, ord: null };
+    const stage = V.stages[V.phase], names = { reinforce: 'reinforcement', structure: 'structure', fitout: 'fit-out', shaft: 'freight extension', test: 'service test' };
+    // The structure stage raises the shell's height before handover; that floor is not complete or rentable yet.
+    return { done: Math.min(sh.floors, V.f), ord, f: V.f, pct: Math.floor((ord.prog || 0) * 100), stage: ord.waiting ? 'waiting for the elevator to clear' : names[stage && stage.kind] || 'handover', viewable: sh.floors > V.f };
+  }
+  floorsHtml() {
+    const shells = this.sim.objs('shell');
+    return `<div class="modal-bg"><div class="modal floors"><div class="row"><h2>Choose building and floor</h2><button class="x" data-a="modalClose" data-qa="floors-close" aria-label="Close floor chooser">${I.x}</button></div><button class="btn" data-a="floorPick" data-v="ext">Exterior</button>${shells.map((o) => { const F = this.floorState(o);
+      const prog = F.ord ? `F${F.f + 1} · ${F.pct}% · ${F.stage}` : '';
+      return `<div class="item"><div class="grow"><b>Building ${o.id} · ${F.done} completed floor${F.done === 1 ? '' : 's'}</b><div class="row wrap">${Array.from({ length: F.done }, (_, f) => `<button class="btn" data-a="floorPick" data-building="${o.id}" data-v="${f}">F${f + 1}</button>`).join('')}${F.ord ? (F.viewable ? `<button class="btn inprog" data-a="floorPick" data-building="${o.id}" data-v="${F.f}" aria-label="View F${F.f + 1}, under construction">${prog} <small>under construction</small></button>` : `<span class="pill a inprog" role="status">${prog}</span>`) : o.floors === 1 ? '<span class="note">F2 not built yet</span>' : ''}${F.ord ? `<button class="btn" disabled>Plan next floor · after F${F.f + 1} handover</button>` : `<button class="btn" data-a="verticalReview" data-v="${o.id}">Plan next floor</button>`}</div></div></div>`; }).join('') || '<p>No interior building yet. Build a one- or two-floor shell.</p>'}</div></div>`;
+  }
   showFloors() {
-    const shells=this.sim.objs('shell');
-    this.pauseForPopup('modal');
-    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><div class="row"><h2>Choose building and floor</h2><button class="x" data-a="modalClose">${I.x}</button></div><button class="btn" data-a="floorPick" data-v="ext">Exterior</button>${shells.map(o=>`<div class="item"><div class="grow"><b>Building ${o.id} · ${o.floors} floors</b><div class="row wrap">${Array.from({length:o.floors},(_,f)=>`<button class="btn" data-a="floorPick" data-building="${o.id}" data-v="${f}">F${f+1}</button>`).join('')}${o.floors===1?'<span class="note">F2 not built yet</span>':''}<button class="btn" data-a="verticalReview" data-v="${o.id}">Plan next floor</button></div></div></div>`).join('')||'<p>No interior building yet. Build a one- or two-floor shell.</p>'}</div></div>`;
+    this.pauseForPopup('modal'); this.floorsOpen = true;
+    this.floorsKey = null; this.refreshFloors();
+  }
+  refreshFloors() { // live while open: progress and stage changes appear without reload
+    if (!this.floorsOpen) return; const m = this.$('modal');
+    if (this.floorsKey && !(m.querySelector && m.querySelector('.modal.floors'))) { this.floorsOpen = false; return; } // replaced by another dialog
+    const h = this.floorsHtml(); if (h === this.floorsKey) return; this.floorsKey = h; m.innerHTML = h;
   }
   showVertical(id, options={fitout:true,stairs:false}) {
-    if(!this.verticalReview)this.verticalPreviousView=this.rend.view;this.verticalReview={shell:id,fitout:options.fitout!==false,stairs:!!options.stairs};const R=this.sim.verticalPlan(id,this.verticalReview);this.verticalQuote=R.ok?R:null;this.verticalPreviewing=false;this.popupBlocks?.delete('vpreview');this.rend.setPreview(null);this.pauseForPopup('modal');this.renderActionBar();
+    if(!this.verticalReview)this.verticalPreviousView=this.rend.view;
+    // Optional stairs stay optional: with no stairwell in this building the option is disabled (and reverted if it was
+    // requested), so it can never replace a valid package or change its price.
+    const stairsHere=this.sim.objs('stairs').some(o=>o.cstate==='operating'&&this.sim.D.shellAt[this.sim.idx(o.x,o.y)]===id), stairsReverted=!!options.stairs&&!stairsHere;
+    this.verticalReview={shell:id,fitout:options.fitout!==false,stairs:!!options.stairs&&stairsHere};const R=this.sim.verticalPlan(id,this.verticalReview);this.verticalQuote=R.ok?R:null;this.verticalPreviewing=false;this.popupBlocks?.delete('vpreview');this.rend.setPreview(null);this.pauseForPopup('modal');this.renderActionBar();
     const sh=this.sim.s.objects[id];
     if(R.ok){this.rend.setView(R.f);this.rend.setPreview({...R,status:'valid',proposed:true,units:R.unitCreates,items:[{x:sh.x,y:sh.y,f:R.f,ok:true},...R.tiles.map(t=>({x:t.i%this.sim.s.W,y:Math.floor(t.i/this.sim.s.W),f:t.f,ok:true}))],creates:[{type:'shell',x:sh.x,y:sh.y,w:sh.w,h:sh.h,f:R.f},...R.creates]});}
     this.syncFloorUi();
     const inv=R.ok?this.sim.investment({...R,status:'valid',missing:[],warn:[]},{completePackage:true,leaseUpMonths:2}):null;
     const row=r=>`<div class="kv"><span>${esc(r.label)}</span><b>${money(r.cost)}</b></div>`;
     const isReq=r=>/^(Structural reinforcement|F\d structure|Required freight)/.test(r.label), isOpt=r=>/^Optional/.test(r.label);
-    const opt=(k,label,note)=>`<label class="vr-opt"><input type="checkbox" data-vertical-option="${k}" ${this.verticalReview[k]?'checked':''}><span><b>${label}</b><small>${note}</small></span></label>`;
+    const opt=(k,label,note,disabled=false)=>`<label class="vr-opt${disabled?' off':''}"><input type="checkbox" data-vertical-option="${k}" data-qa="vr-opt-${k}" aria-describedby="vr-note-${k}" ${this.verticalReview[k]?'checked':''} ${disabled?'disabled':''}><span><b>${label}</b><small id="vr-note-${k}">${note}</small></span></label>`;
     let body=`<h3>Required</h3><p class="note">Freight elevator access to the new floor is required and always included. It is separate from stairs.</p>${R.ok?R.rows.filter(isReq).map(row).join(''):''}
-      <h3>Options</h3>${opt('fitout','Copy this floor’s unit layout and lighting','Fit-out. Leave unchecked for structure only and choose units later.')}${opt('stairs','Extend existing stairs','Optional redundancy for people; carts still need the freight elevator.')}<p class="note">A second elevator is optional redundancy; build it separately after handover.</p>`;
+      <h3>Options</h3>${opt('fitout','Copy this floor’s unit layout and lighting','Fit-out. Leave unchecked for structure only and choose units later.')}${stairsHere?opt('stairs','Extend existing stairs','Optional redundancy for people; carts still need the freight elevator.'):opt('stairs','Extend existing stairs','Not available: this building has no stairwell. Stairs are optional; build a Stairwell separately (Build → Interior) if you want redundancy. The package below is unaffected.',true)}${stairsReverted?'<p class="note vr-reverted" role="status">Stairs option turned off: there is no stairwell to extend. The package and price are unchanged.</p>':''}<p class="note">A second elevator is optional redundancy; build it separately after handover.</p>`;
     if(R.ok){
       const fit=R.rows.filter(r=>!isReq(r)&&!isOpt(r)),optional=R.rows.filter(isOpt);
       const grouped=[];for(const r of fit){const g=grouped.find(x=>x.label===r.label);if(g){g.n++;g.cost+=r.cost;}else grouped.push({label:r.label,n:1,cost:r.cost});}
@@ -1807,8 +1845,8 @@ export class UI {
         <p class="note">Vacant = matching rent-ready vacancies now; unmet and leased = matching shopper outcomes in the last 30 days. This is observed evidence, not a revenue promise. Structure only lets you choose a different fit-out later.</p>`;
       body+=`<h3>Complete package ${money(R.cost)}</h3>${this.spendingHtml(R.cost,this.sim.planDailyCost(R),'after full package')}<p>F${R.from} → F${R.f+1}. ~${Math.ceil(R.dur/1440)} financial days, plus time to clear and test the elevator: reinforce → structure → fit-out → freight extension → service test → commission. Existing leases and units stay in service; the freight elevator pauses briefly for its service test.</p><p class="note">${esc(R.warning)}</p><p class="note">${inv?.range?`Complete-package payback: ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months including a two-month lease-up allowance.`:'Payback: insufficient comparable evidence.'} Prices are provisional prototype values.</p><p class="note">Cancellation: full undo within 30 minutes before any stage finishes; otherwise 60% of unbuilt work until the structure is complete. After that the package must finish.</p>`;
     }else body+=`<p class="vr-verdict unsupported">${esc(R.msg)}</p>`;
-    const acts=R.ok?`<button class="btn" data-a="verticalPreview">Preview on map</button><button class="btn pri" data-a="verticalConfirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button>`:'';
-    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal vreview"><div class="row"><h2>Building ${id} · ${R.ok?`F${R.f+1} expansion review`:'vertical expansion'}</h2><button class="x" data-a="modalClose" aria-label="Cancel review">${I.x}</button></div><div class="vr-body">${body}</div><div class="row wrap vr-acts">${acts}<button class="btn" data-a="modalClose">Cancel</button></div></div></div>`;
+    const acts=R.ok?`<button class="btn" data-a="verticalPreview" data-qa="vr-preview">Preview on map</button><button class="btn pri" data-a="verticalConfirm" data-qa="vr-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button>`:'';
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal vreview" role="dialog" aria-modal="true" aria-labelledby="vr-title"><div class="row"><h2 id="vr-title">Building ${id} · ${R.ok?`F${R.f+1} expansion review`:'vertical expansion'}<small class="vr-paused">Paused while you review · nothing is charged until Confirm</small></h2><button class="x" data-a="modalClose" data-qa="vr-close" aria-label="Close review" title="Close review">${I.x}</button></div><div class="vr-body">${body}</div><div class="row wrap vr-acts">${acts}<button class="btn" data-a="modalClose" data-qa="vr-close-review">Close review</button></div></div></div>`;
   }
   // Hide the review sheet so the proposed floor can be inspected; the quote and ghost stay, time stays paused.
   previewVertical() {
@@ -1823,10 +1861,10 @@ export class UI {
   }
   verticalBarHtml() {
     const R=this.verticalQuote; if(!R) return '';
-    return `<div class="actionbar vpreview"><div class="top"><div class="nm">Proposed F${R.f+1} · Building ${R.shell}<small>Preview only — not built, not commissioned · ${money(R.cost)} complete package</small></div></div><div class="bot"><button class="btn" data-a="verticalBack">Back to review</button><button class="btn pri" data-a="verticalConfirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button><button class="btn" data-a="verticalCancel">Cancel</button></div></div>`;
+    return `<div class="actionbar vpreview"><div class="top"><div class="nm">Proposed F${R.f+1} · Building ${R.shell}<small>Preview only — not built, not commissioned · ${money(R.cost)} complete package</small></div></div><div class="bot"><button class="btn" data-a="verticalBack" data-qa="vp-back">Back to review</button><button class="btn pri" data-a="verticalConfirm" data-qa="vp-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button><button class="btn" data-a="verticalCancel" data-qa="vp-discard">Discard preview</button></div></div>`;
   }
   modalOpen() { return !!this.$('modal').firstChild; }
-  closeModal() { if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
+  closeModal() { this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>

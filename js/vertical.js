@@ -124,3 +124,12 @@ export function expansionEvidence(sim,R){
  else{verdict='partial';why=`Partly supported: ${unmet-vac} more unmet matching request${unmet-vac===1?'':'s'} than vacancies, for ${n} new units.`;}
  return{rows,n,vacant:vac,unmet,leases,signals,elsewhere,verdict,why};
 }
+// Itemised cancellation consequences for the confirmation (read-only; uses the unchanged verticalRefund arithmetic).
+export function cancellationBreakdown(sim,ord){
+ const V=ord.vertical,r=verticalRefund(sim,ord),stage=V.stages[V.phase],frac=stage?Math.min(1,V.elapsed/Math.max(1,stage.dur)):0;
+ const completed=V.stages.slice(0,V.phase).filter(t=>t.cost>0).map(t=>({kind:t.kind,cost:t.cost}));
+ const completedCost=completed.reduce((n,t)=>n+t.cost,0),inProgressBuilt=stage?stage.cost*frac:0,unbuilt=ord.cost-completedCost-inProgressBuilt;
+ const retained=r.undo?[]:completed.filter(t=>t.kind==='reinforce');
+ return{undo:r.undo,locked:r.locked,original:ord.cost,completed,completedCost,inProgressBuilt,inProgressKind:stage?.kind||null,unbuilt,refund:r.refund,nonRefundable:ord.cost-r.refund,penalty:r.undo?0:Math.max(0,unbuilt-r.refund),cashAfter:sim.s.cash+(sim.s.creative?0:r.refund),retained,
+  requote:retained.length?`Paid reinforcement (${retained.reduce((n,t)=>n+t.cost,0)}) is kept with the building; the next F${V.f+1} quote omits it.`:r.undo?'Nothing is retained; a later quote is priced from scratch.':'No completed prerequisite reduces a later quote.'};
+}

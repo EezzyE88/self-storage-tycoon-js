@@ -492,8 +492,11 @@ canvas.addEventListener('wheel', (e) => { e.preventDefault(); game.rend.zoomBy(e
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   const ui = game.ui;
-  if (e.key === ' ') { e.preventDefault(); ui.do({ type: 'speed', v: game.sim.s.speed ? 0 : 1 }); }
-  else if (e.key === '1' || e.key === '2' || e.key === '3') ui.do({ type: 'speed', v: [1, 2, 4][+e.key - 1] });
+  const runSpeed = (v) => { if (!(v > 0 && ui.timeLocked())) ui.do({ type: 'speed', v }); }; // keyboard obeys the same paused-review rule as the buttons
+  if (e.key === 'Escape' && !ui.title && ui.verticalPreviewing) { ui.onClick({ target: { closest: () => ({ dataset: { a: 'verticalCancel' } }) } }); return; }
+  if (e.key === 'Escape' && !ui.title && ui.modalOpen()) { ui.closeModal(); return; }
+  if (e.key === ' ') { e.preventDefault(); runSpeed(game.sim.s.speed ? 0 : 1); }
+  else if (e.key === '1' || e.key === '2' || e.key === '3') runSpeed([1, 2, 4][+e.key - 1]);
   else if (e.key === 'q' || e.key === 'Q') game.rend.rotate(-1);
   else if (e.key === 'e' || e.key === 'E') game.rend.rotate(1);
   else if ((e.key === 'p' || e.key === 'P') && !ui.title) { const sc = game.showcase; if (sc.photo) sc.exitPhoto(); else sc.enterPhoto(); }

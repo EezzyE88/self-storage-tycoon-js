@@ -9,7 +9,8 @@ const URL = process.env.QA_URL || 'http://localhost:5173/?cid=qa';
 const results = []; const errors = [];
 async function open(width, height) {
   const browser = await pw.chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
-  const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const phone = Math.min(width, height) < 600; // phone sizes emulate touch at 2x; desktop uses a mouse at 1x (2x software-GL desktop frames starve Playwright's stability checks)
+  const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: phone ? 2 : 1, isMobile: phone, hasTouch: phone });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   p.on('console', (m) => { if (m.type() === 'error' && !/ERR_(TUNNEL|CONNECTION|NAME)|Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
@@ -20,7 +21,8 @@ async function open(width, height) {
 const frames = async (p, n = 5) => { const f = (n) => p.evaluate((n) => { const g = __game; for (let i = 0; i < n; i++) { g.rend.frame(1 / 30); g.ui.update(1 / 30); } }, n); await f(n); await p.waitForTimeout(400); await f(3); };
 const guide = (p) => p.evaluate(() => { const r = document.querySelector('#guide'); return r && !r.hidden ? { lbl: r.innerText, cls: r.className } : null; });
 const tutText = (p) => p.evaluate(() => document.querySelector('#tut').innerText.replace(/\s+/g, ' ').trim());
-async function scenario(name, w, h, fn) { const { browser, p } = await open(w, h); try { await fn(p); results.push({ name, viewport: `${w}x${h}`, pass: true }); console.log('PASS', name); } catch (e) { results.push({ name, viewport: `${w}x${h}`, pass: false, error: e.message }); console.log('FAIL', name, e.message); await p.screenshot({ path: path.join(OUT, name.replace(/\W+/g, '_') + '-fail.png') }).catch(() => {}); } finally { await browser.close(); } }
+const ONLY = process.env.QA_ONLY ? new RegExp(process.env.QA_ONLY) : null; // optional subset, e.g. QA_ONLY='^[A-F]\.'
+async function scenario(name, w, h, fn) { if (ONLY && !ONLY.test(name)) return; const { browser, p } = await open(w, h); try { await fn(p); results.push({ name, viewport: `${w}x${h}`, pass: true }); console.log('PASS', name); } catch (e) { results.push({ name, viewport: `${w}x${h}`, pass: false, error: e.message }); console.log('FAIL', name, e.message); await p.screenshot({ path: path.join(OUT, name.replace(/\W+/g, '_') + '-fail.png') }).catch(() => {}); } finally { await browser.close(); } }
 const shot = (p, n) => p.screenshot({ path: path.join(OUT, n + '.png') });
 const tutorialBeat = (p, id) => p.evaluate(async (id) => { const g = __game; const m = await import('./js/tutorial.js'); g.sim.s.tut.beat = m.BEATS.findIndex((b) => b.id === id); g.ui.tutMin = true; g.ui.renderTut(true); }, id);
 const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple'); g.ui.title = false; g.ui.closeModal(); const s = g.sim.s; s.tut.on = false; s.tut.done = true; s.cash = 1e6; s.open = true; });
@@ -100,6 +102,50 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.setViewportSize({ width: 734, height: 343 }); await frames(p); await shot(p, 'landscape');
     assert.deepEqual(await p.evaluate(() => [getComputedStyle(document.querySelector('#rotate')).display, getComputedStyle(document.querySelector('#ui')).visibility, __game.sim.s.speed]), ['flex', 'hidden', 0]);
     await p.setViewportSize({ width: 393, height: 659 }); await frames(p); assert.deepEqual(await p.evaluate(() => [getComputedStyle(document.querySelector('#rotate')).display, __game.sim.s.speed]), ['none', 1]);
+  });
+
+  // ---- Grok addendum A-F ----
+  for (const [w, h] of [[393, 659], [1280, 720]]) await scenario(`A. Tap Unit 107 ring is on the unit's pin and a real tap completes the step (${w}x${h})`, w, h, async (p) => {
+    await p.click('[data-a="new"][data-v="maple"]'); await p.evaluate(() => { __game.ui.tutLooked = true; }); await frames(p); await p.click('.tut [data-a="tutNext"]'); await frames(p);
+    const r = await p.evaluate(() => { const G = document.querySelector('#guide'), b = G.getBoundingClientRect(), c = [b.left + b.width / 2, b.top + b.height / 2], hit = document.elementFromPoint(c[0], c[1]), lb = G.querySelector('.glbl').getBoundingClientRect(); return { c, pin: hit && hit.closest('.pin') ? +hit.closest('.pin').dataset.id : null, u: __game.sim.objs('unit').find((u) => u.num === 107).id, labelInView: lb.top >= 0 && lb.bottom <= innerHeight, tabsTop: document.querySelector('#tabs').getBoundingClientRect().top, labelBottom: lb.bottom, hidden: G.hidden }; });
+    assert.equal(r.hidden, false); assert.equal(r.pin, r.u, 'ring centre is Unit 107\'s own pin'); assert.ok(r.labelInView && r.labelBottom <= r.tabsTop, 'label not over the bottom navigation');
+    if (w < 600) await p.touchscreen.tap(r.c[0], r.c[1]); else await p.mouse.click(r.c[0], r.c[1]); await frames(p);
+    assert.equal(await p.evaluate(() => __game.ui.sel), r.u); assert.match(await tutText(p), /Owner Make-Ready/); await shot(p, `addendumA-${w}`);
+  });
+  await scenario('B. Owner Make-Ready stays available in Details until accepted, then shows assigned status', 393, 659, async (p) => {
+    await p.click('[data-a="new"][data-v="maple"]'); await p.evaluate(() => { __game.ui.tutLooked = true; }); await frames(p); await p.click('.tut [data-a="tutNext"]'); await frames(p);
+    await p.evaluate(() => __game.ui.select(__game.sim.objs('unit').find((u) => u.num === 107).id)); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p);
+    const btn = `.sheet [data-cmd*='"ownerMakeReady"']`; assert.ok(await p.isVisible(btn), 'action visible in Details'); await shot(p, 'addendumB-details'); await p.click(btn); await frames(p);
+    assert.equal(await p.locator(btn).count(), 0, 'no stale action'); assert.match(await p.evaluate(() => document.querySelector('.sheet').innerText), /Make-ready (assigned|\d+%)/);
+  });
+  await scenario('C. unavailable optional stairs cannot invalidate the $17,810 package', 393, 659, async (p) => {
+    await plainGame(p); await p.evaluate(() => __game.ui.showVertical(12)); await frames(p);
+    assert.equal(await p.isDisabled('[data-qa="vr-opt-stairs"]'), true); await p.click('[data-qa="vr-opt-stairs"]', { force: true }).catch(() => {}); await frames(p);
+    assert.deepEqual(await p.evaluate(() => [__game.ui.verticalQuote && __game.ui.verticalQuote.cost, __game.ui.verticalQuote && __game.ui.verticalQuote.stairs, !!document.querySelector('[data-qa="vr-confirm"]')]), [17810, false, true]);
+    assert.match(await p.evaluate(() => document.querySelector('.vr-body').innerText), /no stairwell/); await shot(p, 'addendumC-stairs');
+  });
+  await scenario('D. floor chooser shows live in-progress F2 and blocks a second order', 393, 659, async (p) => {
+    await plainGame(p); await p.evaluate(() => { const g = __game, R = g.sim.verticalPlan(12); g.sim.dispatch({ type: 'verticalUpgrade', ...R }); const o = g.sim.s.orders.at(-1); while (o.vertical.phase < 2) g.sim.step(); g.sim.events.length = 0; });
+    await p.click('[data-a="floorChoose"]'); await frames(p); const t1 = await p.evaluate(() => document.querySelector('.modal.floors').innerText);
+    assert.match(t1, /Building 12 · 1 completed floor/); assert.match(t1, /F2 · \d+% · fit-out/); assert.doesNotMatch(t1, /F2 not built yet/); assert.match(t1, /Plan next floor · after F2 handover/); await shot(p, 'addendumD-chooser');
+    await p.evaluate(() => { for (let i = 0; i < 900; i++) __game.sim.step(); __game.sim.events.length = 0; }); await frames(p);
+    const t2 = await p.evaluate(() => document.querySelector('.modal.floors').innerText); assert.notEqual(t2, t1, 'updates while open, no reload');
+  });
+  await scenario('E. cancel is separated, itemised, confirmable, and recorded as separate ledger entries', 393, 659, async (p) => {
+    await plainGame(p); await p.evaluate(() => { const g = __game, R = g.sim.verticalPlan(12); g.sim.dispatch({ type: 'verticalUpgrade', ...R }); g.ui.select(12); }); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p);
+    assert.equal(await p.locator('.dock-actions [data-qa="cancel-construction"]').count(), 0); await p.click('.danger-zone [data-qa="cancel-construction"]'); await frames(p);
+    const t = await p.evaluate(() => document.querySelector('.confirm-cancel').innerText); for (const re of [/Original package charge\s*\$17,810/, /Exact refund\s*\$17,810/, /Cash after cancelling/, /full undo/]) assert.match(t, re); await shot(p, 'addendumE-confirm');
+    await p.click('[data-qa="cc-keep"]'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.orders.at(-1).st), 'construction', 'Keep building cancels nothing');
+    await p.click('.danger-zone [data-qa="cancel-construction"]'); await frames(p); const cash = await p.evaluate(() => __game.sim.s.cash); await p.click('[data-qa="cc-confirm"]'); await frames(p);
+    assert.deepEqual(await p.evaluate((c) => [__game.sim.s.orders.at(-1).st, __game.sim.s.cash - c, __game.sim.s.ledger.filter((x) => x.cat === 'capex').slice(-2).map((x) => x.amt)], cash), ['cancelled', 17810, [-17810, 17810]]);
+  });
+  await scenario('F. review closes by labelled control and Escape; keyboard cannot bypass the paused review', 393, 659, async (p) => {
+    await plainGame(p); await p.evaluate(() => __game.ui.showVertical(12)); await frames(p);
+    assert.equal(await p.getAttribute('[data-qa="vr-close"]', 'aria-label'), 'Close review'); await p.keyboard.press('Space'); await p.keyboard.press('3'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.speed), 0);
+    await p.keyboard.press('Escape'); await frames(p); assert.deepEqual(await p.evaluate(() => [!!document.querySelector('.modal-bg'), __game.ui.verticalQuote, __game.sim.s.speed]), [false, null, 1], 'closing returns to 1x');
+    await p.evaluate(() => __game.ui.showVertical(12)); await frames(p); await p.click('[data-qa="vr-preview"]'); await frames(p); await p.keyboard.press('Escape'); await frames(p);
+    assert.deepEqual(await p.evaluate(() => [__game.ui.verticalPreviewing, __game.rend.previewG.children.length]), [false, 0]);
+    await p.evaluate(() => __game.ui.showVertical(12)); await frames(p); await p.click('[data-qa="vr-close-review"]'); await frames(p); assert.equal(await p.evaluate(() => !!document.querySelector('.modal-bg')), false);
   });
   const pass = results.filter((r) => r.pass).length;
   fs.writeFileSync(path.join(OUT, 'c22-emulation-results.json'), JSON.stringify({ environment: 'headless Chromium (Playwright) device emulation; not a physical iPhone', results, consoleErrors: errors }, null, 2));

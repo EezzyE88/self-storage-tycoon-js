@@ -992,3 +992,13 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
   #rotate p { max-width:420px; margin:0 auto; font-size:16px; line-height:1.4; color:#c9d3dc; }
   #ui, #bubbles { visibility:hidden; }
 }
+/* Candidate 22 addendum: cancellation is structurally and visually apart from navigation and routine actions. */
+#ui .danger-zone { margin-top:14px; padding:10px; border:1px solid #d2452f55; border-radius:10px; background:#d2452f0d; }
+#ui .danger-zone h3 { margin:0 0 4px; color:#a8321f; }
+#ui .danger-zone .btn.danger { min-height:44px; }
+#ui .confirm-cancel .cc-acts { justify-content:space-between; }
+#ui .confirm-cancel .cc-gap { flex:1 1 24px; }
+#ui .cancel-kv b.good { color:#2f8f57; }
+#ui .vr-paused { display:block; font-size:12px; font-weight:500; opacity:.75; }
+#ui .vr-opt.off { opacity:.6; }
+#ui .floors .inprog { border-style:dashed; }
