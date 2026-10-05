@@ -110,7 +110,7 @@ export class UI {
   get rend() { return this.g.rend; }
   sfx(k) { this.g.audio.play(k); }
   syncPopupProperty() {
-    if(this.popupSim && this.popupSim!==this.sim) {this.popupBlocks=new Set();this.popupSpeed=null;this.requestPanel=false;}
+    if(this.popupSim && this.popupSim!==this.sim) {this.popupBlocks=new Set();this.requestPanel=false;}
     this.popupSim=this.sim;
   }
   pauseForPopup(kind) {
@@ -118,7 +118,6 @@ export class UI {
     if (this.title) return;
     this.popupBlocks ||= new Set();
     if (this.popupBlocks.has(kind)) return;
-    if (!this.popupBlocks.size) this.popupSpeed = this.sim.s.speed;
     this.popupBlocks.add(kind);
     if (this.sim.s.speed !== 0) this.do({ type: 'speed', v: 0 });
   }
@@ -126,7 +125,7 @@ export class UI {
     this.syncPopupProperty();
     if (!this.popupBlocks || !this.popupBlocks.has(kind)) return;
     this.popupBlocks.delete(kind);
-    if (!this.popupBlocks.size && !this.title) this.do({ type: 'speed', v: this.popupSpeed ?? 0 });
+    if (!this.popupBlocks.size && !this.title) this.do({ type: 'speed', v: 1 });
   }
 
   // ------------------------------------------------------------ clicks
@@ -135,7 +134,7 @@ export class UI {
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
     switch (a) {
-      case 'speed': if(+v===0 && this.popupBlocks?.size) this.popupSpeed=0; if (!(this.popupBlocks && this.popupBlocks.size && +v > 0)) this.do({ type: 'speed', v: +v }); this.sfx('click'); break;
+      case 'speed': if (!(this.popupBlocks && this.popupBlocks.size && +v > 0)) this.do({ type: 'speed', v: +v }); this.sfx('click'); break;
       case 'finances': this.showFinances(); this.sfx('click'); break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
