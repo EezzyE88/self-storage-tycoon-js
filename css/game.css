@@ -934,3 +934,20 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  #ui .viewctl .viewextra .seg button { width:44px; height:44px; }
  #ui .viewctl .viewextra .rotseg { display:flex; position:static; }
 }
+
+/* Candidate 19: unobstructed camera tools, compact advice and mobile section hierarchy. */
+#ui:has(.viewctl.open) #coach { display:none; }
+#ui:has(.viewctl.open) .feed { top:calc(172px + var(--safe-t)); }
+#ui .coach { width:max-content; right:auto; max-width:calc(100vw - 16px); }
+#ui .coach .ct { font-size:13px; line-height:1.3; }
+.section-picker { display:none; flex-shrink:0; padding:6px 10px; gap:8px; align-items:center; border-bottom:1px solid var(--line); }
+.section-picker span { font-size:12px; color:var(--muted); }
+.section-picker select { min-width:0; flex:1; min-height:44px; border:1px solid var(--line); border-radius:8px; background:var(--paper2); color:var(--ink); font:inherit; padding:8px; }
+.explanation, .settings { border-bottom:1px solid var(--line); margin:10px 0; }
+.explanation summary, .settings summary { padding:12px 0; min-height:44px; font-weight:700; cursor:pointer; }
+#ui .sheet article small { display:block; }
+@media(max-width:700px), (max-height:500px) and (orientation:landscape) {
+ #ui .section-shortcuts { display:none; }
+ #ui .section-picker { display:flex; }
+ #ui .coach { max-width:calc(100vw - 16px); }
+}

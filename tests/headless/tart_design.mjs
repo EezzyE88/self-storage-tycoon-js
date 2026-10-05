@@ -20,5 +20,5 @@ for(const h of [0,6.5,12,18.4,23]){r.todOverride=h;r.updateSky(.016);assert.ok(N
 assert.equal(JSON.stringify(sim.s),before);
 const ui=Object.create(UI.prototype);
 assert.equal(ui.coachLabel('4 rent-ready units vacant. Check demand and asking rents before expanding.'),'4 vacant · Review demand & rents →');
-assert.equal(ui.coachLabel('Access blocked. Restore the aisle.'),'Access blocked. Restore the aisle.');
+assert.equal(ui.coachLabel('Access blocked. Restore the aisle.'),'Access blocked');
 console.log('PASS architecture reuse, bounded trees, read-only lighting and concise vacancy guidance; visual acceptance pending');

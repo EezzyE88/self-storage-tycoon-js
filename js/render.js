@@ -266,12 +266,20 @@ export class Renderer {
   }
   fitProperty(rect) { // frame the whole parcel inside the uncovered screen area
     const s = this.sim.s, w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-    rect = rect || { top: 60, bottom: h - 80, left: 8, right: w - 64 };
-    let X0 = 1e9, X1 = -1e9, Y0 = 1e9, Y1 = -1e9; // frame what is built (plus a margin); an empty lot frames the whole parcel
-    for (const o of Object.values(s.objects)) { if (o.x == null) continue; X0 = Math.min(X0, o.x); Y0 = Math.min(Y0, o.y); X1 = Math.max(X1, o.x + (o.w || 1)); Y1 = Math.max(Y1, o.y + (o.h || 1)); }
-    if (X1 - X0 < 8 || Y1 - Y0 < 8) { X0 = 0; Y0 = 0; X1 = s.W; Y1 = s.H; } else { X0 = Math.max(0, X0 - 2); Y0 = Math.max(0, Y0 - 2); X1 = Math.min(s.W, X1 + 2); Y1 = Math.min(s.H, Y1 + 2); }
-    this.center.set((X0 + X1) / 2, 0, (Y0 + Y1) / 2); this.updateCamera();
-    const bb = () => { let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const [x, y] of [[X0, Y0], [X1, Y0], [X0, Y1], [X1, Y1]]) for (const z of [0, 2.5]) { const p = this.project(x, y, z); x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); } return { x0, x1, y0, y1 }; };
+    rect = rect || { top: 60, bottom: h - 80, left: 8, right: w - 8 };
+    // Project actual built footprints, avoiding the empty corners of an L-shaped estate.
+    const points = [];
+    for (const o of Object.values(s.objects)) {
+      if (o.x == null || o.y == null) continue;
+      const height = Math.max(2.5, (o.floors || 1) * FLOOR_H + 0.5) + (o.f || 0) * FLOOR_H;
+      for (const x of [o.x - 1, o.x + (o.w || 1) + 1])
+        for (const y of [o.y - 1, o.y + (o.h || 1) + 1])
+          for (const z of [0, height]) points.push([x, y, z]);
+    }
+    if (!points.length) for (const x of [0, s.W]) for (const y of [0, s.H]) points.push([x, y, 0]);
+    const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+    this.center.set((Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...ys) + Math.max(...ys)) / 2); this.updateCamera();
+    const bb = () => { let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (const [x, y, z] of points) { const p = this.project(x, y, z); x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); } return { x0, x1, y0, y1 }; };
     let b = bb(); const k = Math.min((rect.right - rect.left) / (b.x1 - b.x0), (rect.bottom - rect.top) / (b.y1 - b.y0)) * 0.97;
     this.zoom = Math.max(0.25, Math.min(4.2, this.zoom * k)); this.updateCamera();
     b = bb(); this.pan((rect.left + rect.right) / 2 - (b.x0 + b.x1) / 2, (rect.top + rect.bottom) / 2 - (b.y0 + b.y1) / 2);

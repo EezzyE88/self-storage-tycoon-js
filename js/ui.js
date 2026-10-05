@@ -158,7 +158,7 @@ export class UI {
       case 'rot': this.rend.rotate(+v); this.sfx('click'); break;
       case 'zoom': this.rend.zoomBy(+v); break;
       case 'fit': this.rend.fitProperty(this.safeRect()); this.sfx('click'); break;
-      case 'viewMore': { const ctl = el.closest('.viewctl'); const open = !ctl.classList.contains('open'); ctl.classList.toggle('open', open); el.setAttribute('aria-expanded', String(open)); this.sfx('click'); break; }
+      case 'viewMore': { const ctl = el.closest('.viewctl'); const open = !ctl.classList.contains('open'); ctl.classList.toggle('open', open); el.setAttribute('aria-expanded', String(open)); this.renderCoach(); this.sfx('click'); break; }
       case 'coach': this.runCoach(); break;
       case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
@@ -244,7 +244,7 @@ export class UI {
     }
   }
   onInput(e) {
-    const el = e.target; if (el.dataset.vol) this.g.audio.setVol(el.dataset.vol, +el.value);
+    const el = e.target; if (el.dataset.sectionPicker && el.value) { this.sheetTall = true; this.renderSheet(true); this.jumpSection(el.value); return; } if (el.dataset.vol) this.g.audio.setVol(el.dataset.vol, +el.value);
     if (el.id === 'loadFile' && el.files[0]) { el.files[0].text().then((t) => this.g.keepCurrent(this.contSave).then(() => this.g.loadCode(t))).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else this.toast('That file is not a valid save', 'bad'); }); }
   }
   do(action, feedback = false) {
@@ -308,6 +308,7 @@ export class UI {
   jumpSection(label) {
     const body = this.$('sheet').querySelector('.body'); if (!body) return;
     if(!this.sheetTall) { this.sheetTall=true; this.renderSheet(true); return this.jumpSection(label); }
+    const picker = this.$('sheet').querySelector('[data-section-picker]'); if (picker) picker.value = label;
     const heading = [...body.querySelectorAll('h3[data-section]')].find((h) => h.dataset.section === label);
     if (heading) body.scrollTop += heading.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
   }
@@ -323,6 +324,7 @@ export class UI {
       });
       const order = title === 'Business' ? ['Bills', 'Financing', 'Pricing', 'Demand', 'Collections', 'Statement'] : sections.map(([, label]) => label);
       jumps.sort((a, b) => order.findIndex((label) => a.endsWith(`>${label}</button>`)) - order.findIndex((label) => b.endsWith(`>${label}</button>`)));
+      extra += `<label class="section-picker"><span>${title} section</span><select data-section-picker="true" aria-label="${title} section"><option value="">Choose section…</option>${jumps.map(j => j.replace(/<button data-a="section" data-v="([^"]+)">(.*?)<\/button>/, '<option value="$1">$2</option>')).join('')}</select>${title==='Operate'?'<button class="btn sm" data-a="feedback">Feedback</button>':''}</label>`;
       extra += `<nav class="section-shortcuts" aria-label="${title} sections">${jumps.join('')}${title==='Operate'?'<button data-a="feedback">Feedback</button>':''}</nav>`;
     }
     const build=title==='Build';
@@ -669,9 +671,9 @@ export class UI {
     const thoughts=[...this.sim.s.thoughts];
     if(this.feedbackFocus) { const key=complaintKey(this.feedbackFocus),idx=thoughts.findIndex(t=>complaintKey(t)===key && t.t===this.feedbackFocus.t); const focused=idx>=0 ? thoughts.splice(idx,1)[0] : this.feedbackFocus; thoughts.push(focused); }
     const rows=thoughts.map(th=>({th,d:diagnoseComplaint(this.sim,th)})).filter(x=>x.d).reverse();
-    const requests=[...this.sim.s.convos].sort((a,b)=>Number(b.id===this.feedbackRequest)-Number(a.id===this.feedbackRequest)).map(c=>({c,d:diagnoseRequest(this.sim,c)})).filter(x=>x.d).map(({c,d})=>`<article class="item"><div class="grow"><b>${esc(c.text||'Customer request')}</b><small>${esc(d.category)} · ${esc(d.location)}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><small>Respond using the existing message choices; they retain their costs and consequences.</small><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('');
+    const requests=[...this.sim.s.convos].sort((a,b)=>Number(b.id===this.feedbackRequest)-Number(a.id===this.feedbackRequest)).map(c=>({c,d:diagnoseRequest(this.sim,c)})).filter(x=>x.d).map(({c,d})=>`<article class="item"><div class="grow"><b>${esc(c.text||'Customer request')}</b><small>${esc(d.category)} · ${esc(d.location)}</small><p><b>What to do:</b> ${esc(d.remedy)}</p><details class="explanation"><summary>Report context</summary><p>${esc(d.cause)}</p></details><small>Respond using the existing message choices; they retain their costs and consequences.</small><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('');
     const requestFirst=this.feedbackRequest!=null;
-    return this.sheet('Customer feedback', 'Recent reports · current property', `<p class="note">Reports describe what happened at the time, not a live fault alarm. Review the location before spending. The latest 40 thoughts are retained in the save.</p>${requestFirst?requests:''}${rows.length ? rows.map(({th,d})=>`<article class="item"><div class="grow"><b>${esc(th.text)}${th.n>1?' ×'+th.n:''}</b><small>${th.requestedSize?'Requested '+esc(th.requestedSize)+(th.requestedClimate?' climate':'')+' · ':''}${esc(d.category)} · Day ${dayOf(th.t)} ${fmtTime(th.t)}</small><small>${esc(d.location)}${d.legacy?' · older save: exact target unavailable':''}</small><p>${esc(d.cause)}</p><p><b>What to do:</b> ${esc(d.remedy)}</p><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('') : requests ? '' : '<p>No recent customer complaints.</p>'}${requestFirst?'':requests}`);
+    return this.sheet('Customer feedback', 'Recent reports · current property', `<p class="note">Reports describe what happened at the time, not a live fault alarm. Review the location before spending. The latest 40 thoughts are retained in the save.</p>${requestFirst?requests:''}${rows.length ? rows.map(({th,d})=>`<article class="item"><div class="grow"><b>${esc(th.text)}${th.n>1?' ×'+th.n:''}</b><small>${th.requestedSize?'Requested '+esc(th.requestedSize)+(th.requestedClimate?' climate':'')+' · ':''}${esc(d.category)} · Day ${dayOf(th.t)} ${fmtTime(th.t)}</small><small>${esc(d.location)}${d.legacy?' · older save: exact target unavailable':''}</small><p><b>What to do:</b> ${esc(d.remedy)}</p><details class="explanation"><summary>Report context</summary><p>${esc(d.cause)}</p></details><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`).join('') : requests ? '' : '<p>No recent customer complaints.</p>'}${requestFirst?'':requests}`);
   }
   bindComplaintBubble(el,th) {
     const sim=this.sim; let pointers=new Set(),start=null,eligible=false,pointerSeen=false,blocked=false,releasedVersion=0;
@@ -1495,13 +1497,15 @@ export class UI {
     return T('All caught up.', null, 'ok');
   }
   coachLabel(text) {
-    const vacant = text.match(/^(\d+) rent-ready units vacant\./);
+    const vacant = text.match(/^(\d+) rent-ready units vacant\./) || text.match(/^Nearly full:.*? · (\d+) rent-ready vacanc/);
     if (vacant) return `${vacant[1]} vacant · Review demand & rents →`;
-    return text;
+    if (/^All .* operating units are leased/.test(text)) return 'Fully leased · Review growth';
+    if (/ needs repair\./.test(text)) return text.split(' needs repair.')[0] + ' · Repair';
+    return text.split('. ')[0].replace(/\.$/, '');
   }
   renderCoach() {
     const s = this.sim.s, el = this.$('coach');
-    const hide = this.title || this.modalOpen() || (s.tut && s.tut.on && !s.tut.done) || !!s.lesson || !!s.lessonOffer || this.root.classList.contains('has-sheet') || !!this.toasts?.length;
+    const hide = !!this.root.querySelector?.('.viewctl.open') || this.title || this.modalOpen() || (s.tut && s.tut.on && !s.tut.done) || !!s.lesson || !!s.lessonOffer || this.root.classList.contains('has-sheet') || !!this.toasts?.length;
     const h = hide ? null : this.coachHint(); this.coachAct = h && h.act;
     if (!h) { if (!el.hidden) { el.hidden = true; this.root.classList.remove('has-coach'); } return; }
     if(h.kind==='ok' && !h.act) { el.hidden=true; this.root.classList.remove('has-coach'); return; }
@@ -1627,9 +1631,9 @@ export class UI {
   financialHtml() {
     const sim = this.sim, P = sim.financialPosition(), F = sim.scheduledOutlook();
     return `<h3>Bills &amp; reserve</h3><div class="kv"><span>Unpaid committed bills</span><span>${money(P.committed)}</span><span>Next weekly settlement</span><span>Day ${sim.nextSettlementDay()} · 7:00 AM</span><span>Recommended reserve</span><span>${money(P.reserve)}</span><span>Available after bills &amp; reserve</span><span class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</span><span>Net liquid position</span><span>${money(P.netLiquid)}</span></div>
-      <p class="note">Reserve: $500 + 14 future financial days of predictable costs and scheduled loan payments. Accrued bills are separate. Net liquid position subtracts bills and credit-line debt, without subtracting reserve.</p>
+      <details class="explanation"><summary>How reserve is calculated</summary><p class="note">Reserve: $500 + 14 future financial days of predictable costs and scheduled loan payments. Accrued bills are separate. Net liquid position subtracts bills and credit-line debt, without subtracting reserve.</p></details>
       <h3>Scheduled next 30 days</h3><div class="kv"><span>Current-tenant bills</span><span>${money(F.inflow)}</span><span>Weekly bills &amp; loan payments</span><span>${money(-F.outflow)}</span><span>Scheduled net cash movement</span><span class="${F.net < 0 ? 'neg' : ''}">${money(F.net)}</span><span>Cash at end</span><span>${money(F.cashAfter)}</span><span>Bills still owed at end</span><span>${money(F.committedAfter)}</span><span>At-risk receivables</span><span>${money(F.atRisk)}</span></div>
-      <p class="note">${F.averageBill ? `If one average tenant misses a scheduled payment: ${money(F.downside)} net cash movement, ${money(F.averageBill)} less cushion.` : 'No current-tenant bills scheduled; there is no payment cushion to model.'} Current leases only. New rentals, overdue collections and optional future spending excluded; existing staffing/assets held constant. Scheduled payments are not guaranteed collections.</p>`;
+      <details class="explanation"><summary>Forecast assumptions &amp; payment risk</summary><p class="note">${F.averageBill ? `If one average tenant misses a scheduled payment: ${money(F.downside)} net cash movement, ${money(F.averageBill)} less cushion.` : 'No current-tenant bills scheduled; there is no payment cushion to model.'} Current leases only. New rentals, overdue collections and optional future spending excluded; existing staffing/assets held constant. Scheduled payments are not guaranteed collections.</p></details>`;
   }
   cashWindow(days) { return this.sim.cashWindow(days); }
   showFinances() {
@@ -1669,7 +1673,7 @@ export class UI {
     const E = this.calendarEvents(), now = this.sim.s.t;
     const rows = E.map((e) => { const d=dayOf(e.t), same=d===dayOf(now); return '<div class="item"><div class="grow"><b>' + esc(e.label) + '</b><small>' + esc(e.detail || '') + '</small></div><span class="pill ' + (e.kind==='important'?'r':same?'a':'b') + '">Day ' + d + '<br>' + fmtTime(e.t) + '</span></div>'; }).join('');
     this.$('modal').innerHTML = '<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Calendar</h2><button class="x" data-a="modalClose" aria-label="Close">' + I.x + '</button></div>' +
-      '<p class="note">Day ' + dayOf(now) + ' · ' + fmtTime(now) + '. Dates below come from current leases, collections, loans, construction, competitors and scenario state; estimated construction dates can move if prerequisites block work.</p>' +
+      '<p class="note">Day ' + dayOf(now) + ' · ' + fmtTime(now) + '</p><details class="explanation"><summary>How scheduled dates work</summary><p class="note">Dates below come from current leases, collections, loans, construction, competitors and scenario state; estimated construction dates can move if prerequisites block work.</p></details>' +
       '<div class="list">' + (rows || '<p class="note">No important scheduled dates yet.</p>') + '</div></div></div>';
   }
   modalOpen() { return !!this.$('modal').firstChild; }
@@ -1678,15 +1682,15 @@ export class UI {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
       <div class="menu-list"><button class="btn" data-a="handbook">Builder\'s handbook <small>How, why and when to use every build item</small></button><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}</div>
-      <h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
+      <details class="settings"><summary>Audio &amp; performance</summary><h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
       <div class="row wrap"><button class="btn sm" data-a="music">Music ${a.musicOn ? 'on' : 'off'}</button><button class="btn sm" data-a="fps">Performance stats ${this.g.showFps ? 'on' : 'off'}</button></div>
       ${this.g.showFps ? `<details class="performance-panel"><summary>Performance samples</summary><pre id="fps">${esc(this.g.performanceText ? this.g.performanceText() : 'Collecting samples…')}</pre><p class="note">CPU submission is not GPU time. Resource counts are not memory bytes. Samples remain separate while this menu is open.</p></details>` : ''}
-      <h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button><button class="btn sm" data-a="lens">Miniature lens ${this.g.showcase && this.g.showcase.lensPref ? 'on' : 'off'}</button></div>
-      <h3>Showcase</h3><div class="menu-list"><button class="btn" data-a="photo">Photo mode <small>Light, looks, lens and a shutter (P)</small></button><button class="btn" data-a="tour">Cinematic tour <small>The camera wanders your property. Tap to stop.</small></button></div>
+      </details><details class="settings"><summary>Graphics</summary><h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button><button class="btn sm" data-a="lens">Miniature lens ${this.g.showcase && this.g.showcase.lensPref ? 'on' : 'off'}</button></div>
+      </details><details class="settings"><summary>Showcase</summary><h3>Showcase</h3><div class="menu-list"><button class="btn" data-a="photo">Photo mode <small>Light, looks, lens and a shutter (P)</small></button><button class="btn" data-a="tour">Cinematic tour <small>The camera wanders your property. Tap to stop.</small></button></div>
       <p class="note">Tip: tap any customer, car or staff member to follow them and read their story.</p>
-      <h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="sandboxSetup">Sandbox</button></div>
-      <h3>Controls</h3><p class="note">Drag to pan; double-tap, pinch or scroll to zoom; rotate with the side buttons (Q/E). On touch, press and hold then drag to place a build; a quick drag pans. Two fingers pan/zoom. Space pauses, 1-3 set speed, Esc cancels.</p>
-      <p class="note" id="autosaveNote">${this.autosaveNote()}</p>
+      </details><details class="settings"><summary>Start a new game</summary><h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="sandboxSetup">Sandbox</button></div>
+      </details><details class="settings"><summary>Controls</summary><h3>Controls</h3><p class="note">Drag to pan; double-tap, pinch or scroll to zoom; rotate with the side buttons (Q/E). On touch, press and hold then drag to place a build; a quick drag pans. Two fingers pan/zoom. Space pauses, 1-3 set speed, Esc cancels.</p>
+      </details><p class="note" id="autosaveNote">${this.autosaveNote()}</p>
       <p class="note build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')} · ${esc(this.g.BUILD ? this.g.BUILD.date : '')}. Mention this when you send feedback.</p></div></div>`;
   }
   showHandbook() {
