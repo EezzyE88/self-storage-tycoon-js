@@ -21,3 +21,17 @@ const u=Object.create(UI.prototype),sim=new Sim(JSON.parse(JSON.stringify(full.s
 console.log('PASS intentional 1x popup resume preserved');
 const Renderer=await loadRenderer(),r=new Renderer({clientWidth:393,clientHeight:720},sim);r.rebuildStatic();const before=JSON.stringify(sim.s);for(let f=0;f<3;f++){r.setView(f);assert.equal(r.floorY(),f*FLOOR_H);assert.ok(r.staticG.children.filter(m=>m.userData.f!=null&&(m.userData.fl??m.userData.f)!==f&&!m.userData.shellWall&&!m.userData.roof&&!m.userData.cab).every(m=>!m.visible));}assert.equal(JSON.stringify(sim.s),before);
 console.log('PASS three-floor cutaway/selected-floor plane under renderer stubs; Safari visual acceptance pending');
+
+for(const mutate of [s=>s.orders.at(-1).vertical.stages.reverse(),s=>s.orders.at(-1).cost+=1,s=>s.orders.at(-1).vertical.elapsed=1e9,s=>s.orders.at(-1).vertical.phase=5,s=>s.agents.push({id:77777,f:0,elev:999999,inElev:true})]){
+ session(base);const R=g.sim.verticalPlan(g.sim.objs('shell')[0].id);g.sim.dispatch({type:'verticalUpgrade',...R});const good=JSON.parse(g.saveJSON());assert.equal(await g.loadCode(JSON.stringify(good)),true);mutate(good);const prior=g.company;assert.equal(await g.loadCode(JSON.stringify(good)),false);assert.equal(g.company,prior);
+}
+console.log('PASS reordered stages, inconsistent package totals, runaway elapsed time, unfinished completed phase and orphan passengers rejected atomically');
+// The production exporter/loader must accept every construction checkpoint.
+session(base);R=g.sim.verticalPlan(g.sim.objs('shell')[0].id);g.sim.dispatch({type:'verticalUpgrade',...R});let phases=new Set(),cash=g.sim.s.cash;
+for(let i=0;i<50000;i++){
+ const ord=g.sim.s.orders.find(o=>o.vertical&&o.st==='construction');if(!ord)break;
+ const key=ord.vertical.phase;if(!phases.has(key)){phases.add(key);const savedOrders=JSON.stringify(g.sim.s.orders);assert.equal(await g.loadCode(await g.saveCode()),true,`phase ${key} reload`);assert.equal(JSON.stringify(g.sim.s.orders),savedOrders);assert.equal(g.sim.s.cash,cash);}
+ const current=g.sim.s.orders.find(o=>o.vertical&&o.st==='construction');g.sim.s.t++;tickVertical(g.sim,current);g.sim.ensure();for(const el of g.sim.objs('elevator'))g.sim.updateElevator(el);
+}
+assert.deepEqual([...phases],[0,1,2,3,4]);assert.equal(g.sim.s.orders.find(o=>o.vertical).st,'done');assert.equal(g.sim.s.cash,cash);
+console.log('PASS production compressed save/reload across all five expansion stages, completion and no repeated charge');

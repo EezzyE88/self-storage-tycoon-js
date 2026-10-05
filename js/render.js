@@ -390,7 +390,7 @@ export class Renderer {
   }
   drawDirt(g, f) {
     const s = this.sim.s, C = CELL;
-    for (let i = 0; i < s.W * s.H; i++) { const d = s.dirt[f][i]; if (d < 0.18) continue; const x = i % s.W, y = (i / s.W) | 0;
+    for (let i = 0; i < s.W * s.H; i++) { const d = s.dirt[f]?.[i] || 0; if (d < 0.18) continue; const x = i % s.W, y = (i / s.W) | 0;
       for (let k = 0; k < 4; k++) { g.fillStyle = `rgba(92,70,40,${Math.min(0.5, d * 0.45)})`; g.beginPath(); g.ellipse(x * C + hash(i + k * 7) * C, y * C + hash(i * 3 + k) * C, 3 + d * 6, 2 + d * 4, hash(i + k), 0, 7); g.fill(); } }
   }
 
@@ -929,6 +929,8 @@ export class Renderer {
   drawOverlay() {
     const sim = this.sim, s = sim.s, D = sim.D, g = this.ovCanvas.getContext('2d'), C = 16, W = s.W, f = Number.isInteger(this.view)?this.view:0;
     g.clearRect(0, 0, this.ovCanvas.width, this.ovCanvas.height);
+    // Planned floors have no simulation grids until the package is accepted.
+    if (!D.walk[f]) { this.ovTex.needsUpdate = true; return; }
     const cell = (i, c) => { g.fillStyle = c; g.fillRect((i % W) * C, ((i / W) | 0) * C, C, C); };
     // status is never color alone (concept §11): every state also gets a mark
     const mark = (px, py, m, sz = C) => { if (!m) return; g.save(); g.strokeStyle = 'rgba(20,24,30,0.75)'; g.fillStyle = 'rgba(20,24,30,0.75)'; g.lineWidth = Math.max(2, sz / 7); const a = sz * 0.22, b = sz * 0.78;
