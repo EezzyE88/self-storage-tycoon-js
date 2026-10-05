@@ -140,7 +140,7 @@ export class Renderer {
     this.scene.add(ground); this.ground = ground;
     const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x7b9364, roughness: 1 }));
     outer.rotation.x = -Math.PI / 2; outer.position.set(sim.s.W / 2, -0.02, sim.s.H / 2); outer.receiveShadow = true; this.scene.add(outer); this.outer = outer; this.worldW = sim.s.W; this.worldH = sim.s.H;
-    // Reused selected upper-floor plate
+    // floor-2 plate
     this.f2Canvas = mkCanvas(sim.s.W * CELL, sim.s.H * CELL); this.f2Tex = tex(this.f2Canvas);
     this.f2Plate = new THREE.Mesh(new THREE.PlaneGeometry(sim.s.W, sim.s.H), new THREE.MeshStandardMaterial({ map: this.f2Tex, transparent: true, alphaTest: 0.5, roughness: 0.9 }));
     this.f2Plate.rotation.x = -Math.PI / 2; this.f2Plate.position.set(sim.s.W / 2, FLOOR_H, sim.s.H / 2); this.f2Plate.receiveShadow = true; this.scene.add(this.f2Plate);
@@ -266,20 +266,12 @@ export class Renderer {
   }
   fitProperty(rect) { // frame the whole parcel inside the uncovered screen area
     const s = this.sim.s, w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-    rect = rect || { top: 60, bottom: h - 80, left: 8, right: w - 8 };
-    // Project actual built footprints, avoiding the empty corners of an L-shaped estate.
-    const points = [];
-    for (const o of Object.values(s.objects)) {
-      if (o.x == null || o.y == null) continue;
-      const height = Math.max(2.5, (o.floors || 1) * FLOOR_H + 0.5) + (o.f || 0) * FLOOR_H;
-      for (const x of [o.x - 1, o.x + (o.w || 1) + 1])
-        for (const y of [o.y - 1, o.y + (o.h || 1) + 1])
-          for (const z of [0, height]) points.push([x, y, z]);
-    }
-    if (!points.length) for (const x of [0, s.W]) for (const y of [0, s.H]) points.push([x, y, 0]);
-    const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
-    this.center.set((Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...ys) + Math.max(...ys)) / 2); this.updateCamera();
-    const bb = () => { let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (const [x, y, z] of points) { const p = this.project(x, y, z); x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); } return { x0, x1, y0, y1 }; };
+    rect = rect || { top: 60, bottom: h - 80, left: 8, right: w - 64 };
+    let X0 = 1e9, X1 = -1e9, Y0 = 1e9, Y1 = -1e9; // frame what is built (plus a margin); an empty lot frames the whole parcel
+    for (const o of Object.values(s.objects)) { if (o.x == null) continue; X0 = Math.min(X0, o.x); Y0 = Math.min(Y0, o.y); X1 = Math.max(X1, o.x + (o.w || 1)); Y1 = Math.max(Y1, o.y + (o.h || 1)); }
+    if (X1 - X0 < 8 || Y1 - Y0 < 8) { X0 = 0; Y0 = 0; X1 = s.W; Y1 = s.H; } else { X0 = Math.max(0, X0 - 2); Y0 = Math.max(0, Y0 - 2); X1 = Math.min(s.W, X1 + 2); Y1 = Math.min(s.H, Y1 + 2); }
+    this.center.set((X0 + X1) / 2, 0, (Y0 + Y1) / 2); this.updateCamera();
+    const bb = () => { let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const [x, y] of [[X0, Y0], [X1, Y0], [X0, Y1], [X1, Y1]]) for (const z of [0, 2.5]) { const p = this.project(x, y, z); x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); } return { x0, x1, y0, y1 }; };
     let b = bb(); const k = Math.min((rect.right - rect.left) / (b.x1 - b.x0), (rect.bottom - rect.top) / (b.y1 - b.y0)) * 0.97;
     this.zoom = Math.max(0.25, Math.min(4.2, this.zoom * k)); this.updateCamera();
     b = bb(); this.pan((rect.left + rect.right) / 2 - (b.x0 + b.x1) / 2, (rect.top + rect.bottom) / 2 - (b.y0 + b.y1) / 2);
@@ -309,7 +301,7 @@ export class Renderer {
   }
   rotate(dir) { this.rot = (this.rot + dir + 4) % 4; this.targetAz = this.targetAz + dir * Math.PI / 2; }
   lookAt(x, y) { this.center.set(x + 0.5, 0, y + 0.5); this.updateCamera(); }
-  floorY() { return Number.isInteger(this.view) ? this.view*FLOOR_H : 0; }
+  floorY() { return this.view === 1 ? FLOOR_H : 0; }
   cellAt(cx, cy) {
     const rect = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((cx - rect.left) / rect.width) * 2 - 1, -((cy - rect.top) / rect.height) * 2 + 1);
@@ -366,14 +358,13 @@ export class Renderer {
     // property line
     g.strokeStyle = 'rgba(255,255,255,0.35)'; g.setLineDash([6, 6]); g.lineWidth = 2; g.strokeRect(p.x0 * C, p.y0 * C, (p.x1 - p.x0 + 1) * C, (p.y1 - p.y0 + 1) * C); g.setLineDash([]);
     this.groundTex.needsUpdate = true;
-    // Reused selected upper-floor plate
-    const floor = Number.isInteger(this.view)&&this.view>0?this.view:1;
+    // floor-2 plate
     const f2 = this.f2Canvas.getContext('2d'); f2.clearRect(0, 0, this.f2Canvas.width, this.f2Canvas.height);
-    for (const sh of sim.objs('shell')) if (sh.floors > floor && sh.cstate !== 'construction') {
+    for (const sh of sim.objs('shell')) if (sh.floors > 1 && sh.cstate !== 'construction') {
       f2.fillStyle = COL.shellFloor; f2.fillRect(sh.x * C, sh.y * C, sh.w * C, sh.h * C);
-      for (let y = sh.y; y < sh.y + sh.h; y++) for (let x = sh.x; x < sh.x + sh.w; x++) this.drawHallCell(f2, s, floor, x, y);
+      for (let y = sh.y; y < sh.y + sh.h; y++) for (let x = sh.x; x < sh.x + sh.w; x++) this.drawHallCell(f2, s, 1, x, y);
     }
-    this.drawDirt(f2, floor);
+    this.drawDirt(f2, 1);
     this.f2Tex.needsUpdate = true;
   }
   drawHallCell(g, s, f, x, y) {
@@ -390,7 +381,7 @@ export class Renderer {
   }
   drawDirt(g, f) {
     const s = this.sim.s, C = CELL;
-    for (let i = 0; i < s.W * s.H; i++) { const d = s.dirt[f]?.[i] || 0; if (d < 0.18) continue; const x = i % s.W, y = (i / s.W) | 0;
+    for (let i = 0; i < s.W * s.H; i++) { const d = s.dirt[f][i]; if (d < 0.18) continue; const x = i % s.W, y = (i / s.W) | 0;
       for (let k = 0; k < 4; k++) { g.fillStyle = `rgba(92,70,40,${Math.min(0.5, d * 0.45)})`; g.beginPath(); g.ellipse(x * C + hash(i + k * 7) * C, y * C + hash(i * 3 + k) * C, 3 + d * 6, 2 + d * 4, hash(i + k), 0, 7); g.fill(); } }
   }
 
@@ -425,7 +416,6 @@ export class Renderer {
     for (const o of Object.values(s.objects)) {
       try { this.buildObj(o); } catch (e) { console.warn('render obj', o.type, e); }
     }
-    for(const ord of s.orders.filter(o=>o.st==='construction'&&o.vertical)){const v=ord.vertical,sh=s.objects[v.shell];if(sh&&v.phase<2){const edge=new THREE.LineSegments(this.geo.edges,this.mat.scaffold);edge.scale.set(sh.w,FLOOR_H,sh.h);edge.position.set(sh.x+sh.w/2,v.f*FLOOR_H+FLOOR_H/2,sh.y+sh.h/2);this.add(edge,v.f,{obj:sh.id,pendingFloor:true});}}
     this.buildFence();
     this.applyView();
   }
@@ -522,9 +512,9 @@ export class Renderer {
         break;
       }
       case 'elevator': {
-        const cx = o.x + 0.5, cz = o.y + 0.5, H = (o.servedFloors?.length||2) * FLOOR_H;
+        const cx = o.x + 0.5, cz = o.y + 0.5, H = 2 * FLOOR_H;
         if (inConst) { this.scaffold(o, cx, cz, 0.9, 0.9, H, 0); break; }
-        for (let f2 = 0; f2 < (o.servedFloors?.length||2); f2++) {
+        for (let f2 = 0; f2 < 2; f2++) {
           const e = new THREE.LineSegments(this.geo.edges, this.mat.edgeDark);
           e.scale.set(0.92, FLOOR_H, 0.92); e.position.set(cx, f2 * FLOOR_H + FLOOR_H / 2, cz); this.add(e, f2, { obj: o.id });
           this.box(0.92, 0.04, 0.92, this.mat.yellow, cx, f2 * FLOOR_H + 0.02, cz, 0, { obj: o.id, fl: f2 });
@@ -568,12 +558,10 @@ export class Renderer {
       case 'stairs': {
         const cx = o.x + 0.5, cz = o.y + 0.5;
         if (inConst) { this.scaffold(o, cx, cz, 0.9, 0.9, 2 * FLOOR_H, 0); break; }
-        const N=7,levels=o.servedFloors?.length||2;
-        for(let floor=0;floor<levels-1;floor++){
-          for(let k=0;k<N;k++){const h=(k+1)*FLOOR_H/N;this.box(.8,h,.9/N,this.mat.stair,cx,h/2,o.y+.05+(k+.5)*.9/N,floor,{obj:o.id});}
-          this.box(.04,.9,.9,this.mat.darkMetal,o.x+.08,FLOOR_H/2+.45,cz,floor,{obj:o.id});
-          this.box(.92,.04,.92,this.mat.yellow,cx,.02,cz,floor+1,{obj:o.id,fl:floor+1});
-        }
+        const N = 7;
+        for (let k = 0; k < N; k++) { const h = (k + 1) * FLOOR_H / N; this.box(0.8, h, 0.9 / N, this.mat.stair, cx, h / 2, o.y + 0.05 + (k + 0.5) * 0.9 / N, 0, { obj: o.id }); }
+        this.box(0.04, 0.9, 0.9, this.mat.darkMetal, o.x + 0.08, FLOOR_H / 2 + 0.45, cz, 0, { obj: o.id });
+        this.box(0.92, 0.04, 0.92, this.mat.yellow, cx, FLOOR_H + 0.02, cz, 1, { obj: o.id, fl: 1 });
         break;
       }
       case 'power': case 'water': {
@@ -636,10 +624,10 @@ export class Renderer {
       for (let k = 0; k <= n; k++) { const t = k / n; this.box(0.06, H + 0.05, 0.06, this.mat.fence, x0 + (x1 - x0) * t, (H + 0.05) / 2, z0 + (z1 - z0) * t, 0); }
     }
   }
-  setView(v) { this.view = v; this.drawGround(); this.applyView(); }
+  setView(v) { this.view = v; this.applyView(); }
   applyView() {
     const v = this.view;
-    this.f2Plate.visible = Number.isInteger(v)&&v>0; this.f2Plate.position.y=this.floorY();
+    this.f2Plate.visible = v !== 0;
     for (const m of this.staticG.children) {
       const u = m.userData;
       if (u.roof) { m.visible = v === 'ext'; continue; }
@@ -648,12 +636,12 @@ export class Renderer {
         const shell = this.sim.s.objects[u.shell];
         if (v === 'ext') { m.visible = true; this.setWallH(m, FLOOR_H); }
         else if (v === 0) { m.visible = u.wf === 0; this.setWallH(m, 0.45); }
-        else { m.visible = u.wf <= v; this.setWallH(m, u.wf === v ? 0.45 : FLOOR_H); }
+        else { m.visible = u.wf <= 1; this.setWallH(m, u.wf === 1 ? 0.45 : FLOOR_H); }
         continue;
       }
-      if (u.fl != null) { m.visible = v==='ext'||u.fl===v; continue; }
-      if (u.f > 0) m.visible = v==='ext'||u.f===v;
-      else m.visible = !(Number.isInteger(v)&&v>0&&u.f===0);
+      if (u.fl != null && u.fl === 1) { m.visible = v !== 0; continue; }
+      if (u.f === 1) m.visible = v !== 0;
+      else m.visible = true;
     }
     this.ovPlane.position.y = this.floorY() + 0.04;
   }
@@ -719,7 +707,7 @@ export class Renderer {
     g.traverse((c) => { c.castShadow = true; });
     return g;
   }
-  floorVisible(f) { return this.view === 'ext' || f === this.view; }
+  floorVisible(f) { return this.view === 'ext' ? true : this.view === 0 ? f === 0 : true; }
   syncPool(map, items, make, upd, dt) {
     const seen = new Set();
     for (const it of items) {
@@ -878,7 +866,7 @@ export class Renderer {
   setPreview(R, anchor = null) {
     this.clearGroup(this.previewG);
     if (!R) return;
-    const col = R.proposed ? 0x7adbe8 : R.status === 'invalid' ? 0xd2452f : R.status === 'incomplete' ? 0xe8a91f : 0x39b36b; // proposed floor: blueprint cyan, never the built look
+    const col = R.status === 'invalid' ? 0xd2452f : R.status === 'incomplete' ? 0xe8a91f : 0x39b36b;
     const okMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.45, depthWrite: false, depthTest: false });
     const badMat = new THREE.MeshBasicMaterial({ color: 0xd2452f, transparent: true, opacity: 0.6, depthWrite: false, depthTest: false });
     const seen = new Set();
@@ -927,10 +915,8 @@ export class Renderer {
   }
   setOverlay(kind) { this.overlay = kind; this.ovPlane.visible = !!kind; this.lastOv = -1; }
   drawOverlay() {
-    const sim = this.sim, s = sim.s, D = sim.D, g = this.ovCanvas.getContext('2d'), C = 16, W = s.W, f = Number.isInteger(this.view)?this.view:0;
+    const sim = this.sim, s = sim.s, D = sim.D, g = this.ovCanvas.getContext('2d'), C = 16, W = s.W, f = this.view === 1 ? 1 : 0;
     g.clearRect(0, 0, this.ovCanvas.width, this.ovCanvas.height);
-    // Planned floors have no simulation grids until the package is accepted.
-    if (!D.walk[f]) { this.ovTex.needsUpdate = true; return; }
     const cell = (i, c) => { g.fillStyle = c; g.fillRect((i % W) * C, ((i / W) | 0) * C, C, C); };
     // status is never color alone (concept §11): every state also gets a mark
     const mark = (px, py, m, sz = C) => { if (!m) return; g.save(); g.strokeStyle = 'rgba(20,24,30,0.75)'; g.fillStyle = 'rgba(20,24,30,0.75)'; g.lineWidth = Math.max(2, sz / 7); const a = sz * 0.22, b = sz * 0.78;

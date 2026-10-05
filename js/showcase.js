@@ -234,7 +234,7 @@ export function installShowcase(game) {
   };
   function reticle(x, y) { const r = $('reticle'); r.style.left = x + 'px'; r.style.top = y + 'px'; r.classList.remove('on'); void r.offsetWidth; r.classList.add('on'); }
   const origAttach = game.attach.bind(game);
-  game.attach = (sim, kind) => { clearCrowd(); if (sc.mode === 'attract') stopAttract(); stopFollow(true); if (sc.mode === 'tour') stopTour(); sc.pops.length = 0; $('pops').innerHTML = ''; const r = origAttach(sim, kind); const o = sim.occupancy(); sc.seenFull.set(sim, o.n > 0 && o.occ >= o.n); return r; };
+  game.attach = (sim, kind, opts) => { clearCrowd(); if (sc.mode === 'attract') stopAttract(); stopFollow(true); if (sc.mode === 'tour') stopTour(); sc.pops.length = 0; $('pops').innerHTML = ''; const r = origAttach(sim, kind, opts); const o = sim.occupancy(); sc.seenFull.set(sim, o.n > 0 && o.occ >= o.n); return r; };
   const origEvent = ui.onEvent.bind(ui);
   ui.onEvent = (e) => { origEvent(e); onEvent(e); };
 

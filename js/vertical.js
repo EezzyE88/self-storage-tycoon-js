@@ -72,7 +72,11 @@ export function tickVertical(sim,ord){const V=ord.vertical,s=sim.s,sh=s.objects[
  if(stage.kind==='test'){
  const e=s.objects[V.elevator];if(e){e.servedFloors=Array.from({length:sh.floors},(_,i)=>i);while(e.q.length<sh.floors)e.q.push([]);delete e.serviceTestUntil;delete e.extensionDrain;if(sh.floors>2)e.dispatchMode='sweep-v1';}
  if(V.stair&&s.objects[V.stair])s.objects[V.stair].servedFloors=Array.from({length:sh.floors},(_,i)=>i);
- ord.st='done';ord.prog=1;sim.emit('complete',{order:ord.id,label:ord.label,cells:[],units:V.ids.filter(id=>s.objects[id]?.type==='unit').length});
+ ord.st='done';ord.prog=1;
+ // Reconcile floor, halls, landing and route graph in one step before any player-facing access/readiness evaluation.
+ V.phase++;V.elapsed=0;sim.markDirty();sim.ensure();
+ const mine=V.ids.map(id=>s.objects[id]).filter(o=>o?.type==='unit'),ready=mine.filter(u=>u.cstate==='ready').length,otherReady=sim.objs('unit').filter(u=>u.cstate==='ready'&&u.order!==ord.id).length;
+ sim.emit('complete',{order:ord.id,label:ord.label,cells:[],units:mine.length,ready,otherReady,floor:V.f+1,vertical:true});return;
  }
  V.phase++;V.elapsed=0;sim.markDirty();}
 export function verticalRefund(sim,ord){const V=ord.vertical,stage=V.stages[V.phase],undo=sim.s.t-ord.t0<=30&&V.phase===0;const remaining=V.stages.slice(V.phase+1).reduce((n,t)=>n+t.cost,0)+(stage?stage.cost*(1-V.elapsed/Math.max(1,stage.dur)):0);return{undo,refund:undo?ord.cost:Math.round(remaining*.6),locked:V.phase>=2};}
@@ -100,3 +104,23 @@ export function sweepElevator(sim,el){const s=sim.s,agent=id=>s.agents.find(a=>a
 }
 // Select a working freight route using deterministic congestion evidence, only for new F3+ trips.
 export function freightPath(sim,from,to){const a=sim.unnode(from),b=sim.unnode(to);if(a.f===b.f)return null;const options=[];sim.navNoVertical=true;try{for(const el of sim.objs('elevator').sort((a,b)=>a.id-b.id)){if(!sim.works(el)||el.extensionDrain||el.serviceTestUntil>sim.s.t||!served(sim,el).includes(a.f)||!served(sim,el).includes(b.f))continue;const src=sim.node(a.f,el.x,el.y),dst=sim.node(b.f,el.x,el.y);const left=sim.bfs([from],n=>n===src,n=>sim.pedNbr(n)),right=sim.bfs([dst],n=>n===to,n=>sim.pedNbr(n));if(!left||!right)continue;const slots=el.q.flat().reduce((n,id)=>n+(sim.s.agents.find(a=>a.id===id)?.cart?2:1),0),score=left.length+right.length-2+10*Math.abs(el.pos-a.f)+3*Math.ceil(slots/el.cap)+10*el.riders.reduce((n,r)=>n+Math.abs(r.dest-el.pos),0);options.push({el,score,path:[...left,...right]});}}finally{sim.navNoVertical=false;}options.sort((a,b)=>a.score-b.score||a.el.id-b.el.id);return options[0]?.path||null;}
+// Expansion review evidence (presentation only; reads observed history, never changes demand or market outcomes).
+// Compares the copied unit mix with current matching vacancies and the last 30 days of matching shopper evidence.
+export const EVIDENCE_MIN=3;
+export function expansionEvidence(sim,R){
+ const s=sim.s,day=sim.day,key=(size,climate)=>size+(climate?' climate':' standard');
+ const mix=new Map();for(const u of R.unitCreates||[]){const k=key(u.size,u.env==='climate');mix.set(k,{size:u.size,climate:u.env==='climate',n:(mix.get(k)?.n||0)+1});}
+ const lost=new Map();for(const x of s.mkt.lostLog||[])if(x.d>day-30&&['noSize','noReady','noClimate'].includes(x.r)&&x.sz){const k=key(x.sz,!!x.climate);lost.set(k,(lost.get(k)||0)+1);}
+ const leased=new Map();for(const L of Object.values(s.leases||{})){const u=s.objects[L.unit];if(u&&L.start>day-30){const k=key(u.size,u.env==='climate');leased.set(k,(leased.get(k)||0)+1);}}
+ const vacant=k=>sim.objs('unit').filter(u=>key(u.size,u.env==='climate')===k&&u.cstate==='operating'&&!u.lease&&!u.blocked&&u.commercial==='ready').length;
+ const rows=[...mix.entries()].map(([k,m])=>({product:k,...m,vacant:vacant(k),unmet:lost.get(k)||0,recentLeases:leased.get(k)||0}));
+ const n=rows.reduce((a,r)=>a+r.n,0),vac=rows.reduce((a,r)=>a+r.vacant,0),unmet=rows.reduce((a,r)=>a+r.unmet,0),leases=rows.reduce((a,r)=>a+r.recentLeases,0),signals=unmet+leases;
+ const elsewhere=[...lost.entries()].filter(([k])=>!mix.has(k)).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([product,unmet])=>({product,unmet}));
+ let verdict,why;
+ if(!n){verdict='structure';why='Structure only: no units are copied. Fit out later with the products demand supports.';}
+ else if(signals<EVIDENCE_MIN){verdict='insufficient';why=`Not enough evidence: ${signals} matching shopper signal${signals===1?'':'s'} in 30 days (needs at least ${EVIDENCE_MIN}).`;}
+ else if(vac>=unmet){verdict='unsupported';why=`Unsupported by current evidence: ${vac} matching vacanc${vac===1?'y':'ies'} already cover${vac===1?'s':''} the ${unmet} recently unmet matching request${unmet===1?'':'s'}.`;}
+ else if(unmet-vac>=Math.ceil(n/2)){verdict='supported';why=`Appears supported: ${unmet} unmet matching requests exceed ${vac} matching vacanc${vac===1?'y':'ies'}.`;}
+ else{verdict='partial';why=`Partly supported: ${unmet-vac} more unmet matching request${unmet-vac===1?'':'s'} than vacancies, for ${n} new units.`;}
+ return{rows,n,vacant:vac,unmet,leases,signals,elsewhere,verdict,why};
+}

@@ -13,6 +13,7 @@ import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { cloud } from './cloud.js';
 import { localsave } from './localsave.js';
+import { savearchive } from './savearchive.js';
 import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
 
@@ -100,11 +101,11 @@ const game = {
     return { ok: true, msg: `Sent $${amt.toLocaleString()} to ${B.name}` };
   },
   note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },
-  attach(sim, kind) {
+  attach(sim, kind, opts = {}) {
     this.sim = sim; this.acc = 0; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)
     if (this.rend) this.rend.setSim(sim);
     if (this.ui) {
-      this.ui.tool = null; this.ui.sel = null; this.ui.plan = null; this.ui.setTab(null); this.ui.renderActionBar();
+      this.ui.tool = null; this.ui.sel = null; this.ui.plan = null; this.ui.setTab(null); this.ui.resetSession(opts.view); this.ui.renderActionBar();
       const s = sim.s; this.ui.setMeta(this.metaName() || (s.mode === 'tutorial' ? 'Maple Street Storage' : s.creative ? 'Creative Lot' : 'Empty Lot'), modeLabel(s));
       this.ui.hF2 = null; this.ui.renderTut(true); this.ui.renderFeed(true);
     }
@@ -115,8 +116,10 @@ const game = {
   },
   drain() { const ev = this.sim.events; if (!ev.length) return; this.sim.events = []; if (this.sim === this.demo && this.ui && this.ui.title) return; /* the living title screen stays quiet */ for (const e of ev) this.ui.onEvent(e); },
   saveJSON() {
-    const C = this.company;
-    return C && C.props.length > 1 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: p.sim.s })) }) : JSON.stringify(this.sim.s);
+    const C = this.company, view = this.ui && this.rend ? this.rend.view : null;
+    // The selected floor/exterior view is the only save-owned UI state; it rides beside (not inside) the simulation state.
+    const own = (s) => view == null || s !== this.sim.s ? s : { ...s, uiView: view };
+    return C && C.props.length > 1 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));
   },
   rawSaveCode(json) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); },
   async saveCode(json = this.saveJSON()) {
@@ -126,26 +129,40 @@ const game = {
       return 'SST1.' + btoa(bin);
     } catch (e) { return this.rawSaveCode(json); }
   },
-  async loadCode(code) {
-    try {
-      code = (code || '').trim(); let json;
-      if (code.startsWith('SST1.')) { const bin = atob(code.slice(5)); const b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); json = await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
-      else if (code.startsWith('SST0.')) json = decodeURIComponent(escape(atob(code.slice(5))));
-      else json = code;
-      const st = sanitizeSave(JSON.parse(json));
-      if (!st || typeof st !== 'object') return false;
-      if (st && st.company && Array.isArray(st.props) && st.props.length) {
-        if (st.props.length > 12 || !st.props.every((p) => p && typeof p.name === 'string' && validState(p.s)) || !Number.isInteger(st.active ?? 0) || (st.active ?? 0) < 0 || (st.active ?? 0) >= st.props.length || (st.feed != null && !Array.isArray(st.feed))) return false;
-        const props = st.props.map((p) => ({ name: p.name, sim: new Sim(p.s) })); for (const p of props) p.sim.s.speed = 0;
-        this.company = { props, active: st.active ?? 0, feed: st.feed || [] };
-        this.attach(props[this.company.active].sim); this.ui.title = false; return true;
-      }
-      if (!validState(st)) return false;
-      st.speed = 0; const sim = new Sim(st);
-      this.company = { props: [{ name: st.scenario ? st.scenario.name : st.mode === 'tutorial' ? 'Maple Street Storage' : st.creative ? 'Creative Lot' : sandboxName(st) || 'My Property', sim }], active: 0, feed: [] };
-      this.attach(sim); this.ui.title = false; return true;
-    } catch (e) { console.warn(e); return false; }
+  async decodeSave(code) {
+    code = (code || '').trim();
+    if (code.startsWith('SST1.')) { const bin = atob(code.slice(5)); const b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
+    if (code.startsWith('SST0.')) return decodeURIComponent(escape(atob(code.slice(5))));
+    return code;
   },
+  // Parse, migrate and validate completely without touching the running game or any save slot.
+  async prepareLoad(code) {
+    try {
+      const st = sanitizeSave(JSON.parse(await this.decodeSave(code)));
+      if (!st || typeof st !== 'object') return { ok: false, msg: 'Not a save' };
+      let company, view;
+      if (st.company && Array.isArray(st.props) && st.props.length) {
+        if (st.props.length > 12 || !st.props.every((p) => p && typeof p.name === 'string' && validState(p.s)) || !Number.isInteger(st.active ?? 0) || (st.active ?? 0) < 0 || (st.active ?? 0) >= st.props.length || (st.feed != null && !Array.isArray(st.feed))) return { ok: false, msg: 'Invalid portfolio save' };
+        view = st.props[st.active ?? 0].s.uiView; for (const p of st.props) delete p.s.uiView;
+        const props = st.props.map((p) => ({ name: p.name, sim: new Sim(p.s) })); for (const p of props) p.sim.s.speed = 0;
+        company = { props, active: st.active ?? 0, feed: st.feed || [] };
+      } else {
+        if (!validState(st)) return { ok: false, msg: 'Invalid save' };
+        view = st.uiView; delete st.uiView;
+        st.speed = 0; const sim = new Sim(st);
+        company = { props: [{ name: st.scenario ? st.scenario.name : st.mode === 'tutorial' ? 'Maple Street Storage' : st.creative ? 'Creative Lot' : sandboxName(st) || 'My Property', sim }], active: 0, feed: [] };
+      }
+      for (const p of company.props) { p.sim.ensure(); p.sim.events.length = 0; } // migration/rebuild must succeed before anything is replaced
+      const sim = company.props[company.active].sim, s = sim.s;
+      const meta = { name: company.props[company.active].name, mode: modeLabel(s), day: sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: company.props.length };
+      return { ok: true, company, view, meta };
+    } catch (e) { console.warn(e); return { ok: false, msg: 'Unreadable save' }; }
+  },
+  applyLoad(prep) {
+    this.company = prep.company;
+    this.attach(prep.company.props[prep.company.active].sim, 'load', { view: prep.view }); this.ui.title = false; return true;
+  },
+  async loadCode(code) { const prep = await this.prepareLoad(code); return prep.ok ? this.applyLoad(prep) : false; },
   saveMeta() {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
     return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name };
@@ -174,9 +191,18 @@ const game = {
   // before New game / Load replaces what the player has: copy it to the kept slot (browser storage only)
   async keepCurrent(fallback) {
     if (!localsave.ok) return false;
-    if (this.sim !== this.demo && this.ui && !this.ui.title) { const meta = this.saveMeta(), json = this.saveJSON(); const code = await this.saveCode(json); return localsave.keep({ code, meta, at: Math.floor(Date.now() / 1000) }); }
-    const L = localsave.get(); return localsave.keep(L.main || fallback);
+    const rec = await this.outgoingRecord(fallback); if (!rec) return true; // nothing to keep
+    const old = localsave.getKept(); // the existing previous game is archived, never silently overwritten
+    if (old && old.code !== rec.code && !savearchive.push(old)) return false;
+    return localsave.keep(rec);
   },
+  // What would become the "previous game" if the running (or last autosaved) game were replaced now.
+  async outgoingRecord(fallback) {
+    if (this.playing()) { const meta = this.saveMeta(), json = this.saveJSON(); return { code: await this.saveCode(json), meta, at: Math.floor(Date.now() / 1000) }; }
+    const L = localsave.get(); return L.main || fallback || null;
+  },
+  outgoingMeta(fallback) { if (this.playing()) return this.saveMeta(); const L = localsave.get(); const r = L.main || fallback; return r ? r.meta : null; },
+  savearchive,
   modeLabel,
   playing() { return this.sim !== this.demo && this.ui && !this.ui.title; },
   async saveFile() {

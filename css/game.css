@@ -504,6 +504,8 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #guide .glbl::after { content: ''; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--yellow); }
 #guide.below .glbl { bottom: auto; top: calc(100% + 8px); }
 #guide.below .glbl::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: var(--yellow); }
+#guide.nolabel .glbl { display: none; }
+#guide.passive .gring { border-style: dashed; animation: none; }
 @keyframes gpulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.06); opacity: .75; } }
 @media (prefers-reduced-motion: reduce) { #guide .gring { animation: none; } #guide { transition: none; } }
 @media (max-width: 700px) {
@@ -750,7 +752,17 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .lesson-chip { flex:1; text-align:left; min-height:44px; min-width:0; }
 #ui .lesson-chip small { display:block; font-size:12px; color:#b8cbdc; }
 #ui .lesson-chip b { display:block; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#ui.has-sheet #tut, #ui:has(.modal-bg) #tut, #ui:has(.actionbar) #tut { display:none; }
+#ui:has(.modal-bg) #tut { display:none; }
+/* Candidate 22: the current instruction stays visible as a one-line strip above an open panel or build bar. */
+#ui.has-sheet .tut:not(.offer):not(.scen), #ui:has(.actionbar) .tut:not(.offer):not(.scen) { top:calc(114px + var(--safe-t)); bottom:auto; left:8px; right:8px; max-height:none; display:block; padding:5px 10px; border-top-width:3px; }
+#ui.has-sheet .tut:not(.offer):not(.scen) :is(.ch, h4, .intro, .prog, .why, .step-help, .ck), #ui:has(.actionbar) .tut:not(.offer):not(.scen) :is(.ch, h4, .intro, .prog, .why, .step-help, .ck) { display:none; }
+#ui.has-sheet .tut .steps li.cur, #ui:has(.actionbar) .tut .steps li.cur { display:block; margin:0; padding:2px 0; background:none; border:0; }
+#ui.has-sheet .tut .tx, #ui:has(.actionbar) .tut .tx { display:block; white-space:normal; font-size:14px; line-height:1.3; }
+#ui.has-sheet .tut .tut-actions:not(:has(.pri)), #ui:has(.actionbar) .tut .tut-actions { display:none; }
+#ui.has-sheet .tut .tut-actions:has(.pri) { display:flex; margin:4px 0 0; padding:0; border:0; }
+#ui.has-sheet .tut .tut-actions > :not(.pri) { display:none; }
+#ui.has-sheet .tut.offer, #ui:has(.actionbar) .tut.offer { display:none; }
+#ui.has-sheet:has(#tut .tut) .feed, #ui:has(.actionbar):has(#tut .tut) .feed { top:calc(176px + var(--safe-t)); }
 #ui .coach { top:calc(114px + var(--safe-t)); left:8px; right:108px; padding:6px 8px; font-size:14px; min-height:44px; }
 #ui .coach .ct { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
 #ui.has-sheet #coach, #ui:has(.modal-bg) #coach { display:none; }
@@ -953,3 +965,30 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 }
 
 #ui .viewctl .floorseg button[data-a="floorChoose"] {width:58px;min-width:58px;font-size:12px;}
+
+/* Candidate 22: expansion review that never hides what it describes; practical iPhone touch sizes. */
+#ui .modal.vreview { display:flex; flex-direction:column; max-height:calc(100dvh - 24px - var(--safe-t) - var(--safe-b)); }
+#ui .modal.vreview .vr-body { overflow-y:auto; min-height:0; flex:1 1 auto; -webkit-overflow-scrolling:touch; }
+#ui .modal.vreview .vr-acts { flex-shrink:0; gap:8px; padding-top:8px; border-top:1px solid var(--line); }
+#ui .modal.vreview .vr-acts .btn { min-height:44px; flex:1 1 auto; }
+#ui .vr-opt { display:flex; align-items:center; gap:10px; min-height:48px; padding:6px 0; cursor:pointer; }
+#ui .vr-opt input[type=checkbox] { width:26px; height:26px; flex:none; margin:0; accent-color:var(--yellow); }
+#ui .vr-opt small { display:block; font-size:12px; opacity:.8; }
+#ui .vr-verdict { padding:6px 8px; border-radius:8px; border-left:3px solid #9aa3ab; background:rgba(0,0,0,.05); }
+#ui .vr-verdict.supported { border-left-color:#39b36b; }
+#ui .vr-verdict.partial, #ui .vr-verdict.insufficient { border-left-color:#e8a91f; }
+#ui .vr-verdict.unsupported { border-left-color:#d2452f; }
+#ui .actionbar.vpreview .bot { display:flex; gap:8px; flex-wrap:wrap; }
+#ui .actionbar.vpreview .bot .btn { min-height:44px; flex:1 1 auto; }
+#ui .actionbar.vpreview .nm small { display:block; }
+#ui .confirm-cancel .btn, #ui .confirm-import .btn { min-height:44px; }
+
+/* Candidate 22 orientation policy: portrait is the supported phone presentation. A phone-height landscape viewport
+   shows an honest rotate prompt instead of an obstructed game; large landscape (desktop/tablet) layouts are unchanged. */
+#rotate { display:none; }
+@media (orientation: landscape) and (max-height: 500px) {
+  #rotate { display:flex; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; padding:24px; background:#16202b; color:#f1ede3; text-align:center; font-family:inherit; }
+  #rotate b { display:block; font-size:22px; margin-bottom:8px; }
+  #rotate p { max-width:420px; margin:0 auto; font-size:16px; line-height:1.4; color:#c9d3dc; }
+  #ui, #bubbles { visibility:hidden; }
+}

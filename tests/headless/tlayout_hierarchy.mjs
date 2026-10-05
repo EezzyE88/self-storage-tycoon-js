@@ -3,7 +3,8 @@ import {readFileSync} from 'node:fs';
 import {loadRenderer} from '../performance/renderer-fixture.mjs';
 import {makeMaple} from '../../js/maple.js';
 import {UI} from '../../js/ui.js';
-const Renderer=await loadRenderer(), Previous=await loadRenderer('54d432f');
+// Legacy layout baseline: committed copy of f2f31b0:js/render.js (the renderer immediately before the framing fix).
+const Renderer=await loadRenderer(), Previous=await loadRenderer('tests/fixtures/render-pre-layout-hierarchy.js');
 const sim=makeMaple(19), saved=JSON.stringify(sim.s), canvas={clientWidth:393,clientHeight:720};
 const r=new Renderer(canvas,sim), old=new Previous(canvas,sim), rect={left:8,right:385,top:160,bottom:645};
 r.fitProperty(rect);old.fitProperty(rect);assert.ok(r.zoom>old.zoom*1.05,`overview must be measurably tighter: ${r.zoom}/${old.zoom}`);

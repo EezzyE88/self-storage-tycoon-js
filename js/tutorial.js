@@ -60,7 +60,7 @@ export const BEATS = [
     focus: (sim) => ({ obj: unitByNum(sim, 107).id }),
     steps: [
       { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin (the ring points at it). Tap the unit itself.', obj: (sim) => unitByNum(sim, 107).id, done: (sim, ui) => (ui && ui.sel === unitByNum(sim, 107).id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
-      { t: 'Tap <b>Start Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the big <b>Start Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
+      { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the <b>Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
       { t: 'Start the clock: tap <b>1x</b>', d: 'The speed controls are at the <b>top right</b>. <b>1x</b> is normal, <b>2x</b> and <b>4x</b> are faster, the pause icon stops time.', sel: PLAY, done: (sim) => running(sim) || unitByNum(sim, 107).commercial === 'ready' },
       { t: 'Watch the Owner finish', d: 'The Owner walks from the office to Unit 107. The pin fills as work progresses (about 2-3 game hours). Use <b>4x</b> to hurry.', obj: (sim) => unitByNum(sim, 107).id, done: (sim) => unitByNum(sim, 107).commercial === 'ready' || !!unitByNum(sim, 107).lease },
     ],
@@ -81,7 +81,7 @@ export const BEATS = [
     focus: () => ({ tab: 'business' }),
     steps: [
       { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar (the bar-chart icon).', sel: TAB('business'), done: (sim, ui) => sim.s.tut.flags.businessOpened },
-      { t: 'Read the cards, then tap <b>Got it</b>', d: '<b>Rent roll</b> is monthly rent from all leases. <b>Occupancy</b> is the share of units leased. Scroll down to the <b>Operating statement</b> for the last 30 days: rent in, costs out. Tap <b>Got it</b> on this card when done.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.moneyAck },
+      { t: 'Read the cards, then tap <b>Got it</b>', d: '<b>Rent roll</b> is monthly rent from all leases. <b>Occupancy</b> is the share of units leased. Choose <b>Statement</b> in the section selector for the last 30 days: rent in, costs out. Tap <b>Got it</b> on this card when done.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.moneyAck },
     ],
     button: 'Got it', buttonWhen: (sim) => sim.s.tut.flags.businessOpened, flag: 'moneyAck',
     check: (sim) => sim.s.tut.flags.businessOpened && sim.s.tut.flags.moneyAck },
@@ -115,7 +115,7 @@ export const BEATS = [
     focus: () => ({ tab: 'operate' }),
     steps: [
       { t: 'Open <b>Operate</b>', d: 'Tap <b>Operate</b> in the bottom bar (the person icon; the red badge counts waiting jobs).', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || sim.s.staff.some((x) => x.role === 'porter') },
-      { t: 'Tap <b>Hire Porter</b>', d: 'Scroll down to <b>Staff</b> in the Operate panel and tap <b>Hire Porter</b>. The price shows the daily wage.', sel: `[data-cmd*='"role":"porter"']`, done: (sim) => sim.s.staff.some((x) => x.role === 'porter') },
+      { t: 'Tap <b>Hire Porter</b>', d: 'In the Operate panel, choose <b>Hire</b> in the section selector at the top, then tap <b>Hire Porter</b>. The button shows the daily wage.', sel: `[data-cmd*='"role":"porter"']`, done: (sim) => sim.s.staff.some((x) => x.role === 'porter') },
       { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', sel: PLAY, done: (sim) => !!sim.s.milestones.first_delegated },
     ],
     check: (sim) => !!sim.s.milestones.first_delegated },
@@ -145,7 +145,7 @@ export const LESSONS = [
     why: 'Security coverage feeds your <b>Reputation</b>, which affects how many prospects sign. Overlays show hidden systems: security, carts, HVAC, cleanliness and power.',
     steps: [
       { t: 'Open <b>Operate</b>', d: 'Tap <b>Operate</b> in the bottom bar.', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || (ui && ui.rend && ui.rend.overlay === 'security') || since(sim, (o) => o.type === 'camera' || o.type === 'light') || ordered(sim, 'camera') || ordered(sim, 'light') },
-      { t: 'Turn on the <b>Security</b> overlay', d: 'Scroll to <b>Overlays</b> in the Operate panel and tap <b>Security</b>. Covered ground glows; uncovered ground stays dark.', sel: '[data-a="overlay"][data-v="security"]', done: (sim, ui) => (ui && ui.rend && ui.rend.overlay === 'security') || ordered(sim, 'camera') || ordered(sim, 'light') },
+      { t: 'Turn on the <b>Security</b> overlay', d: 'In the Operate panel, choose <b>Overlays</b> in the section selector, then tap <b>Security</b>. Covered ground glows; uncovered ground stays dark.', sel: '[data-a="overlay"][data-v="security"]', done: (sim, ui) => (ui && ui.rend && ui.rend.overlay === 'security') || ordered(sim, 'camera') || ordered(sim, 'light') },
       ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'camera', toolName: 'Camera', cell: { x: 22, y: 14 }, placed: (sim) => ordered(sim, 'camera') || ordered(sim, 'light'),
         place: '<b>Tap</b> the apron beside the loading stalls to place it', placeD: 'Tap the concrete just right of the loading stalls, below the interior building. A Light works too if you prefer.' }),
       waitBuild('Let the installer finish', (sim) => since(sim, (o) => (o.type === 'camera' || o.type === 'light') && o.cstate === 'operating')),
@@ -195,7 +195,7 @@ export const LESSONS = [
     offer: (sim) => Object.values(sim.s.leases).some((L) => ['delinquent', 'lien'].includes(L.status)),
     steps: [
       { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || ctx(sim).flags.collAck },
-      { t: 'Find <b>Collections</b>', d: 'Scroll down to the <b>Collections</b> ladder. Each rung counts accounts at that stage; the list below has actions for each account (notice, plan, waive, unlock).', sel: '.ladder', done: (sim) => ctx(sim).flags.collAck },
+      { t: 'Find <b>Collections</b>', d: 'In the Business panel, choose <b>Collections</b> in the section selector to reach the ladder. Each rung counts accounts at that stage; the list below has actions for each account (notice, plan, waive, unlock).', sel: '.ladder', done: (sim) => ctx(sim).flags.collAck },
       { t: 'Tap <b>Got it</b>', d: 'Or act on an account first. The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => ctx(sim).flags.collAck },
     ],
     button: 'Got it', flag: 'collAck', check: (sim) => ctx(sim).flags.collAck },
@@ -214,12 +214,20 @@ export const lessonById = (id) => LESSONS.find((l) => l.id === id);
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
 export function curBeat(sim) { return sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[sim.s.tut.beat] : null; }
+// A navigation step whose destination is already showing is complete: never ask the player to tap what is selected.
+export function alreadyShowing(st, ui) {
+  if (!ui || !st || !st.sel) return false;
+  const tab = /^#tabs \[data-v="(\w+)"\]$/.exec(st.sel); if (tab) return ui.tab === tab[1] && ui.sel == null;
+  const cat = /^\.cats \[data-v="(\w+)"\]$/.exec(st.sel); if (cat) return catIs(ui, cat[1]) && ui.sel == null;
+  return false;
+}
+// The current step is the first incomplete one. Steps carry their own progress fallbacks, so later progress still
+// completes earlier steps, but an unmet earlier step (e.g. a lesson restored after reload) is never skipped.
 export function stepState(sim, ui) {
   const b = curBeat(sim); if (!b || !b.steps) return { b, cur: -1, done: [] };
-  const done = b.steps.map((st) => { try { return !!st.done(sim, ui); } catch (e) { return false; } });
-  if (b.id === 'up') { const missing = done.indexOf(false); return { b, cur: missing < 0 ? done.length - 1 : missing, done, all: missing < 0 }; }
-  let last = -1; for (let i = 0; i < done.length; i++) if (done[i]) last = i;
-  return { b, cur: Math.min(last + 1, b.steps.length - 1), done, all: last === b.steps.length - 1 };
+  const done = b.steps.map((st) => { try { return !!st.done(sim, ui) || alreadyShowing(st, ui); } catch (e) { return false; } });
+  const missing = done.indexOf(false);
+  return { b, cur: missing < 0 ? done.length - 1 : missing, done, all: missing < 0 };
 }
 
 // Tool unlocks are problem-earned in the tutorial (GDD §42). Sandbox: everything.
