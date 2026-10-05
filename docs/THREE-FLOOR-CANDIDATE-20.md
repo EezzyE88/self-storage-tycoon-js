@@ -1,0 +1,29 @@
+# Three-floor prototype — candidate 20
+
+Implemented against candidate 19 and hardened specification v2 (native spec commit 633984bf7c896a3adf1f895b42158711659e937f). Accepted master remains 2812abf8d268f9a225e5786d173f95efcbd6223d. Isolated branch: candidate/three-floor-20261005. Build: bplus-three-floor-candidate-20. Not promoted or Safari accepted.
+
+## Playable slice
+
+Choose Floors → an existing completed two-floor interior building → Plan next floor. Review the itemized package, optional copied fit-out and optional existing stair extension. Confirm charges the complete package once. Reinforcement, structure, fit-out, freight extension and a 30-tick service test run as saved stages. Structure-only construction remains available. The new floor needs explicit commissioning; existing leases are preserved. The same upgrade entry can take a suitable one-floor building to F2 first. An unsuitable shaft/layout produces a refusal rather than removing occupied inventory.
+
+Required freight access is billed separately from optional stairs. A redundant second elevator can be built separately using the existing tool after the package finishes. Existing two-floor elevator and stair purchase prices remain 9,500 and 2,800. F3 landing extension is 1,900, optional stair extension 560, new F3-capable freight elevator 11,400. Reinforcement is 4 per footprint cell; additional structural floor is 26 per cell. Copied halls, units, lighting, cameras and necessary HVAC/power capacity use current tool prices and actual headroom. Extensions add no second-cab operating cost. New prices are provisional.
+
+The floor chooser lists completed levels per building and explains missing F2. Selection/picking/overlays/people/carts use the selected numeric floor. A proposed floor has hallway/unit ghosts; committed unfinished structure has an outline. The live building inspector exposes package progress, early cancellation and commissioning outside collapsed information. Existing repair, vendor, Owner and staff controls remain visible. Fully leased Growth guidance assesses expansion rather than advising turnover of nonexistent vacant stock; gates are unchanged.
+
+## Safety and deliberate prototype constraints
+
+- Runtime grids, routing, validation and selected-floor rendering support up to five levels; new playable upgrades stop at F3. F4/F5 are not exposed as a partial release.
+- Existing occupied floors remain intact. The primary elevator retains its ID, riders and queues; promotion to the saved multi-floor dispatcher waits for a stopped, cleared cab. The extension test temporarily suspends service. Failed equipment must be repaired before handover.
+- Multi-floor service preserves four slots, two for a cart user, three door ticks and ten travel ticks per floor. Oldest aged calls lock priority; mixed directions, capacity and invalid references are deterministic. F3 freight route choice scores working shafts and reroutes waiting freight on failure or 120 ticks without boarding. Legacy F1/F2 trips retain the original dispatcher and economic coefficients.
+- Edits to the building and package service pads are reserved until the order finishes. Cancellation is deliberately limited to before structural completion: full undo within 30 ticks before any stage completes; otherwise 60% of each remaining unbuilt stage. Paid reinforcement is retained and credited in a later quote. After structure completion the committed package must finish. This is a narrower cancellation contract than specification v2 and prevents an unusable half-upgrade.
+- Paid structural capacity is purchased only for the next floor in this slice. There is no speculative five-floor capacity purchase UI. The stored capacity model is bounded to five.
+- Legacy saves remain in their unchanged two-layer form until a vertical order is committed; migration is lazy to preserve exact legacy state/RNG parity. Existing queue IDs are retained, with original enqueue time on agents, instead of rewriting queues to object entries. Expanded saves require a multi-floor build; existing SST0/SST1 envelopes and backup/kept slots are unchanged. Import validates all properties before attachment. Load stays paused; normal popup closure intentionally resumes at 1x.
+- Copying fit-out is not an automatic promise of amenity coverage, leases or payback. Existing unmet prerequisites remain visible on units. This prototype is not a balance acceptance or a real-time performance certification.
+
+## Verification
+
+All 50 headless scripts passed (47 existing plus three new scripts). Final focused checks also passed after preview/export wording changes. Evidence: [results](releases/candidate-20/results.json), [gameplay](releases/candidate-20/gameplay.log), [save/render](releases/candidate-20/save-and-render.log), [legacy parity](releases/candidate-20/legacy-parity.log).
+
+The 12 gameplay checks cover complete-package charges, duplicate/stale refusal, original occupied unit/lease IDs, explicit commissioning, construction reload, mixed-direction/cart capacity, midflight reload, failure/repair, outbound and return paths, full customer cart claim/visit/return/departure, occupied legacy cab handover, multiple-shaft recovery, and duplicate/stale calls. Actual game SST0/SST1 exporters/loaders test F2/F3 states, pending orders, invalid portfolios and intentional 1x resume. GPU/canvas stubs check cutaway/selection planes without save mutation. Exact seven-day state/RNG/economy comparisons pass against candidate 19 for Maple and Go Vertical; data, finance, scenario factories and save-slot code are byte-identical.
+
+No physical iPhone Safari test was available in this execution environment. Use the existing owner-private Safari preview to assess floor-picker usability, previews, camera clearance, readable floor identity, background/resume and a complete F2→F3 upgrade before considering acceptance. Master is not a deployment target.

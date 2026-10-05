@@ -62,7 +62,7 @@ export class UI {
         <button class="iconbtn" data-a="menu" aria-label="Menu">${I.menu}</button>
       </div>
       <div class="viewctl">
-        <div class="seg floorseg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="view" data-v="1">F2</button></div>
+        <div class="seg floorseg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="floorChoose" aria-label="Choose building and floor">Floors</button></div>
         <button class="viewmore" data-a="viewMore" aria-label="More camera controls" aria-expanded="false">${I.view}</button>
         <div class="viewextra">
         <div class="seg rotseg"><button data-a="rot" data-v="-1" aria-label="Rotate view left">${I.rotL}</button><button data-a="rot" data-v="1" aria-label="Rotate view right">${I.rotR}</button></div>
@@ -154,6 +154,10 @@ export class UI {
       case 'confirm': this.confirmPlan(); break;
       case 'flip': this.flip = !this.flip; this.replan(); break;
       case 'climate': this.climate = !this.climate; this.replan(); break;
+      case 'floorChoose': this.showFloors(); break;
+      case 'verticalReview': this.showVertical(+v); break;
+      case 'verticalConfirm': {const R=this.verticalQuote;if(R){const result=this.do({type:'verticalUpgrade',shell:R.shell,fitout:R.fitout,stairs:R.stairs,stamp:R.stamp},true);if(result.ok){this.closeModal();this.select(R.shell);}else this.showVertical(R.shell,R);}break;}
+      case 'floorPick': this.floorBuilding=+el.dataset.building||null; this.setView(v==='ext'?'ext':+v);this.closeModal();if(this.floorBuilding){const o=this.sim.s.objects[this.floorBuilding];if(o)this.rend.lookAt(o.x+o.w/2,o.y+o.h/2);}break;
       case 'view': this.setView(v === 'ext' ? 'ext' : +v); this.sfx('click'); break;
       case 'rot': this.rend.rotate(+v); this.sfx('click'); break;
       case 'zoom': this.rend.zoomBy(+v); break;
@@ -215,7 +219,7 @@ export class UI {
       case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
       case 'scenMin': this.scMin = !this.scMin; this.renderTut(true); break;
       case 'saveCode': this.showSave(); break;
-      case 'saveFile': this.g.saveFile(); break;
+      case 'saveFile': if(this.sim.s.hall.length>2)this.toast('This expanded save requires a build with multi-floor support.');this.g.saveFile(); break;
       case 'loadOpen': this.showLoad(); break;
       case 'gfx': { const g = this.g; if (g.autoQ) { g.autoQ = false; g.rend.setQuality(2); } else if (g.rend.quality > 0) g.rend.setQuality(g.rend.quality - 1); else { g.autoQ = true; g.rend.setQuality(2); } this.showMenu(); break; }
       case 'battery': this.g.battery = !this.g.battery; this.showMenu(); break;
@@ -244,7 +248,7 @@ export class UI {
     }
   }
   onInput(e) {
-    const el = e.target; if (el.dataset.sectionPicker && el.value) { this.sheetTall = true; this.renderSheet(true); this.jumpSection(el.value); return; } if (el.dataset.vol) this.g.audio.setVol(el.dataset.vol, +el.value);
+    const el = e.target; if(el.dataset.verticalOption){const R=this.verticalQuote;if(R)this.showVertical(R.shell,{...R,[el.dataset.verticalOption]:el.checked});return;} if (el.dataset.sectionPicker && el.value) { this.sheetTall = true; this.renderSheet(true); this.jumpSection(el.value); return; } if (el.dataset.vol) this.g.audio.setVol(el.dataset.vol, +el.value);
     if (el.id === 'loadFile' && el.files[0]) { el.files[0].text().then((t) => this.g.keepCurrent(this.contSave).then(() => this.g.loadCode(t))).then((ok) => { if (ok) { this.closeModal(); this.toast('Save loaded', 'good'); } else this.toast('That file is not a valid save', 'bad'); }); }
   }
   do(action, feedback = false) {
@@ -332,9 +336,9 @@ export class UI {
     const actions = [];
     if (this.sel != null) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
       const cmd = button.match(/data-cmd='([^']*)'/);
-      if (!cmd) { if (/data-a="staffHelp"/.test(button)) { actions.push(button); return ''; } return button; }
+      if (!cmd) { if (/data-a="(?:staffHelp|verticalReview)"/.test(button)) { actions.push(button); return ''; } return button; }
       let type; try { type = JSON.parse(cmd[1]).type; } catch { return button; }
-      if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor'].includes(type)) return button;
+      if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor', 'cancelOrder'].includes(type)) return button;
       actions.push(button); return '';
     });
     const actionRail = actions.length ? `<div class="dock-actions" aria-label="Task actions">${actions.join('')}</div>` : '';
@@ -372,7 +376,7 @@ export class UI {
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
   }
-  toolFloor() { const v = this.rend.view; return v === 1 ? 1 : 0; }
+  toolFloor() { const v = this.rend.view; return Number.isInteger(v)?v:0; }
   placeStart(cell) { if (!this.tool || !cell) return; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
   finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.renderActionBar(); }
   cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); this.renderActionBar(); }
@@ -416,8 +420,8 @@ export class UI {
       box.innerHTML = `<div class="actionbar placing" aria-live="polite"><b>${R?.count || 0}${T.unit ? ' units' : ' cells'} · ${money(R?.cost || 0)}</b><span>${R?.status === 'valid' ? 'Valid' : R?.status === 'incomplete' ? 'Needs setup' : 'Invalid'} · Lift finger to review</span></div>`;
       return;
     }
-    if(!R) { box.innerHTML=`<div class="actionbar idle-strip"><b>${T.name}</b><span>Hold to place${this.toolFloor()?' · F2':''}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
-    let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ' Placing on Floor 2.' : ''}</span></div>`;
+    if(!R) { box.innerHTML=`<div class="actionbar idle-strip"><b>${T.name}</b><span>Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
+    let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
       const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
@@ -604,7 +608,7 @@ export class UI {
       case 'shell': {
         const units = sim.objs('unit').filter((u) => D.shellAt[u.y * s.W + u.x] === o.id);
         const hv = D.hvac[o.id];
-        return this.sheet(nm, `${o.w}x${o.h} cells`, `<div class="kv"><span>Units</span><span>${units.length}</span><span>Occupied</span><span>${units.filter((u) => u.lease).length}</span><span>HVAC</span><span>${hv && hv.cap ? Math.round(hv.load) + ' / ' + Math.round(hv.cap) : 'None'}</span></div><p class="note">Use the floor selector (F1/F2) to see inside. Interiors need hallways, a door to the outside, lights, and for Floor 2 an elevator.</p>`);
+        return this.sheet(nm, `${o.w}x${o.h} cells`, `<div class="kv"><span>Completed floors</span><span>${o.floors}</span><span>Units</span><span>${units.length}</span><span>Occupied</span><span>${units.filter((u) => u.lease).length}</span><span>HVAC</span><span>${hv && hv.cap ? Math.round(hv.load) + ' / ' + Math.round(hv.cap) : 'None'}</span></div><button class="btn pri" data-a="verticalReview" data-v="${o.id}">Plan next floor</button>${s.orders.filter(q=>q.vertical?.shell===o.id&&q.st==='construction').map(q=>`<p class="note">${esc(q.label)} · ${Math.round(q.prog*100)}% · ${esc(q.vertical.stages[q.vertical.phase]?.kind||'complete')}${q.waiting?' · waiting for elevator to clear':''}</p>${q.vertical.phase<2?`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({type:'cancelOrder',id:q.id})}'>Cancel unfinished package · refund ${money(sim.cancelRefund(q).refund)}</button>`:''}`).join('')}<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({type:'commission',all:true})}'>Commission ready units</button><p class="note">Choose Floors to see inside. Upper-floor rentals require working freight access; stairs are optional.</p>`);
       }
       case 'canopy': return this.sheet('Covered Canopy', '', '<p class="note">Loading under cover keeps interior customers dry on rainy days.</p>');
       default: return this.sheet(nm, '', '');
@@ -612,7 +616,7 @@ export class UI {
   }
   pickAt(cell) {
     const sim = this.sim, s = sim.s, D = sim.D; if (!cell || !sim.inb(cell.x, cell.y)) return null;
-    const f = this.rend.view === 1 ? 1 : 0, i = cell.y * s.W + cell.x, WH = s.W * s.H;
+    const f = Number.isInteger(this.rend.view) ? this.rend.view : 0, i = cell.y * s.W + cell.x, WH = s.W * s.H;
     const at = (D.at.get(f * WH + i) || []).map((id) => s.objects[id]).filter(Boolean);
     const order = ['light', 'camera', 'elevator', 'corral', 'door', 'hvac', 'gate', 'unit', 'office', 'canopy'];
     at.sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
@@ -659,7 +663,7 @@ export class UI {
   viewReportedTarget(l) {
     const target=reportedTarget(this.sim,l); if(!target) return;
     this.select(null); this.setTab(null);
-    const f=target.f===1 && this.sim.objs('shell').some(o=>o.floors>1) ? 1 : 0;
+    const f=Number.isInteger(target.f)&&this.sim.objs('shell').some(o=>o.floors>target.f)?target.f:0;
     this.setView(f); this.rend.lookAt(target.x,target.y);
     const o=this.sim.s.objects[target.obj]; if(o && (o.f||0)===f) this.select(o.id);
   }
@@ -1404,8 +1408,7 @@ export class UI {
     }
     const tm = fmtTime(s.t); if (tm !== this.hTime) { this.hTime = tm; this.$('clock').textContent = tm; const d = dayOf(s.t); this.$('date').textContent = `Day ${d} · ${DOW[(d - 1) % 7]}${s.weather === 'rain' ? ' ☂' : ''}`; this.$('date').title = `Day ${d} · ${DOW[(d - 1) % 7]} · ${s.weather === 'rain' ? 'Rain' : 'Clear'}`; }
     if (s.speed !== this.hSpeed) { this.hSpeed = s.speed; for (const b of this.root.querySelectorAll('#speed button')) b.classList.toggle('on', +b.dataset.v === s.speed); }
-    const hasF2 = this.sim.objs('shell').some((x) => x.floors > 1);
-    if (hasF2 !== this.hF2) { this.hF2 = hasF2; this.root.querySelector('#floors [data-v="1"]').disabled = !hasF2; if (!hasF2 && this.rend.view === 1) this.setView(0); }
+    const maxFloor=Math.max(this.verticalQuote?this.verticalQuote.f+1:1,...this.sim.objs('shell').map(o=>o.floors));if(Number.isInteger(this.rend.view)&&this.rend.view>=maxFloor)this.setView(0);const fb=this.root.querySelector('[data-a="floorChoose"]');if(fb)fb.textContent=Number.isInteger(this.rend.view)?`F${this.rend.view+1} ▾`:'Floors';
     const open = s.tasks.filter((t) => !t.assigned).length; if (open !== this.hTasks) { this.hTasks = open; const b = this.$('taskBadge'); b.hidden = !open; b.textContent = open; }
     this.root.classList.toggle('has-sheet', !!(this.$('sheet').firstChild || this.$('abar').firstChild));
     document.body.classList.toggle('sheet-open', this.root.classList.contains('has-sheet')); // lets the milestone banner move clear of the sheet
@@ -1519,7 +1522,7 @@ export class UI {
     if (a.tab) { if (a.cat) this.cat = a.cat; this.select(null); this.setTab(a.tab); if (a.section) this.jumpSection(a.section); return; }
     const sel = a.sel ?? a.dirt; this.select(sel);
     const o = typeof sel === 'number' ? this.sim.s.objects[sel] : sel.kind === 'cart' ? this.sim.s.carts.find((c) => c.id === sel.id) : sel;
-    if (o && (o.f || 0) === 1 && this.rend.view !== 1 && this.sim.objs('shell').some((x) => x.floors > 1)) this.setView(1);
+    if(o&&(o.f||0)>0&&this.rend.view!==o.f&&this.sim.objs('shell').some(x=>x.floors>o.f))this.setView(o.f);
   }
   computePins() {
     const sim = this.sim, s = sim.s, pins = [], seen = new Set();
@@ -1549,7 +1552,7 @@ export class UI {
     const root = this.$('pins'); if (!root) return;
     const R = this.rend, list = this.title ? [] : (this.pinList || []); const pool = (this.pinPool ||= new Map()); const live = new Set();
     const placed = [];
-    const viewOk = (f) => R.view === 'ext' || R.view === 1 || f === 0;
+    const viewOk = (f) => R.view === 'ext' || f === R.view;
     for (const p of list) {
       if (!viewOk(p.f)) continue;
       const pr = R.project(p.x, p.y, p.f * 1.9 + 2.3); if (!pr.vis || pr.x < -20 || pr.y < -20 || pr.x > innerWidth + 20 || pr.y > innerHeight + 20) continue;
@@ -1676,8 +1679,19 @@ export class UI {
       '<p class="note">Day ' + dayOf(now) + ' · ' + fmtTime(now) + '</p><details class="explanation"><summary>How scheduled dates work</summary><p class="note">Dates below come from current leases, collections, loans, construction, competitors and scenario state; estimated construction dates can move if prerequisites block work.</p></details>' +
       '<div class="list">' + (rows || '<p class="note">No important scheduled dates yet.</p>') + '</div></div></div>';
   }
+  showFloors() {
+    const shells=this.sim.objs('shell');
+    this.pauseForPopup('modal');
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><div class="row"><h2>Choose building and floor</h2><button class="x" data-a="modalClose">${I.x}</button></div><button class="btn" data-a="floorPick" data-v="ext">Exterior</button>${shells.map(o=>`<div class="item"><div class="grow"><b>Building ${o.id} · ${o.floors} floors</b><div class="row wrap">${Array.from({length:o.floors},(_,f)=>`<button class="btn" data-a="floorPick" data-building="${o.id}" data-v="${f}">F${f+1}</button>`).join('')}${o.floors===1?'<span class="note">F2 not built yet</span>':''}<button class="btn" data-a="verticalReview" data-v="${o.id}">Plan next floor</button></div></div></div>`).join('')||'<p>No interior building yet. Build a one- or two-floor shell.</p>'}</div></div>`;
+  }
+  showVertical(id, options={fitout:true,stairs:false}) {
+    const R=this.sim.verticalPlan(id,options);this.verticalQuote=R.ok?R:null;this.pauseForPopup('modal');if(R.ok){this.rend.setView(R.f);this.rend.setPreview({...R,status:'valid',units:R.unitCreates,items:[{x:this.sim.s.objects[id].x,y:this.sim.s.objects[id].y,f:R.f,ok:true},...R.tiles.map(t=>({x:t.i%this.sim.s.W,y:Math.floor(t.i/this.sim.s.W),f:t.f,ok:true}))],creates:[{type:'shell',x:this.sim.s.objects[id].x,y:this.sim.s.objects[id].y,w:this.sim.s.objects[id].w,h:this.sim.s.objects[id].h,f:R.f},...R.creates]});}
+    const inv=R.ok?this.sim.investment({...R,status:'valid',missing:[],warn:[]},{completePackage:true,leaseUpMonths:2}):null;
+    const rows=R.ok?R.rows.map(r=>`<div class="kv"><span>${esc(r.label)}</span><b>${money(r.cost)}</b></div>`).join(''):'';
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><div class="row"><h2>Building ${id} · vertical expansion</h2><button class="x" data-a="modalClose">${I.x}</button></div>${R.ok?`<p>F${R.from} → F${R.f+1}. Existing leases and units remain in service.</p><label><input type="checkbox" data-vertical-option="fitout" ${R.fitout?'checked':''}> Copy this floor’s unit layout and lighting</label><br><label><input type="checkbox" data-vertical-option="stairs" ${R.stairs?'checked':''}> Extend existing optional stairs</label><p class="note">Freight access is required and included. Stairs and a second elevator are optional redundancy.</p>${rows}<h3>Complete package ${money(R.cost)}</h3>${this.spendingHtml(R.cost,this.sim.planDailyCost(R),'after full package')}<p>~${Math.ceil(R.dur/1440)} financial days, plus time to clear/test the elevator. Reinforce → structure → fit-out → freight extension → service test → commission.</p><p class="note">${esc(R.warning)}</p><p class="note">${inv?.range?`Complete-package payback: ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months including a two-month lease-up allowance.`:'Payback: insufficient comparable evidence.'} Prices are provisional prototype values.</p><p class="note">Cancel before structure finishes for 60% of unbuilt work (full undo within 30 minutes before any stage finishes). Once structure is complete, the committed package must finish.</p><button class="btn pri" data-a="verticalConfirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm package · ${money(R.cost)}</button>`:`<p>${esc(R.msg)}</p>`}</div></div>`;
+  }
   modalOpen() { return !!this.$('modal').firstChild; }
-  closeModal() { this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
+  closeModal() { if(this.verticalQuote){this.rend.setPreview(null);this.verticalQuote=null;} this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
@@ -1713,7 +1727,7 @@ export class UI {
   async showSave() {
     const code = await this.g.saveCode();
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Save code</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
-      <p class="note">Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p><textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
+      <p class="note">${this.sim.s.hall.length>2?'Expanded saves require a build with multi-floor support. ':''}Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p><textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
   }
   showLoad() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Load game</h2><button class="x" data-a="${this.title ? 'showTitle' : 'modalClose'}" aria-label="Close">${I.x}</button></div>

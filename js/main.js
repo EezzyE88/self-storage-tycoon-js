@@ -211,10 +211,29 @@ function validState(st) {
   if (!isInt(W) || !isInt(H) || W < 12 || H < 12 || W > 96 || H > 96) return false;
   const WH = W * H, arr = (a, n) => Array.isArray(a) && a.length === n && a.every((x) => typeof x === 'number');
   if (!arr(st.ground, WH)) return false;
-  for (const k of ['hall', 'dirt']) if (st[k] && !(Array.isArray(st[k]) && st[k].length === 2 && st[k].every((l) => arr(l, WH)))) return false;
+  for (const k of ['hall', 'dirt']) if (st[k] && !(Array.isArray(st[k]) && st[k].length >= 2 && st[k].length <= 5 && (st[k].length===2 || st.floorModelVersion===1) && st[k].every((l) => arr(l, WH)))) return false;
+  if(st.floorModelVersion!=null&&st.floorModelVersion!==1)return false;
+  if(st.hall&&st.dirt&&st.hall.length!==st.dirt.length)return false;
   if (!st.objects || typeof st.objects !== 'object' || Array.isArray(st.objects)) return false;
   for (const o of Object.values(st.objects)) { if (!o || typeof o !== 'object' || typeof o.type !== 'string' || !isInt(o.x) || !isInt(o.y) || o.x < -2 || o.y < -2 || o.x > W + 2 || o.y > H + 2) return false; }
+  for(const o of Object.values(st.objects)){if(o.f!=null&&(!isInt(o.f)||o.f<0||o.f>=(st.hall?.length||2)))return false;if(o.type==='shell'&&(!isInt(o.floors)||o.floors<1||o.floors>5||o.floors>(st.hall?.length||2)))return false;if(o.servedFloors&&(!Array.isArray(o.servedFloors)||!o.servedFloors.every(f=>isInt(f)&&f>=0&&f<(st.hall?.length||2))||new Set(o.servedFloors).size!==o.servedFloors.length))return false;if(o.type==='elevator'&&o.servedFloors&&(o.q?.length!==o.servedFloors.length||!Number.isFinite(o.pos)||o.pos<0||o.pos>Math.max(...o.servedFloors)))return false;}
   for (const k of ['orders', 'carts', 'vehicles', 'agents', 'staff', 'tasks', 'ledger', 'days']) if (st[k] != null && !Array.isArray(st[k])) return false;
+  if(st.floorModelVersion===1){
+    const N=st.hall.length, agents=new Map((st.agents||[]).map(a=>[a.id,a])), seen=new Set();
+    if(!st.hall.every(l=>l.every(v=>v===0||v===1||v===2))||!st.dirt.every(l=>l.every(v=>Number.isFinite(v)&&v>=0)))return false;
+    for(const a of [...st.agents||[],...st.carts||[],...st.tasks||[]])if(a.f!=null&&(!isInt(a.f)||a.f<0||a.f>=N))return false;
+    for(const o of Object.values(st.objects)){
+      if(o.type==='shell'&&o.plannedMaxFloors!=null&&(!isInt(o.plannedMaxFloors)||o.plannedMaxFloors<o.floors||o.plannedMaxFloors>5||!Number.isFinite(o.structuralRightsPaid)||o.structuralRightsPaid<0))return false;
+      if(o.type!=='elevator')continue;
+      const fs=o.servedFloors||[0,1];if(!fs.length||fs.some((f,k)=>f!==k)||!Array.isArray(o.q)||o.q.length!==fs.length||!o.q.every(Array.isArray)||!Array.isArray(o.riders)||!Number.isFinite(o.pos)||o.pos<0||o.pos>fs.at(-1)||o.tgt!=null&&!fs.includes(o.tgt)||!Number.isFinite(o.door)||o.door<0||o.door>3||o.cap!==4)return false;
+      if(o.dispatchMode!=null&&o.dispatchMode!=='sweep-v1')return false;
+      let slots=0;
+      for(let f=0;f<o.q.length;f++)for(const id of o.q[f]){const a=agents.get(id);if(!a||seen.has(id)||a.elev!==o.id||a.inElev||a.f!==f||!fs.includes(a.elevDest)||!Number.isFinite(a.elevT0))return false;seen.add(id);}
+      for(const r of o.riders){const a=agents.get(r.a);if(!a||seen.has(r.a)||a.elev!==o.id||!a.inElev||!fs.includes(r.dest)||r.slots!==(a.cart?2:1))return false;seen.add(r.a);slots+=r.slots;}
+      if(slots>o.cap)return false;
+    }
+    for(const ord of st.orders||[])if(ord.vertical){const v=ord.vertical;if(!st.objects[v.shell]||!isInt(v.f)||v.f<1||v.f>=N||!isInt(v.phase)||v.phase<0||v.phase>5||!Array.isArray(v.stages)||v.stages.length!==5||!v.stages.every(x=>['reinforce','structure','fitout','shaft','test'].includes(x.kind)&&Number.isFinite(x.cost)&&x.cost>=0&&Number.isFinite(x.dur)&&x.dur>=0)||!Number.isFinite(v.elapsed)||v.elapsed<0||!Array.isArray(v.creates)||!Array.isArray(v.ids)||!Array.isArray(v.tiles)||v.tiles.some(t=>t.f!==v.f||!isInt(t.i)||t.i<0||t.i>=WH)||v.creates.some(c=>!isInt(c.x)||!isInt(c.y)||c.x<0||c.y<0||c.x>=W||c.y>=H||c.f!=null&&(!isInt(c.f)||c.f<0||c.f>=N)))return false;}
+  }
   if (!(st.staff || []).every((x) => x && typeof x.role === 'string' && ROLES[x.role])) return false;
   if (typeof st.t !== 'number' || st.t < 0 || typeof st.cash !== 'number') return false;
   if (!st.market || !MARKETS[st.market.id]) return false;
