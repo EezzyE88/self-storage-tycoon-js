@@ -252,6 +252,16 @@ export class Renderer {
     let b = bb(); const k = Math.min((rect.right - rect.left) / (b.x1 - b.x0), (rect.bottom - rect.top) / (b.y1 - b.y0)) * 0.97;
     this.zoom = Math.max(0.25, Math.min(4.2, this.zoom * k)); this.updateCamera();
     b = bb(); this.pan((rect.left + rect.right) / 2 - (b.x0 + b.x1) / 2, (rect.top + rect.bottom) / 2 - (b.y0 + b.y1) / 2);
+    this.tapZoom = { sim: this.sim, step: 0, base: this.zoom, rect: { ...rect } };
+  }
+  doubleTapZoom(cx, cy, rect) {
+    if (!this.tapZoom || this.tapZoom.sim !== this.sim) this.fitProperty(rect);
+    const cycle = this.tapZoom;
+    if (cycle.step === 3) { this.fitProperty(rect || cycle.rect); return; }
+    cycle.step++;
+    // Three evenly spaced levels use the available camera range without saturating early.
+    const target = cycle.base * Math.pow(4.2 / cycle.base, cycle.step / 3);
+    this.zoomAt(cx, cy, target / this.zoom);
   }
   zoomBy(k) { this.zoom = Math.max(0.3, Math.min(4.2, this.zoom * k)); this.updateCamera(); }
   zoomAt(cx, cy, k) {

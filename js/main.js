@@ -356,7 +356,7 @@ const mapTap = (e) => {
   const isDouble = prev && now - prev.t <= DOUBLE_TAP_MS && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) <= DOUBLE_TAP_PX;
   if (isDouble) {
     cancelMapTap();
-    game.rend.zoomAt(e.clientX, e.clientY, 1.65);
+    game.rend.doubleTapZoom(e.clientX, e.clientY, game.ui.safeRect());
     return;
   }
   // Delay selection until a second tap is ruled out. A double-tap never opens an inspector.

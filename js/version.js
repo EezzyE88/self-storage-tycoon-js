@@ -1,2 +1,2 @@
-// Isolated UI candidate with intentional safe 1x resume.
-export const BUILD = { name: 'bplus-property-first-safe-resume-candidate-16', date: '2026-10-05' };
+// Isolated Safari candidate: visible completion controls and cycling map zoom.
+export const BUILD = { name: 'bplus-visible-actions-zoom-candidate-17', date: '2026-10-05' };

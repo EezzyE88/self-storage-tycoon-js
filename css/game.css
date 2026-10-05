@@ -715,7 +715,7 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .tabs button svg { width:17px; height:17px; }
 #ui .tabs button.on { background:#d1e5f2; color:#16202b; }
 #ui .sheet { left:8px; right:8px; transform:none; width:auto; bottom:calc(64px + var(--safe-b)); max-height:29dvh; border-radius:12px; box-shadow:0 4px 18px #07142140; }
-#ui .sheet.tall { max-height:calc(100dvh - 178px - var(--safe-t) - var(--safe-b)); height:72dvh; }
+#ui .sheet.tall { max-height:calc(100dvh - 178px - var(--safe-t) - var(--safe-b)); height:auto; }
 #ui .sheet header { padding:4px 8px; min-height:52px; gap:6px; }
 #ui .sheet header h2 { font-size:16px; min-width:0; }
 #ui .sheet header .sub { font-size:12px; line-height:1.25; }
@@ -739,9 +739,9 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .sheet.tall > .btn[data-a=feedback] { display:inline-flex; }
 #ui .sheet header ~ .section-shortcuts { flex-shrink:0; }
 #ui .tut { left:8px; right:8px; width:auto; transform:none; bottom:calc(64px + var(--safe-b)); padding:5px 8px; border-radius:10px; }
-#ui .tut.min:not(.scen):not(.offer) { display:grid; grid-template-columns:minmax(0,1fr) 64px; max-height:64px; }
+#ui .tut.min:not(.scen):not(.offer) { display:grid; grid-template-columns:minmax(0,1fr) 64px; max-height:none; }
 #ui .tut.min .ch { grid-column:2; grid-row:1; }
-#ui .tut.min .ch > span, #ui .tut.min .ck, #ui .tut.min .tut-actions { display:none; }
+#ui .tut.min .ch > span, #ui .tut.min .ck { display:none; }
 #ui .tut.min .tut-body { grid-column:1; grid-row:1; overflow:hidden; align-self:center; }
 #ui .tut.min .steps li.cur { display:block; padding:0; }
 #ui .tut.min .tx { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
@@ -786,7 +786,7 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 }
 @media (max-height:520px) and (orientation:landscape) {
  #ui .sheet { max-height:32dvh; }
- #ui .sheet.tall { max-height:calc(100dvh - 126px - var(--safe-b)); height:70dvh; }
+ #ui .sheet.tall { max-height:calc(100dvh - 126px - var(--safe-b)); height:auto; }
  #ui .viewctl { top:calc(8px + var(--safe-t)); }
  #ui .viewctl .rotseg { display:none; }
  #ui .coach, #ui .feed { top:calc(64px + var(--safe-t)); }
@@ -818,3 +818,30 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .tut.scen .ch button { min-width:44px; min-height:44px; }
 #ui.has-sheet .feed { display:flex; }
 #ui:has(.modal-bg) .feed { display:none; }
+
+/* Candidate 17: content-sized panels and task actions that remain on the map. */
+#ui .dock-actions { display:flex; flex-wrap:wrap; flex-shrink:0; gap:6px; padding:6px 10px; border-bottom:1px solid var(--line); }
+#ui .dock-actions .btn { flex:1 1 auto; min-width:0; }
+#ui .sheet:has(.dock-actions) { max-height:44dvh; }
+#ui .sheet.tall { height:auto; }
+#ui .sheet .body { flex:0 1 auto; min-height:0; }
+#ui .detail-content .row:empty { display:none; }
+#ui .tut.min .tut-actions:has(.pri) { display:flex; grid-column:1 / -1; grid-row:2; margin:0; padding:0; border:0; }
+#ui .tut.min .tut-actions .pri { min-height:44px; margin:0; }
+#ui .tut.min .tx { white-space:normal; line-height:1.3; }
+#ui .sheet.compact.build-dock header { min-height:44px; }
+#ui .sheet.compact.build-dock header .sub { display:none; }
+#ui .sheet.compact.build-dock .tool { min-height:56px; }
+@media (max-width:700px) {
+ #ui .hud { grid-template-columns:minmax(0,1fr) 88px 44px; }
+ #ui .hud .cash { font-size:16px; }
+ #ui .hud .cash small, #ui .hud .clock span:not(.sbflag) { font-size:11px; }
+ #ui .hud .speed { top:50px; }
+ #ui .viewctl { top:calc(58px + var(--safe-t)); flex-direction:row; align-items:flex-start; gap:3px; }
+ #ui .viewctl .seg button { width:32px; min-width:32px; height:44px; }
+ #ui .viewctl .rotseg { display:flex; align-self:auto; }
+ #ui .coach, #ui .feed { top:calc(108px + var(--safe-t)); }
+}
+@media (max-width:380px) {
+ #ui .viewctl .rotseg { position:absolute; top:48px; right:0; }
+}

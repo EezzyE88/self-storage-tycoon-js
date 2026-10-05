@@ -50,7 +50,7 @@ test('map input wires a bounded double-tap to anchored camera zoom', () => {
   const render = readFileSync(new URL('../../js/render.js', import.meta.url), 'utf8');
   assert.match(main, /DOUBLE_TAP_MS\s*=\s*320/);
   assert.match(main, /DOUBLE_TAP_PX\s*=\s*28/);
-  assert.match(main, /game\.rend\.zoomAt\(e\.clientX, e\.clientY, 1\.65\)/);
+  assert.match(main, /game\.rend\.doubleTapZoom\(e\.clientX, e\.clientY, game\.ui\.safeRect\(\)\)/);
   assert.match(render, /zoomAt\(cx, cy, k\)/);
   assert.match(render, /before\.fx - after\.fx/);
 });

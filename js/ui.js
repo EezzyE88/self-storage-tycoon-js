@@ -134,7 +134,14 @@ export class UI {
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
     switch (a) {
-      case 'speed': if (!(this.popupBlocks && this.popupBlocks.size && +v > 0)) this.do({ type: 'speed', v: +v }); this.sfx('click'); break;
+      case 'speed': {
+        if (+v > 0 && this.popupBlocks?.size && [...this.popupBlocks].every(k => k === 'tutorial' || k === 'scenario')) {
+          this.tutMin = true; this.scMin = true;
+          this.resumePopup('tutorial'); this.resumePopup('scenario'); this.renderTut(true);
+        }
+        if (!(this.popupBlocks?.size && +v > 0)) this.do({ type: 'speed', v: +v });
+        this.sfx('click'); break;
+      }
       case 'finances': this.showFinances(); this.sfx('click'); break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
@@ -296,11 +303,7 @@ export class UI {
     const nb = box.querySelector('.body'); if (nb) nb.scrollTop = st;
     const nc = box.querySelector('.cats'); if (nc) { nc.scrollLeft = cs; const on = nc.querySelector('button.on'); if (on) { const r = on.getBoundingClientRect(), cr = nc.getBoundingClientRect(); if (r.left < cr.left || r.right > cr.right) nc.scrollLeft += r.left - cr.left - 14; } }
     const cv = box.querySelector('canvas.chart'); if (cv) this.drawChart(cv);
-    const detailBody=box.querySelector('.detail-content') || nb;
-    if (this.sel != null && detailBody) { // lead every inspector with its single most useful action
-      const btn = detailBody.querySelector('.btn.go, .btn.pri, button.btn[data-a="cmd"]:not(.danger)');
-      if (btn && !btn.closest('.primary')) { const w = document.createElement('div'); w.className = 'primary'; const row = btn.parentElement; w.appendChild(btn); detailBody.prepend(w); if (row && row.classList.contains('row') && !row.children.length) row.remove(); }
-    }
+
   }
   jumpSection(label) {
     const body = this.$('sheet').querySelector('.body'); if (!body) return;
@@ -323,7 +326,17 @@ export class UI {
       extra += `<nav class="section-shortcuts" aria-label="${title} sections">${jumps.join('')}${title==='Operate'?'<button data-a="feedback">Feedback</button>':''}</nav>`;
     }
     const build=title==='Build';
-    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
+    // Keep completion and work assignment controls outside the collapsible information body.
+    const actions = [];
+    if (this.sel != null) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
+      const cmd = button.match(/data-cmd='([^']*)'/);
+      if (!cmd) { if (/data-a="staffHelp"/.test(button)) { actions.push(button); return ''; } return button; }
+      let type; try { type = JSON.parse(cmd[1]).type; } catch { return button; }
+      if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor'].includes(type)) return button;
+      actions.push(button); return '';
+    });
+    const actionRail = actions.length ? `<div class="dock-actions" aria-label="Task actions">${actions.join('')}</div>` : '';
+    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}${actionRail}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
   }
 
   dockSummary(title,sub) {
@@ -1412,11 +1425,20 @@ export class UI {
   phone() { return innerWidth <= 700 || innerHeight <= 520; }
   safeRect() { // screen area not covered by HUD, tabs, open sheet
     const W = innerWidth, H = innerHeight, land = innerHeight <= 520 && innerWidth > innerHeight;
-    const hud = this.root.querySelector('.hud').getBoundingClientRect().bottom + 8;
     const tabs = this.$('tabs').getBoundingClientRect();
-    const sh = this.$('sheet').firstElementChild || this.$('abar').firstElementChild; const sr = sh && sh.getBoundingClientRect();
-    let top = hud + (this.$('coach').hidden ? 0 : 40), bottom = land ? H - 8 : tabs.top - 8, left = land ? tabs.right + 8 : 8, right = W - 64;
-    if (sr) { if (land) right = Math.min(right, sr.left - 8); else bottom = Math.min(bottom, sr.top - 8); }
+    let top = 8, bottom = tabs.top - 8, left = 8, right = W - 8;
+    for (const selector of ['.hud', '.speed', '.viewctl', '#coach', '#feed']) {
+      const el = this.root.querySelector(selector); if (!el || el.hidden) continue;
+      const r = el.getBoundingClientRect(); if (r.width && r.height) top = Math.max(top, r.bottom + 8);
+    }
+    for (const id of ['sheet', 'abar', 'tut']) {
+      const el = this.$(id).firstElementChild; if (!el) continue;
+      const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+      if (land && id !== 'tut') right = Math.min(right, r.left - 8);
+      else bottom = Math.min(bottom, r.top - 8);
+    }
+    // Keep framing usable even when a paused workspace occupies most of a short viewport.
+    top = Math.min(top, bottom - 80); right = Math.max(left + 80, right);
     return { top, bottom, left, right };
   }
   keepSelVisible() {
