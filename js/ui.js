@@ -102,23 +102,31 @@ export class UI {
       if (dy < 0) this.sheetTall = true; else if (this.sheetTall) this.sheetTall = false; else { this.select(null); this.setTab(null); return; }
       this.applySheetSize();
     }, true);
+    this.root.addEventListener('pointercancel',()=>{sw=null;},true);
     this.root.addEventListener('input', (e) => this.onInput(e));
     this.showTitle();
   }
   get sim() { return this.g.sim; }
   get rend() { return this.g.rend; }
   sfx(k) { this.g.audio.play(k); }
+  syncPopupProperty() {
+    if(this.popupSim && this.popupSim!==this.sim) {this.popupBlocks=new Set();this.popupSpeed=null;this.requestPanel=false;}
+    this.popupSim=this.sim;
+  }
   pauseForPopup(kind) {
+    this.syncPopupProperty();
     if (this.title) return;
     this.popupBlocks ||= new Set();
     if (this.popupBlocks.has(kind)) return;
+    if (!this.popupBlocks.size) this.popupSpeed = this.sim.s.speed;
     this.popupBlocks.add(kind);
     if (this.sim.s.speed !== 0) this.do({ type: 'speed', v: 0 });
   }
   resumePopup(kind) {
+    this.syncPopupProperty();
     if (!this.popupBlocks || !this.popupBlocks.has(kind)) return;
     this.popupBlocks.delete(kind);
-    if (!this.popupBlocks.size && !this.title) this.do({ type: 'speed', v: 1 });
+    if (!this.popupBlocks.size && !this.title) this.do({ type: 'speed', v: this.popupSpeed ?? 0 });
   }
 
   // ------------------------------------------------------------ clicks
@@ -127,12 +135,12 @@ export class UI {
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
     switch (a) {
-      case 'speed': if (!(this.popupBlocks && this.popupBlocks.size && +v > 0)) this.do({ type: 'speed', v: +v }); this.sfx('click'); break;
+      case 'speed': if(+v===0 && this.popupBlocks?.size) this.popupSpeed=0; if (!(this.popupBlocks && this.popupBlocks.size && +v > 0)) this.do({ type: 'speed', v: +v }); this.sfx('click'); break;
       case 'finances': this.showFinances(); this.sfx('click'); break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
       case 'staffHelp': this.hireRoleFocus = ROLES[v] ? v : null; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); this.sfx('click'); break;
-      case 'section': this.jumpSection(v); this.sfx('click'); break;
+      case 'section': this.sheetTall = true; this.renderSheet(true); this.jumpSection(v); this.sfx('click'); break;
       case 'cat': this.cat = v; this.renderSheet(true); this.sfx('click'); break;
       case 'tool': this.pickTool(v); break;
       case 'goTool': if (TOOLS[v]) { this.select(null); this.cat = TOOLS[v].cat; this.setTab('build'); this.pickTool(v); } break; // opening checklist shortcuts
@@ -149,8 +157,8 @@ export class UI {
       case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
-      case 'feedback': this.select(null); this.feedbackFocus=null; this.feedbackRequest=null; this.sheetKey=null; this.setTab('feedback'); break;
-      case 'requestHelp': this.select(null); this.feedbackFocus=null; this.feedbackRequest=+el.dataset.id; this.sheetKey=null; this.setTab('feedback'); break;
+      case 'feedback': this.select(null); this.feedbackFocus=null; this.feedbackRequest=null; this.sheetKey=null; this.setTab('feedback',true); break;
+      case 'requestHelp': this.select(null); this.feedbackFocus=null; this.feedbackRequest=+el.dataset.id; this.sheetKey=null; this.setTab('feedback',true); break;
       case 'complaintView': {
         if(el.dataset.property!=null && +el.dataset.property!==this.feedbackEpoch) break;
         let target; try { target=JSON.parse(el.dataset.target); } catch { break; }
@@ -165,7 +173,8 @@ export class UI {
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
       case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = true; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
       case 'rush': this.rush = !this.rush; this.replan(); this.sfx('click'); break;
-      case 'convoAll': this.convoAll = !this.convoAll; this.renderFeed(true); break;
+      case 'requests': this.showRequests(); break;
+      case 'convoAll': this.showRequests(); break;
       case 'lessonEnd': this.do({ type: 'lesson', op: 'end' }); this.renderTut(true); break;
       case 'lessonLater': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'dismiss', id: v }); this.renderTut(true); break;
       case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
@@ -240,11 +249,12 @@ export class UI {
   }
 
   // ------------------------------------------------------------ tabs / sheets
-  setTab(t) {
+  setTab(t, expanded = false) {
     if (t === 'growth' && this.plan && this.plan.args) this.growthPlanArgs = { ...this.plan.args };
     if(t!=='feedback') { this.feedbackFocus=null; this.feedbackRequest=null; }
     this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
     if (t) this.sel = null, this.rend.setSelection(null);
+    this.sheetTall = !!expanded;
     if (t === 'business') this.do({ type: 'tutFlag', flag: 'businessOpened' });
     for (const b of this.root.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.v === t);
     this.renderSheet(true);
@@ -257,7 +267,7 @@ export class UI {
   select(id, keepTab = false) {
     this.sel = id; this.rend.setSelection(typeof id === 'number' ? id : null);
     if (id == null && !this.tab) this.sheetTall = false;
-    if (id != null && !keepTab) { this.tab = null; for (const b of this.root.querySelectorAll('#tabs button')) b.classList.remove('on'); }
+    if (id != null && !keepTab) { this.sheetTall = false; this.tab = null; for (const b of this.root.querySelectorAll('#tabs button')) b.classList.remove('on'); }
     const o = typeof id === 'number' && this.sim.s.objects[id];
     if (o && o.type === 'corral') this.do({ type: 'tutFlag', flag: 'corralInspected' });
     this.renderSheet(true);
@@ -266,7 +276,7 @@ export class UI {
   renderSheet(force = false) {
     this.syncFeedbackProperty();
     const box = this.$('sheet');
-    if (this.tool) { box.innerHTML = ''; return; }
+    if (this.tool) { box.innerHTML = ''; this.resumePopup('panel'); return; }
     let html = '';
     if (this.sel != null) html = this.inspector();
     else if (this.tab === 'build') html = this.buildSheet();
@@ -274,7 +284,8 @@ export class UI {
     else if (this.tab === 'operate') html = this.operateSheet();
     else if (this.tab === 'business') html = this.businessSheet();
     else if (this.tab === 'growth') html = this.growthSheet();
-    if (!html) { box.innerHTML = ''; return; }
+    if (!html) { box.innerHTML = ''; this.resumePopup('panel'); return; }
+    if(this.sheetTall) this.pauseForPopup('panel'); else this.resumePopup('panel');
     const key = this.sel != null ? 'sel:' + JSON.stringify(this.sel) : this.tab;
     const sameSheet=this.sheetKey===key; const statusOpen=sameSheet && !!box.querySelector('.status-key')?.open; const sectionScroll=sameSheet ? (box.querySelector('.section-shortcuts')?.scrollLeft || 0) : 0;
     const body = box.querySelector('.body'); const st = body && this.sheetKey === key ? body.scrollTop : 0; this.sheetKey = key;
@@ -286,13 +297,15 @@ export class UI {
     const nb = box.querySelector('.body'); if (nb) nb.scrollTop = st;
     const nc = box.querySelector('.cats'); if (nc) { nc.scrollLeft = cs; const on = nc.querySelector('button.on'); if (on) { const r = on.getBoundingClientRect(), cr = nc.getBoundingClientRect(); if (r.left < cr.left || r.right > cr.right) nc.scrollLeft += r.left - cr.left - 14; } }
     const cv = box.querySelector('canvas.chart'); if (cv) this.drawChart(cv);
-    if (this.sel != null && nb) { // lead every inspector with its single most useful action
-      const btn = nb.querySelector('.btn.go, .btn.pri, button.btn[data-a="cmd"]:not(.danger)');
-      if (btn && !btn.closest('.primary')) { const w = document.createElement('div'); w.className = 'primary'; const row = btn.parentElement; w.appendChild(btn); nb.prepend(w); if (row && row.classList.contains('row') && !row.children.length) row.remove(); }
+    const detailBody=box.querySelector('.detail-content') || nb;
+    if (this.sel != null && detailBody) { // lead every inspector with its single most useful action
+      const btn = detailBody.querySelector('.btn.go, .btn.pri, button.btn[data-a="cmd"]:not(.danger)');
+      if (btn && !btn.closest('.primary')) { const w = document.createElement('div'); w.className = 'primary'; const row = btn.parentElement; w.appendChild(btn); detailBody.prepend(w); if (row && row.classList.contains('row') && !row.children.length) row.remove(); }
     }
   }
   jumpSection(label) {
     const body = this.$('sheet').querySelector('.body'); if (!body) return;
+    if(!this.sheetTall) { this.sheetTall=true; this.renderSheet(true); return this.jumpSection(label); }
     const heading = [...body.querySelectorAll('h3[data-section]')].find((h) => h.dataset.section === label);
     if (heading) body.scrollTop += heading.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
   }
@@ -308,11 +321,23 @@ export class UI {
       });
       const order = title === 'Business' ? ['Bills', 'Financing', 'Pricing', 'Demand', 'Collections', 'Statement'] : sections.map(([, label]) => label);
       jumps.sort((a, b) => order.findIndex((label) => a.endsWith(`>${label}</button>`)) - order.findIndex((label) => b.endsWith(`>${label}</button>`)));
-      extra += `<nav class="section-shortcuts" aria-label="${title} sections">${jumps.join('')}</nav>`;
+      extra += `<nav class="section-shortcuts" aria-label="${title} sections">${jumps.join('')}${title==='Operate'?'<button data-a="feedback">Feedback</button>':''}</nav>`;
     }
-    return `<div class="sheet${this.sheetTall ? ' tall' : ''}"><button class="grab" data-a="sheetGrow" aria-label="Expand or shrink panel"><i></i></button><header><h2>${esc(title)}${sub ? `<span class="sub">${sub}</span>` : ''}</h2><button class="x" data-a="close" aria-label="Close">${I.x}</button></header>${extra}<div class="body">${body}</div></div>`;
+    const build=title==='Build';
+    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
   }
 
+  dockSummary(title,sub) {
+    const sim=this.sim,s=sim.s;
+    if(title==='Build') return '';
+    let pairs=[];
+    if(title==='Operate') pairs=[['Jobs',s.tasks.length],['Staff',s.staff.length],['Office queue',s.officeQ.length]];
+    else if(title==='Business') {const o=sim.occupancy();pairs=[['Cash',money(s.cash)],['Occupied',`${o.occ}/${o.n}`],['Vacant ready',sim.objs('unit').filter(u=>u.cstate==='operating'&&u.commercial==='ready'&&!u.blocked).length]];}
+    else if(title==='Growth') pairs=[['Reputation',pct(sim.reputation())],['Properties',this.g.company?.props.length||1]];
+    else if(title==='Customer feedback') pairs=[['Recent reports',s.thoughts.filter(t=>t.kind==='bad').length],['Requests',s.convos.length]];
+    else {const o=typeof this.sel==='number'&&s.objects[this.sel];pairs=o?.type==='unit'?[['Status',UNIT_STATUS[unitStatus(o)].label],['Size',o.size]]:[['Selected',sub||title]];}
+    return `<div class="dock-metrics">${pairs.map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(String(v))}</b></div>`).join('')}</div>`;
+  }
   // ------------------------------------------------------------ BUILD
   buildSheet() {
     const s = this.sim.s; const cats = CATEGORIES.filter((c) => Object.values(TOOLS).some((t) => t.cat === c.id));
@@ -327,6 +352,7 @@ export class UI {
     return this.sheet('Build', s.creative ? 'Creative mode: instant and free' : s.sb && (s.sb.unlimited || s.sb.instant) ? [s.sb.unlimited ? 'Free Build funds' : '', s.sb.instant ? 'Instant construction' : ''].filter(Boolean).join(' · ') + '. Costs are still recorded.' : 'Place, preview, then confirm', `<div class="build-help"><button class="btn sm" data-a="handbook">Builder's handbook</button><span>How, why and when to use every build item</span></div><div class="tools">${cards}</div>`, catHtml);
   }
   pickTool(k) {
+    if(k) {this.sheetTall=false;this.tutMin=true;this.resumePopup('tutorial');}
     if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
     this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
@@ -368,6 +394,7 @@ export class UI {
     this.renderActionBar();
   }
   renderActionBar() {
+    if(this.tool && this.plan && !this.buildPlacing) this.pauseForPopup('review'); else this.resumePopup('review');
     const box = this.$('abar'); if (!this.tool) { box.innerHTML = ''; return; }
     const T = TOOLS[this.tool], R0 = this.plan; const rush = this.canRush() && this.rush && R0 && R0.dur;
     const R = R0 && rush ? { ...R0, cost: Math.round(R0.cost * 1.25), dur: R0.dur * 0.5 } : R0;
@@ -636,7 +663,7 @@ export class UI {
   }
   bindComplaintBubble(el,th) {
     const sim=this.sim; let pointers=new Set(),start=null,eligible=false,pointerSeen=false,blocked=false,releasedVersion=0;
-    const open=()=>{if(this.sim!==sim || this.tool || this.title) return; this.select(null); this.feedbackFocus=th; this.feedbackRequest=null; this.sheetKey=null; this.setTab('feedback');};
+    const open=()=>{if(this.sim!==sim || this.tool || this.title) return; this.select(null); this.feedbackFocus=th; this.feedbackRequest=null; this.sheetKey=null; this.setTab('feedback',true);};
     el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-label',th.text+' Review cause and remedy');
     el.addEventListener('pointerdown',e=>{
       el.setPointerCapture?.(e.pointerId);
@@ -995,23 +1022,29 @@ export class UI {
     if (!force && key === this.convoKey) return; this.convoKey = key;
     const feed = this.$('feed');
     for (const el of feed.querySelectorAll('.convo')) el.remove();
-    const frag = document.createDocumentFragment();
+    const frag = document.createDocumentFragment(); this.requestCards=[];
     // phone declutter: one request at a time, most urgent first (critical, then soonest to expire)
     const urg = (c) => (c.sev === 'critical' ? 0 : 1e6) + (c.ttl ? Math.max(0, c.ttl - (s.t - c.t)) : 5e5);
     const order = s.convos.slice().sort((a, b) => urg(a) - urg(b)); const cap = this.convoAll ? 3 : 1;
     if (order.length) this.pauseForPopup('convo'); else this.resumePopup('convo');
-    if (order.length > cap) { const m = document.createElement('button'); m.className = 'convo more'; m.dataset.a = 'convoAll'; m.textContent = this.convoAll ? 'Show fewer' : `+${order.length - cap} more request${order.length - cap > 1 ? 's' : ''} waiting`; frag.appendChild(m); }
+    if (false && order.length > cap) { const m = document.createElement('button'); m.className = 'convo more'; m.dataset.a = 'convoAll'; m.textContent = this.convoAll ? 'Show fewer' : `+${order.length - cap} more request${order.length - cap > 1 ? 's' : ''} waiting`; frag.appendChild(m); }
     else if (this.convoAll && order.length <= 1) this.convoAll = false;
-    for (const c of order.slice(0, cap).reverse()) {
+    for (const c of order) {
       const el = document.createElement('div'); el.className = 'convo ' + (c.sev || 'attention');
       // no countdowns (concept §9): say calmly what happens if the player leaves it; only collections keep a real-world date
       const defA = c.def != null && c.actions && c.actions[c.def]; const due = c.ttl ? c.t + c.ttl : null;
       const calm = c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. If you leave it: ${defA ? defA.label : 'nothing happens'}.` : defA && c.actions.length > 1 ? `No rush. If you leave it, the game picks: ${defA.label}.` : '';
       const advice=diagnoseRequest(this.sim,c);
       el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
-      frag.appendChild(el);
+      this.requestCards.push(el.outerHTML);
     }
+    if(order.length) { const b=document.createElement('button'); b.className='convo inbox-chip';b.dataset.a='requests';b.textContent=`${order.length} request${order.length===1?'':'s'} · paused · Review`;frag.appendChild(b); }
     feed.prepend(frag);
+    if(this.requestPanel && this.modalOpen()) {if(order.length) this.showRequests();else this.closeModal();}
+  }
+  showRequests() {
+    this.pauseForPopup('modal');this.requestPanel=true;
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Requests · paused</h2><button class="x" data-a="modalClose" aria-label="Close requests">${I.x}</button></div>${(this.requestCards||[]).join('') || '<p>No active requests.</p>'}</div></div>`;
   }
   addBubble(th) {
     // Merge identical customer thoughts without letting rapid repeats pin a bubble on-screen forever.
@@ -1120,6 +1153,7 @@ export class UI {
   tutFocus() { const b = curBeat(this.sim); return b && b.focus ? b.focus(this.sim) : null; }
   renderTut(force = false) {
     const s = this.sim.s, box = this.$('tut');
+    if(!this.title && !this.tutMin && curBeat(this.sim)) this.pauseForPopup('tutorial'); else this.resumePopup('tutorial');
     if (s.scenario && !this.title) { this.renderScenario(force); return; }
     const b = this.title ? null : curBeat(this.sim);
     if (!b) {
@@ -1131,7 +1165,7 @@ export class UI {
       if (off) this.pauseForPopup('lessonOffer'); else this.resumePopup('lessonOffer');
       const key = 'offer:' + (off ? off.id : '');
       if (!force && key === this.tutKey) return; this.tutKey = key; this.rend.setFocus(null);
-      box.innerHTML = off ? `<div class="tut offer"><div class="ch"><span>Optional lesson</span></div><h4>${off.title}</h4><p class="intro">${off.body}</p><div class="row"><button class="btn pri" data-a="lessonStart" data-v="${off.id}">Start lesson</button><button class="skip" data-a="lessonLater" data-v="${off.id}">Not now</button></div></div>` : '';
+      box.innerHTML = off ? `<div class="tut offer"><button class="lesson-chip" data-a="lessonStart" data-v="${off.id}"><small>Optional lesson · paused</small><b>${off.title}</b></button><button class="x" data-a="lessonLater" data-v="${off.id}" aria-label="Dismiss optional lesson">${I.x}</button></div>` : '';
       return;
     }
     const isLesson = !!s.lesson;
@@ -1272,6 +1306,8 @@ export class UI {
   fmtGoal(g, v) { return g.fmt === 'pct' ? pct(v) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
   renderScenario(force) {
     const sim = this.sim, s = sim.s, sc = s.scenario, box = this.$('tut');
+    if(this.scMin==null) this.scMin=true;
+    if(this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
     const prog = scenarioProgress(sim);
     const key = JSON.stringify([sc.status, this.scMin, sim.day, prog.map((g) => [g.met, this.fmtGoal(g, g.cur)]), sc.badDays]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
@@ -1344,6 +1380,7 @@ export class UI {
   update(dt) {
     const s = this.sim.s; const now = performance.now();
     if (!this.title && this.modalOpen()) this.pauseForPopup('modal');
+    else this.resumePopup('modal');
     const cash = Math.round(s.cash);
     const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small>${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }
     if (now - (this.goalT || 0) > 1000) { // next career goal, always visible as a thin bar under the cash
@@ -1390,7 +1427,7 @@ export class UI {
     if (p.y > r.bottom - 20 || p.y < r.top + 20) dy = my - p.y; if (p.x > r.right - 20 || p.x < r.left + 20) dx = mx - p.x;
     if (dx || dy) this.rend.pan(dx, dy);
   }
-  applySheetSize() { const el = this.$('sheet').firstElementChild; if (el) el.classList.toggle('tall', !!this.sheetTall); }
+  applySheetSize() { this.renderSheet(true); }
   slowHud() {
     const sim = this.sim, s = sim.s; const oc = sim.occupancy();
     if (!oc.n || s.creative) { this.cashSub = null; return; }
@@ -1610,7 +1647,7 @@ export class UI {
       '<div class="list">' + (rows || '<p class="note">No important scheduled dates yet.</p>') + '</div></div></div>';
   }
   modalOpen() { return !!this.$('modal').firstChild; }
-  closeModal() { this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
+  closeModal() { this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>

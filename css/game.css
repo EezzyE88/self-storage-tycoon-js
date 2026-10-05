@@ -699,3 +699,122 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 @media (min-width: 701px) and (max-width: 1180px) and (min-height: 521px) {
   #ui.has-sheet .sheet { left: auto; right: calc(62px + var(--safe-r)); transform: none; width: min(560px, 50vw); }
 }
+
+/* Candidate 15: live property dock and deliberately paused detail workspaces. */
+:root { --paper:#f4f7fa; --paper2:#e3eaf0; --line:#cbd5df; --muted:#536474; --tabs-h:52px; }
+#ui .hud { gap:6px; }
+#ui .hud .brand, #ui .hud .spacer { display:none; }
+#ui .chip { border-radius:10px; box-shadow:0 2px 10px #07142130; min-height:44px; }
+#ui .speed button { min-width:44px; height:44px; }
+#ui .hud .cash { font-size:18px; }
+#ui .hud .cash small { font-size:12px; }
+#ui .hud .clock b { font-size:14px; }
+#ui .hud .clock span:not(.sbflag) { display:block; font-size:12px; }
+#ui .tabs { left:8px; right:8px; transform:none; bottom:calc(6px + var(--safe-b)); border-radius:12px; padding:3px; gap:2px; }
+#ui .tabs button { flex:1; min-width:0; height:46px; font-size:14px; flex-direction:row; gap:5px; }
+#ui .tabs button svg { width:17px; height:17px; }
+#ui .tabs button.on { background:#d1e5f2; color:#16202b; }
+#ui .sheet { left:8px; right:8px; transform:none; width:auto; bottom:calc(64px + var(--safe-b)); max-height:29dvh; border-radius:12px; box-shadow:0 4px 18px #07142140; }
+#ui .sheet.tall { max-height:calc(100dvh - 178px - var(--safe-t) - var(--safe-b)); height:72dvh; }
+#ui .sheet header { padding:4px 8px; min-height:52px; gap:6px; }
+#ui .sheet header h2 { font-size:16px; min-width:0; }
+#ui .sheet header .sub { font-size:12px; line-height:1.25; }
+#ui .panel-size { flex:none; min-height:44px; min-width:60px; border-radius:8px; background:var(--paper2); font-size:14px; font-weight:700; padding:0 8px; }
+#ui .sheet .x { min-width:44px; min-height:44px; }
+#ui .sheet .body { padding:8px 10px; flex:1; }
+#ui .sheet.compact:not(.build-dock) .detail-content { display:none; }
+#ui .sheet.tall .dock-summary, #ui .build-dock .dock-summary { display:none; }
+#ui .dock-metrics { display:flex; gap:12px; justify-content:space-between; }
+#ui .dock-metrics > div { min-width:0; flex:1; }
+#ui .dock-metrics small { display:block; color:var(--muted); font-size:12px; }
+#ui .dock-metrics b { display:block; font-size:16px; overflow-wrap:anywhere; }
+#ui .section-shortcuts, #ui .cats { display:flex; overflow-x:auto; padding:3px 8px; gap:4px; touch-action:pan-x; }
+#ui .section-shortcuts button, #ui .cats button { min-height:44px; flex:none; border-radius:8px; font-size:14px; padding:0 10px; }
+#ui .sheet.compact.build-dock { max-height:29dvh; }
+#ui .sheet.compact.build-dock .tools { display:flex; overflow-x:auto; touch-action:pan-x; gap:6px; }
+#ui .sheet.compact.build-dock .tool { min-width:136px; width:136px; flex:none; min-height:66px; padding:6px 8px; }
+#ui .sheet.compact.build-dock .tool .d, #ui .sheet.compact.build-dock .build-help { display:none; }
+#ui .tool .c, #ui .tool .d { font-size:14px; }
+#ui .sheet > .btn[data-a=feedback] { display:none; }
+#ui .sheet.tall > .btn[data-a=feedback] { display:inline-flex; }
+#ui .sheet header ~ .section-shortcuts { flex-shrink:0; }
+#ui .tut { left:8px; right:8px; width:auto; transform:none; bottom:calc(64px + var(--safe-b)); padding:5px 8px; border-radius:10px; }
+#ui .tut.min:not(.scen):not(.offer) { display:grid; grid-template-columns:minmax(0,1fr) 64px; max-height:64px; }
+#ui .tut.min .ch { grid-column:2; grid-row:1; }
+#ui .tut.min .ch > span, #ui .tut.min .ck, #ui .tut.min .tut-actions { display:none; }
+#ui .tut.min .tut-body { grid-column:1; grid-row:1; overflow:hidden; align-self:center; }
+#ui .tut.min .steps li.cur { display:block; padding:0; }
+#ui .tut.min .tx { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
+#ui .tut:not(.min):not(.offer):not(.scen) { max-height:68dvh; }
+#ui .tut.offer { display:flex; align-items:center; gap:8px; max-height:74px; border-top:0; }
+#ui .lesson-chip { flex:1; text-align:left; min-height:44px; min-width:0; }
+#ui .lesson-chip small { display:block; font-size:12px; color:#b8cbdc; }
+#ui .lesson-chip b { display:block; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#ui.has-sheet #tut, #ui:has(.modal-bg) #tut, #ui:has(.actionbar) #tut { display:none; }
+#ui .coach { top:calc(114px + var(--safe-t)); left:8px; right:108px; padding:6px 8px; font-size:14px; min-height:44px; }
+#ui .coach .ct { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+#ui.has-sheet #coach, #ui:has(.modal-bg) #coach { display:none; }
+#ui .feed { top:calc(114px + var(--safe-t)); left:8px; right:auto; width:min(250px,calc(100vw - 112px)); }
+#ui .inbox-chip { min-height:44px; padding:8px 10px; font-size:14px; font-weight:700; border-left:3px solid #dcad42; text-align:left; }
+#ui .feed .toast { font-size:14px; max-height:66px; overflow:hidden; }
+#ui:has(.inbox-chip) #coach, #ui.has-sheet .feed .toast, #ui:has(.modal-bg) .feed { display:none; }
+#ui .modal-bg { background:#08152270; }
+#ui .modal { border-radius:14px; width:min(560px,calc(100vw - 16px)); max-height:calc(100dvh - 32px - var(--safe-t) - var(--safe-b)); }
+#ui .modal .btn, #ui .sheet .btn { min-height:44px; height:auto; padding:8px 12px; font-size:14px; }
+#ui .modal h3, #ui .sheet h3, #ui .item small, #ui .note { font-size:14px; }
+#ui .actionbar { left:8px; right:8px; width:auto; transform:none; bottom:calc(64px + var(--safe-b)); border-radius:12px; }
+#ui .actionbar.placing, #ui .actionbar.idle-strip { min-height:44px; max-height:64px; }
+#ui .actionbar:not(.placing):not(.idle-strip) { max-height:62dvh; }
+@media (max-width:700px) {
+ #ui .hud { display:grid; grid-template-columns:minmax(0,1fr) 96px 44px; align-items:stretch; }
+ #ui .hud > .chip:nth-child(2) { grid-column:1; }
+ #ui .hud .clock { grid-column:2; }
+ #ui .hud > .iconbtn { grid-column:3; width:44px; height:48px; }
+ #ui .hud .speed { position:absolute; left:0; top:54px; padding:2px; gap:0; }
+ #ui .hud .cash small { max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+ #ui .viewctl { top:calc(62px + var(--safe-t)); right:8px; gap:4px; }
+ #ui .viewctl .seg { flex-direction:row; padding:2px; gap:0; }
+ #ui .viewctl .seg button { width:40px; height:44px; font-size:12px; }
+ #ui .viewctl .rotseg { align-self:flex-end; }
+}
+@media (min-width:701px) {
+ #ui .hud { right:auto; }
+ #ui .sheet { left:auto; right:8px; width:400px; }
+ #ui .tabs { left:auto; width:400px; }
+ #ui .tut { right:auto; width:360px; }
+ #ui .coach, #ui .feed { top:calc(64px + var(--safe-t)); width:330px; right:auto; }
+}
+@media (max-height:520px) and (orientation:landscape) {
+ #ui .sheet { max-height:32dvh; }
+ #ui .sheet.tall { max-height:calc(100dvh - 126px - var(--safe-b)); height:70dvh; }
+ #ui .viewctl { top:calc(8px + var(--safe-t)); }
+ #ui .viewctl .rotseg { display:none; }
+ #ui .coach, #ui .feed { top:calc(64px + var(--safe-t)); }
+ #ui .tut { max-width:50vw; }
+ #ui .sheet.compact.build-dock { max-height:35dvh; }
+ #ui .sheet.compact.build-dock header, #ui .sheet.compact.build-dock .cats { display:none; }
+}
+/* Short landscape uses a side dock rather than hiding its navigation. */
+@media (max-height:520px) and (orientation:landscape) {
+ #ui .sheet, #ui .sheet.compact.build-dock { left:auto; right:8px; width:min(380px,46vw); max-height:calc(100dvh - 134px - var(--safe-b)); }
+ #ui .sheet.compact.build-dock header { display:flex; }
+ #ui .sheet.compact.build-dock .cats { display:flex; }
+ #ui .sheet header .sub { display:none; }
+ #ui .sheet header h2 { font-size:14px; }
+ #ui .sheet.compact.build-dock .tool { min-width:116px; width:116px; }
+ #ui .tabs { left:auto; width:46vw; }
+ #ui .tabs button { font-size:12px; }
+ #ui .tabs button svg { display:none; }
+ #ui .section-shortcuts { padding:2px 6px; }
+}
+#ui .sheet.compact:not(.build-dock) .body { flex-shrink:0; }
+#ui .sheet.compact:not(.build-dock) .dock-metrics { gap:8px; }
+#ui .sheet.compact:not(.build-dock) header .sub { display:none; }
+#ui .sheet.compact:not(.build-dock) .body { padding:5px 10px; }
+#ui .tut { top:auto; }
+#ui .tut.scen.min { max-height:64px; overflow:hidden; }
+#ui .tut.scen.min .ch { min-height:44px; }
+#ui .tut.scen:not(.min) { max-height:68dvh; overflow-y:auto; }
+#ui .tut.scen .ch button { min-width:44px; min-height:44px; }
+#ui.has-sheet .feed { display:flex; }
+#ui:has(.modal-bg) .feed { display:none; }

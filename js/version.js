@@ -1,2 +1,2 @@
-// Displayed build identity for isolated Safari acceptance.
-export const BUILD = { name: 'bplus-complaint-capacity-candidate-14', date: '2026-10-05' };
+// Isolated property-first UI playtest build.
+export const BUILD = { name: 'bplus-property-first-ui-candidate-15', date: '2026-10-05' };
