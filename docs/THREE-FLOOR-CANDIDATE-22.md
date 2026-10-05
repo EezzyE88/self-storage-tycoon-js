@@ -2,7 +2,7 @@
 
 | Item | Value |
 | --- | --- |
-| Branch | `candidate/three-floor-repair-20261005` |
+| Branch | `candidate/three-floor-repair-claude-20261005` (the name `candidate/three-floor-repair-20261005` was already taken on the remote by a separate, independent attempt, `c7d9e8f`, which was left untouched) |
 | Base | Candidate 21 `b126ddcb8675dd71bd01ec546294175cdaa7d5b4` (tree `9de22e40b380fbf05c64cd34e4d08b22671df17a`) |
 | Accepted master | `2812abf8d268f9a225e5786d173f95efcbd6223d`, unchanged |
 | Build | `bplus-three-floor-candidate-22` |
