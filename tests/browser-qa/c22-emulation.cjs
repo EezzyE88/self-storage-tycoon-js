@@ -110,7 +110,9 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     const speed = () => p.evaluate(() => __game.sim.s.speed);
     // Real time runs between steps, so a genuine request or milestone banner may hold its own pause; it must then restore v.
     const restored = async (v, msg) => { const r = await p.evaluate(() => ({ s: __game.sim.s.speed, n: (__game.ui.popupBlocks || new Set()).size, r: __game.ui.popupResume, k: [...(__game.ui.popupBlocks || [])] })); assert.ok(r.s === v || (r.n > 0 && r.r === v), `${msg}: ${JSON.stringify(r)}`); };
-    await plainGame(p); await p.click('#speed [data-v="2"]'); await frames(p); assert.equal(await speed(), 2);
+    // Optional-lesson offers legitimately hold time (and make run speeds inert) until dismissed; keep them out of this scenario.
+    await plainGame(p); await p.evaluate(async () => { const m = await import('./js/tutorial.js'); for (const L of m.LESSONS) __game.sim.dispatch({ type: 'lesson', op: 'dismiss', id: L.id }); __game.ui.resumePopup('lessonOffer'); });
+    await p.click('#speed [data-v="2"]'); await frames(p); assert.equal(await speed(), 2);
     await p.click('#tabs [data-v="business"]'); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0, 'Details pauses');
     await p.click('[data-a="sheetGrow"]'); await frames(p); await restored(2, 'Back to map restores 2x');
     await p.click('.sheet [data-a="close"]'); await frames(p);
@@ -119,7 +121,7 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.click('#speed [data-v="4"]'); await frames(p); await p.click('[data-a="floorChoose"]'); await frames(p); assert.equal(await speed(), 0); await p.click('[data-qa="floors-close"]'); await frames(p); await restored(4, 'closing the chooser restores 4x');
     await p.evaluate(() => __game.ui.select(12)); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p); await p.click('#speed [data-v="0"]'); await frames(p);
     await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0, 'Pause tapped inside a panel survives Back to map');
-    await p.click('#speed [data-v="1"]'); await frames(p); await p.evaluate(() => { const g = __game; g.ui.select(null); g.sim.convo({ key: 'qa', who: 'Tenant', text: 'Hello', sev: 'attention', actions: [{ label: 'Thanks' }] }); g.ui.renderFeed(true); }); await frames(p); assert.equal(await speed(), 0, 'a request pauses');
+    await p.click('#speed [data-v="1"]'); await frames(p); await restored(1, '1x tapped after the panel closed'); await p.evaluate(() => { const g = __game; g.ui.select(null); g.sim.convo({ key: 'qa', who: 'Tenant', text: 'Hello', sev: 'attention', actions: [{ label: 'Thanks' }] }); g.ui.renderFeed(true); }); await frames(p); assert.equal(await speed(), 0, 'a request pauses');
     await p.click('[data-a="requests"]'); await frames(p); await p.click('.modal [data-a="convo"]'); await frames(p); await p.evaluate(() => __game.ui.closeModal()); await frames(p); await restored(1, 'answering restores 1x');
   });
 
