@@ -1,0 +1,742 @@
+[
+ {
+  "w": 393,
+  "h": 659,
+  "phase": "place",
+  "initial": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "9 × 9 · 2 floors × Entrance",
+    "Drive aisle × Elevator",
+    "Drive aisle × Entrance",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Place here × Loading",
+    "Entrance × Loading"
+   ],
+   "underUi": [
+    "9 × 9 · 2 floors under guide",
+    "Drive aisle under guide",
+    "Elevator under guide",
+    "Place here under guide",
+    "Entrance under guide",
+    "Loading under guide"
+   ],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 116.2585678100586,
+    "t": 233.52662658691406,
+    "r": 250.59368133544922,
+    "b": 322.1051330566406
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.48,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "9 × 9 · 2 floors × Entrance",
+    "Drive aisle × Elevator",
+    "Drive aisle × Entrance",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Place here × Loading",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 49.103599548339844,
+    "t": 195.40260314941406,
+    "r": 183.43871307373047,
+    "b": 283.9811096191406
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.48,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "Drive aisle × Elevator",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": -24.5945987701416,
+    "t": 128.35389709472656,
+    "r": 176.90805625915527,
+    "b": 261.2216491699219
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.721,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 393,
+  "h": 659,
+  "phase": "wait",
+  "initial": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "9 × 9 · 2 floors × Entrance",
+    "Drive aisle × Elevator",
+    "Drive aisle × Entrance",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Place here × Loading",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 304.7143859863281,
+    "t": 426.7867736816406,
+    "r": 439.04949951171875,
+    "b": 515.3652954101562
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.48,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "9 × 9 · 2 floors × Entrance",
+    "Drive aisle × Elevator",
+    "Drive aisle × Entrance",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Place here × Loading",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 234.71438598632812,
+    "t": 386.7867736816406,
+    "r": 369.04949951171875,
+    "b": 475.3652648925781
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.48,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "Drive aisle × Elevator",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 253.8215789794922,
+    "t": 415.4301452636719,
+    "r": 455.3242492675781,
+    "b": 548.2979125976562
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.721,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 430,
+  "h": 932,
+  "phase": "place",
+  "initial": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "Drive aisle × Elevator",
+    "Drive aisle × Entrance",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Place here × Loading",
+    "Entrance × Loading"
+   ],
+   "underUi": [
+    "9 × 9 · 2 floors under guide",
+    "Drive aisle under guide",
+    "Elevator under guide",
+    "Place here under guide",
+    "Entrance under guide",
+    "Loading under guide"
+   ],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 129.6314239501953,
+    "t": 363.7480773925781,
+    "r": 277.1506042480469,
+    "b": 461.01995849609375
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.373,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "Drive aisle × Elevator",
+    "Drive aisle × Entrance",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Place here × Loading",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 59.63142776489258,
+    "t": 323.7480773925781,
+    "r": 207.1506233215332,
+    "b": 421.01995849609375
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.373,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "Drive aisle × Elevator",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": -18.0528564453125,
+    "t": 252.6221160888672,
+    "r": 203.22592163085938,
+    "b": 398.52996826171875
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.56,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 430,
+  "h": 932,
+  "phase": "wait",
+  "initial": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "Drive aisle × Elevator",
+    "Drive aisle × Entrance",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Place here × Loading",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 333.83489990234375,
+    "t": 568.1239013671875,
+    "r": 481.3540954589844,
+    "b": 665.3958129882812
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.373,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "9 × 9 · 2 floors × Place here",
+    "Drive aisle × Elevator",
+    "Drive aisle × Entrance",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Place here × Loading",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 263.83489990234375,
+    "t": 528.1239013671875,
+    "r": 411.3540954589844,
+    "b": 625.3958129882812
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.373,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "Drive aisle × Elevator",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Elevator × Loading",
+    "Place here × Entrance",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 288.2523498535156,
+    "t": 559.1859130859375,
+    "r": 509.5311279296875,
+    "b": 705.09375
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.56,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "phase": "place",
+  "initial": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "Drive aisle × Elevator",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Place here × Entrance",
+    "Entrance × Loading"
+   ],
+   "underUi": [
+    "Drive aisle under guide",
+    "Elevator under guide",
+    "Place here under guide",
+    "Entrance under guide"
+   ],
+   "placeHere": true,
+   "safe": {
+    "top": 456,
+    "bottom": 592,
+    "left": 8,
+    "right": 1272
+   },
+   "shell": {
+    "l": 889.46728515625,
+    "t": 383.499267578125,
+    "r": 1210.2109375,
+    "b": 594.9927368164062
+   },
+   "shellInsideSafe": false,
+   "zoom": 1.05,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "Drive aisle × Elevator",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Place here × Entrance",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 456,
+    "bottom": 592,
+    "left": 8,
+    "right": 1272
+   },
+   "shell": {
+    "l": 819.46728515625,
+    "t": 343.499267578125,
+    "r": 1140.2109375,
+    "b": 554.9927368164062
+   },
+   "shellInsideSafe": false,
+   "zoom": 1.05,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "Drive aisle × Loading"
+   ],
+   "underUi": [
+    "Elevator under guide",
+    "Place here under guide"
+   ],
+   "placeHere": true,
+   "safe": {
+    "top": 456,
+    "bottom": 592,
+    "left": 8,
+    "right": 1272
+   },
+   "shell": {
+    "l": 909.200927734375,
+    "t": 335.2489013671875,
+    "r": 1390.31640625,
+    "b": 652.4890747070312
+   },
+   "shellInsideSafe": false,
+   "zoom": 1.575,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "phase": "wait",
+  "initial": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "Drive aisle × Elevator",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Place here × Entrance",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 456,
+    "bottom": 592,
+    "left": 8,
+    "right": 1272
+   },
+   "shell": {
+    "l": 889.46728515625,
+    "t": 383.499267578125,
+    "r": 1210.2109375,
+    "b": 594.9927368164062
+   },
+   "shellInsideSafe": false,
+   "zoom": 1.05,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "Drive aisle × Elevator",
+    "Drive aisle × Loading",
+    "Elevator × Entrance",
+    "Place here × Entrance",
+    "Entrance × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 456,
+    "bottom": 592,
+    "left": 8,
+    "right": 1272
+   },
+   "shell": {
+    "l": 819.46728515625,
+    "t": 343.499267578125,
+    "r": 1140.2109375,
+    "b": 554.9927368164062
+   },
+   "shellInsideSafe": false,
+   "zoom": 1.05,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "9 × 9 · 2 floors",
+    "Drive aisle",
+    "Elevator",
+    "Place here",
+    "Entrance",
+    "Loading"
+   ],
+   "overlaps": [
+    "Drive aisle × Loading"
+   ],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 456,
+    "bottom": 592,
+    "left": 8,
+    "right": 1272
+   },
+   "shell": {
+    "l": 909.200927734375,
+    "t": 335.2489013671875,
+    "r": 1390.31640625,
+    "b": 652.4890747070312
+   },
+   "shellInsideSafe": false,
+   "zoom": 1.575,
+   "speed": 0
+  },
+  "errs": []
+ }
+]

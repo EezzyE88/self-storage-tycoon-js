@@ -189,7 +189,86 @@ An independent review of `3fbea35` found three remaining gaps. They were confirm
 - **Unreadable slots:** `<key>.unreadable` copies are kept but not shown in the interface.
 - **Drop disclosure:** the prediction assumes the outgoing game is not already archived. If it is, fewer games are dropped than disclosed, never more.
 - **Simulated failures only:** storage failures were simulated in Node and in Chromium. No real Safari quota or private-mode behaviour was observed.
-- **Overlapping captions (not caused by this follow-up):** in the scenario H screenshot ([followup-elevator-wait.png](releases/candidate-22/followup/emulation/followup-elevator-wait.png), 393×659), the blueprint captions near the shaft ("Place here", "Entrance", "Loading", "Drive aisle", "Elevator") overlap one another. Review repair #3 separated the ring label from captions and removed duplicate captions. It did not separate distinct captions from each other, so this remains a label-placement issue for the Safari pass.
+- **Overlapping captions (resolved by final repair V1–V3):** in the scenario H screenshot ([followup-elevator-wait.png](releases/candidate-22/followup/emulation/followup-elevator-wait.png), 393×659), the blueprint captions near the shaft ("Place here", "Entrance", "Loading", "Drive aisle", "Elevator") overlap one another. Review repair #3 separated the ring label from captions and removed duplicate captions. It did not separate distinct captions from each other, so this remains a label-placement issue for the Safari pass.
+
+## Final bounded repair (V1–V4)
+
+Authorized after independent verification of `4690b64`. Code commit `30d8652fc7a9201ec0679211f4c8f479931973e7` (tree `2e31db782ac2c6ab51c644640e9696478f9a154d`), base `4690b64`. Presentation and validation only. Prices, construction rules, saves, pause behaviour and the six protected modules are unchanged.
+
+| # | Reproduced at `4690b64` | Cause | Repair |
+| --- | --- | --- | --- |
+| V1 | Elevator step, 393×659: **10** overlapping caption pairs. "Place here", "Entrance", "Loading", "Drive aisle", "Elevator" and the building size were stacked under the ring. 430×932: 9; 1280×720: 5. | Each caption was drawn at its own map point. Only exact duplicate names were suppressed. | **Shared layout.** `js/captions.js` lays every caption out in one pass, in priority order: target, then unfinished prerequisite, then building context, then secondary route context.<br>**Placement.** A caption takes the nearest clear spot that avoids other captions and the interface: HUD, instruction strip, panels, bottom navigation, toasts and the coach ring. Nearby secondary captions are grouped ("Entrance · Loading"). A caption moved off its spot keeps a leader line to it.<br>**Never dropped:** target and prerequisite captions. When space runs out, only context and secondary captions are left out.<br>**Every frame:** the layout is recomputed, so it holds through pan and zoom. The previous placement is preferred, so captions do not flicker. |
+| V2 | After early elevator commitment, "Place here" and the yellow elevator outline were still drawn. Captions for finished work (aisle, entrance, loading) stayed. | `currentBlueprintPlan()` read the raw lesson step, not the resolved one. | **Resolved step.** The blueprint follows the resolved step. A step waiting on, or missing, a hallway asks for no placement.<br>**Waiting view:** the building outline plus each unfinished hallway ("F1 hallway · under construction" / "F2 hallway needed").<br>**Completed work** and the existing building are no longer captioned.<br>**Unchanged:** early commitment and the completed-hallway predicate. |
+| V3 | While waiting, the 9×9 building ran off the right edge (393×659: x to 439; 430×932: x to 481). Desktop usable area measured 456–592 px of 720. | **Waiting:** the ring points at the 4x button, so no map pan ever ran.<br>**Placement:** `panClear()` centred one anchor cell and assumed a 64 px top bar; the real one ends at 107 px.<br>**Desktop:** `safeRect()` treated the right-hand view-control column as top furniture. | **`frameStep()`:** once per step, waiting states included, it pans the step's whole outline into the measured usable area. The outline is the building plus the target or the unfinished hallways. It zooms out only if the outline cannot fit, and never zooms in.<br>**Gestures:** never during a drag or pinch. A step change mid-gesture is skipped, not deferred. The player's later camera movement is never undone.<br>**"Show me where"** frames the same outline.<br>**`panClear()`** uses the measured HUD.<br>**`safeRect()`:** a tall side column narrows the width. At 1280×720 the usable top is now 66, not 456. Desktop Fit and keep-selection-visible were rechecked. |
+| V4 | F3 complaint → Cause & remedy showed "reported location unavailable" (Unit 315, F3); F1/F2 worked. | `reportedTarget()` accepted floors `[0,1]` only. | **Validation:** floors are checked against `floorCount()` and `RELEASE_FLOORS` (3).<br>**F3** reports open F3 at the reported unit and select it.<br>**Still rejected:** F4/F5 (even with five floor layers allocated), non-integer, negative or out-of-property floors, and bad coordinates.<br>**Kept:** a removed unit keeps its spot without selecting anything. A floor no building reaches any more opens from F1. |
+
+**Measurements (headless Chromium, `4690b64` → `30d8652`)**
+
+Each cell reads overlapping caption pairs / captions under the interface / "Place here" shown / outline inside the usable area. Pan and zoom columns use the renderer's own `pan()` and `zoomAt()`, the functions the drag and pinch handlers call.
+
+| Viewport, state | Initial | After pan | After 1.5× zoom |
+| --- | --- | --- | --- |
+| 393×659 placement | 10/6/yes/yes → **0/0/yes/yes** | 10/0 → **0/0** | 7/0 → **0/0** |
+| 393×659 waiting | 10/0/**yes**/**no** → **0/0/no/yes** | 10/0 → **0/0** | 7/0 → **0/0** |
+| 430×932 placement | 9/6/yes/yes → **0/0/yes/yes** | 9/0 → **0/0** | 6/0 → **0/0** |
+| 430×932 waiting | 9/0/**yes**/**no** → **0/0/no/yes** | 9/0 → **0/0** | 6/0 → **0/0** |
+| 1280×720 placement | 5/4/yes/no → **0/0/yes/yes** | 5/0 → **0/0** | 1/2 → **0/0** |
+| 1280×720 waiting | 5/0/**yes**/no → **0/0/no/yes** | 5/0 → **0/0** | 1/0 → **0/0** |
+
+After the player's own zoom, the outline can extend past the edges. That is intended: framing never overrides the player.
+
+Before and after screenshots and the raw measurement JSON are in [releases/candidate-22/final](releases/candidate-22/final/). The probe script is `visual-probe.cjs`. Screenshots were re-encoded as JPEG (quality 85, same pixel size) to keep the repository small. The JSON files hold the measurements.
+
+All evidence comes from a fresh depth-1 clone of `30d8652` containing one commit. **59/59** headless scripts; **23/23** Chromium emulation scenarios (18 existing + I×2, J, K, L) with 0 console errors and 0 unhandled rejections; the 734×343 rotate-to-portrait scenario still passes. Economics are unchanged:
+- F2 complete $17,810, structure-only $12,470; F3 complete $10,210, structure-only $4,870
+- full undo $17,810, partial refund $10,371, $396 retained, re-quote $17,414
+- 30-day cash $975,148.25 / $975,247.00 / $974,890.50 / $974,716.50
+- F3 journeys: 16 reloads, 4 outage recoveries, 36 burst callers, 0 failures; 7,200 elevator journeys
+
+The six protected modules and `savearchive.js` are byte-identical to `4690b64`.
+
+**Cost:** `updateBlueprint()` takes 0.71 ms before and 0.65 ms after, per frame while panning, in headless Chromium on a desktop CPU. iPhone timing was not measured.
+
+**Regression tests**
+- `tests/headless/tfinal_repairs.mjs` (14 checks):
+  - layout: crowding, obstacles, essential captions never dropped, stability through pan and zoom
+  - resolved-step preview on real construction ticks: waiting, the normal order, a missing hallway
+  - framing: whole outline, once per step, no snap-back, skipped mid-gesture, zoom out only; desktop and phone `safeRect`
+  - F1/F2/F3 navigation through the production feedback sheet and click handler; unsupported floors; stale targets
+- `tblueprint.mjs`: the four-rotation caption test still requires Entrance when the map is on screen. In the squeezed view it now also requires no overlaps and that only lower-priority captions are dropped.
+- Chromium scenarios:
+  - **I** (393×659 and 430×932): placement and waiting, after pan and after zoom
+  - **J** (1280×720): a real mouse drag in progress when the step changes, then no snap-back and no undoing of a later pan; desktop `safeRect`; Fit (every building inside the usable area); keep-selection-visible
+  - **K:** Operate → Feedback → the F3 report → View reported location opens F3, selects the unit and keeps Pause
+  - **L:** walkthrough below
+- **Run against `4690b64`, with the new test file and the new `captions.js` copied in:**
+  - **Fail on real behaviour:** the resolved-step preview checks (3), the desktop `safeRect` check, and all three F3 complaint checks.
+  - **Fail because the code is absent:** the framing checks (`frameStep`/`stepOutline` do not exist there). The base framing defect is shown by the measurements above.
+  - **Pass:** the four caption-layout checks unit-test the new module, so they pass. The base collision defect is shown by the measurement table (10/9/5 overlapping pairs).
+
+**Walkthrough (scenario L, 393×659)**
+- **Setup, scripted and disclosed:** Maple, tutorial off, $1M, build-up lesson state set directly, earlier construction fast-forwarded.
+- **Ordinary controls from there:**
+  1. Instruction "Elevator", with the ring "Tap here" on the target.
+  2. **Show me where** frames the building and target, with no caption collisions.
+  3. **Use suggested placement** opens the build bar with Elevator at $9,500.
+  4. **Confirm** charges $9,500 once and keeps the manual Pause.
+- **Visible result:** a confirmation toast, and the lesson card moves to "Light both hallways" with its own uncluttered target.
+
+Scenarios H and I cover early commitment → waiting (no placement cue, Pause kept, ring on 4x) → construction fast-forwarded → "Light both hallways".
+
+**Set up, not played:** lesson state, fast-forwarded construction, cleared generated requests, and the injected F3 complaint (`sim.thought()` from a visitor at an F3 unit). These are test setup, not unaided play.
+
+**Remaining defects and limitations (final repair)**
+- **Found, not fixed (pre-existing, outside this scope):**
+  - **What happens:** after Confirm the placed tool stays armed. When the next step targets a different tool, for example Light after Elevator, the ring reads "Tap here" on the new target while the build bar still shows the Elevator tool. A tap there would try to place another elevator, not a light. **Use suggested placement** switches the tool correctly.
+  - **Cause:** `resolveStep()` redirects to **Stop building** only on non-build steps.
+- **Framing scope:** the new framing applies to the build-up lesson. Other placement lessons and the core tutorial keep their single-point ring pan, which now uses the measured HUD top.
+- **Caption widths** are measured with the browser's own font metrics. Safari metrics were not observed.
+- **Gestures:** pan and zoom checks used the renderer's camera functions, plus a real mouse drag at 1280×720. No real touch pinch or double-tap was driven in emulation. The existing `tgestures`/`tmenu_touch` checks pass.
+- **Desktop side columns** are detected by shape (taller than 1.5× their width, entirely on one side).
+- **Milestone banner (pre-existing):** in the scenario K screenshot, the temporary "Grand opening · 14 new units open" banner covers the floor selector while it shows. The selected unit's sheet still reads "Floor 3".
+- **Safari:** none of this was observed in Safari/WebKit or on a physical iPhone.
 
 ## Remaining limitations
 
@@ -207,7 +286,7 @@ An independent review of `3fbea35` found three remaining gaps. They were confirm
 
 ## Verdict
 
-- **Automated gate:** PASS (follow-up `b4ebcb9`: 58/58 headless, 18/18 Chromium emulation).
+- **Automated gate:** PASS (follow-up `b4ebcb9`: 58/58 headless, 18/18 Chromium emulation; final repair `30d8652`: 59/59 headless, 23/23 Chromium emulation).
 - **Release verdict:** **HOLD**, pending a physical iPhone Safari playtest of the private preview. Nothing found in this repair blocks source review or private publication.
 
 Recommended Safari checks:

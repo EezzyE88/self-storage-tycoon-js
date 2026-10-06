@@ -1,0 +1,27 @@
+PASS suggested full layout commissions working upstairs inventory
+PASS offset building 28,4 receives working adapted blueprint
+PASS offset building 30,5 receives working adapted blueprint
+PASS offset building 29,7 receives working adapted blueprint
+PASS mirrored plot generates a valid working blueprint
+PASS save/resume recovers offset shell and preserves finances
+PASS work elsewhere, wrong floor and historic first_upper cannot graduate this building
+PASS suggested UI placement reviews money without spending or building
+PASS one-cell drag assistance snaps only near the suggested rectangle
+PASS missing power or broken customer route prevents readiness
+PASS Confirm footer and tutorial primary action are outside scroll bodies
+PASS blueprint start/end labels follow all four camera rotations
+PASS clipped, covered and disabled menu targets never get a false Tap here
+PASS smallest legal two-floor shell commissions its single-unit row
+PASS off-hall light cannot skip the F1 hallway lighting instruction
+PASS drag assistance never snaps a different build tool
+PASS suggested placement retains explicit row axis and entrance direction in review
+PASS normal construction preserves loading paint and completes the whole lesson
+PASS cancelling unfinished paving also cancels and refunds its dependent painting
+PASS late cancellation refunds only the unbuilt share for road and waiting paint
+PASS dragging away from assistance restores free row orientation
+PASS every authored construction group exposes a footprint and confirmation target
+PASS expansion guide shows four valid units with aisle-facing doors
+PASS climate suggestions commission a lit climate row without changing unrelated accounts
+PASS blocked authored row relocates to valid nearby frontage
+PASS upstairs blueprint uses the same elevation as the rendered floor
+ALL PASS: 26 blueprint/recovery checks

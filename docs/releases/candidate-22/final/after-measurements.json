@@ -1,0 +1,506 @@
+[
+ {
+  "w": 393,
+  "h": 659,
+  "phase": "place",
+  "initial": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 129.3324432373047,
+    "t": 289.78692626953125,
+    "r": 263.66754150390625,
+    "b": 378.36541748046875
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.48,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 59.33245086669922,
+    "t": 249.78692626953125,
+    "r": 193.66756439208984,
+    "b": 338.36541748046875
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.48,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": -9.251326560974121,
+    "t": 209.93038940429688,
+    "r": 192.25132846832275,
+    "b": 342.79815673828125
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.721,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 393,
+  "h": 659,
+  "phase": "wait",
+  "initial": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 129.3324432373047,
+    "t": 289.78692626953125,
+    "r": 263.66754150390625,
+    "b": 378.36541748046875
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.48,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": 59.33245086669922,
+    "t": 249.78692626953125,
+    "r": 193.66756439208984,
+    "b": 338.36541748046875
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.48,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 115,
+    "bottom": 531,
+    "left": 8,
+    "right": 385
+   },
+   "shell": {
+    "l": -9.251326560974121,
+    "t": 209.93038940429688,
+    "r": 192.25132846832275,
+    "b": 342.79815673828125
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.721,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 430,
+  "h": 932,
+  "phase": "place",
+  "initial": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 141.2404022216797,
+    "t": 423.41986083984375,
+    "r": 288.75958251953125,
+    "b": 520.6917724609375
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.373,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 71.24040985107422,
+    "t": 383.41986083984375,
+    "r": 218.75960540771484,
+    "b": 480.6917419433594
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.373,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": -0.6393877267837524,
+    "t": 342.1297912597656,
+    "r": 220.63939034938812,
+    "b": 488.0376281738281
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.56,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 430,
+  "h": 932,
+  "phase": "wait",
+  "initial": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 141.2404022216797,
+    "t": 423.41986083984375,
+    "r": 288.75958251953125,
+    "b": 520.6917724609375
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.373,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": 71.24040985107422,
+    "t": 383.41986083984375,
+    "r": 218.75960540771484,
+    "b": 480.6917419433594
+   },
+   "shellInsideSafe": true,
+   "zoom": 0.373,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 115,
+    "bottom": 804,
+    "left": 8,
+    "right": 422
+   },
+   "shell": {
+    "l": -0.6393877267837524,
+    "t": 342.1297912597656,
+    "r": 220.63939034938812,
+    "b": 488.0376281738281
+   },
+   "shellInsideSafe": false,
+   "zoom": 0.56,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "phase": "place",
+  "initial": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 66,
+    "bottom": 592,
+    "left": 8,
+    "right": 1198
+   },
+   "shell": {
+    "l": 442.628173828125,
+    "t": 255.24974060058594,
+    "r": 763.371826171875,
+    "b": 466.7431640625
+   },
+   "shellInsideSafe": true,
+   "zoom": 1.05,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 66,
+    "bottom": 592,
+    "left": 8,
+    "right": 1198
+   },
+   "shell": {
+    "l": 372.628173828125,
+    "t": 215.24974060058594,
+    "r": 693.371826171875,
+    "b": 426.7431640625
+   },
+   "shellInsideSafe": true,
+   "zoom": 1.05,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator",
+   "ring": "Tap here",
+   "captions": [
+    "Elevator",
+    "Place here"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": true,
+   "safe": {
+    "top": 66,
+    "bottom": 592,
+    "left": 8,
+    "right": 1198
+   },
+   "shell": {
+    "l": 238.94227600097656,
+    "t": 142.87460327148438,
+    "r": 720.0577545166016,
+    "b": 460.1147766113281
+   },
+   "shellInsideSafe": true,
+   "zoom": 1.575,
+   "speed": 0
+  },
+  "errs": []
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "phase": "wait",
+  "initial": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 66,
+    "bottom": 592,
+    "left": 8,
+    "right": 1198
+   },
+   "shell": {
+    "l": 442.628173828125,
+    "t": 255.24974060058594,
+    "r": 763.371826171875,
+    "b": 466.7431640625
+   },
+   "shellInsideSafe": true,
+   "zoom": 1.05,
+   "speed": 0
+  },
+  "afterPan": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 66,
+    "bottom": 592,
+    "left": 8,
+    "right": 1198
+   },
+   "shell": {
+    "l": 372.628173828125,
+    "t": 215.24974060058594,
+    "r": 693.371826171875,
+    "b": 426.7431640625
+   },
+   "shellInsideSafe": true,
+   "zoom": 1.05,
+   "speed": 0
+  },
+  "afterZoom": {
+   "tut": "Details Elevator committed: let the F1 hallway finish",
+   "ring": "Run time",
+   "captions": [
+    "F1 hallway · under construction",
+    "F2 hallway · under construction"
+   ],
+   "overlaps": [],
+   "underUi": [],
+   "placeHere": false,
+   "safe": {
+    "top": 66,
+    "bottom": 592,
+    "left": 8,
+    "right": 1198
+   },
+   "shell": {
+    "l": 238.94227600097656,
+    "t": 142.87460327148438,
+    "r": 720.0577545166016,
+    "b": 460.1147766113281
+   },
+   "shellInsideSafe": true,
+   "zoom": 1.575,
+   "speed": 0
+  },
+  "errs": []
+ }
+]
