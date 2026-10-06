@@ -6,6 +6,7 @@ import { fmtTime, dayOf } from './sim.js';
 import { PostFX, LOOK_NAMES } from './post.js';
 import { WorldFX } from './fx.js';
 import { MILESTONES } from './ui.js';
+import { bannerTop } from './bannerplace.js';
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const money = (v) => (v < 0 ? '-' : '') + '$' + Math.abs(Math.round(v)).toLocaleString();
@@ -242,25 +243,43 @@ export function installShowcase(game) {
   let banQ = [], banBusy = false;
   function celebrate(kicker, title, sub, at, tone) {
     if (at && !tone) fx.burst(at.x, at.z, at.f || 0);
-    banQ.push({ kicker, title, sub, tone }); if (banQ.length > 3) banQ.shift(); if (!banBusy) nextBanner();
+    banQ.push({ kicker, title, sub, tone, queued: performance.now() }); if (banQ.length > 3) banQ.shift(); if (!banBusy) nextBanner();
   }
   sc.celebrate = celebrate;
   sc.bannerBusy = () => banBusy || banQ.length > 0; // the UI holds lesson offers until celebrations finish
+  // A banner waits (never holding time while it waits) when something more important is up or there is no clear room
+  // for it; a banner still waiting after BANNER_MAX_WAIT is dropped, so the queue always drains and no hold is left.
+  const BANNER_MAX_WAIT = 20000;
+  const bannerBlocked = () => game.sim.s.convos.length || game.sim.s.lesson || game.sim.s.tut?.on || ui.modalOpen() || ui.tool || ui.tab;
+  const phonePortrait = () => matchMedia('(max-width: 600px) and (orientation: portrait)').matches;
+  // Phone portrait: below the measured control rows and request cards, above the panel / build bar / navigation.
+  // Elsewhere the stylesheet position is already clear of the controls. Returns '' (stylesheet), a px top, or null.
+  function bannerSpot(el) {
+    if (!phonePortrait()) return '';
+    const bottomOf = (sel) => [...document.querySelectorAll(sel)].reduce((m, e) => { const r = e.getBoundingClientRect(); return r.height ? Math.max(m, r.bottom) : m; }, 0);
+    const topOf = (sel) => [...document.querySelectorAll(sel)].reduce((m, e) => { const r = e.getBoundingClientRect(); return r.height ? Math.min(m, r.top) : m; }, innerHeight);
+    const sheetOpen = document.body.classList.contains('sheet-open'), card = el.firstElementChild;
+    const top = bannerTop({ controlsBottom: bottomOf('.hud, #speed, .viewctl'), convoBottom: bottomOf('#feed .convo'), limit: topOf('#sheet > *, #abar > *, #tabs'),
+      height: card ? card.getBoundingClientRect().height : 0, H: innerHeight, prefer: sheetOpen ? null : 0.36 });
+    return top == null ? null : top + 'px';
+  }
   function nextBanner() {
-    if(banQ.length && (game.sim.s.convos.length || game.sim.s.lesson || game.sim.s.tut?.on || ui.modalOpen() || ui.tool || ui.tab)) { banBusy=true; setTimeout(nextBanner,400); return; }
-    const b = banQ.shift(); const el = $('celebrate'); if (!b) { banBusy = false; game.ui.resumePopup('celebrate'); return; } banBusy = true;
+    while (banQ.length && performance.now() - banQ[0].queued > BANNER_MAX_WAIT) banQ.shift(); // stale: dismissed unseen
+    const el = $('celebrate');
+    if (!banQ.length) { banBusy = false; game.ui.resumePopup('celebrate'); return; }
+    const b = banQ[0];
+    el.classList.remove('on'); el.classList.toggle('warn', b.tone === 'warn');
+    el.innerHTML = `<div class="cb"><span class="cb-k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.6L21 9l-5.2 4.2L17.6 20 12 16.2 6.4 20l1.8-6.8L3 9l6.6-.4z"/></svg>${esc(b.kicker)}</span><b>${esc(b.title)}</b>${b.sub ? `<small>${esc(b.sub)}</small>` : ''}</div>`;
+    const spot = bannerBlocked() ? null : bannerSpot(el);
+    if (spot === null) { banBusy = true; game.ui.resumePopup('celebrate'); clearTimeout(el._wait); el._wait = setTimeout(nextBanner, 400); return; } // queued, not holding time
+    banQ.shift(); banBusy = true;
     game.ui.pauseForPopup('celebrate');
     game.audio.play(b.tone ? 'attention' : 'flourish');
-    el.innerHTML = `<div class="cb"><span class="cb-k"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.6L21 9l-5.2 4.2L17.6 20 12 16.2 6.4 20l1.8-6.8L3 9l6.6-.4z"/></svg>${esc(b.kicker)}</span><b>${esc(b.title)}</b>${b.sub ? `<small>${esc(b.sub)}</small>` : ''}</div>`;
-    // phone portrait: never cover a request card - sit just below the card stack (pre-merge fix 3)
-    const place = () => { el.style.visibility = game.sim.s.convos.length || game.sim.s.lesson || game.sim.s.tut?.on || ui.modalOpen() ? 'hidden' : ''; let top = '';
-      if (matchMedia('(max-width: 600px) and (orientation: portrait)').matches && !document.body.classList.contains('sheet-open')) {
-        const bottom = [...document.querySelectorAll('#feed .convo')].reduce((a, c) => Math.max(a, c.getBoundingClientRect().bottom), 0);
-        if (bottom > 0) top = Math.round(Math.max(bottom + 10, innerHeight * 0.36)) + 'px';
-      }
-      if (el.style.top !== top) el.style.top = top; };
-    place(); clearInterval(el._place); el._place = setInterval(place, 200); // cards can arrive a frame after the event
-    el.classList.toggle('warn', b.tone === 'warn'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    // While showing: follow the controls, cards and panel as they change; if the room disappears, hide rather than cover.
+    const place = () => { const sp = bannerSpot(el); el.style.visibility = game.sim.s.convos.length || game.sim.s.lesson || game.sim.s.tut?.on || ui.modalOpen() || sp === null ? 'hidden' : '';
+      const top = sp || ''; if (el.style.top !== top) el.style.top = top; };
+    el.style.top = spot; place(); clearInterval(el._place); el._place = setInterval(place, 200); // cards can arrive a frame after the event
+    void el.offsetWidth; el.classList.add('on');
     setTimeout(() => { el.classList.remove('on'); setTimeout(() => { clearInterval(el._place); nextBanner(); }, 450); }, 3600);
   }
   function officeAt() { const o = Object.values(game.sim.s.objects).find((q) => q.type === 'office'); return o ? { x: o.x + (o.w || 1) / 2, z: o.y + (o.h || 1) / 2, f: 0 } : { x: rend.center.x, z: rend.center.z, f: 0 }; }

@@ -121,6 +121,9 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.click('#speed [data-v="4"]'); await frames(p); await p.click('[data-a="floorChoose"]'); await frames(p); assert.equal(await speed(), 0); await p.click('[data-qa="floors-close"]'); await frames(p); await restored(4, 'closing the chooser restores 4x');
     await p.evaluate(() => __game.ui.select(12)); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p); await p.click('#speed [data-v="0"]'); await frames(p);
     await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0, 'Pause tapped inside a panel survives Back to map');
+    // Disclosed setup: a customer request that arrived on its own while 4x ran would make this tap inert by design
+    // (run speeds do nothing during a hold), so such requests are cleared first; the injected request below is the test.
+    await p.evaluate(() => { __game.sim.s.convos.length = 0; __game.ui.renderFeed(true); }); await frames(p);
     await p.click('#speed [data-v="1"]'); await frames(p); await restored(1, '1x tapped after the panel closed'); await p.evaluate(() => { const g = __game; g.ui.select(null); g.sim.convo({ key: 'qa', who: 'Tenant', text: 'Hello', sev: 'attention', actions: [{ label: 'Thanks' }] }); g.ui.renderFeed(true); }); await frames(p); assert.equal(await speed(), 0, 'a request pauses');
     await p.click('[data-a="requests"]'); await frames(p); await p.click('.modal [data-a="convo"]'); await frames(p); await p.evaluate(() => __game.ui.closeModal()); await frames(p); await restored(1, 'answering restores 1x');
   });
@@ -299,7 +302,102 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.click('#abar [data-a="confirm"]'); await frames(p);
     const r = await p.evaluate((c) => ({ spent: c - __game.sim.s.cash, elevators: __game.sim.objs('elevator').length, speed: __game.sim.s.speed }), cash); assert.equal(r.spent, 9500, 'charged once'); assert.equal(r.speed, 0, 'manual Pause kept through Confirm');
     const toastTexts = await p.evaluate(() => __game.ui.toasts.map((t) => t.text).join(' | ') + ' || ' + document.querySelector('#feed').innerText); assert.ok(r.elevators >= 1, 'elevator ordered'); assert.match(toastTexts, /Elevator/, 'visible confirmation: ' + toastTexts); await frames(p); await p.evaluate(() => { if (__game.ui.tutMin === false) document.querySelector('#tut [data-a="tutMin"]')?.click(); }); await frames(p);
-    assert.match(await tutText(p), /Light both hallways/, 'visible result: the lesson moves on'); const after = await p.evaluate(MEASURE); assert.deepEqual([after.overlaps, after.underUi], [[], []]); await shot(p, 'final-walkthrough-result');
+    // Visible result: the lesson moves on to the lights step. Elevator is still armed (repeat placement is kept), so the
+    // card now asks to switch to Light rather than inviting a hold that would quote another Elevator.
+    assert.equal(await p.evaluate(() => { const st = __game.ui.currentBlueprintPlan(); return st && st.tool; }), 'light', 'visible result: the lesson moves on to the lights');
+    assert.match(await tutText(p), /Switch to Light/, 'and asks for the Light tool, since Elevator is still armed'); const after = await p.evaluate(MEASURE); assert.deepEqual([after.overlaps, after.underUi], [[], []]); await shot(p, 'final-walkthrough-result');
+  });
+  // ---- Tool/floor guidance after Confirm and banner placement (M-O). Disclosed setup per scenario.
+  // A real touch hold through Chrome's touch input (pointerType 'touch'), held past the 240 ms build-hold threshold.
+  // Held well past 240 ms: software-GL frames at 2x DPR can delay the page's hold timer behind the release.
+  const touchHold = async (p, x, y, ms = 900) => { const c = await p.context().newCDPSession(p); const pt = [{ x, y, id: 1 }];
+    await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt }); await p.waitForTimeout(ms); await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await c.detach(); };
+  // A real short finger tap at an element's centre (Chrome touch input), for buttons.
+  const tapEl = async (p, sel) => { const loc = typeof sel === 'string' ? p.locator(/:visible/.test(sel) ? sel : sel + ':visible').first() : sel; await loc.waitFor({ state: 'visible', timeout: 10000 }).catch(() => { throw new Error('tap target not visible: ' + sel); }); let r = null; for (let i = 0; i < 10 && !r; i++) { r = await loc.boundingBox().catch(() => null); if (!r) await p.waitForTimeout(60); } if (!r) throw new Error('tap target has no box: ' + sel); // panels re-render every 400 ms
+    const c = await p.context().newCDPSession(p); const pt = [{ x: r.x + r.width / 2, y: r.y + r.height / 2, id: 2 }]; await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt }); await p.waitForTimeout(60); await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await c.detach(); await frames(p); };
+  // Disclosed setup step: let celebrations queued by fast-forwarded construction finish and dismiss lesson offers (as P does).
+  const quiet = async (p) => { await p.evaluate(() => { __game.sim.s.lessonOffer = null; }); await p.waitForFunction(() => !__game.showcase.bannerBusy(), null, { timeout: 30000 }); await p.evaluate(() => { __game.sim.s.lessonOffer = null; __game.ui.renderTut(true); }); await frames(p); };
+  const targetPoint = (p) => p.evaluate(() => { const g = __game, st = g.ui.currentBlueprintPlan(); const q = g.rend.project(st.a.x + 0.5, st.a.y + 0.5, (st.f || 0) * 1.9); return { x: Math.round(q.x), y: Math.round(q.y), f: st.f || 0, tool: st.tool }; });
+  const ringOn = (p, sel) => p.evaluate((sel) => { const g = document.querySelector('#guide'), e = document.querySelector(sel); if (!g || g.hidden || !e) return false; const a = g.getBoundingClientRect(), b = e.getBoundingClientRect(); return a.left <= b.left + 2 && a.right >= b.right - 2 && a.top <= b.top + 2 && a.bottom >= b.bottom - 2; }, sel);
+  const mapRing = (p) => p.evaluate(() => { const g = document.querySelector('#guide'); return !!g && !g.hidden && g.classList.contains('map'); });
+  const caps = (p) => p.evaluate(() => [...document.querySelectorAll('#blueprint text')].map((t) => t.textContent));
+  const barText = (p) => p.evaluate(() => document.querySelector('#abar').innerText.replace(/\s+/g, ' ').trim());
+  const expandCard = async (p) => { if (!(await p.locator('#tut [data-a="suggestPlacement"]:visible').count())) await tapEl(p, '#tut [data-a="tutMin"]'); };
+  // Lesson offers hold time by design until answered: answer one with its real "Later" button when it appears.
+  const answerOffer = async (p) => { if (await p.locator('[data-a="lessonLater"]:visible').count()) await tapEl(p, '[data-a="lessonLater"]:visible'); };
+  for (const [w, h] of [[393, 659], [430, 932]]) await scenario(`M. ${w}x${h} touch: Elevator Confirm -> Light F1 -> Light F2 follows the real next target; never a wrong-tool or wrong-floor map cue`, w, h, async (p) => {
+    // Setup (scripted): lesson at the elevator step as in I. From here: real taps, real touch holds and a real Space key.
+    await plainGame(p); await upLessonAt(p, 'place'); await quiet(p); await tapEl(p, '#speed [data-v="2"]'); assert.equal(await p.evaluate(() => __game.sim.s.speed), 2, 'running at 2x before the walkthrough');
+    await expandCard(p); await tapEl(p, '#tut [data-a="suggestPlacement"]:visible'); assert.equal(await p.evaluate(() => __game.sim.s.speed), 0, 'review holds time');
+    await p.keyboard.press('Space'); await frames(p); await tapEl(p, '#abar [data-a="confirm"]');
+    assert.equal(await p.evaluate(() => __game.sim.s.speed), 0, 'Space during the hold recorded Pause, kept through Confirm'); await tapEl(p, '#speed [data-v="2"]');
+    // After Confirm: Elevator armed, step needs Light.
+    assert.match(await tutText(p), /Switch to Light/); assert.ok(await ringOn(p, '#tut [data-a="suggestPlacement"]'), 'ring on the visible one-tap fix'); assert.equal(await mapRing(p), false, 'no map ring');
+    let c = await caps(p); assert.ok(!c.includes('Place here') && c.includes('Light goes here · F1'), 'described target, no imperative cue: ' + c); assert.match(await barText(p), /Hold places another Elevator · lesson needs Light on F1/);
+    await shot(p, `guide-switch-tool-${w}x${h}`);
+    // A player who holds at the outlined spot anyway gets what the bar said: an Elevator quote (ordinary building kept).
+    let t = await targetPoint(p); await touchHold(p, t.x, t.y); await frames(p); const hit0 = await p.evaluate(({ x, y }) => { const e = document.elementFromPoint(x, y); return e && (e.id || e.className || e.tagName); }, t);
+    assert.equal(await p.evaluate(() => __game.ui.plan && __game.ui.plan.args.tool), 'elevator', 'hold at the outlined Light spot with Elevator armed quotes an Elevator; point ' + JSON.stringify(t) + ' hits ' + hit0);
+    // The guided action: Use suggested placement arms Light on F1; Confirm.
+    await expandCard(p); await tapEl(p, '#tut [data-a="suggestPlacement"]:visible');
+    assert.deepEqual(await p.evaluate(() => [__game.ui.tool, __game.ui.plan.args.tool, __game.ui.plan.args.f, __game.ui.plan.status]), ['light', 'light', 0, 'valid'], 'Use suggested placement arms Light on F1');
+    await tapEl(p, '#abar [data-a="confirm"]'); assert.equal(await p.evaluate(() => __game.sim.s.speed), 2, 'prior 2x restored after the review');
+    // Second light goes on F2: same tool, wrong floor.
+    assert.match(await tutText(p), /Switch to F2 for this Light/); assert.equal(await mapRing(p), false); assert.ok(await ringOn(p, '#tut [data-a="suggestPlacement"]'), 'ring on the one-tap fix'); c = await caps(p); assert.ok(!c.includes('Place here') && c.includes('Light goes here · F2'), String(c));
+    assert.match(await barText(p), /lesson needs Light on F2/); t = await targetPoint(p); assert.equal(t.f, 1); await shot(p, `guide-switch-floor-${w}x${h}`);
+    await touchHold(p, t.x, t.y); await frames(p); const fq = await p.evaluate(() => (__game.ui.plan ? __game.ui.plan.args.f : null)); assert.ok(fq === null || fq === 0, 'a hold while viewing F1 never quotes the F2 Light (got F' + (fq + 1) + ') - which is why there is no map cue');
+    await expandCard(p); await tapEl(p, '#tut [data-a="suggestPlacement"]:visible');
+    assert.deepEqual(await p.evaluate(() => [__game.rend.view, __game.ui.plan.args.f, __game.ui.plan.status]), [1, 1, 'valid'], 'one tap: F2');
+    // Tool and floor now match: the actionable cue returns and a real hold at the target quotes the right Light (repeat placement).
+    await p.evaluate(() => { __game.ui.plan = null; __game.ui.planArgs = null; __game.ui.renderActionBar(); }); await frames(p); // test step: discard the suggested review so the hold below is the player's own (no production control does only this)
+    c = await caps(p); assert.ok(c.includes('Place here'), 'matching tool+floor: cue back'); t = await targetPoint(p); await touchHold(p, t.x, t.y); await frames(p);
+    const own = await p.evaluate(() => (__game.ui.plan ? [__game.ui.plan.args.tool, __game.ui.plan.args.f, __game.ui.plan.status, __game.ui.plan.args.a.x, __game.ui.plan.args.a.y] : null)); const tgt = await p.evaluate(() => __game.ui.currentBlueprintPlan().a);
+    assert.deepEqual(own && own.slice(0, 3), ['light', 1, 'valid'], 'own hold at the F2 target: ' + JSON.stringify({ own, tgt, t })); await tapEl(p, '#abar [data-a="confirm"]');
+    assert.match(await tutText(p), /F2 units|Switch to/); assert.equal(await p.evaluate(() => __game.sim.objs('light').filter((o) => o.f === 1).length > 0), true, 'F2 light ordered');
+    assert.equal(await p.evaluate(() => __game.sim.s.speed), 2, 'prior 2x after the last Confirm');
+  });
+  // Banner geometry vs the measured phone controls and the open sheet.
+  const bannerGeo = (p) => p.waitForFunction(() => { const R = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }; const hit = (a, c) => a.l < c.r && c.l < a.r && a.t < c.b && c.t < a.b;
+    const el = document.querySelector('#celebrate.on'); if (!el || +getComputedStyle(el).opacity < 0.95) return false; const B = R(el.querySelector('.cb'));
+    const covers = ['.hud > *', '#speed', '.viewctl', '#sheet > *', '#abar > *', '#tabs'].flatMap((s) => [...document.querySelectorAll(s)].map((e) => ({ n: s, ...R(e) }))).filter((o) => o.r > o.l && hit(B, o)).map((o) => o.n);
+    return { banner: B, covers: [...new Set(covers)], hidden: el.style.visibility === 'hidden', held: [...(__game.ui.popupBlocks || [])] }; }, null, { timeout: 12000, polling: 100 }).then((h) => h.jsonValue());
+  for (const [w, h] of [[393, 659], [430, 932]]) await scenario(`N. ${w}x${h} real Commission -> Grand opening sits below the speed/floor rows and clear of the open sheet; prior speed restored`, w, h, async (p) => {
+    // Setup (scripted): F2 package ordered and construction fast-forwarded; ready unit selected. Ordinary control: the Commission button.
+    await plainGame(p); await p.evaluate(() => { const g = __game, sim = g.sim, R = sim.verticalPlan(12); sim.dispatch({ type: 'verticalUpgrade', ...R }); const o = sim.s.orders.at(-1); for (let i = 0; i < 60000 && o.st === 'construction'; i++) { sim.step(); if (sim.events.length > 50) g.drain(); } g.drain(); sim.s.convos.length = 0; g.ui.renderFeed(true); }); await quiet(p); await p.evaluate(() => { const sim = __game.sim; __game.ui.select(sim.objs('unit').find((u) => u.f === 1 && u.cstate === 'ready').id); }); await frames(p);
+    await tapEl(p, '#speed [data-v="2"]'); const btn = p.locator('[data-a="cmd"]', { hasText: /Commission whole order|Commission F2 order/ }).first(); await tapEl(p, btn);
+    const g = await bannerGeo(p); assert.deepEqual(g.covers, [], 'banner covers nothing: ' + JSON.stringify(g)); assert.equal(g.hidden, false); assert.ok(g.held.includes('celebrate'), 'time held while it shows');
+    const ctl = await p.evaluate(() => Math.max(document.querySelector('#speed').getBoundingClientRect().bottom, document.querySelector('.viewctl').getBoundingClientRect().bottom)); assert.ok(g.banner.t >= ctl + 6, 'below the controls');
+    assert.equal(await p.evaluate(() => { const b = document.querySelector('#floors [data-a="view"][data-v="0"]').getBoundingClientRect(); return document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2).closest('#floors') !== null; }), true, 'F1 control readable and reachable');
+    await shot(p, `banner-grand-opening-${w}x${h}`);
+    await p.waitForFunction(() => !__game.showcase.bannerBusy(), null, { timeout: 15000 }); await frames(p); await answerOffer(p);
+    assert.deepEqual(await p.evaluate(() => [__game.sim.s.speed, [...(__game.ui.popupBlocks || [])]]), [2, []], 'prior 2x restored after the banner, no hold left');
+  });
+  await scenario('O. banner waits without holding time, then shows; a banner waiting too long is dropped with no stale hold', 393, 659, async (p) => {
+    // Setup (scripted): banners injected with showcase.celebrate(), the call production events use. Ordinary controls: tab, Close, Details, Back to map.
+    await plainGame(p); await quiet(p); await tapEl(p, '#speed [data-v="2"]');
+    await tapEl(p, '#tabs [data-v="operate"]'); const held = () => p.evaluate(() => ({ speed: __game.sim.s.speed, blocks: [...(__game.ui.popupBlocks || [])], busy: __game.showcase.bannerBusy(), on: !!document.querySelector('#celebrate.on') }));
+    const base = (await held()).speed; await p.evaluate(() => __game.showcase.celebrate('Milestone', 'Queued while a panel is open', '', null)); await p.waitForTimeout(1500);
+    let st = await held(); assert.equal(st.on, false, 'queued not shown ' + JSON.stringify(st)); assert.ok(st.busy, 'queued'); assert.ok(!st.blocks.includes('celebrate'), 'queued banner holds no time'); assert.equal(st.speed, base);
+    await tapEl(p, '.sheet [data-a="close"]'); const g = await bannerGeo(p); assert.deepEqual(g.covers, []); await p.waitForFunction(() => !__game.showcase.bannerBusy(), null, { timeout: 15000 }); await frames(p); assert.deepEqual(await p.evaluate(() => [__game.sim.s.speed, [...(__game.ui.popupBlocks || [])]]), [2, []], 'shown, then prior speed restored');
+    // Waiting too long: a panel stays open past the limit; the banner is dropped unseen, the queue drains, no hold remains.
+    await p.evaluate(() => __game.ui.select(null)); await tapEl(p, '#tabs [data-v="operate"]'); await p.evaluate(() => __game.showcase.celebrate('Milestone', 'Never shown', '', null)); await p.waitForTimeout(21500);
+    await tapEl(p, '.sheet [data-a="close"]'); await p.waitForTimeout(900); st = await held(); assert.equal(st.busy, false, 'queue drained ' + JSON.stringify(st)); assert.equal(st.on, false, 'stale banner not shown'); assert.ok(!st.blocks.includes('celebrate'), 'no stale banner hold');
+    // 21 s of 2x play may raise a customer request or a lesson offer; those hold time by design, and only while visible.
+    const vis = await p.evaluate(() => ({ convo: [...document.querySelectorAll('#feed .convo')].some((e) => e.getBoundingClientRect().height > 0), offer: [...document.querySelectorAll('#tut .lesson-chip')].some((e) => e.getBoundingClientRect().height > 0) }));
+    for (const b of st.blocks) assert.ok((b === 'convo' && vis.convo) || (b === 'lessonOffer' && vis.offer), 'every remaining hold is visible and answerable: ' + b + ' ' + JSON.stringify(vis));
+    if (!st.blocks.length) assert.equal(st.speed, 2);
+  });
+  await scenario('O2. 320x480 portrait: no room above an expanded panel, so the banner waits (no hold); Back to map gives it room and it shows', 320, 480, async (p) => {
+    // Setup (scripted): unit selected; banner injected with showcase.celebrate(). Ordinary controls: Details, Back to map.
+    await plainGame(p); await quiet(p); await tapEl(p, '#speed [data-v="2"]'); await p.evaluate(() => __game.ui.select(__game.sim.objs('unit')[0].id)); await frames(p);
+    await tapEl(p, '[data-a="sheetGrow"]'); const room = await p.evaluate(() => { const s = document.querySelector('#sheet > *').getBoundingClientRect().top, c = Math.max(document.querySelector('#speed').getBoundingClientRect().bottom, document.querySelector('.viewctl').getBoundingClientRect().bottom); return s - c; });
+    assert.ok(room < 60, 'expanded panel leaves ' + room + ' px');
+    const before = await p.evaluate(() => [...(__game.ui.popupBlocks || [])]); await p.evaluate(() => __game.showcase.celebrate('Milestone', 'Waiting for room', '', null)); await p.waitForTimeout(1500);
+    const st = await p.evaluate(() => ({ on: !!document.querySelector('#celebrate.on'), busy: __game.showcase.bannerBusy(), blocks: [...(__game.ui.popupBlocks || [])] }));
+    assert.equal(st.on, false, 'no room: waits instead of covering'); assert.ok(st.busy); assert.ok(!st.blocks.includes('celebrate'), 'waiting banner adds no hold'); assert.deepEqual(st.blocks, before, 'holds unchanged by the waiting banner');
+    await tapEl(p, '[data-a="sheetGrow"]'); const g = await bannerGeo(p); assert.deepEqual(g.covers, [], 'shows once there is room, covering nothing'); await shot(p, 'banner-recovered-320x480');
+    await p.waitForFunction(() => !__game.showcase.bannerBusy(), null, { timeout: 15000 }); await frames(p); await answerOffer(p);
+    assert.ok(!(await p.evaluate(() => [...(__game.ui.popupBlocks || [])])).includes('celebrate'), 'no stale banner hold');
   });
   const pass = results.filter((r) => r.pass).length;
   fs.writeFileSync(path.join(OUT, 'c22-emulation-results.json'), JSON.stringify({ environment: 'headless Chromium (Playwright) device emulation; not a physical iPhone', results, consoleErrors: errors }, null, 2));

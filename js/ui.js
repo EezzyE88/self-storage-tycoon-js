@@ -494,7 +494,8 @@ export class UI {
       box.innerHTML = `<div class="actionbar placing" aria-live="polite"><b>${R?.count || 0}${T.unit ? ' units' : ' cells'} · ${money(R?.cost || 0)}</b><span>${R?.status === 'valid' ? 'Valid' : R?.status === 'incomplete' ? 'Needs setup' : 'Invalid'} · Lift finger to review</span></div>`;
       return;
     }
-    if(!R) { box.innerHTML=`<div class="actionbar idle-strip"><b>${T.name}</b><span>Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
+    const mm=curBeat(this.sim)?this.placementMismatch(curBeat(this.sim).steps[stepState(this.sim,this).cur]):null;
+    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name}${this.toolFloor()?` on F${this.toolFloor()+1}`:''} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
@@ -1289,6 +1290,15 @@ export class UI {
       const el = this.root.querySelector(sel), picker = this.root.querySelector('.sheet [data-section-picker]');
       if (picker && !(el && this.guideVisible(el))) return { ...step, redirect: 'section', t: `Choose <b>${section[2]}</b> in the section selector`, d: `The ${section[0] === 'operate' ? 'Operate' : 'Business'} panel is split into sections. Choose <b>${section[2]}</b> in the selector at the top of the panel; then ${step.t.replace(/<[^>]+>/g, '')}.`, sel: '.sheet [data-section-picker]', lbl: 'Choose ' + section[2] };
     }
+    // An armed tool that differs from the step's tool, or the right tool on the wrong floor: following the map target
+    // would quote the wrong thing, so point at the one-tap fix (it arms the right tool on the right floor).
+    const mm = this.placementMismatch(step);
+    if (mm) { const W = TOOLS[mm.want.tool].name, A = TOOLS[mm.armed].name, F = (mm.want.f || 0) + 1;
+      return { ...step, redirect: 'switch', mismatch: mm, // blueprint kept: the card still offers Use suggested placement
+        t: mm.kind === 'tool' ? `Switch to ${W}` : `Switch to F${F} for this ${W}`,
+        d: mm.kind === 'tool' ? `The <b>${A}</b> tool is still armed from your last placement, so holding on the map would place another ${A}. Tap <b>Use suggested placement</b> to switch to the ${W} on F${F}, or tap <b>×</b> on the build bar to put the ${A} away.`
+          : `The ${W} tool is armed on F${mm.floor + 1}, but this ${W} goes on F${F}. Tap <b>Use suggested placement</b> to switch to F${F}, or use <b>Floors</b> to change floor.`,
+        sel: '#tut [data-a="suggestPlacement"]', lbl: mm.kind === 'tool' ? `Switch to ${W}` : `Switch to F${F}`, alt: '#abar [data-a="cancelTool"]', altLbl: 'Stop building' }; }
     const buildStep = step.placement || step.blueprint || /#abar|data-a="tool"|^\.cats|data-v="build"|^#speed /.test(sel);
     if (this.tool && !buildStep && TOOLS[this.tool]) return { ...step, redirect: 'tool', t: 'Put away the build tool', d: `The <b>${TOOLS[this.tool].name}</b> tool is still armed, so map taps would place it. Tap <b>×</b> on the build bar first.`, sel: '#abar [data-a="cancelTool"]', lbl: 'Stop building' };
     return step;
@@ -1304,7 +1314,10 @@ export class UI {
       // one card at a time on phones: hold a new lesson offer while banners or notifications are up, but never longer than 12 s
       if (s.lessonOffer !== this.offerSeen) { this.offerSeen = s.lessonOffer; this.offerT = performance.now(); }
       const held = this.phone() && performance.now() - (this.offerT || 0) < 12000 && ((this.g.showcase && this.g.showcase.bannerBusy && this.g.showcase.bannerBusy()) || this.toasts.length > 0);
-      const off = !this.title && !held && s.lessonOffer && lessonById(s.lessonOffer);
+      // The stylesheet hides the offer chip while a panel or build bar is open; an offer nobody can see or dismiss must not
+      // hold time, so it waits (unpaused) and appears, holding time as usual, once the panel closes.
+      const covered = !!(this.$('sheet')?.firstChild || this.$('abar')?.firstChild);
+      const off = !this.title && !held && !covered && s.lessonOffer && lessonById(s.lessonOffer);
       if (off) this.pauseForPopup('lessonOffer'); else this.resumePopup('lessonOffer');
       const key = 'offer:' + (off ? off.id : '');
       if (!force && key === this.tutKey) return; this.tutKey = key; this.rend.setFocus(null);
@@ -1328,22 +1341,37 @@ export class UI {
     const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details><span class="how-line">${x.d}</span>` : ''}</span></li>`;
     let items = '';
     b.steps.forEach((x, i) => { if (i === cur) items += li(step, i, 'cur');  });
-    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}`}</span><button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button></div>
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}`}</span><button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button></div>
       <div class="tut-body"><h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
-      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button><button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
+      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
   // The placement the current RESOLVED step asks for. A step that is waiting on, or missing, a prerequisite (e.g. an
   // elevator committed before its hallways finished) asks for no placement, so nothing invites placing again.
   currentBlueprintPlan() {
-    const step=stepState(this.sim,this).cur, raw=curBeat(this.sim)?.steps[step], st=raw&&this.resolveStep(raw);
-    if(raw&&(raw.blueprint||raw.placement)&&!(st.blueprint||st.placement)) return null;
+    const step=stepState(this.sim,this).cur, raw=curBeat(this.sim)?.steps[step];
+    if(raw?.prereq && raw.prereq(this.sim)) return null; // the same condition resolveStep() uses to drop the placement
+    return this.stepPlacement(raw);
+  }
+  // Authoritative placement (tool, floor, cells) for a lesson step. Side-effect free and independent of resolveStep(),
+  // so resolveStep() can use it. Lights take two placements: F1 first, then F2.
+  stepPlacement(st) {
+    if(!st||!(st.blueprint||st.placement)) return null;
     if(this.sim.s.lesson?.id!=='up') return authoredPlacement(this.sim,st);
-    const key=st?.blueprint;
+    const key=st.blueprint;
     const l=verticalLayout(this.sim); if(!l?.plans) return null;
     return l.plans[key==='lights' ? (this.sim.objs('light').some(o=>(o.f||0)===0&&o.x>=l.sh.x&&o.x<l.sh.x+l.sh.w&&o.y>=l.sh.y&&o.y<l.sh.y+l.sh.h&&this.sim.s.hall[0][this.sim.idx(o.x,o.y)]) ? 'light2' : 'light') : key] || null;
+  }
+  // The armed build tool cannot do what the step asks: a different tool, or the right tool on the wrong floor (a hold
+  // there would quote the wrong thing). Null when nothing is armed, outside tutorials, or tool and floor both match.
+  placementMismatch(st) {
+    if(!this.tool||!TOOLS[this.tool]||!st||(st.prereq&&st.prereq(this.sim))) return null;
+    const want=this.stepPlacement(st); if(!want||!TOOLS[want.tool]) return null;
+    if(this.tool!==want.tool) return {kind:'tool',want,armed:this.tool};
+    const f=want.f||0; if(this.toolFloor()!==f) return {kind:'floor',want,armed:this.tool,floor:this.toolFloor()};
+    return null;
   }
   suggestPlacement() {
     const a=this.currentBlueprintPlan(); if(!a) { this.toast(this.sim.s.lesson?.id==='up' ? verticalCheck(this.sim) : 'The suggested spot is blocked. Choose another valid placement or clear the taught area.'); return; }
@@ -1410,9 +1438,10 @@ export class UI {
       // Waiting on / missing a hallway: show that hallway, never a placement cue for the step being held.
       if(pre) pre.states.forEach((st,f)=>{ if(st==='built') return; const hp=l.plans[f===0?'hall':'hall2']; if(hp) polygon(hp.a,hp.b,f,'#ffb648',st==='ordered'?`F${f+1} hallway · under construction`:`F${f+1} hallway needed`,CP.prerequisite); });
     }
-    if(a) { const planned=this.sim.plan(a),items=planned.items||[], cells=items.filter(c=>c.x!=null&&c.y!=null); const start=cells.length?{x:Math.min(...cells.map(c=>c.x)),y:Math.min(...cells.map(c=>c.y))}:a.a,end=cells.length?{x:Math.max(...cells.map(c=>c.x)),y:Math.max(...cells.map(c=>c.y))}:a.b; polygon(start,end,a.f,'#ffd23a',TOOLS[a.tool].name,CP.target); for(const u of planned.units||[]) {polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,'#ffd23a','');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)shapes+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="#ffd23a" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="#ffd23a"/>`; }
+    if(a) { const planned=this.sim.plan(a),items=planned.items||[], cells=items.filter(c=>c.x!=null&&c.y!=null); const start=cells.length?{x:Math.min(...cells.map(c=>c.x)),y:Math.min(...cells.map(c=>c.y))}:a.a,end=cells.length?{x:Math.max(...cells.map(c=>c.x)),y:Math.max(...cells.map(c=>c.y))}:a.b; const mm=this.placementMismatch(curBeat(sim)?.steps[stepState(sim,this).cur]); // wrong tool/floor armed: describe, never invite
+      polygon(start,end,a.f,mm?'#9fb3c8':'#ffd23a',mm?`${TOOLS[a.tool].name} goes here · F${(a.f||0)+1}`:TOOLS[a.tool].name,CP.target); const uc=mm?'#9fb3c8':'#ffd23a'; for(const u of planned.units||[]) {polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,uc,'');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)shapes+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="${uc}" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="${uc}"/>`; }
       const single=a.a.x===a.b.x&&a.a.y===a.b.y;
-      for(const [c,label] of [[a.a,single?'Place here':'Start here'],[a.b,single?'':'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(!p.vis)continue;shapes+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/>`;if(label)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.target,dy:label==='End here'?23:-15});}}
+      if(!mm) for(const [c,label] of [[a.a,single?'Place here':'Start here'],[a.b,single?'':'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(!p.vis)continue;shapes+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/>`;if(label)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.target,dy:label==='End here'?23:-15});}}
     if(l?.plans) { // secondary route context, only while that part is still to be placed
       for(const [c,label,k] of [[l.door,'Entrance','doorWide'],[l.outer,'Loading','loading'],[l.plans.elevator.a,'Elevator','elevator']]) {if(!c||done(k)||(k==='elevator'&&(pre||a?.tool==='elevator')))continue;const p=project(c.x+.5,c.y+.5,a?.f||0);if(p.vis)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.secondary,cls:'secondary',dy:-9});} }
     const L=layoutCaptions(caps,{width:innerWidth,height:innerHeight,obstacles:this.captionObstacles(),measure:(t,c)=>this.measureCaption(t,c),prev:this.capPrev});
@@ -1473,6 +1502,8 @@ export class UI {
       if (!el && section && this.tab === section[0]) { el = q('.sheet [data-section-picker]'); if (el) return { el, lbl: 'Choose ' + section[2] }; }
       if (el) return { el, lbl: step.lbl || (sel === '#speed [data-v="4"]' ? 'Speed up' : 'Tap here') };
     }
+    // Never an actionable map ring while the armed tool/floor is wrong: the one-tap fix, else the build bar's ×, else nothing.
+    if (step.redirect === 'switch') { const alt = step.alt && q(step.alt); return alt ? { el: alt, lbl: step.altLbl } : null; }
     const oid = step.obj && step.obj(this.sim); const o = oid && this.sim.s.objects[oid];
     const passive = /^(Watch|Let|Keep)\b/.test(step.t);
     // Prefer the object's own tappable pin (a real button that selects it) when it is visible and uncovered.
