@@ -2,7 +2,7 @@
   "environment": "headless Chromium (Playwright) device emulation; not a physical iPhone",
   "results": [
     {
-      "name": "tutorial 1x is never targeted while inert; Back to map resumes 1x",
+      "name": "tutorial 1x is never targeted while inert; Back to map keeps the paused clock, then 1x works",
       "viewport": "393x659",
       "pass": true
     },
@@ -32,7 +32,12 @@
       "pass": true
     },
     {
-      "name": "landscape 734x343: rotate prompt pauses; portrait resumes at 1x",
+      "name": "landscape 734x343: rotate prompt pauses; portrait restores the previous speed",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "P. temporary pauses restore the previous speed; manual Pause survives panels, dialogs, confirmations and requests",
       "viewport": "393x659",
       "pass": true
     },

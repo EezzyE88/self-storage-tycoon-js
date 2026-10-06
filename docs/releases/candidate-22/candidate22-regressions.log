@@ -10,7 +10,7 @@ PASS 6. import confirmation names incoming, running, stored-previous and displac
 PASS 7. switching games clears transient overlay, review and panel state; only the saved view carries over
 PASS 4. tutorial step is the first incomplete step; restored lessons never skip an unmet step
 PASS 4. an already-selected tab or category completes its navigation step
-PASS 4. clock steps never target an inert 1x: an expanded panel redirects to Back to map, which resumes at 1x
+PASS 4. clock steps never target an inert 1x: an expanded panel redirects to Back to map, then 1x works
 PASS 4. an armed build tool redirects map/commission steps to putting the tool away
 PASS 4. instructions use current UI terms and navigation
 PASS 4. passive watch steps are labelled as watching, not tapping

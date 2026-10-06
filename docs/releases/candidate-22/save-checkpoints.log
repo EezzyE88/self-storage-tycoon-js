@@ -14,7 +14,7 @@ ALL PASS: 12 three-floor gameplay checks
 PASS actual SST0/SST1 export/load preserves F2/F3 objects, layers, charges and paused load
 PASS actual save/load retains construction phase, elapsed ticks and paid package
 PASS malformed height/version/layers/floors rejected atomically across portfolio
-PASS intentional 1x popup resume preserved
+PASS popup closure restores the previous speed (Pause, 1x, 4x)
 PASS three-floor cutaway/selected-floor plane under renderer stubs; Safari visual acceptance pending
 PASS reordered stages, inconsistent package totals, runaway elapsed time, unfinished completed phase and orphan passengers rejected atomically
 PASS production compressed save/reload across all five expansion stages, completion and no repeated charge

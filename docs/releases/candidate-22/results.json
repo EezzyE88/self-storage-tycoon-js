@@ -15,49 +15,49 @@
     "file": "t9b.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 1.8
+    "seconds": 1.5
   },
   {
     "file": "t9c.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 5.5
+    "seconds": 4.9
   },
   {
     "file": "t9d.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 60.5
+    "seconds": 59.9
   },
   {
     "file": "t9e.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 1
+    "seconds": 1.2
   },
   {
     "file": "t9f.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 8.6
+    "seconds": 7.7
   },
   {
     "file": "tads.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.1
+    "seconds": 0.2
   },
   {
     "file": "tart_design.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.4
+    "seconds": 0.3
   },
   {
     "file": "tbal.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 21.8
+    "seconds": 20.8
   },
   {
     "file": "tblueprint.mjs",
@@ -69,19 +69,19 @@
     "file": "tbplus_payback.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 76.6
+    "seconds": 74.2
   },
   {
     "file": "tbplus_scenarios.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 13.9
+    "seconds": 13.4
   },
   {
     "file": "tbplus.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.6
+    "seconds": 0.7
   },
   {
     "file": "tbugs.mjs",
@@ -93,13 +93,13 @@
     "file": "tcalm.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 16.7
+    "seconds": 15.9
   },
   {
     "file": "tcancellation.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.3
+    "seconds": 0.2
   },
   {
     "file": "tcandidate22.mjs",
@@ -117,7 +117,7 @@
     "file": "tclim.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 1.5
+    "seconds": 1.3
   },
   {
     "file": "tcomplaint_capacity.mjs",
@@ -147,7 +147,7 @@
     "file": "tdrama.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 28.8
+    "seconds": 28
   },
   {
     "file": "tfeedback_interactions.mjs",
@@ -171,19 +171,19 @@
     "file": "tfix.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.9
+    "seconds": 0.8
   },
   {
     "file": "tfuzz.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 50.3
+    "seconds": 47.2
   },
   {
     "file": "tgestures.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.3
+    "seconds": 0.2
   },
   {
     "file": "tlayout_hierarchy.mjs",
@@ -207,13 +207,19 @@
     "file": "tp.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 8.2
+    "seconds": 7.6
   },
   {
     "file": "tp2.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 16.4
+    "seconds": 16.1
+  },
+  {
+    "file": "tpause_policy.mjs",
+    "passed": true,
+    "exit": 0,
+    "seconds": 0.5
   },
   {
     "file": "tperformance.mjs",
@@ -225,43 +231,43 @@
     "file": "tproperty_ui.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.3
+    "seconds": 0.2
   },
   {
     "file": "tr.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.3
+    "seconds": 0.4
   },
   {
     "file": "tsandbox.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 4.3
+    "seconds": 4.5
   },
   {
     "file": "tsc.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 15.9
+    "seconds": 15.1
   },
   {
     "file": "tstafffirst.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.3
+    "seconds": 0.2
   },
   {
     "file": "tstaffing_compare.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 5.8
+    "seconds": 5.2
   },
   {
     "file": "tstatus_hierarchy.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.3
+    "seconds": 0.2
   },
   {
     "file": "tsystems.mjs",
@@ -273,13 +279,13 @@
     "file": "tthreefloor_hardening.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 12.6
+    "seconds": 11.5
   },
   {
     "file": "tthreefloor_journeys.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 7.2
+    "seconds": 6.1
   },
   {
     "file": "tthreefloor_parity.mjs",
@@ -297,7 +303,7 @@
     "file": "tthreefloor.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 0.6
+    "seconds": 0.5
   },
   {
     "file": "tv.mjs",
@@ -309,7 +315,7 @@
     "file": "tvert.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 5.2
+    "seconds": 4.2
   },
   {
     "file": "tw.mjs",
@@ -321,6 +327,6 @@
     "file": "twalk.mjs",
     "passed": true,
     "exit": 0,
-    "seconds": 1.4
+    "seconds": 1.2
   }
 ]

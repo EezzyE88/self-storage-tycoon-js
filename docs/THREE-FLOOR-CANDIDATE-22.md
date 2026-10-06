@@ -30,7 +30,7 @@ No economy, construction price, demand coefficient, wage, build duration or acce
 
 ## Test evidence
 
-All results come from a **fresh depth-1 clone** of the final code commit, `df1100d7b09bb4bc81f5d4566efda4af79539541`, which includes the addendum fixes. That clone has a single commit; `54d432f` and `da4c72a` do not exist in it. No build artifacts were present.
+All results come from a **fresh depth-1 clone** of the final code commit, `e26e3b0bd75e2804ed3cae44cf1652a806db6141`, which includes the addendum fixes and the pause policy. That clone has a single commit; `54d432f` and `da4c72a` do not exist in it. No build artifacts were present.
 
 ```sh
 node tests/run-headless.mjs /tmp/c22                      # complete headless suite
@@ -43,9 +43,9 @@ python3 -m http.server 5173 & node tests/browser-qa/c22-emulation.cjs /tmp/c22-s
 | Check | Result |
 | --- | --- |
 | Base Candidate 21 suite (full-history clone, before changes) | 51/51 |
-| Final headless suite, fresh depth-1 clone | **54/54** scripts (51 existing + 3 new). [results.json](releases/candidate-22/results.json) |
-| Candidate-22 regressions | 28/28 checks (23 original + 5 for the addendum). [log](releases/candidate-22/candidate22-regressions.log); cancellation: [log](releases/candidate-22/cancellation.log) |
-| Browser emulation (headless Chromium: 393×659 and 734×343 with touch, 1280×720 with a mouse; **not** Safari, **not** a physical iPhone) | 14/14 scenarios (7 original + 7 addendum), 0 console errors, 0 unhandled rejections. [results + screenshots](releases/candidate-22/emulation/) |
+| Final headless suite, fresh depth-1 clone | **55/55** scripts (51 existing + 4 new). [results.json](releases/candidate-22/results.json) |
+| Candidate-22 regressions | 28/28 checks (23 original + 5 for the addendum). [log](releases/candidate-22/candidate22-regressions.log); cancellation: [log](releases/candidate-22/cancellation.log); pause policy: [log](releases/candidate-22/pause-policy.log) |
+| Browser emulation (headless Chromium: 393×659 and 734×343 with touch, 1280×720 with a mouse; **not** Safari, **not** a physical iPhone) | 15/15 scenarios (7 original + 7 addendum + 1 pause policy), 0 console errors, 0 unhandled rejections. [results + screenshots](releases/candidate-22/emulation/) |
 | Stress script `tests/stress/tstress.mjs` | Completed; worst game-day 164 ms, peak save 671 KB |
 
 ### Seeded F3 journeys (`tthreefloor_journeys.mjs`, seeds 1–4)
