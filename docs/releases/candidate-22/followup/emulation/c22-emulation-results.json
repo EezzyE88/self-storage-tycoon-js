@@ -1,0 +1,96 @@
+{
+  "environment": "headless Chromium (Playwright) device emulation; not a physical iPhone",
+  "results": [
+    {
+      "name": "tutorial 1x is never targeted while inert; Back to map keeps the paused clock, then 1x works",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "selected Units category advances to the revealed Drive-Up 10x10 card; staff uses the section selector",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "Requests: security map and Cause & remedy open above, paused, and return predictably",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "new game and import isolate transient UI; import is validated and confirmed; saved floor restores",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "F2/F3 floor selection, labels, completion and save/reload agree",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "iPhone expansion review: full terms, preview on map keeps the quote, single charge",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "landscape 734x343: rotate prompt pauses; portrait restores the previous speed",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "P. temporary pauses restore the previous speed; manual Pause survives panels, dialogs, confirmations and requests",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "R. real keyboard: Space during a hold or photo Freeze records Pause; Unfreeze/Done keep it; unaffordable Confirm is disabled",
+      "viewport": "1280x720",
+      "pass": true
+    },
+    {
+      "name": "A. Tap Unit 107 ring is on the unit's pin and a real tap completes the step (393x659)",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "A. Tap Unit 107 ring is on the unit's pin and a real tap completes the step (1280x720)",
+      "viewport": "1280x720",
+      "pass": true
+    },
+    {
+      "name": "B. Owner Make-Ready stays available in Details until accepted, then shows assigned status",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "C. unavailable optional stairs cannot invalidate the $17,810 package",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "D. floor chooser shows live in-progress F2 and blocks a second order",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "E. cancel is separated, itemised, confirmable, and recorded as separate ledger entries",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "F. review closes by labelled control and Escape; keyboard cannot bypass the paused review",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "G. save recovery: failing storage during archive restore keeps every game; reload and retry",
+      "viewport": "393x659",
+      "pass": true
+    },
+    {
+      "name": "H. early elevator commitment waits for finished hallways; Pause is never resumed by the guide",
+      "viewport": "393x659",
+      "pass": true
+    }
+  ],
+  "consoleErrors": []
+}
