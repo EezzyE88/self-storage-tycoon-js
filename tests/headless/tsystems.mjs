@@ -10,7 +10,7 @@ import {verticalLayout,verticalDone} from '../../js/blueprint.js';
 import {stepState} from '../../js/tutorial.js';
 const main=readFileSync(new URL('../../js/main.js',import.meta.url),'utf8');
 const writes=[], storage={ok:true,put(code,meta){writes.push({code,meta});return true;},keep(){return true;}};
-const context=vm.createContext({Audio:class{},Sim,fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,BUILD:{name:'test'},localsave:storage,savearchive:{list:()=>[],push:()=>true,wouldDrop:()=>null},cloud:{ok:false,beacon(){}},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
+const context=vm.createContext({Audio:class{},Sim,fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,BUILD:{name:'test'},localsave:storage,savearchive:{list:()=>[],push:()=>true,wouldDrop:()=>null,transaction:fn=>!!fn()},cloud:{ok:false,beacon(){}},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
 vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initial world'))+main.slice(main.indexOf('function validState('),main.indexOf('function makeMapleSeedPrice'))+';globalThis.game=game;',context);
 const g=context.game;g.ui={title:false};g.attach=function(sim){this.sim=sim;};
 function session(){g.sim=makeMaple();g.company={props:[{name:'Original',sim:g.sim}],active:0,feed:[]};g.saving=false;writes.length=0;}

@@ -828,7 +828,7 @@ export class Renderer {
       if (u.cstate === 'built') k = u.missing && u.missing.length ? 'missing' : 'commission';
       else if (u.cstate === 'ready') k = 'commission';
       else if (u.cstate === 'operating') {
-        if (u.blocked) k = 'missing';
+        if (u.blocked) k = u.accessHold != null ? null : 'missing'; // handover hold shows its status colour, not a fault badge
         else if (u.commercial === 'unready') k = sim.s.tasks.some((t) => t.type === 'makeready' && t.obj === u.id && t.assigned) ? 'task' : 'turn';
         else if (u.commercial === 'ready') k = 'rent'; else if (u.commercial === 'reserved') k = 'reserved';
         else if (u.lease && sim.s.leases[u.lease] && sim.s.leases[u.lease].status !== 'current') k = 'lien';

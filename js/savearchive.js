@@ -7,7 +7,18 @@ try { const ls = window.localStorage; const k = 'sst.probe.archive'; ls.setItem(
 const valid = (r) => r && typeof r.code === 'string' && r.meta && typeof r.meta === 'object';
 const read = () => { try { const d = JSON.parse((store && store.getItem(KEY)) || '[]'); return Array.isArray(d) ? d.filter(valid) : []; } catch (e) { return []; } };
 const write = (list) => { try { store.setItem(KEY, JSON.stringify(list)); return true; } catch (e) { return false; } };
+const KEPT = 'sst.kept.previous'; // localsave.js's kept slot (that module is unchanged; the key is shared)
 export const savearchive = {
+  // All-or-nothing over the kept and archive slots: if fn throws or returns false, both are restored byte-for-byte,
+  // so a failed write can neither lose an archived game nor leave a half-moved one. (Rollback never trims.)
+  transaction(fn) {
+    if (!store) return false;
+    let before; try { before = [store.getItem(KEY), store.getItem(KEPT)]; } catch (e) { return false; }
+    let ok = false; try { ok = !!fn(); } catch (e) { ok = false; }
+    if (ok) return true;
+    [[KEY, before[0]], [KEPT, before[1]]].forEach(([k, v]) => { try { if (v === null) store.removeItem(k); else store.setItem(k, v); } catch (e) { /* best effort */ } });
+    return false;
+  },
   get ok() { return !!store; },
   list() { return read(); },
   // The entry that pushing one more would drop (newest first, so the last one), or null.

@@ -192,9 +192,11 @@ const game = {
   async keepCurrent(fallback) {
     if (!localsave.ok) return false;
     const rec = await this.outgoingRecord(fallback); if (!rec) return true; // nothing to keep
-    const old = localsave.getKept(); // the existing previous game is archived, never silently overwritten
-    if (old && old.code !== rec.code && !savearchive.push(old)) return false;
-    return localsave.keep(rec);
+    return this.keepRecord(rec);
+  },
+  // The existing previous game is archived, never silently overwritten; any failed write rolls both slots back.
+  keepRecord(rec) {
+    return savearchive.transaction(() => { const old = localsave.getKept(); if (old && old.code !== rec.code && !savearchive.push(old)) return false; return localsave.keep(rec); });
   },
   // What would become the "previous game" if the running (or last autosaved) game were replaced now.
   async outgoingRecord(fallback) {
@@ -492,10 +494,10 @@ canvas.addEventListener('wheel', (e) => { e.preventDefault(); game.rend.zoomBy(e
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   const ui = game.ui;
-  const runSpeed = (v) => { ui.notePause(v); if (!(v > 0 && ui.timeLocked())) ui.do({ type: 'speed', v }); }; // keyboard obeys the same rules as the buttons
+  const runSpeed = (v) => ui.requestSpeed(v); // keyboard obeys exactly the same rules as the buttons
   if (e.key === 'Escape' && !ui.title && ui.verticalPreviewing) { ui.onClick({ target: { closest: () => ({ dataset: { a: 'verticalCancel' } }) } }); return; }
   if (e.key === 'Escape' && !ui.title && ui.modalOpen()) { ui.closeModal(); return; }
-  if (e.key === ' ') { e.preventDefault(); runSpeed(game.sim.s.speed ? 0 : 1); }
+  if (e.key === ' ') { e.preventDefault(); ui.spaceKey(); }
   else if (e.key === '1' || e.key === '2' || e.key === '3') runSpeed([1, 2, 4][+e.key - 1]);
   else if (e.key === 'q' || e.key === 'Q') game.rend.rotate(-1);
   else if (e.key === 'e' || e.key === 'E') game.rend.rotate(1);

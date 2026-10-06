@@ -88,6 +88,7 @@ export class Sim {
       const truncated = state.ledger.length >= 250;
       state.finance.cashCompleteFrom = truncated && state.ledger.length ? dayOf(state.ledger[0].t) + 1 : 1;
       for (const row of state.ledger) {
+        if (row.info) continue; // information-only rows never count as cash movement
         const d = dayOf(row.t); let bucket = state.finance.cashDays.find((x) => x.day === d);
         if (!bucket) { bucket = { day: d, incoming: 0, outgoing: 0, categories: {}, complete: d >= state.finance.cashCompleteFrom }; state.finance.cashDays.push(bucket); }
         if (row.amt >= 0) bucket.incoming = cents(bucket.incoming + row.amt); else bucket.outgoing = cents(bucket.outgoing - row.amt);

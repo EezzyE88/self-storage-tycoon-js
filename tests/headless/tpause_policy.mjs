@@ -23,7 +23,7 @@ await test('nested and interleaved pauses restore the speed from before the firs
 await test('manual Pause during a temporary pause is preserved by button and keyboard',()=>{
   for(const v of [1,2,4]){const {ui,sim}=fixture(v);ui.pauseForPopup('modal');click(ui,{a:'speed',v:'0'});ui.resumePopup('modal');assert.equal(sim.s.speed,0,'button Pause');
     const k=fixture(v);k.ui.pauseForPopup('panel');k.ui.notePause(0);k.ui.do({type:'speed',v:0});k.ui.resumePopup('panel');assert.equal(k.sim.s.speed,0,'keyboard Pause');}
-  const main=readFileSync('js/main.js','utf8');assert.match(main,/const runSpeed = \(v\) => \{ ui\.notePause\(v\);/);});
+  const main=readFileSync('js/main.js','utf8');assert.match(main,/const runSpeed = \(v\) => ui\.requestSpeed\(v\);/);}); // real keydown handler: tests/headless/treview_repairs.mjs
 await test('an inert run-speed tap during a blocking panel neither runs time nor changes what is restored',()=>{
   for(const v of SPEEDS){const {ui,sim}=fixture(v);ui.pauseForPopup('panel');click(ui,{a:'speed',v:'4'});assert.equal(sim.s.speed,0);ui.resumePopup('panel');assert.equal(sim.s.speed,v);}});
 await test('tutorial: tapping 1x with only the tutorial card open is an explicit run choice',()=>{
@@ -49,7 +49,7 @@ await test('property switch never applies another property’s saved speed; load
   const {ui}=fixture(4);ui.pauseForPopup('panel');const other=makeMaple(5);other.s.speed=0;ui.g.sim=other;ui.resumePopup('panel');assert.equal(other.s.speed,0);assert.equal(ui.popupResume,null);
   const src=readFileSync('js/main.js','utf8');assert.match(src,/st\.speed = 0; const sim = new Sim\(st\);/,'imports and loads still open paused');});
 await test('showcase: unfreezing photo mode and starting the tour do not override a manual Pause',()=>{
-  const sc=readFileSync('js/showcase.js','utf8');assert.match(sc,/v: sc\.freezeSpeed \?\? 0 \}\)/);assert.doesNotMatch(sc,/freezeSpeed \|\| 1/);
+  const sc=readFileSync('js/showcase.js','utf8');assert.doesNotMatch(sc,/freezeSpeed/,'Freeze uses the shared controller');assert.match(sc,/ui\.pauseForPopup\('freeze'\)/);assert.match(sc,/ui\.resumePopup\('freeze'\)/);
   const u=readFileSync('js/ui.js','utf8');assert.doesNotMatch(u,/startTour\(\); if \(!this\.sim\.s\.speed\) this\.do\(\{ type: 'speed', v: 1 \}\)/);
   const {ui,sim}=fixture(0);ui.closeModal=()=>{};ui.g.showcase={startTour(){}};click(ui,{a:'tour'});assert.equal(sim.s.speed,0);});
 await test('tutorial wording no longer promises a 1x resume',()=>{const u=readFileSync('js/ui.js','utf8');assert.doesNotMatch(u,/the clock resumes at 1x/);assert.match(u,/time returns to the speed it had before, then you can tap <b>1x<\/b>/);

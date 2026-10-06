@@ -64,7 +64,7 @@ await test('3. handover topology is held, not reported; a real disconnection sti
 
 // Production save path, as in tthreefloor_save.mjs, with spies on the slots.
 function harness(){const main=readFileSync('js/main.js','utf8');const writes=[];const kept={rec:{code:'OLD',meta:{name:'Maple Street Storage',day:40,cash:5000}}};
-  const localsave={ok:true,get:()=>({main:null}),getKept:()=>kept.rec,keep:r=>{writes.push(['keep',r.meta.name]);kept.rec=r;return true;}};const archive=[];const savearchive={list:()=>archive,push:r=>{writes.push(['archive',r.meta.name]);archive.unshift(r);return true;},wouldDrop:()=>null};
+  const localsave={ok:true,get:()=>({main:null}),getKept:()=>kept.rec,keep:r=>{writes.push(['keep',r.meta.name]);kept.rec=r;return true;}};const archive=[];const savearchive={list:()=>archive,push:r=>{writes.push(['archive',r.meta.name]);archive.unshift(r);return true;},wouldDrop:()=>null,transaction:fn=>!!fn()};
   const context=vm.createContext({Sim,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},localsave,savearchive,cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
   vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initial world'))+main.slice(main.indexOf('function validState('),main.indexOf('function makeMapleSeedPrice'))+';globalThis.game=game;',context);
   const g=context.game;const attached=[];g.ui={title:false};g.rend={view:'ext'};g.attach=function(s,k,o){this.sim=s;attached.push(o&&o.view);};return{g,writes,kept,archive,attached};}
@@ -191,5 +191,5 @@ await test('F. expansion review is accessible: stable labels, automation selecto
   assert.match(h,/aria-label="Close review"/);assert.match(h,/role="dialog" aria-modal="true" aria-labelledby="vr-title"/);assert.match(h,/Paused while you review/);assert.doesNotMatch(h,/<select/,'no native select needed in the review');
   assert.match(h,/data-vertical-option="stairs"[^>]*disabled/);assert.match(h,/Not available: this building has no stairwell/);assert.match(h,/Confirm · \$17,810/);
   ui.previewVertical();assert.match(ui.verticalBarHtml(),/data-qa="vp-back"[\s\S]*data-qa="vp-confirm"[\s\S]*data-qa="vp-discard"/);
-  const main=readFileSync('js/main.js','utf8');assert.match(main,/e\.key === 'Escape' && !ui\.title && ui\.modalOpen\(\)\) \{ ui\.closeModal\(\); return; \}/);assert.match(main,/const runSpeed = \(v\) => \{ ui\.notePause\(v\); if \(!\(v > 0 && ui\.timeLocked\(\)\)\) ui\.do/);});
+  const main=readFileSync('js/main.js','utf8');assert.match(main,/e\.key === 'Escape' && !ui\.title && ui\.modalOpen\(\)\) \{ ui\.closeModal\(\); return; \}/);assert.match(main,/const runSpeed = \(v\) => ui\.requestSpeed\(v\);/);assert.match(main,/if \(e\.key === ' '\) \{ e\.preventDefault\(\); ui\.spaceKey\(\); \}/);});
 console.log(`${n} candidate-22 regression checks passed`);

@@ -234,7 +234,7 @@ export function installShowcase(game) {
   };
   function reticle(x, y) { const r = $('reticle'); r.style.left = x + 'px'; r.style.top = y + 'px'; r.classList.remove('on'); void r.offsetWidth; r.classList.add('on'); }
   const origAttach = game.attach.bind(game);
-  game.attach = (sim, kind, opts) => { clearCrowd(); if (sc.mode === 'attract') stopAttract(); stopFollow(true); if (sc.mode === 'tour') stopTour(); sc.pops.length = 0; $('pops').innerHTML = ''; const r = origAttach(sim, kind, opts); const o = sim.occupancy(); sc.seenFull.set(sim, o.n > 0 && o.occ >= o.n); return r; };
+  game.attach = (sim, kind, opts) => { if (sc.photo) exitPhoto(); clearCrowd(); if (sc.mode === 'attract') stopAttract(); stopFollow(true); if (sc.mode === 'tour') stopTour(); sc.pops.length = 0; $('pops').innerHTML = ''; const r = origAttach(sim, kind, opts); const o = sim.occupancy(); sc.seenFull.set(sim, o.n > 0 && o.occ >= o.n); return r; };
   const origEvent = ui.onEvent.bind(ui);
   ui.onEvent = (e) => { origEvent(e); onEvent(e); };
 
@@ -350,11 +350,11 @@ export function installShowcase(game) {
   function enterPhoto() {
     if (sc.photo) return; stopFollow(true); ui.select(null); if (ui.tool) ui.pickTool(null); ui.setTab(null);
     sc.photo = true; body.classList.add('photo-mode'); post.mode = 'strong'; post.strength = 0.8; post.focus = 0.5; $('tourChip').hidden = true;
-    sc.freezeSpeed = null; renderPhotoBar(); game.audio.play('tab');
+    renderPhotoBar(); game.audio.play('tab');
   }
   function exitPhoto() {
     if (!sc.photo) return; sc.photo = false; body.classList.remove('photo-mode'); $('photoBar').hidden = true; $('shot').hidden = true;
-    if (sc.freeze) { sc.freeze = false; if (sc.freezeSpeed != null) ui.do({ type: 'speed', v: sc.freezeSpeed }); }
+    if (sc.freeze) { sc.freeze = false; ui.resumePopup('freeze'); } // shared controller: restores the speed before Freeze, or a manual Pause
     rend.todOverride = null; rend.weatherOverride = null; sc.tod = 'live'; sc.wx = 'live'; post.look = 'natural';
     if (sc.mode === 'tour') stopTour(); applyLens(); game.audio.play('tab');
   }
@@ -380,7 +380,7 @@ export function installShowcase(game) {
     if (k === 'tod') { sc.tod = v === 'live' ? 'live' : +v; rend.todOverride = v === 'live' ? null : +v; }
     if (k === 'look') post.look = v;
     if (k === 'wx') { sc.wx = v; rend.weatherOverride = v === 'live' ? null : v; }
-    if (k === 'freeze') { sc.freeze = !sc.freeze; if (sc.freeze) { sc.freezeSpeed = game.sim.s.speed; ui.do({ type: 'speed', v: 0 }); } else ui.do({ type: 'speed', v: sc.freezeSpeed ?? 0 }); } // unfreezing restores the previous speed, including Pause
+    if (k === 'freeze') { sc.freeze = !sc.freeze; if (sc.freeze) ui.pauseForPopup('freeze'); else ui.resumePopup('freeze'); } // Freeze is a temporary pause in the shared controller
     if (k === 'tour') { if (sc.mode === 'tour') stopTour(); else startTour(); }
     if (k === 'rot') rend.rotate(+v);
     game.audio.play('click'); renderPhotoBar();

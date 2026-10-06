@@ -13,7 +13,7 @@ import {modeLabel,sandboxName} from '../../js/scenarios.js';
 
 // Production save path (SST1 export/import) evaluated from js/main.js, as in tthreefloor_save.mjs.
 const main=readFileSync('js/main.js','utf8');
-const context=vm.createContext({Sim,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},localsave:{ok:true},savearchive:{list:()=>[],push:()=>true,wouldDrop:()=>null},cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
+const context=vm.createContext({Sim,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},localsave:{ok:true},savearchive:{list:()=>[],push:()=>true,wouldDrop:()=>null,transaction:fn=>!!fn()},cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
 vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initial world'))+main.slice(main.indexOf('function validState('),main.indexOf('function makeMapleSeedPrice'))+';globalThis.game=game;',context);
 const g=context.game;g.ui={title:false};g.attach=function(s){this.sim=s;};
 async function reload(sim){g.sim=sim;g.company={props:[{name:'Journey',sim}],active:0,feed:[]};const code=await g.saveCode();assert.match(code,/^SST1\./);assert.equal(await g.loadCode(code),true);const r=g.sim;r.s.speed=sim.s.speed;return r;}

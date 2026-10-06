@@ -10,7 +10,7 @@ import {modeLabel,sandboxName} from '../../js/scenarios.js';
 import {tickVertical,verticalRefund,cancellationBreakdown} from '../../js/vertical.js';
 
 const main=readFileSync('js/main.js','utf8');
-const context=vm.createContext({Sim,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},localsave:{ok:true},savearchive:{list:()=>[],push:()=>true,wouldDrop:()=>null},cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
+const context=vm.createContext({Sim,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},localsave:{ok:true},savearchive:{list:()=>[],push:()=>true,wouldDrop:()=>null,transaction:fn=>!!fn()},cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
 vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initial world'))+main.slice(main.indexOf('function validState('),main.indexOf('function makeMapleSeedPrice'))+';globalThis.game=game;',context);
 const g=context.game;g.ui={title:false};g.attach=function(s){this.sim=s;};
 

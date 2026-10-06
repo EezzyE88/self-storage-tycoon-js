@@ -1,7 +1,7 @@
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
 import { TOOLS } from './data.js';
-import { verticalDone, verticalLayout } from './blueprint.js';
+import { verticalDone, verticalLayout, shaftHallState } from './blueprint.js';
 
 const unitByNum = (sim, n) => sim.objs('unit').find((u) => u.num === n);
 const createdSince = (sim, type, t) => sim.objs(type).some((o) => o.cstate === 'operating' && o.id > (ctx(sim).idMark || 0));
@@ -183,7 +183,10 @@ export const LESSONS = [
         ['elevator','Elevator','interior','Place the shaft beside both hallways, near the entrance.'],
         ['lights','Light both hallways','security','Place a light in each highlighted hallway: F1 and F2.'],
         ['units','F2 units','interior','Place units beside this hallway. Suggested placement faces their doors toward it.'],
-      ].map(([blueprint,t,cat,d]) => ({blueprint,cat,t,d:d+' Use suggested placement, review, then Confirm. You can also place manually.',done:(sim)=>verticalDone(sim,blueprint)})),
+      ].map(([blueprint,t,cat,d]) => ({blueprint,cat,t,d:d+' Use suggested placement, review, then Confirm. You can also place manually.',done:(sim)=>verticalDone(sim,blueprint),
+        // The shaft needs BUILT hallways beside it on both floors: an ordered hallway means waiting, not placing;
+        // a missing hallway outranks waiting, because time alone cannot fix it.
+        prereq:blueprint==='elevator'?(sim)=>{const st=shaftHallState(sim);if(!st||verticalDone(sim,'elevator'))return null;const miss=st.indexOf('missing'),f=miss>=0?miss:st.findIndex(x=>x!=='built');return f<0?null:{state:st[f],floor:f+1,states:st};}:null})),
       {t:'Finish construction and check access',d:'Run time to finish construction. Recheck my layout lists any missing connection, lighting or power.',blueprint:'finished',sel:FAST,done:(sim)=>verticalDone(sim,'finished')},
       {t:'Commission upstairs units',d:'Tap a ready upstairs unit in this building and Commission whole order.',obj:(sim)=>{const l=verticalLayout(sim);return l&&!l.proposed&&sim.objs('unit').find(u=>u.f===1&&u.x>=l.sh.x&&u.x<l.sh.x+l.sh.w&&u.y>=l.sh.y&&u.y<l.sh.y+l.sh.h&&u.cstate==='ready')?.id;},sel:COMMISSION,done:(sim)=>verticalDone(sim,'commissioned')},
     ],

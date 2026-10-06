@@ -2,7 +2,7 @@
 import { G } from './data.js';
 export function unitStatus(u) {
   if (u.cstate === 'construction') return 'construction';
-  if (u.blocked) return 'blocked';
+  if (u.blocked) return u.accessHold != null ? 'handover' : 'blocked'; // a freight handover test is temporary, not a fault
   if (u.cstate !== 'operating') return 'commission';
   return ({ready:'available',occupied:'occupied',reserved:'reserved',unready:'turnover'})[u.commercial] || 'commission';
 }
@@ -12,6 +12,7 @@ export const UNIT_STATUS = {
   reserved: {label:'Reserved',mark:'H',color:'#81669e'},
   turnover: {label:'Turnover',mark:'◇',color:'#ba8b37'},
   blocked: {label:'Blocked',mark:'×',color:'#b45448'},
+  handover: {label:'Handover test',mark:'~',color:'#7e8fa3'},
   commission: {label:'Commission',mark:'?',color:'#477a99'},
   construction: {label:'Building',mark:'/',color:'#9b917b'},
 };

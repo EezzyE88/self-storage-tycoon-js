@@ -31,7 +31,7 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
   await scenario('tutorial 1x is never targeted while inert; Back to map keeps the paused clock, then 1x works', 393, 659, async (p) => {
     await p.click('[data-a="new"][data-v="maple"]'); await p.evaluate(() => { __game.ui.tutLooked = true; }); await frames(p); await p.click('.tut [data-a="tutNext"]'); await frames(p);
     await p.evaluate(() => { const g = __game; g.ui.select(g.sim.objs('unit').find((u) => u.num === 107).id); }); await frames(p);
-    assert.match(await tutText(p), /Owner Make-Ready/); await p.click(`[data-cmd*='"ownerMakeReady"']`); await frames(p);
+    assert.match(await tutText(p), /Owner Make-Ready/); assert.ok(await p.isVisible('#tut .how-line'), 'how-to line visible in the docked strip'); await p.click(`[data-cmd*='"ownerMakeReady"']`); await frames(p);
     assert.match(await tutText(p), /Start the clock: tap 1x/); await shot(p, 'tut-1x');
     await p.click('[data-a="sheetGrow"]'); await frames(p);
     assert.match(await tutText(p), /Back to map/); assert.equal((await guide(p)).lbl, 'Back to map'); await shot(p, 'tut-back-to-map');
@@ -121,6 +121,26 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0, 'Pause tapped inside a panel survives Back to map');
     await p.click('#speed [data-v="1"]'); await frames(p); await p.evaluate(() => { const g = __game; g.ui.select(null); g.sim.convo({ key: 'qa', who: 'Tenant', text: 'Hello', sev: 'attention', actions: [{ label: 'Thanks' }] }); g.ui.renderFeed(true); }); await frames(p); assert.equal(await speed(), 0, 'a request pauses');
     await p.click('[data-a="requests"]'); await frames(p); await p.click('.modal [data-a="convo"]'); await frames(p); await p.evaluate(() => __game.ui.closeModal()); await frames(p); await restored(1, 'answering restores 1x');
+  });
+
+  await scenario('R. real keyboard: Space during a hold or photo Freeze records Pause; Unfreeze/Done keep it; unaffordable Confirm is disabled', 1280, 720, async (p) => {
+    const speed = () => p.evaluate(() => __game.sim.s.speed), clock = () => p.evaluate(() => __game.sim.s.t);
+    await plainGame(p); await p.click('#speed [data-v="4"]'); await frames(p);
+    await p.click('#tabs [data-v="business"]'); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0);
+    await p.keyboard.press('Space'); await frames(p); assert.equal(await speed(), 0, 'Space during the hold never runs time');
+    await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0, 'Back to map keeps the manual Pause');
+    await p.click('.sheet [data-a="close"]'); await frames(p);
+    for (const exit of ['unfreeze', 'done']) {
+      await p.click('#speed [data-v="4"]'); await frames(p); await p.evaluate(() => __game.showcase.enterPhoto()); await frames(p);
+      await p.click('[data-p="freeze"]'); await frames(p); assert.equal(await speed(), 0, 'Freeze holds time');
+      await p.keyboard.press('Space'); const t0 = await clock(); await p.waitForTimeout(1200); await frames(p); assert.equal(await speed(), 0, 'Space while frozen does not run time'); assert.equal(await clock(), t0, 'game clock did not advance while frozen');
+      await p.click(exit === 'unfreeze' ? '[data-p="freeze"]' : '[data-p="done"]'); await frames(p); assert.equal(await speed(), 0, `${exit} preserves the manual Pause`);
+      if (exit === 'unfreeze') await p.click('[data-p="done"]'); await frames(p);
+    }
+    await p.click('#speed [data-v="4"]'); await frames(p); await p.evaluate(() => __game.showcase.enterPhoto()); await frames(p); await p.click('[data-p="freeze"]'); await frames(p); await p.click('[data-p="done"]'); await frames(p);
+    const r = await p.evaluate(() => ({ s: __game.sim.s.speed, n: (__game.ui.popupBlocks || new Set()).size, r: __game.ui.popupResume })); assert.ok(r.s === 4 || (r.n > 0 && r.r === 4), 'without a Pause, leaving Freeze restores 4x');
+    await p.evaluate(() => { const g = __game; g.sim.dispatch({ type: 'speed', v: 0 }); g.sim.s.cash = 100; g.ui.pickTool('du10x10'); g.ui.planArgs = { a: { x: 13, y: 21 }, b: { x: 13, y: 23 }, axis: 'y' }; g.ui.replan(); g.ui.renderActionBar(); }); await frames(p);
+    const c = await p.evaluate(() => ({ disabled: document.querySelector('#abar [data-a="confirm"]').disabled, text: document.querySelector('#abar').innerText })); assert.equal(c.disabled, true); assert.match(c.text, /Not enough cash: needs \$[\d,]+ more/);
   });
   // ---- Grok addendum A-F ----
   for (const [w, h] of [[393, 659], [1280, 720]]) await scenario(`A. Tap Unit 107 ring is on the unit's pin and a real tap completes the step (${w}x${h})`, w, h, async (p) => {

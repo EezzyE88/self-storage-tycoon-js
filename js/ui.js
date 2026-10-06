@@ -149,6 +149,22 @@ export class UI {
   }
   // A Pause chosen while a temporary pause is active is the player's decision: it is what closing restores.
   notePause(v) { if (+v === 0 && this.popupBlocks?.size) this.popupResume = 0; }
+  // One path for every explicit speed request (buttons and number keys). Run speeds stay inert while a blocking
+  // pause holds time; with only the tutorial/scenario card open, a run speed closes the card and is applied.
+  requestSpeed(v) {
+    v = +v;
+    if (v > 0 && this.popupBlocks?.size && [...this.popupBlocks].every((k) => k === 'tutorial' || k === 'scenario')) {
+      this.tutMin = true; this.scMin = true; this.resumePopup('tutorial'); this.resumePopup('scenario'); this.renderTut(true);
+    }
+    this.notePause(v);
+    if (!(this.popupBlocks?.size && v > 0)) this.do({ type: 'speed', v });
+  }
+  // Space: during any temporary pause it always records a manual Pause (never a scheduled resume);
+  // otherwise it is the ordinary Pause/1x toggle.
+  spaceKey() {
+    if (this.popupBlocks?.size && !this.title) { this.popupResume = 0; return 'pause'; }
+    this.do({ type: 'speed', v: this.sim.s.speed ? 0 : 1 }); return 'toggle';
+  }
 
   // ------------------------------------------------------------ clicks
   onClick(e) {
@@ -158,15 +174,7 @@ export class UI {
     // Navigating out of the Requests dialog: close it first so the destination is never opened underneath it.
     if (this.requestPanel && ['focus', 'overlay', 'requestHelp', 'feedback'].includes(a) && el.closest('.modal')) this.leaveRequests(a === 'requestHelp' || a === 'feedback');
     switch (a) {
-      case 'speed': {
-        if (+v > 0 && this.popupBlocks?.size && [...this.popupBlocks].every(k => k === 'tutorial' || k === 'scenario')) {
-          this.tutMin = true; this.scMin = true;
-          this.resumePopup('tutorial'); this.resumePopup('scenario'); this.renderTut(true);
-        }
-        this.notePause(v);
-        if (!(this.popupBlocks?.size && +v > 0)) this.do({ type: 'speed', v: +v });
-        this.sfx('click'); break;
-      }
+      case 'speed': this.requestSpeed(v); this.sfx('click'); break;
       case 'finances': this.showFinances(); this.sfx('click'); break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
@@ -230,10 +238,7 @@ export class UI {
       case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); }); break;
       case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then((ok) => { if (ok || !this.g.localsave.ok) run(); else this.toast('Your current game could not be stored safely, so no new game was started.', 'bad'); }); break; }
       case 'replaceNo': this.pendingNew = null; if (this.title) this.showTitle(); else this.closeModal(); break;
-      case 'restoreKept': { const k = this.g.localsave.getKept(); if (!k) break;
-        (async () => { const cur = this.g.playing() ? { code: await this.g.saveCode(), meta: this.g.saveMeta(), at: Math.floor(Date.now() / 1000) } : this.g.localsave.get().main;
-          if (await this.g.loadCode(k.code)) { if (cur) this.g.localsave.keep(cur); this.closeModal(); this.sfx('confirm'); const m = k.meta || {}; this.toast(`Restored your previous game: ${m.name || 'Saved game'}, Day ${+m.day || 1}, ${money(+m.cash || 0)} cash.${cur ? ' The game you left is now the previous game.' : ''}`, 'good'); this.g.autosave(); }
-          else this.toast('The previous game could not be loaded.', 'bad'); })(); break; }
+      case 'restoreKept': this.restoreKept(); break;
       case 'scenarios': this.showScenarios(); this.sfx('click'); break;
       case 'sandboxSetup': this.showSandbox(); this.sfx('click'); break;
       case 'sbOpt': { const k = el.dataset.k, val = JSON.parse(v);
@@ -482,6 +487,8 @@ export class UI {
       const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
       status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
+      // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
+      if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
         status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
         const inv = this.sim.investment(R);
@@ -497,7 +504,7 @@ export class UI {
       ${isUnit ? `<button class="btn sm" data-a="flip">Flip doors</button>` : ''}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
-      <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
+      <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
   }
 
   // ------------------------------------------------------------ INSPECTOR
@@ -663,7 +670,7 @@ export class UI {
       case 'shell': {
         const units = sim.objs('unit').filter((u) => D.shellAt[u.y * s.W + u.x] === o.id);
         const hv = D.hvac[o.id];
-        return this.sheet(nm, `${o.w}x${o.h} cells`, `<div class="kv"><span>Completed floors</span><span>${this.floorState(o).done}${this.floorState(o).ord ? ` · F${this.floorState(o).f + 1} ${this.floorState(o).pct}% (${this.floorState(o).stage})` : ''}</span><span>Units</span><span>${units.length}</span><span>Occupied</span><span>${units.filter((u) => u.lease).length}</span><span>HVAC</span><span>${hv && hv.cap ? Math.round(hv.load) + ' / ' + Math.round(hv.cap) : 'None'}</span></div>${this.floorState(o).ord?`<button class="btn" disabled>Plan next floor · after F${this.floorState(o).f+1} handover</button>`:`<button class="btn pri" data-a="verticalReview" data-v="${o.id}">Plan next floor</button>`}${s.orders.filter(q=>q.vertical?.shell===o.id&&q.st==='construction').map(q=>`<p class="note">${esc(q.label)} · ${this.floorState(o).pct}% · ${esc(this.floorState(o).stage)}</p>${q.vertical.phase<2?`<div class="danger-zone"><h3>Cancel construction</h3><p class="note">Stops the unfinished package. You will see the exact refund and what is retained before anything changes.</p><button class="btn danger" data-qa="cancel-construction" data-a="cmd" data-cmd='${JSON.stringify({type:'cancelOrder',id:q.id})}'>Cancel construction… (refund ${money(sim.cancelRefund(q).refund)})</button></div>`:'<p class="note">Structure is complete; this package must finish.</p>'}`).join('')}<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({type:'commission',all:true})}'>Commission ready units</button><p class="note">Choose Floors to see inside. Upper-floor rentals require working freight access; stairs are optional.</p>`);
+        return this.sheet(nm, `${o.w}x${o.h} cells`, `<div class="kv"><span>Completed floors</span><span>${this.floorState(o).done}${this.floorState(o).ord ? ` · F${this.floorState(o).f + 1} ${this.floorState(o).pct}% (${this.floorState(o).stage})` : ''}</span><span>Units</span><span>${units.length}</span><span>Occupied</span><span>${units.filter((u) => u.lease).length}</span><span>HVAC</span><span>${hv && hv.cap ? Math.round(hv.load) + ' / ' + Math.round(hv.cap) : 'None'}</span></div>${this.floorState(o).ord?`<button class="btn" disabled>Plan next floor · after F${this.floorState(o).f+1} handover</button>`:`<button class="btn pri" data-a="verticalReview" data-v="${o.id}">Plan next floor</button>`}${s.orders.filter(q=>q.vertical?.shell===o.id&&q.st==='construction').map(q=>`<p class="note">${esc(q.label)} · ${this.floorState(o).pct}% · ${esc(this.floorState(o).stage)}</p>${q.vertical.phase<2?`<div class="danger-zone"><h3>Cancel construction</h3><p class="note">Stops the unfinished package. You will see the exact refund and what is retained before anything changes.</p><button class="btn danger" data-qa="cancel-construction" data-a="cmd" data-cmd='${JSON.stringify({type:'cancelOrder',id:q.id})}'>Cancel construction… (refund ${money(sim.cancelRefund(q).refund)})</button></div>`:'<p class="note">Structure is complete; this package must finish.</p>'}`).join('')}${this.buildingCommissionHtml(o)}<p class="note">Choose Floors to see inside. Upper-floor rentals require working freight access; stairs are optional.</p>`);
       }
       case 'canopy': return this.sheet('Covered Canopy', '', '<p class="note">Loading under cover keeps interior customers dry on rainy days.</p>');
       default: return this.sheet(nm, '', '');
@@ -1020,7 +1027,7 @@ export class UI {
     }
     const lost = Object.entries(s.lost).sort((a, b) => b[1] - a[1]);
     if (lost.length) h += `<h3>Lost demand</h3><div class="kv">${lost.map(([k, v]) => `<span>${LOST[k] || k}</span><span>${v}</span>`).join('')}</div>`;
-    h += `<h3>Recent ledger</h3><div class="kv">${s.ledger.slice(-8).reverse().map((l) => `<span>Day ${dayOf(l.t)} · ${esc(l.note || l.cat)}</span><span style="color:${l.amt < 0 ? 'var(--red)' : 'var(--green)'}">${money(l.amt)}</span>`).join('')}</div>`;
+    h += `<h3>Recent ledger</h3><div class="kv">${s.ledger.slice(-8).reverse().map((l) => `<span>Day ${dayOf(l.t)} · ${esc(l.note || l.cat)}</span><span style="color:${l.info ? 'inherit' : l.amt < 0 ? 'var(--red)' : 'var(--green)'}">${l.info ? '— info' : money(l.amt)}</span>`).join('')}</div>`;
     return this.sheet('Business', `${MARKETS[s.market.id].name}`, h);
   }
   drawChart(cv) {
@@ -1250,10 +1257,17 @@ export class UI {
   // a step never points at a control that cannot respond in the current UI state.
   resolveStep(step) {
     if (!step) return step;
+    // Prerequisites distinguish missing, ordered (needs construction time) and built; only built satisfies a step.
+    const pre = step.prereq && step.prereq(this.sim);
+    if (pre && pre.state === 'ordered') step = { ...step, redirect: 'wait', placement: undefined, blueprint: undefined, t: `F${pre.floor} hallway ordered: let construction finish`, d: `The elevator needs a <b>finished</b> hallway beside the shaft on F1 and F2. F${pre.floor}'s hallway is ordered but still under construction. Close panels, then run time with <b>1x</b> or <b>4x</b>; this step continues when it is built.`, sel: '#speed [data-v="4"]', lbl: 'Run time' };
+    else if (pre && pre.state === 'missing') step = { ...step, redirect: 'prereq', placement: undefined, blueprint: undefined, t: `Build the F${pre.floor} hallway first`, d: `The elevator needs a finished hallway beside the shaft on F1 and F2; F${pre.floor} has none there yet. Place the F${pre.floor} hallway along the outlined route, let it finish, then place the elevator.`, sel: null, lbl: '' };
     const sel = step.sel || '';
     if (/^#speed /.test(sel) && this.timeLocked()) {
+      if (this.tool && TOOLS[this.tool]) return { ...step, redirect: 'tool', t: 'Put away the build tool', d: `Time is held while the <b>${TOOLS[this.tool].name}</b> placement review is open. Tap <b>×</b> on the build bar, then use the time controls.`, sel: '#abar [data-a="cancelTool"]', lbl: 'Stop building' };
       if (this.sheetTall && this.$('sheet').firstChild) return { ...step, redirect: 'back', t: 'Tap <b>Back to map</b>', d: 'Time stays paused while this panel is expanded, so the clock controls do not respond. Tap <b>Back to map</b> at the top of the panel; time returns to the speed it had before, then you can tap <b>1x</b>.', sel: '.sheet [data-a="sheetGrow"][aria-expanded="true"]', lbl: 'Back to map' };
       if (this.modalOpen()) return { ...step, redirect: 'modal', t: 'Close this window', d: 'Time stays paused while this window is open. Close it with <b>×</b>; time returns to the speed it had before, then you can tap <b>1x</b>.', sel: '.modal [data-a="modalClose"]', lbl: 'Close' };
+      if (this.popupBlocks?.has('convo')) return { ...step, redirect: 'requests', t: 'Answer the waiting request', d: 'A customer request is holding time. Open <b>Requests</b> and choose a response; then use the time controls.', sel: '[data-a="requests"]', lbl: 'Requests' };
+      return { ...step, redirect: 'held', sel: null, lbl: '' }; // never ring a control that cannot respond
     }
     // The panels use a section selector: when the required control is not on screen yet, the instruction names the section.
     const section = /"role":"porter"/.test(sel) ? ['operate', 'Hire capacity', 'Hire'] : /data-a="overlay"/.test(sel) ? ['operate', 'Overlays', 'Overlays'] : sel === '.ladder' ? ['business', 'Collections', 'Collections'] : null;
@@ -1297,7 +1311,7 @@ export class UI {
     const f = oid ? { obj: oid } : cell ? { cell, f: bp?.f ?? step.f ?? 0 } : this.tutFocus();
     this.rend.setFocus(f);
     const n = b.steps.length, doneN = st.done.filter((x, i) => x || i < cur).length;
-    const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details>` : ''}</span></li>`;
+    const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details><span class="how-line">${x.d}</span>` : ''}</span></li>`;
     let items = '';
     b.steps.forEach((x, i) => { if (i === cur) items += li(step, i, 'cur');  });
     box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}`}</span><button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button></div>
@@ -1358,7 +1372,9 @@ export class UI {
     const polygon=(a,b,f,color,label)=>{const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1; const pts=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(([x,y])=>project(x,y,f)); if(!pts.every(p=>p.vis))return '';const c=project(x+w/2,y+h/2,f);return `<polygon points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="${color}" fill-opacity=".12" stroke="${color}" stroke-width="2" stroke-dasharray="6 4"/><text x="${c.x}" y="${c.y}" class="bp-label">${label}</text>`;};
     let html=l?.plans ? polygon(l.plans.shell2.a,l.plans.shell2.b,0,'#7adbe8',`${l.sh.w} × ${l.sh.h} · 2 floors`)+polygon(l.plans.aisle.a,l.plans.aisle.b,0,'#7adbe8','Drive aisle') : '';
     if(a) { const planned=this.sim.plan(a),items=planned.items||[], cells=items.filter(c=>c.x!=null&&c.y!=null); const start=cells.length?{x:Math.min(...cells.map(c=>c.x)),y:Math.min(...cells.map(c=>c.y))}:a.a,end=cells.length?{x:Math.max(...cells.map(c=>c.x)),y:Math.max(...cells.map(c=>c.y))}:a.b; html+=polygon(start,end,a.f,'#ffd23a',TOOLS[a.tool].name); for(const u of planned.units||[]) {html+=polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,'#ffd23a','');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)html+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="#ffd23a" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="#ffd23a"/>`; }for(const [c,label] of [[a.a,'Start here'],[a.b,'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(p.vis)html+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/><text x="${p.x}" y="${p.y+(label==='Start here'?-15:23)}" class="bp-label">${a.a.x===a.b.x&&a.a.y===a.b.y ? (label==='Start here'?'Place here':'') : label}</text>`;}}
-    if(l?.plans) for(const [c,label] of [[l.door,'Entrance'],[l.outer,'Loading'],[l.plans.elevator.a,'Elevator']]) {const p=project(c.x+.5,c.y+.5,a?.f||0);if(p.vis)html+=`<text x="${p.x}" y="${p.y-9}" class="bp-label secondary">${label}</text>`;}
+    // Secondary captions never repeat a caption already drawn (e.g. the active Elevator placement's own label).
+    if(l?.plans) { const taken=[...html.matchAll(/<text x="([\d.-]+)" y="([\d.-]+)"[^>]*>([^<]*)</g)].filter(m=>m[3]).map(m=>({x:+m[1],y:+m[2],t:m[3]}));
+      for(const [c,label] of [[l.door,'Entrance'],[l.outer,'Loading'],[l.plans.elevator.a,'Elevator']]) {const p=project(c.x+.5,c.y+.5,a?.f||0);if(!p.vis||taken.some(q=>q.t.toLowerCase()===label.toLowerCase()))continue;taken.push({x:p.x,y:p.y-9,t:label});html+=`<text x="${p.x}" y="${p.y-9}" class="bp-label secondary">${label}</text>`;} }
     box.setAttribute('viewBox',`0 0 ${innerWidth} ${innerHeight}`); if(box.innerHTML!==html)box.innerHTML=html;
   }
   // Coach ring: points at the current step's DOM control, or the control that leads to it, or its map spot.
@@ -1443,7 +1459,7 @@ export class UI {
     const lb = g.lastChild; if (lb.textContent !== t.lbl) lb.textContent = t.lbl;
     // The label must not hide the instruction, HUD, status text or toasts: use the clear side, else drop the label.
     const lw = Math.max(70, t.lbl.length * 7 + 20), lx = x + w / 2 - lw / 2;
-    const blockers = [...this.root.querySelectorAll('#tut .tut, .hud > .chip, .hud > .iconbtn, .viewctl, #feed .toast, .sheet header, .sheet .cats, .sheet .pill, .sheet .kv, .sheet .dock-summary, .sheet .miss, #tabs, .actionbar .status')].filter((e) => !(t.el && (e.contains(t.el) || t.el.contains(e)))).map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
+    const blockers = [...this.root.querySelectorAll('#tut .tut, .hud > .chip, .hud > .iconbtn, .viewctl, #feed .toast, .sheet header, .sheet .cats, .sheet .pill, .sheet .kv, .sheet .dock-summary, .sheet .miss, #tabs, .actionbar .status, #blueprint text')].filter((e) => !(t.el && (e.contains(t.el) || t.el.contains(e)))).map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
     const clear = (top) => top >= 0 && top + 30 <= innerHeight && !blockers.some((r) => lx < r.right && lx + lw > r.left && top < r.bottom && top + 30 > r.top);
     const above = clear(y - 38), below = clear(y + h + 8);
     g.classList.toggle('below', !above && below); g.classList.toggle('nolabel', !above && !below); g.classList.toggle('passive', !!t.passive);
@@ -1600,7 +1616,9 @@ export class UI {
     const T = (text, act, kind = 'warn') => ({ text, act, kind });
     if (!D) return null;
     if (D.power && D.power.shed && D.power.shed.length) return T(`Power overloaded: ${D.power.shed.length} ${D.power.shed.length === 1 ? 'thing is' : 'things are'} shut off. Add an Electrical Service.`, { tab: 'build', cat: 'utilities' }, 'bad');
-    const blocked = objs.filter((o) => o.type === 'unit' && o.blocked);
+    const blocked = objs.filter((o) => o.type === 'unit' && o.blocked && o.accessHold == null);
+    const held = objs.filter((o) => o.type === 'unit' && o.blocked && o.accessHold != null);
+    if (!blocked.length && held.length) return T(`Freight handover test: ${held.length} upper ${held.length === 1 ? 'unit is' : 'units are'} briefly closed until the package hands over.`, { sel: held[0].id }, 'warn');
     if (blocked.length) return T(`${blocked.length > 1 ? blocked.length + ' units' : sim.objName(blocked[0])} can't be reached by customers. Tap to see why.`, { sel: blocked[0].id }, 'bad');
     const el = objs.find((o) => o.type === 'elevator' && o.cstate === 'operating' && o.cond < 0.2);
     if (el) return T('The freight elevator is out of service. Upper units cannot rent.', { sel: el.id }, 'bad');
@@ -1667,7 +1685,7 @@ export class UI {
     }
     for (const o of Object.values(s.objects)) {
       if (o.type === 'unit') {
-        if (o.blocked) add('blocked', o);
+        if (o.blocked && o.accessHold == null) add('blocked', o); // held for a freight handover test: no fault pin
         else if (o.cstate === 'ready') add('ready', o);
         else if (o.lease && s.leases[o.lease] && s.leases[o.lease].status === 'auction') add('auction', o);
         else if (o.overlock) add('lock', o);
@@ -1776,7 +1794,7 @@ export class UI {
     const cats = { rent: 'Rent collected', anc: 'Late fees & auctions', opex: 'Operating costs', payroll: 'Payroll', service: 'Vendors / service', marketing: 'Advertising', capex: 'Construction / capital', debt: 'Loan principal', interest: 'Interest', loan: 'Loan proceeds', inject: 'Added funds', subsidy: 'Sandbox funds', other: 'Other', settle_opex: 'Weekly operating bills', settle_payroll: 'Weekly payroll', settle_interest: 'Weekly credit interest' };
     const w30 = W[2][1], grouped = w30.categories;
     const groupHtml = Object.entries(grouped).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).map(([k,v]) => '<span>' + esc(cats[k] || k) + '</span><span class="' + (v < 0 ? 'neg' : '') + '">' + (v >= 0 ? '+' : '') + money(v) + '</span>').join('');
-    const recent = s.ledger.slice(-16).reverse().map((x) => '<div class="item"><div class="grow"><b>' + esc(x.note || cats[x.cat] || 'Cash movement') + '</b><small>Day ' + dayOf(x.t) + ' · ' + fmtTime(x.t) + ' · ' + esc(cats[x.cat] || x.cat || 'Other') + '</small></div><b class="' + (x.amt < 0 ? 'neg' : '') + '">' + (x.amt >= 0 ? '+' : '') + money(x.amt) + '</b></div>').join('');
+    const recent = s.ledger.slice(-16).reverse().map((x) => '<div class="item"><div class="grow"><b>' + esc(x.note || cats[x.cat] || 'Cash movement') + '</b><small>Day ' + dayOf(x.t) + ' · ' + fmtTime(x.t) + ' · ' + esc(x.info ? 'Information only · no cash moved' : cats[x.cat] || x.cat || 'Other') + '</small></div><b class="' + (x.amt < 0 ? 'neg' : '') + '">' + (x.info ? '— info' : (x.amt >= 0 ? '+' : '') + money(x.amt)) + '</b></div>').join('');
     this.$('modal').innerHTML = '<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Finances</h2><button class="x" data-a="modalClose" aria-label="Close">' + I.x + '</button></div>' +
       '<div class="stats"><div class="stat"><small>Cash now</small><b>' + money(s.cash) + '</b><div class="n">What is actually in the account.</div></div><div class="stat"><small>Owed to you</small><b>' + money(rcv.amt) + '</b><div class="n">' + rcv.n + ' account' + (rcv.n === 1 ? '' : 's') + ' behind; not cash until collected.</div></div></div>' + this.financialHtml() +
       '<h3>Actual cash movement</h3><div class="kv">' + W.map(([d,w]) => '<span>' + d + ' calendar day' + (d === 1 ? '' : 's') + (w.complete ? '' : ' (partial history)') + '</span><span class="' + (w.net < 0 ? 'neg' : '') + '">' + (w.net >= 0 ? '+' : '') + money(w.net) + ' · in ' + money(w.incoming) + ' / out ' + money(w.outgoing) + '</span>').join('') + '</div>' +
@@ -1809,6 +1827,15 @@ export class UI {
     this.$('modal').innerHTML = '<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Calendar</h2><button class="x" data-a="modalClose" aria-label="Close">' + I.x + '</button></div>' +
       '<p class="note">Day ' + dayOf(now) + ' · ' + fmtTime(now) + '</p><details class="explanation"><summary>How scheduled dates work</summary><p class="note">Dates below come from current leases, collections, loans, construction, competitors and scenario state; estimated construction dates can move if prerequisites block work.</p></details>' +
       '<div class="list">' + (rows || '<p class="note">No important scheduled dates yet.</p>') + '</div></div></div>';
+  }
+  // Commissioning from a building: this building's finished orders first (scoped), then the explicit property-wide action.
+  buildingCommissionHtml(sh) {
+    const sim = this.sim, s = sim.s, ready = sim.objs('unit').filter((u) => u.cstate === 'ready'), byOrder = new Map();
+    for (const u of ready) { const q = u.order && s.orders.find((x) => x.id === u.order); if (q && q.vertical && q.vertical.shell === sh.id) byOrder.set(q, (byOrder.get(q) || 0) + 1); }
+    const scoped = [...byOrder].map(([q, n]) => `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: q.id })}'>Commission ${esc(q.label.replace(/^Building \d+ → /, ''))} order · ${n} unit${n === 1 ? '' : 's'}</button>`).join('');
+    const inOrders = [...byOrder.values()].reduce((a, n) => a + n, 0);
+    const all = ready.length > inOrders || (!inOrders && ready.length) ? `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission all ${ready.length} ready unit${ready.length === 1 ? '' : 's'} on property</button><p class="note">Property-wide: includes ready units outside this building's order.</p>` : '';
+    return scoped + all;
   }
   // Live floor state per building: completed (handed over) floors, and any vertical order in progress.
   floorState(sh) {
@@ -1956,12 +1983,29 @@ export class UI {
       <p class="note">Previous games that were replaced by a newer previous game. Restoring one keeps your current game as the previous game.</p>
       ${list.map((r, i) => `<div class="item"><div class="grow">${this.metaLine(r.meta)}</div><button class="btn" data-a="archiveRestore" data-v="${i}">Restore</button></div>`).join('') || '<p>No older saved games.</p>'}</div></div>`;
   }
+  // Restore previous game: validate, store the outgoing game first, and only then load. Nothing loads if the store fails.
+  async restoreKept() {
+    const g = this.g, k = g.localsave.getKept(); if (!k) return false;
+    const prep = await g.prepareLoad(k.code); if (!prep.ok) { this.toast('The previous game could not be loaded. Nothing was changed.', 'bad'); return false; }
+    const cur = await g.outgoingRecord(this.contSave);
+    if (cur && !g.savearchive.transaction(() => g.localsave.keep(cur))) { this.toast('Your current game could not be stored safely, so the previous game was not restored. Nothing was changed.', 'bad'); return false; }
+    g.applyLoad(prep); this.closeModal(); this.sfx('confirm'); const m = k.meta || {};
+    this.toast(`Restored your previous game: ${m.name || 'Saved game'}, Day ${+m.day || 1}, ${money(+m.cash || 0)} cash.${cur ? ' The game you left is now the previous game.' : ''}`, 'good'); g.autosave(); return true;
+  }
+  // Archive restore: remove the record, archive the displaced previous game and keep the outgoing one in a single
+  // transaction; any failed write restores both slots exactly, so no archived game can be dropped.
   async restoreArchived(i) {
-    const g = this.g, rec = g.savearchive.list()[i]; if (!rec) return;
-    const prep = await g.prepareLoad(rec.code); if (!prep.ok) { this.toast('That saved game could not be loaded. It was left in place.', 'bad'); return; }
-    if (!g.savearchive.take(i)) { this.toast('Could not update browser storage. Nothing was changed.', 'bad'); return; }
-    if (!(await g.keepCurrent(this.contSave))) { g.savearchive.put(i, rec); this.toast('Your current game could not be stored safely, so nothing was restored.', 'bad'); return; }
-    g.applyLoad(prep); this.closeModal(); this.sfx('confirm'); this.toast(`Restored ${prep.meta.name}, Day ${prep.meta.day}. Your previous game is kept.`, 'good'); g.autosave();
+    const g = this.g, rec = g.savearchive.list()[i]; if (!rec) return false;
+    const prep = await g.prepareLoad(rec.code); if (!prep.ok) { this.toast('That saved game could not be loaded. It was left in place.', 'bad'); return false; }
+    const cur = await g.outgoingRecord(this.contSave);
+    const ok = g.savearchive.transaction(() => {
+      if (g.savearchive.list()[i]?.code !== rec.code || !g.savearchive.take(i)) return false;
+      if (!cur) return true; const old = g.localsave.getKept();
+      if (old && old.code !== cur.code && !g.savearchive.push(old)) return false;
+      return g.localsave.keep(cur);
+    });
+    if (!ok) { this.toast('Your current game could not be stored safely, so nothing was restored. Nothing was changed.', 'bad'); return false; }
+    g.applyLoad(prep); this.closeModal(); this.sfx('confirm'); this.toast(`Restored ${prep.meta.name}, Day ${prep.meta.day}.${cur ? ' Your previous game is kept.' : ''}`, 'good'); g.autosave(); return true;
   }
   showLoad() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Load game</h2><button class="x" data-a="${this.title ? 'showTitle' : 'modalClose'}" aria-label="Close">${I.x}</button></div>

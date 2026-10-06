@@ -11,7 +11,7 @@ for(const [commercial,state] of Object.entries({ready:'available',occupied:'occu
 test('blocked supersedes leased and ready status',()=>{for(const commercial of ['occupied','ready'])assert.equal(unitStatus({cstate:'operating',commercial,blocked:true}),'blocked')});
 test('uncommissioned stock never appears available',()=>assert.equal(unitStatus({cstate:'ready',commercial:'ready'}),'commission'));
 test('construction retains its state',()=>assert.equal(unitStatus({cstate:'construction',blocked:true}),'construction'));
-test('all states have unique text and complementary colors',()=>{assert.equal(new Set(Object.values(UNIT_STATUS).map(x=>x.label)).size,7);assert.equal(new Set(Object.values(UNIT_STATUS).map(x=>x.color)).size,7)});
+test('all states have unique text and complementary colors',()=>{assert.equal(new Set(Object.values(UNIT_STATUS).map(x=>x.label)).size,8);assert.equal(new Set(Object.values(UNIT_STATUS).map(x=>x.color)).size,8)});
 const i=sim.s.ground.findIndex((g,i)=>g===G.LOADING&&sim.D.vehReach[i]&&sim.D.walk[0][i]);assert.ok(i>=0);
 const bay=()=>loadingStatus(sim).find(b=>b.i===i);sim.s.vehicles=[];
 test('connected empty bay is free',()=>assert.equal(bay().state,'free'));

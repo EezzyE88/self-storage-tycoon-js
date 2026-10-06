@@ -62,6 +62,12 @@ function access(sim,sh,entry=null) {
   }
   return best;
 }
+// Hallway beside the planned shaft, per floor: 'built' (hall===1), 'ordered' (queued or under construction, hall===2)
+// or 'missing'. The elevator needs built hallways on both floors; ordered ones only need construction time.
+export function shaftHallState(sim) {
+  const l=verticalLayout(sim); if(!l||l.blocked||l.proposed||!l.plans?.elevator) return null; const c=l.plans.elevator.a;
+  return [0,1].map(f=>{const v=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>sim.inb(c.x+dx,c.y+dy)?sim.s.hall[f]?.[sim.idx(c.x+dx,c.y+dy)]:0);return v.includes(1)?'built':v.some(x=>x)?'ordered':'missing';});
+}
 export function verticalDone(sim,key) {
   const l=verticalLayout(sim); if(!l||l.blocked) return false; const {sh,plans}=l;
   if(key==='shell2') return !l.proposed;

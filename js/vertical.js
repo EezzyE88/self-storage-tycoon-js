@@ -80,7 +80,11 @@ export function tickVertical(sim,ord){const V=ord.vertical,s=sim.s,sh=s.objects[
  }
  V.phase++;V.elapsed=0;sim.markDirty();}
 export function verticalRefund(sim,ord){const V=ord.vertical,stage=V.stages[V.phase],undo=sim.s.t-ord.t0<=30&&V.phase===0;const remaining=V.stages.slice(V.phase+1).reduce((n,t)=>n+t.cost,0)+(stage?stage.cost*(1-V.elapsed/Math.max(1,stage.dur)):0);return{undo,refund:undo?ord.cost:Math.round(remaining*.6),locked:V.phase>=2};}
-export function cancelVertical(sim,ord){const {undo,refund,locked}=verticalRefund(sim,ord);if(locked)return{ok:false,msg:'Structure is complete; finish this committed package to preserve usable freight access.'};if(!sim.s.creative)sim.money(refund,'capex','Cancelled: '+ord.label);ord.st='cancelled';ord.prog=1;sim.markDirty();return{ok:true,refund,msg:`Cancelled unfinished work; paid reinforcement retained. Refunded $${refund}.`};}
+export function cancelVertical(sim,ord){const {undo,refund,locked}=verticalRefund(sim,ord);if(locked)return{ok:false,msg:'Structure is complete; finish this committed package to preserve usable freight access.'};const B=cancellationBreakdown(sim,ord);if(!sim.s.creative)sim.money(refund,'capex','Cancelled: '+ord.label);
+ // Information-only ledger facts (amt 0, info:true): written straight to the ledger, never through cash accounting.
+ const fact=note=>sim.s.ledger.push({t:sim.s.t,amt:0,cat:'info',info:true,note});const $=v=>'$'+(Math.round(v*100)/100).toLocaleString();
+ if(sim.s.creative){}else if(B.undo)fact(`Full undo within the grace period: no penalty, nothing retained (${ord.label})`);
+ else{if(B.penalty>0)fact(`Cancellation penalty, not refunded: ${$(B.penalty)} (40% of unbuilt work, ${ord.label})`);if(B.inProgressBuilt>0)fact(`Work in progress not refunded: ${$(B.inProgressBuilt)} (${ord.label})`);for(const t of B.retained)fact(`Retained with the building: reinforcement ${$(t.cost)}; the next F${ord.vertical.f+1} quote omits it`);}ord.st='cancelled';ord.prog=1;sim.markDirty();return{ok:true,refund,msg:`Cancelled unfinished work; paid reinforcement retained. Refunded $${refund}.`};}
 // Directional multi-floor service, leaving the legacy dispatcher intact.
 export function sweepElevator(sim,el){const s=sim.s,agent=id=>s.agents.find(a=>a.id===id),floors=served(sim,el),qCalls=[];
  for(let f=0;f<el.q.length;f++){el.q[f]=[...new Set(el.q[f])].filter(id=>{const a=agent(id);return a&&a.elev===el.id&&!a.inElev&&floors.includes(f)&&floors.includes(a.elevDest);});for(const id of el.q[f]){const a=agent(id);qCalls.push({id,f,dest:a.elevDest,t:a.elevT0});}}
