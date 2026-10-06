@@ -1,0 +1,22 @@
+PASS nested overlays restore the previous speed 0
+PASS nested overlays restore the previous speed 1
+PASS nested overlays restore the previous speed 2
+PASS nested overlays restore the previous speed 4
+PASS a Pause tapped during a popup is preserved when it closes
+PASS run speed cannot defeat a blocking panel
+PASS duplicate blockers restore the previous speed once
+PASS property change never applies stale previous-property run speed
+PASS compact panels show concise metrics without performing management actions
+PASS expanded panel explicitly communicates pause and collapse
+PASS inspector compact status uses authoritative occupied state
+PASS section navigation expands before jumping to controls
+PASS construction release pauses review; clearing preview restores the previous speed
+PASS inbox preserves original response buttons without creating purchases
+PASS expanded sheet pauses immediately and collapsing restores the previous speed
+PASS commission actions stay outside collapsed details and are never duplicated
+PASS cleaning action stays available without expanding its information
+PASS tutorial clock instruction can dismiss tutorial details and start 1x
+PASS tutorial clock action cannot bypass a pending customer request
+PASS money lesson renders Got it in the compact completion row and advances
+PASS landscape overview retains left playfield with a right-side dock
+21 executed checks passed; physical Safari acceptance pending

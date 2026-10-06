@@ -260,14 +260,96 @@ Scenarios H and I cover early commitment → waiting (no placement cue, Pause ke
 **Set up, not played:** lesson state, fast-forwarded construction, cleared generated requests, and the injected F3 complaint (`sim.thought()` from a visitor at an F3 unit). These are test setup, not unaided play.
 
 **Remaining defects and limitations (final repair)**
-- **Found, not fixed (pre-existing, outside this scope):**
+- **Found, not fixed at the time (pre-existing; resolved by G1 below):**
   - **What happens:** after Confirm the placed tool stays armed. When the next step targets a different tool, for example Light after Elevator, the ring reads "Tap here" on the new target while the build bar still shows the Elevator tool. A tap there would try to place another elevator, not a light. **Use suggested placement** switches the tool correctly.
   - **Cause:** `resolveStep()` redirects to **Stop building** only on non-build steps.
 - **Framing scope:** the new framing applies to the build-up lesson. Other placement lessons and the core tutorial keep their single-point ring pan, which now uses the measured HUD top.
 - **Caption widths** are measured with the browser's own font metrics. Safari metrics were not observed.
 - **Gestures:** pan and zoom checks used the renderer's camera functions, plus a real mouse drag at 1280×720. No real touch pinch or double-tap was driven in emulation. The existing `tgestures`/`tmenu_touch` checks pass.
 - **Desktop side columns** are detected by shape (taller than 1.5× their width, entirely on one side).
-- **Milestone banner (pre-existing):** in the scenario K screenshot, the temporary "Grand opening · 14 new units open" banner covers the floor selector while it shows. The selected unit's sheet still reads "Floor 3".
+- **Milestone banner (pre-existing; resolved by G2 below):** in the scenario K screenshot, the temporary "Grand opening · 14 new units open" banner covers the floor selector while it shows. The selected unit's sheet still reads "Floor 3".
+- **Safari:** none of this was observed in Safari/WebKit or on a physical iPhone.
+
+## Tool/floor guidance and banner repair (G1–G3)
+
+Authorized after independent verification of `aa2dd92`. Base `aa2dd92`. Commits on the branch:
+- `c1cfba9`: the repair
+- `55328db`: scenario R setup only
+- `9a2ff55`: clearer switch wording, no ring label over the card, and the build bar naming the floor
+
+**The final code commit, and the commit tested from a fresh clone, is `9a2ff55ed1638b492cfa6bc21ea1d5caec359c67` (tree `f818376a60abcedbf2aaa080b1086fc306047ca1`).** Presentation and timing only. These are unchanged and byte-identical to `aa2dd92`: `data.js`, `finance.js`, `maple.js`, `scenarios.js`, `localsave.js`, `economics.js`, `savearchive.js`, `sim.js`, `vertical.js`, `complaints.js`.
+
+| # | Reproduced at `aa2dd92` (production handlers) | Cause | Repair |
+| --- | --- | --- | --- |
+| G1 | **Elevator Confirm.** After Confirm the step was "Light both hallways", Elevator stayed armed, and the ring read "Tap here" on the Light target. A hold there quoted a valid **$9,500 Elevator**.<br>**Light F1 Confirm.** The same ring pointed at the F2 light while viewing F1; a hold quoted a Light on **F1**. | `confirmPlan()` keeps the tool armed, which is intended for repeated placement. `resolveStep()` redirected an armed tool only on non-build steps. | **Helpers.** `stepPlacement()` returns the authoritative tool, floor and cells for a step, with no side effects. `currentBlueprintPlan()` checks the prerequisite directly and no longer calls `resolveStep()`, so there is no recursion. `placementMismatch()` flags a different tool, or the right tool on the wrong floor.<br>**Guidance.** The step resolves to "Switch to Light" or "Switch to F2 for this Light". The card explains it in one line, for example "Elevator is still armed, so a hold would place another Elevator". The ring goes to **Use suggested placement**, shown as the card's primary action over the build bar, which arms the right tool on the right floor in one tap; the ring carries no label over the card text. If that button is not visible, the ring goes to the build bar's ×. A map ring is never shown in this state.<br>**Map.** The target keeps a grey outline captioned "Light goes here · F2". There is no "Place here", Start/End marker, yellow footprint or door marker.<br>**Build bar.** It says what a hold would do: "Hold places another Elevator on F1 · lesson needs Light on F1".<br>**Unchanged:** a matching tool and floor, no tool armed, play outside lessons, and Confirm keeping the tool armed. |
+| G2 | **Grand opening with a sheet open** (393×659 and 430×932): the banner sat at y 62–122 over the HUD, speed row and floor row. Without a sheet it was clear (238–345 / 336–443). Desktop was clear. | `body.sheet-open #celebrate { top: 62px }` dates from a one-row HUD. The second row now ends at 107 px. | **Placement.** `js/bannerplace.js` places the banner below the measured HUD, speed row, floor row and request cards, and clear of the panel, build bar and navigation. Without a panel it keeps the 36% position.<br>**No room:** the banner waits instead of covering anything.<br>**Unchanged:** desktop placement, pass-through clicks, and the hold while shown. |
+| G3 | **Stale holds.** A banner deferred behind a panel kept the previous banner's time hold. A deferred banner retried forever.<br>**Lesson offer (pre-existing, found while verifying G2).** With a panel or build bar open, the offer held time while the stylesheet hid its chip, so the player could neither see nor dismiss it. | No hold release on deferral, and no expiry. The offer paused regardless of visibility. | **Banners.** A waiting banner never holds time. One still waiting after 20 s is dropped unseen, so the queue always drains.<br>**Offers.** An offer covered by a panel waits unpaused, then appears and holds as designed once the panel closes. |
+
+**Before → after, the same production calls on both trees (`guidance-compare.txt`)**
+
+| After Confirm | `aa2dd92` | `9a2ff55` |
+| --- | --- | --- |
+| Elevator (step needs Light, F1) | "Light both hallways"; **map ring "Tap here"**; "Place here" | "**Switch to Light**"; no map ring; "Light goes here · F1" |
+| Light F1 (step needs Light, F2) | "Light both hallways"; **map ring "Tap here"**; "Place here"; following it quotes **Light on F1** | "**Switch to F2 for this Light**"; no map ring; "Light goes here · F2" |
+
+**Banner placement, measured on the real page (Chromium emulation)**
+
+| Viewport | Sheet | `aa2dd92` | `9a2ff55` |
+| --- | --- | --- | --- |
+| 393×659 | open | y 62–122, covers HUD, speed and floor rows | below the rows, clear of the sheet (scenario N) |
+| 430×932 | open | y 62–122, covers HUD, speed and floor rows | below the rows, clear of the sheet (scenario N) |
+| 320×480 | expanded | – | no room (8 px): waits without a hold, then shows when Back to map frees space (scenario O2) |
+
+**Tests**
+- **Headless:** `tests/headless/tguidance_banner.mjs` (7 checks) runs on production handlers and real construction state:
+  - Elevator Confirm, then the reproduced wrong quote and the switch guidance
+  - Light F1 → Light F2 floor guidance, then F2 units
+  - repeated placement with a matching tool and floor; no change outside lessons
+  - no recursion
+  - manual Pause through the chain, prior 2x after each review, and Space during a review hold through the real `main.js` keydown listener
+  - banner placement maths
+  - the hidden-offer hold
+- **Run against `aa2dd92`:** the offer check fails on real behaviour; the guidance checks fail because the new helpers are absent. `guidance-compare.txt` above is the behavioural before/after.
+- **Chromium scenarios:**
+  - **M (393×659, 430×932):** real touch taps and **real touch holds** (Chrome touch input, held 900 ms; see limitations) at the next map target after each Confirm, through Elevator → Light F1 → Light F2 → F2 units. Checks:
+    - the ring is on the visible one-tap fix, and no map ring appears
+    - a hold at the outlined spot while mismatched gives what the bar says (Elevator, or F1)
+    - Use suggested placement arms the right tool and floor
+    - with a matching tool and floor, a real hold at the target quotes the right Light on F2
+    - prior 2x is restored after each review, and Space during a review hold records Pause
+  - **N (393×659, 430×932):** after a real **Commission** tap, the Grand opening banner covers nothing, F1 stays reachable, and prior 2x is restored.
+  - **O:** a banner queued behind a panel holds no time and shows on Close. One queued past 20 s is dropped, with no stale hold.
+  - **O2:** the 320×480 no-room wait and recovery.
+- **Existing scenarios changed:**
+  - **L** now expects "Switch to Light" after Elevator Confirm. Its old assertion encoded the defective state.
+  - **P** clears customer requests that arrive on their own before its 1x tap; a genuine request hold makes that tap inert by design. P failed intermittently on `aa2dd92` too (1 of 3 runs) and passes 4/4 with this setup.
+  - **R** now dismisses optional-lesson offers up front, as P already did. An offer arriving mid-scenario made its final 4x tap inert and decided the remembered speed.
+    - **Before the setup change:** R failed 1 of 4 runs on `aa2dd92` and 4 of 4 on `c1cfba9`. It is more frequent now because a waiting banner no longer freezes game time, so offers arrive sooner. The failure state was an offer hold with remembered speed Pause, which is correct behaviour.
+    - **After:** 5 of 5 passes. Assertions are unchanged.
+
+**Evidence (fresh depth-1 clone of `9a2ff55`, one commit):** results, logs, `guidance-compare.txt`, emulation JSON and screenshots are in [releases/candidate-22/guidance-banner](releases/candidate-22/guidance-banner/).
+- **Headless:** 60/60 scripts. Targeted suites: guidance/banner 7/7, final repairs 14/14, blueprint 26/26, property UI 21/21, pause policy 13/13, save recovery 13/13, Candidate 22 28/28.
+- **Chromium emulation:** 29/29 scenarios, including 734×343 rotate, J (desktop Fit and keep-selection-visible), I (393×659 and 430×932), M, N, O and O2. 0 console errors, 0 unhandled rejections.
+- **Economy unchanged:**
+  - F2 complete $17,810, structure-only $12,470; F3 complete $10,210, structure-only $4,870
+  - full undo $17,810, partial refund $10,371, $396 retained, re-quote $17,414
+  - 30-day cash $975,148.25 / $975,247.00 / $974,890.50 / $974,716.50
+- **Screenshots:** re-encoded as JPEG (quality 85). The `banner-grand-opening-*` images are taken after the geometry assertion, so they may show the next queued celebration in the same measured position. The assertion itself ran on the Grand opening banner.
+
+**Scripted setup vs ordinary controls**
+- **Scripted (disclosed):**
+  - lesson state, $1M, and construction fast-forwarded with `sim.step()`
+  - queued celebrations allowed to finish and lesson offers dismissed before measuring
+  - unit selection with `ui.select()`
+  - extra banners injected with `showcase.celebrate()`, the call production events use
+  - in M, one discard of a suggested review (no production control does only that)
+  - in P, the request clear; in R, the offer dismissal
+- **Ordinary controls:** touch taps on the speed buttons, Use suggested placement, Confirm, Commission, Details / Back to map, the Operate tab and Close; touch holds on the map; the Space key.
+
+**Remaining limitations**
+- **Touch-hold timing:** in emulation the hold is 900 ms. At 430×932 with 2× DPR, software-GL frames can delay the page's 240 ms hold timer behind a quicker release, which is an emulation artifact. On-device hold timing needs the iPhone pass.
+- **Guidance only:** a player can still hold with the wrong tool deliberately. The build bar states what that will place, and nothing blocks ordinary building.
+- **Banner wait limit:** a banner that cannot find room or stays queued for 20 s is dropped unseen, by design.
 - **Safari:** none of this was observed in Safari/WebKit or on a physical iPhone.
 
 ## Remaining limitations
@@ -286,7 +368,7 @@ Scenarios H and I cover early commitment → waiting (no placement cue, Pause ke
 
 ## Verdict
 
-- **Automated gate:** PASS (follow-up `b4ebcb9`: 58/58 headless, 18/18 Chromium emulation; final repair `30d8652`: 59/59 headless, 23/23 Chromium emulation).
+- **Automated gate:** PASS (follow-up `b4ebcb9`: 58/58 headless, 18/18 Chromium emulation; final repair `30d8652`: 59/59 headless, 23/23 Chromium emulation; guidance/banner repair `9a2ff55`: 60/60 headless, 29/29 Chromium emulation).
 - **Release verdict:** **HOLD**, pending a physical iPhone Safari playtest of the private preview. Nothing found in this repair blocks source review or private publication.
 
 Recommended Safari checks:
