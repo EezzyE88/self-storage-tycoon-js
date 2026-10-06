@@ -34,11 +34,11 @@ await test('Elevator Confirm -> "Light both hallways" with Elevator still armed:
   assert.equal(step(s,ui).t,'Light both hallways');assert.equal(ui.tool,'elevator','tool stays armed after Confirm (repeat placement is kept)');
   // The reproduced failure path: a hold at the Light target with Elevator armed quotes a $9,500 Elevator.
   const q=holdAtTarget(s,ui);assert.deepEqual([q.tool,q.cost],['elevator',9500],'what following the old "Tap here" did');
-  const r=resolved(s,ui);assert.equal(r.redirect,'switch');assert.equal(r.t,'Switch to Light');assert.equal(r.sel,'#tut [data-a="suggestPlacement"]');assert.match(r.d,/Elevator<\/b> tool is still armed/);
+  const r=resolved(s,ui);assert.equal(r.redirect,'switch');assert.equal(r.t,'Switch to Light');assert.equal(r.sel,'#tut [data-a="suggestPlacement"]');assert.match(r.d,/<b>Elevator<\/b> is still armed, so a hold would place another Elevator/);
   ui.guideStep=r;assert.equal(ui.guideTarget(),null,'no map ring when the control is not on screen (never a map "Tap here")');
   const t=captions(ui);assert.ok(!t.some(x=>/Place here|Start here|End here/.test(x)),'no imperative placement cue');assert.ok(t.includes('Light goes here · F1'),'target outline kept, described');
   assert.doesNotMatch(ui.$('blueprint').innerHTML,/<circle[^>]*fill="#ffd23a"/,'no placement marker');
-  assert.match(bar(ui),/Hold places another Elevator · lesson needs Light on F1/,'build bar says what a hold would do');});
+  assert.match(bar(ui),/Hold places another Elevator on F1 · lesson needs Light on F1/,'build bar says what a hold would do');});
 
 await test('Light F1 -> Light F2: the floor mismatch is guided too; tool+floor match gives the normal cue; then F2 units',()=>{
   const {s,ui}=atElevatorStep();ui.suggestPlacement();ui.confirmPlan();
@@ -47,7 +47,7 @@ await test('Light F1 -> Light F2: the floor mismatch is guided too; tool+floor m
   assert.equal(step(s,ui).t,'Light both hallways');const want=ui.stepPlacement(step(s,ui));assert.equal(want.f,1,'second light goes on F2');
   const q=holdAtTarget(s,ui);assert.equal(q.f,0,'a hold now would quote on F1 (reproduced)');
   const r=resolved(s,ui);assert.equal(r.redirect,'switch');assert.equal(r.t,'Switch to F2 for this Light');ui.guideStep=r;assert.equal(ui.guideTarget(),null);
-  assert.ok(captions(ui).includes('Light goes here · F2'));assert.ok(!captions(ui).includes('Place here'));assert.match(bar(ui),/Hold places another Light · lesson needs Light on F2/);
+  assert.ok(captions(ui).includes('Light goes here · F2'));assert.ok(!captions(ui).includes('Place here'));assert.match(bar(ui),/Hold places another Light on F1 · lesson needs Light on F2/);
   ui.suggestPlacement();assert.deepEqual([ui.tool,ui.rend.view,ui.plan.args.f,ui.plan.status],['light',1,1,'valid'],'one tap moves to F2');assert.equal(resolved(s,ui).redirect,undefined);
   ui.plan=null;ui.planArgs=null;assert.ok(captions(ui).includes('Place here'),'matching tool and floor: the actionable cue returns');
   ui.suggestPlacement();ui.confirmPlan();assert.equal(step(s,ui).t,'F2 units');assert.equal(resolved(s,ui).redirect,'switch','next tool differs again');

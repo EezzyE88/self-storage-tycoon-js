@@ -495,7 +495,7 @@ export class UI {
       return;
     }
     const mm=curBeat(this.sim)?this.placementMismatch(curBeat(this.sim).steps[stepState(this.sim,this).cur]):null;
-    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name}${this.toolFloor()?` on F${this.toolFloor()+1}`:''} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
+    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
@@ -1296,8 +1296,8 @@ export class UI {
     if (mm) { const W = TOOLS[mm.want.tool].name, A = TOOLS[mm.armed].name, F = (mm.want.f || 0) + 1;
       return { ...step, redirect: 'switch', mismatch: mm, // blueprint kept: the card still offers Use suggested placement
         t: mm.kind === 'tool' ? `Switch to ${W}` : `Switch to F${F} for this ${W}`,
-        d: mm.kind === 'tool' ? `The <b>${A}</b> tool is still armed from your last placement, so holding on the map would place another ${A}. Tap <b>Use suggested placement</b> to switch to the ${W} on F${F}, or tap <b>×</b> on the build bar to put the ${A} away.`
-          : `The ${W} tool is armed on F${mm.floor + 1}, but this ${W} goes on F${F}. Tap <b>Use suggested placement</b> to switch to F${F}, or use <b>Floors</b> to change floor.`,
+        d: mm.kind === 'tool' ? `<b>${A}</b> is still armed, so a hold would place another ${A}. Tap <b>Use suggested placement</b> for the ${W} on F${F}, or <b>×</b> to put the ${A} away.`
+          : `This ${W} goes on F${F}; you are on F${mm.floor + 1}. Tap <b>Use suggested placement</b> to switch to F${F}.`,
         sel: '#tut [data-a="suggestPlacement"]', lbl: mm.kind === 'tool' ? `Switch to ${W}` : `Switch to F${F}`, alt: '#abar [data-a="cancelTool"]', altLbl: 'Stop building' }; }
     const buildStep = step.placement || step.blueprint || /#abar|data-a="tool"|^\.cats|data-v="build"|^#speed /.test(sel);
     if (this.tool && !buildStep && TOOLS[this.tool]) return { ...step, redirect: 'tool', t: 'Put away the build tool', d: `The <b>${TOOLS[this.tool].name}</b> tool is still armed, so map taps would place it. Tap <b>×</b> on the build bar first.`, sel: '#abar [data-a="cancelTool"]', lbl: 'Stop building' };
@@ -1565,7 +1565,9 @@ export class UI {
     const blockers = [...this.root.querySelectorAll('#tut .tut, .hud > .chip, .hud > .iconbtn, .viewctl, #feed .toast, .sheet header, .sheet .cats, .sheet .pill, .sheet .kv, .sheet .dock-summary, .sheet .miss, #tabs, .actionbar .status, #blueprint text')].filter((e) => !(t.el && (e.contains(t.el) || t.el.contains(e)))).map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
     const clear = (top) => top >= 0 && top + 30 <= innerHeight && !blockers.some((r) => lx < r.right && lx + lw > r.left && top < r.bottom && top + 30 > r.top);
     const above = clear(y - 38), below = clear(y + h + 8);
-    g.classList.toggle('below', !above && below); g.classList.toggle('nolabel', !above && !below); g.classList.toggle('passive', !!t.passive);
+    // A ring on the instruction card's own button needs no label: the card title and the button already say it.
+    const inCard = !!(t.el && t.el.closest && t.el.closest('#tut')) && this.guideStep?.redirect === 'switch';
+    g.classList.toggle('below', !inCard && !above && below); g.classList.toggle('nolabel', inCard || (!above && !below)); g.classList.toggle('passive', !!t.passive);
   }
 
   fmtGoal(g, v) { return g.fmt === 'pct' ? pct(v) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }

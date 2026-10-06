@@ -335,8 +335,8 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.keyboard.press('Space'); await frames(p); await tapEl(p, '#abar [data-a="confirm"]');
     assert.equal(await p.evaluate(() => __game.sim.s.speed), 0, 'Space during the hold recorded Pause, kept through Confirm'); await tapEl(p, '#speed [data-v="2"]');
     // After Confirm: Elevator armed, step needs Light.
-    assert.match(await tutText(p), /Switch to Light/); assert.ok(await ringOn(p, '#tut [data-a="suggestPlacement"]'), 'ring on the visible one-tap fix'); assert.equal(await mapRing(p), false, 'no map ring');
-    let c = await caps(p); assert.ok(!c.includes('Place here') && c.includes('Light goes here · F1'), 'described target, no imperative cue: ' + c); assert.match(await barText(p), /Hold places another Elevator · lesson needs Light on F1/);
+    assert.match(await tutText(p), /Switch to Light/); assert.ok(await ringOn(p, '#tut [data-a="suggestPlacement"]'), 'ring on the visible one-tap fix'); assert.ok(await p.evaluate(() => document.querySelector('#guide').classList.contains('nolabel')), 'no ring label over the instruction text'); assert.equal(await mapRing(p), false, 'no map ring');
+    let c = await caps(p); assert.ok(!c.includes('Place here') && c.includes('Light goes here · F1'), 'described target, no imperative cue: ' + c); assert.match(await barText(p), /Hold places another Elevator on F1 · lesson needs Light on F1/);
     await shot(p, `guide-switch-tool-${w}x${h}`);
     // A player who holds at the outlined spot anyway gets what the bar said: an Elevator quote (ordinary building kept).
     let t = await targetPoint(p); await touchHold(p, t.x, t.y); await frames(p); const hit0 = await p.evaluate(({ x, y }) => { const e = document.elementFromPoint(x, y); return e && (e.id || e.className || e.tagName); }, t);
