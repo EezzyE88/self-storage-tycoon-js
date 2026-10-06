@@ -380,7 +380,7 @@ export function installShowcase(game) {
     if (k === 'tod') { sc.tod = v === 'live' ? 'live' : +v; rend.todOverride = v === 'live' ? null : +v; }
     if (k === 'look') post.look = v;
     if (k === 'wx') { sc.wx = v; rend.weatherOverride = v === 'live' ? null : v; }
-    if (k === 'freeze') { sc.freeze = !sc.freeze; if (sc.freeze) { sc.freezeSpeed = game.sim.s.speed; ui.do({ type: 'speed', v: 0 }); } else ui.do({ type: 'speed', v: sc.freezeSpeed || 1 }); }
+    if (k === 'freeze') { sc.freeze = !sc.freeze; if (sc.freeze) { sc.freezeSpeed = game.sim.s.speed; ui.do({ type: 'speed', v: 0 }); } else ui.do({ type: 'speed', v: sc.freezeSpeed ?? 0 }); } // unfreezing restores the previous speed, including Pause
     if (k === 'tour') { if (sc.mode === 'tour') stopTour(); else startTour(); }
     if (k === 'rot') rend.rotate(+v);
     game.audio.play('click'); renderPhotoBar();

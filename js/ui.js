@@ -125,14 +125,17 @@ export class UI {
   }
   sfx(k) { this.g.audio.play(k); }
   syncPopupProperty() {
-    if(this.popupSim && this.popupSim!==this.sim) {this.popupBlocks=new Set();this.requestPanel=false;}
+    if(this.popupSim && this.popupSim!==this.sim) {this.popupBlocks=new Set();this.popupResume=null;this.requestPanel=false;}
     this.popupSim=this.sim;
   }
+  // Temporary UI pauses (panels, dialogs, reviews, requests, banners, rotation) remember the speed in force when the
+  // first one opened and restore exactly that when the last one closes. A manual Pause is never overridden.
   pauseForPopup(kind) {
     this.syncPopupProperty();
     if (this.title) return;
     this.popupBlocks ||= new Set();
     if (this.popupBlocks.has(kind)) return;
+    if (!this.popupBlocks.size) this.popupResume = this.sim.s.speed;
     this.popupBlocks.add(kind);
     if (this.sim.s.speed !== 0) this.do({ type: 'speed', v: 0 });
   }
@@ -140,8 +143,12 @@ export class UI {
     this.syncPopupProperty();
     if (!this.popupBlocks || !this.popupBlocks.has(kind)) return;
     this.popupBlocks.delete(kind);
-    if (!this.popupBlocks.size && !this.title) this.do({ type: 'speed', v: 1 });
+    if (this.popupBlocks.size || this.title) return;
+    const v = this.popupResume ?? 0; this.popupResume = null;
+    if (this.sim.s.speed !== v) this.do({ type: 'speed', v });
   }
+  // A Pause chosen while a temporary pause is active is the player's decision: it is what closing restores.
+  notePause(v) { if (+v === 0 && this.popupBlocks?.size) this.popupResume = 0; }
 
   // ------------------------------------------------------------ clicks
   onClick(e) {
@@ -156,6 +163,7 @@ export class UI {
           this.tutMin = true; this.scMin = true;
           this.resumePopup('tutorial'); this.resumePopup('scenario'); this.renderTut(true);
         }
+        this.notePause(v);
         if (!(this.popupBlocks?.size && +v > 0)) this.do({ type: 'speed', v: +v });
         this.sfx('click'); break;
       }
@@ -198,7 +206,7 @@ export class UI {
       case 'close': { const back = this.returnToRequests && this.tab === 'feedback'; this.returnToRequests = false; this.select(null); this.setTab(null); if (back && this.sim.s.convos.length) this.showRequests(); break; }
       case 'cmd': { const act = JSON.parse(el.dataset.cmd);
         if (act.type === 'cancelOrder' && !el.dataset.confirmed) { this.confirmCancelOrder(act.id); break; }
-        if (act.type === 'cancelOrder' && this.modalOpen()) this.closeModal();
+        if (act.type === 'cancelOrder') this.closeModal(); // the confirmed tap closes its dialog, restoring the previous speed
         const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'delegateTask', 'delegateTaskFor', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
       case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); if (!this.sim.s.convos.length) this.resumePopup('convo'); break;
@@ -247,7 +255,7 @@ export class UI {
       case 'gfx': { const g = this.g; if (g.autoQ) { g.autoQ = false; g.rend.setQuality(2); } else if (g.rend.quality > 0) g.rend.setQuality(g.rend.quality - 1); else { g.autoQ = true; g.rend.setQuality(2); } this.showMenu(); break; }
       case 'battery': this.g.battery = !this.g.battery; this.showMenu(); break;
       case 'photo': this.closeModal(); this.g.showcase.enterPhoto(); break;
-      case 'tour': this.closeModal(); this.g.showcase.startTour(); if (!this.sim.s.speed) this.do({ type: 'speed', v: 1 }); break;
+      case 'tour': this.closeModal(); this.g.showcase.startTour(); break; // a manual Pause stays paused through the tour
       case 'lens': this.g.showcase.setLens(!this.g.showcase.lensPref); this.showMenu(); break;
       case 'continue': { const d = this.contSave; if (!d) break;
         const told = (r, note) => { const m = r.meta || {}; this.closeModal(); this.sfx('confirm'); this.toast(`${note}Restored ${m.name || 'your game'}: Day ${+m.day || 1}${m.time ? ', ' + m.time : ''}, ${money(+m.cash || 0)} cash (${this.ago((r.at || 0) * 1000)}${r.src === 'server' ? ', from the save server' : ''}).`, note ? 'bad' : 'good'); };
@@ -1244,8 +1252,8 @@ export class UI {
     if (!step) return step;
     const sel = step.sel || '';
     if (/^#speed /.test(sel) && this.timeLocked()) {
-      if (this.sheetTall && this.$('sheet').firstChild) return { ...step, redirect: 'back', t: 'Tap <b>Back to map</b>', d: 'Time stays paused while this panel is expanded, so the clock controls do not respond. Tap <b>Back to map</b> at the top of the panel; the clock resumes at 1x.', sel: '.sheet [data-a="sheetGrow"][aria-expanded="true"]', lbl: 'Back to map' };
-      if (this.modalOpen()) return { ...step, redirect: 'modal', t: 'Close this window', d: 'Time stays paused while this window is open. Close it with <b>×</b>; the clock resumes at 1x.', sel: '.modal [data-a="modalClose"]', lbl: 'Close' };
+      if (this.sheetTall && this.$('sheet').firstChild) return { ...step, redirect: 'back', t: 'Tap <b>Back to map</b>', d: 'Time stays paused while this panel is expanded, so the clock controls do not respond. Tap <b>Back to map</b> at the top of the panel; time returns to the speed it had before, then you can tap <b>1x</b>.', sel: '.sheet [data-a="sheetGrow"][aria-expanded="true"]', lbl: 'Back to map' };
+      if (this.modalOpen()) return { ...step, redirect: 'modal', t: 'Close this window', d: 'Time stays paused while this window is open. Close it with <b>×</b>; time returns to the speed it had before, then you can tap <b>1x</b>.', sel: '.modal [data-a="modalClose"]', lbl: 'Close' };
     }
     // The panels use a section selector: when the required control is not on screen yet, the instruction names the section.
     const section = /"role":"porter"/.test(sel) ? ['operate', 'Hire capacity', 'Hire'] : /data-a="overlay"/.test(sel) ? ['operate', 'Overlays', 'Overlays'] : sel === '.ladder' ? ['business', 'Collections', 'Collections'] : null;

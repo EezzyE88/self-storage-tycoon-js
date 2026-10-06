@@ -492,7 +492,7 @@ canvas.addEventListener('wheel', (e) => { e.preventDefault(); game.rend.zoomBy(e
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   const ui = game.ui;
-  const runSpeed = (v) => { if (!(v > 0 && ui.timeLocked())) ui.do({ type: 'speed', v }); }; // keyboard obeys the same paused-review rule as the buttons
+  const runSpeed = (v) => { ui.notePause(v); if (!(v > 0 && ui.timeLocked())) ui.do({ type: 'speed', v }); }; // keyboard obeys the same rules as the buttons
   if (e.key === 'Escape' && !ui.title && ui.verticalPreviewing) { ui.onClick({ target: { closest: () => ({ dataset: { a: 'verticalCancel' } }) } }); return; }
   if (e.key === 'Escape' && !ui.title && ui.modalOpen()) { ui.closeModal(); return; }
   if (e.key === ' ') { e.preventDefault(); runSpeed(game.sim.s.speed ? 0 : 1); }

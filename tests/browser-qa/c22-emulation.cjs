@@ -28,7 +28,7 @@ const tutorialBeat = (p, id) => p.evaluate(async (id) => { const g = __game; con
 const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple'); g.ui.title = false; g.ui.closeModal(); const s = g.sim.s; s.tut.on = false; s.tut.done = true; s.cash = 1e6; s.open = true; });
 
 (async () => {
-  await scenario('tutorial 1x is never targeted while inert; Back to map resumes 1x', 393, 659, async (p) => {
+  await scenario('tutorial 1x is never targeted while inert; Back to map keeps the paused clock, then 1x works', 393, 659, async (p) => {
     await p.click('[data-a="new"][data-v="maple"]'); await p.evaluate(() => { __game.ui.tutLooked = true; }); await frames(p); await p.click('.tut [data-a="tutNext"]'); await frames(p);
     await p.evaluate(() => { const g = __game; g.ui.select(g.sim.objs('unit').find((u) => u.num === 107).id); }); await frames(p);
     assert.match(await tutText(p), /Owner Make-Ready/); await p.click(`[data-cmd*='"ownerMakeReady"']`); await frames(p);
@@ -36,7 +36,8 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.click('[data-a="sheetGrow"]'); await frames(p);
     assert.match(await tutText(p), /Back to map/); assert.equal((await guide(p)).lbl, 'Back to map'); await shot(p, 'tut-back-to-map');
     await p.click('#speed [data-v="1"]'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.speed), 0);
-    await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.speed), 1);
+    await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.speed), 0, 'Back to map restores the paused clock');
+    assert.match(await tutText(p), /Start the clock: tap 1x/); await p.click('#speed [data-v="1"]'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.speed), 1);
     assert.match(await tutText(p), /Watch the Owner finish/); assert.equal((await guide(p)).lbl, 'Watch here');
   });
   await scenario('selected Units category advances to the revealed Drive-Up 10x10 card; staff uses the section selector', 393, 659, async (p) => {
@@ -97,13 +98,30 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.click('[data-a="verticalPreview"]'); await frames(p); const cash = await p.evaluate(() => __game.sim.s.cash); await p.click('#abar [data-a="verticalConfirm"]'); await frames(p);
     assert.equal(cash - await p.evaluate(() => __game.sim.s.cash), 17810);
   });
-  await scenario('landscape 734x343: rotate prompt pauses; portrait resumes at 1x', 393, 659, async (p) => {
+  await scenario('landscape 734x343: rotate prompt pauses; portrait restores the previous speed', 393, 659, async (p) => {
     await plainGame(p); await p.evaluate(() => __game.sim.dispatch({ type: 'speed', v: 2 })); await frames(p);
     await p.setViewportSize({ width: 734, height: 343 }); await frames(p); await shot(p, 'landscape');
     assert.deepEqual(await p.evaluate(() => [getComputedStyle(document.querySelector('#rotate')).display, getComputedStyle(document.querySelector('#ui')).visibility, __game.sim.s.speed]), ['flex', 'hidden', 0]);
-    await p.setViewportSize({ width: 393, height: 659 }); await frames(p); assert.deepEqual(await p.evaluate(() => [getComputedStyle(document.querySelector('#rotate')).display, __game.sim.s.speed]), ['none', 1]);
+    await p.setViewportSize({ width: 393, height: 659 }); await frames(p); assert.deepEqual(await p.evaluate(() => [getComputedStyle(document.querySelector('#rotate')).display, __game.sim.s.speed]), ['none', 2]);
   });
 
+
+  await scenario('P. temporary pauses restore the previous speed; manual Pause survives panels, dialogs, confirmations and requests', 393, 659, async (p) => {
+    const speed = () => p.evaluate(() => __game.sim.s.speed);
+    // Real time runs between steps, so a genuine request or milestone banner may hold its own pause; it must then restore v.
+    const restored = async (v, msg) => { const r = await p.evaluate(() => ({ s: __game.sim.s.speed, n: (__game.ui.popupBlocks || new Set()).size, r: __game.ui.popupResume, k: [...(__game.ui.popupBlocks || [])] })); assert.ok(r.s === v || (r.n > 0 && r.r === v), `${msg}: ${JSON.stringify(r)}`); };
+    await plainGame(p); await p.click('#speed [data-v="2"]'); await frames(p); assert.equal(await speed(), 2);
+    await p.click('#tabs [data-v="business"]'); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0, 'Details pauses');
+    await p.click('[data-a="sheetGrow"]'); await frames(p); await restored(2, 'Back to map restores 2x');
+    await p.click('.sheet [data-a="close"]'); await frames(p);
+    await p.click('#speed [data-v="0"]'); await frames(p); await p.evaluate(() => __game.ui.showVertical(12)); await frames(p); await p.click('[data-qa="vr-preview"]'); await frames(p);
+    await p.click('#abar [data-qa="vp-confirm"]'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.orders.at(-1).st), 'construction'); assert.equal(await speed(), 0, 'confirmation keeps a manual Pause');
+    await p.click('#speed [data-v="4"]'); await frames(p); await p.click('[data-a="floorChoose"]'); await frames(p); assert.equal(await speed(), 0); await p.click('[data-qa="floors-close"]'); await frames(p); await restored(4, 'closing the chooser restores 4x');
+    await p.evaluate(() => __game.ui.select(12)); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p); await p.click('#speed [data-v="0"]'); await frames(p);
+    await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0, 'Pause tapped inside a panel survives Back to map');
+    await p.click('#speed [data-v="1"]'); await frames(p); await p.evaluate(() => { const g = __game; g.ui.select(null); g.sim.convo({ key: 'qa', who: 'Tenant', text: 'Hello', sev: 'attention', actions: [{ label: 'Thanks' }] }); g.ui.renderFeed(true); }); await frames(p); assert.equal(await speed(), 0, 'a request pauses');
+    await p.click('[data-a="requests"]'); await frames(p); await p.click('.modal [data-a="convo"]'); await frames(p); await p.evaluate(() => __game.ui.closeModal()); await frames(p); await restored(1, 'answering restores 1x');
+  });
   // ---- Grok addendum A-F ----
   for (const [w, h] of [[393, 659], [1280, 720]]) await scenario(`A. Tap Unit 107 ring is on the unit's pin and a real tap completes the step (${w}x${h})`, w, h, async (p) => {
     await p.click('[data-a="new"][data-v="maple"]'); await p.evaluate(() => { __game.ui.tutLooked = true; }); await frames(p); await p.click('.tut [data-a="tutNext"]'); await frames(p);
@@ -142,7 +160,7 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
   await scenario('F. review closes by labelled control and Escape; keyboard cannot bypass the paused review', 393, 659, async (p) => {
     await plainGame(p); await p.evaluate(() => __game.ui.showVertical(12)); await frames(p);
     assert.equal(await p.getAttribute('[data-qa="vr-close"]', 'aria-label'), 'Close review'); await p.keyboard.press('Space'); await p.keyboard.press('3'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.speed), 0);
-    await p.keyboard.press('Escape'); await frames(p); assert.deepEqual(await p.evaluate(() => [!!document.querySelector('.modal-bg'), __game.ui.verticalQuote, __game.sim.s.speed]), [false, null, 1], 'closing returns to 1x');
+    await p.keyboard.press('Escape'); await frames(p); assert.deepEqual(await p.evaluate(() => [!!document.querySelector('.modal-bg'), __game.ui.verticalQuote, __game.sim.s.speed]), [false, null, 0], 'closing restores the paused clock');
     await p.evaluate(() => __game.ui.showVertical(12)); await frames(p); await p.click('[data-qa="vr-preview"]'); await frames(p); await p.keyboard.press('Escape'); await frames(p);
     assert.deepEqual(await p.evaluate(() => [__game.ui.verticalPreviewing, __game.rend.previewG.children.length]), [false, 0]);
     await p.evaluate(() => __game.ui.showVertical(12)); await frames(p); await p.click('[data-qa="vr-close-review"]'); await frames(p); assert.equal(await p.evaluate(() => !!document.querySelector('.modal-bg')), false);

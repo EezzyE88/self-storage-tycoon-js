@@ -17,8 +17,8 @@ session(base);let R=g.sim.verticalPlan(g.sim.objs('shell')[0].id);g.sim.dispatch
 console.log('PASS actual save/load retains construction phase, elapsed ticks and paid package');
 for(const mutate of [s=>s.floorModelVersion=2,s=>s.hall.push([]),s=>s.objects[Object.values(s.objects).find(o=>o.type==='elevator').id].servedFloors=[0,1,5],s=>s.agents.push({id:1,f:5}),s=>s.dirt[2][0]=null,s=>s.objects[Object.values(s.objects).find(o=>o.type==='shell').id].plannedMaxFloors=6]){session(full);const old=g.company,s=JSON.parse(g.saveJSON());mutate(s);assert.equal(await g.loadCode(JSON.stringify({company:1,active:0,props:[{name:'Good',s:base.s},{name:'Bad',s}]})),false);assert.equal(g.company,old);}
 console.log('PASS malformed height/version/layers/floors rejected atomically across portfolio');
-const u=Object.create(UI.prototype),sim=new Sim(JSON.parse(JSON.stringify(full.s)));u.g={sim};u.popupBlocks=new Set(['modal']);u.do=a=>sim.dispatch(a);u.resumePopup('modal');assert.equal(sim.s.speed,1);
-console.log('PASS intentional 1x popup resume preserved');
+const u=Object.create(UI.prototype),sim=new Sim(JSON.parse(JSON.stringify(full.s)));u.g={sim};u.do=a=>sim.dispatch(a);for(const v of [0,1,4]){sim.s.speed=v;u.pauseForPopup('modal');assert.equal(sim.s.speed,0);u.resumePopup('modal');assert.equal(sim.s.speed,v);}
+console.log('PASS popup closure restores the previous speed (Pause, 1x, 4x)');
 const Renderer=await loadRenderer(),r=new Renderer({clientWidth:393,clientHeight:720},sim);r.rebuildStatic();const before=JSON.stringify(sim.s);for(let f=0;f<3;f++){r.setView(f);assert.equal(r.floorY(),f*FLOOR_H);assert.ok(r.staticG.children.filter(m=>m.userData.f!=null&&(m.userData.fl??m.userData.f)!==f&&!m.userData.shellWall&&!m.userData.roof&&!m.userData.cab).every(m=>!m.visible));}assert.equal(JSON.stringify(sim.s),before);
 console.log('PASS three-floor cutaway/selected-floor plane under renderer stubs; Safari visual acceptance pending');
 

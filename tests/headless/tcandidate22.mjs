@@ -107,12 +107,13 @@ await test('4. an already-selected tab or category completes its navigation step
   assert.equal(alreadyShowing({sel:'#tabs [data-v="build"]'},{tab:'build',sel:null}),true);assert.equal(alreadyShowing({sel:'#tabs [data-v="build"]'},{tab:'build',sel:5}),false);
   assert.equal(alreadyShowing({sel:'.cats [data-v="units"]'},{tab:'build',cat:'units',sel:null}),true);assert.equal(alreadyShowing({sel:'.cats [data-v="units"]'},{tab:'operate',cat:'units',sel:null}),false);
   const m=makeMaple(3);m.s.tut.beat=BEATS.findIndex(b=>b.id==='expand');assert.equal(stepState(m,{tab:'build',cat:'units',sel:null}).cur,2,'Units already chosen: next action is the Drive-Up card');});
-await test('4. clock steps never target an inert 1x: an expanded panel redirects to Back to map, which resumes at 1x',()=>{
+await test('4. clock steps never target an inert 1x: an expanded panel redirects to Back to map, then 1x works',()=>{
   const {ui,sim,boxes}=fixture();const step=BEATS.find(b=>b.id==='makeready').steps[2];
   ui.popupBlocks=new Set(['tutorial']);assert.equal(ui.resolveStep(step),step,'tutorial card pause alone leaves 1x usable');
-  ui.popupBlocks=new Set(['panel']);ui.sheetTall=true;boxes.sheet=el();boxes.sheet.firstChild={};const r=ui.resolveStep(step);assert.equal(r.redirect,'back');assert.match(r.t,/Back to map/);assert.match(r.sel,/sheetGrow/);
+  ui.popupBlocks=new Set();ui.pauseForPopup('panel');ui.sheetTall=true;boxes.sheet=el();boxes.sheet.firstChild={};const r=ui.resolveStep(step);assert.equal(r.redirect,'back');assert.match(r.t,/Back to map/);assert.match(r.sel,/sheetGrow/);
   ui.onClick({target:{closest:()=>({dataset:{a:'speed',v:'1'}})}});assert.equal(sim.s.speed,0,'1x is inert while the panel holds time');
-  ui.sheetTall=false;ui.resumePopup('panel');assert.equal(sim.s.speed,1,'returning to the map resumes at 1x');
+  ui.sheetTall=false;ui.resumePopup('panel');assert.equal(sim.s.speed,0,'Back to map restores the paused clock it found');assert.equal(ui.resolveStep(step),step,'the step now targets the working 1x');
+  ui.onClick({target:{closest:()=>({dataset:{a:'speed',v:'1'}})}});assert.equal(sim.s.speed,1,'1x responds after Back to map');
   ui.popupBlocks=new Set(['modal']);boxes.modal=el();boxes.modal.firstChild={};assert.equal(ui.resolveStep(step).redirect,'modal');});
 await test('4. an armed build tool redirects map/commission steps to putting the tool away',()=>{
   const {ui}=fixture();ui.tool='du10x10';const commission=BEATS.find(b=>b.id==='expand').steps.at(-1);const r=ui.resolveStep(commission);assert.equal(r.redirect,'tool');assert.match(r.sel,/cancelTool/);
@@ -156,7 +157,7 @@ await test('13. wage copy matches the Porter wage and does not silently round $1
   assert.match(src,/on-site work \(walking time extra\)/);assert.match(src,/response time ~\$\{h\}h/);});
 await test('9. orientation policy: portrait manifest and a pausing rotate prompt for phone-height landscape',()=>{
   assert.equal(JSON.parse(readFileSync('manifest.webmanifest','utf8')).orientation,'portrait');assert.match(readFileSync('index.html','utf8'),/id="rotate"/);assert.match(readFileSync('css/game.css','utf8'),/@media \(orientation: landscape\) and \(max-height: 500px\) \{\n  #rotate \{ display:flex/);
-  const {ui,sim}=fixture(makeMaple(3),2);let land=true;globalThis.matchMedia=()=>({matches:land});ui.syncOrientation();assert.equal(sim.s.speed,0);ui.onClick({target:{closest:()=>({dataset:{a:'speed',v:'4'}})}});assert.equal(sim.s.speed,0);land=false;ui.syncOrientation();assert.equal(sim.s.speed,1);delete globalThis.matchMedia;});
+  const {ui,sim}=fixture(makeMaple(3),2);let land=true;globalThis.matchMedia=()=>({matches:land});ui.syncOrientation();assert.equal(sim.s.speed,0);ui.onClick({target:{closest:()=>({dataset:{a:'speed',v:'4'}})}});assert.equal(sim.s.speed,0);land=false;ui.syncOrientation();assert.equal(sim.s.speed,2,'portrait restores the previous speed');delete globalThis.matchMedia;});
 await test('10. suite runs without hidden Git history',()=>{for(const f of ['tests/headless/tlayout_hierarchy.mjs','tests/headless/tthreefloor_parity.mjs'])assert.doesNotMatch(readFileSync(f,'utf8'),/execFileSync\('git'|54d432f/);readFileSync('tests/fixtures/render-pre-layout-hierarchy.js');readFileSync('tests/fixtures/candidate19/sim.js');});
 
 // ---- Grok addendum (A-F) ----
@@ -190,5 +191,5 @@ await test('F. expansion review is accessible: stable labels, automation selecto
   assert.match(h,/aria-label="Close review"/);assert.match(h,/role="dialog" aria-modal="true" aria-labelledby="vr-title"/);assert.match(h,/Paused while you review/);assert.doesNotMatch(h,/<select/,'no native select needed in the review');
   assert.match(h,/data-vertical-option="stairs"[^>]*disabled/);assert.match(h,/Not available: this building has no stairwell/);assert.match(h,/Confirm · \$17,810/);
   ui.previewVertical();assert.match(ui.verticalBarHtml(),/data-qa="vp-back"[\s\S]*data-qa="vp-confirm"[\s\S]*data-qa="vp-discard"/);
-  const main=readFileSync('js/main.js','utf8');assert.match(main,/e\.key === 'Escape' && !ui\.title && ui\.modalOpen\(\)\) \{ ui\.closeModal\(\); return; \}/);assert.match(main,/const runSpeed = \(v\) => \{ if \(!\(v > 0 && ui\.timeLocked\(\)\)\) ui\.do/);});
+  const main=readFileSync('js/main.js','utf8');assert.match(main,/e\.key === 'Escape' && !ui\.title && ui\.modalOpen\(\)\) \{ ui\.closeModal\(\); return; \}/);assert.match(main,/const runSpeed = \(v\) => \{ ui\.notePause\(v\); if \(!\(v > 0 && ui\.timeLocked\(\)\)\) ui\.do/);});
 console.log(`${n} candidate-22 regression checks passed`);
