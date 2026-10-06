@@ -42,6 +42,11 @@
       "pass": true
     },
     {
+      "name": "R. real keyboard: Space during a hold or photo Freeze records Pause; Unfreeze/Done keep it; unaffordable Confirm is disabled",
+      "viewport": "1280x720",
+      "pass": true
+    },
+    {
       "name": "A. Tap Unit 107 ring is on the unit's pin and a real tap completes the step (393x659)",
       "viewport": "393x659",
       "pass": true

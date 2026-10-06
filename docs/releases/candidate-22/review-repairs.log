@@ -1,0 +1,15 @@
+PASS #1 Space during any temporary pause records a manual Pause and never schedules a resume
+PASS #1 the reviewer reproduction: 4x → blocking panel → Space → close panel stays paused
+PASS #1 outside a hold Space toggles; explicit 1x/2x/4x resume only after the hold is released
+PASS #2 Freeze: Space cannot run time while frozen; Unfreeze and exiting photo mode preserve manual Pause
+PASS #3 ring labels avoid blueprint captions, and no blueprint caption is drawn twice
+PASS #4 the docked instruction strip keeps the how-to line visible
+PASS #5 an ordered hallway is not a built one: the elevator step waits with a live route to time controls
+PASS #6 Confirm is disabled below the hard cash requirement and states the shortfall; reserve stays advisory
+PASS #7 Restore previous game stores the outgoing game first; a failed store loads nothing and changes nothing
+PASS #7 Archive restore under storage failure keeps every archived game, even with a full archive
+PASS #7 keeping the outgoing game is atomic: a failed write leaves no half-moved previous game
+PASS #8 held upper units show "Handover test" everywhere, not a fault; genuine disconnections still warn
+PASS #9 building commissioning offers this order first; the property-wide action states its scope
+PASS #10 cancellation records penalty, work-in-progress and retained-prerequisite facts without moving cash
+14 review-repair checks passed

@@ -30,7 +30,7 @@ No economy, construction price, demand coefficient, wage, build duration or acce
 
 ## Test evidence
 
-All results come from a **fresh depth-1 clone** of the final code commit, `e26e3b0bd75e2804ed3cae44cf1652a806db6141`, which includes the addendum fixes and the pause policy. That clone has a single commit; `54d432f` and `da4c72a` do not exist in it. No build artifacts were present.
+All results come from a **fresh depth-1 clone** of the final code-and-test commit, `c0bbe68895403e48682a88e90a0734d2df88bd27`, which includes the addendum fixes, the pause policy and the review repairs. Its runtime code is identical to `b7edc7a`. That clone has a single commit; `54d432f` and `da4c72a` do not exist in it. No build artifacts were present.
 
 ```sh
 node tests/run-headless.mjs /tmp/c22                      # complete headless suite
@@ -43,9 +43,9 @@ python3 -m http.server 5173 & node tests/browser-qa/c22-emulation.cjs /tmp/c22-s
 | Check | Result |
 | --- | --- |
 | Base Candidate 21 suite (full-history clone, before changes) | 51/51 |
-| Final headless suite, fresh depth-1 clone | **55/55** scripts (51 existing + 4 new). [results.json](releases/candidate-22/results.json) |
-| Candidate-22 regressions | 28/28 checks (23 original + 5 for the addendum). [log](releases/candidate-22/candidate22-regressions.log); cancellation: [log](releases/candidate-22/cancellation.log); pause policy: [log](releases/candidate-22/pause-policy.log) |
-| Browser emulation (headless Chromium: 393×659 and 734×343 with touch, 1280×720 with a mouse; **not** Safari, **not** a physical iPhone) | 15/15 scenarios (7 original + 7 addendum + 1 pause policy), 0 console errors, 0 unhandled rejections. [results + screenshots](releases/candidate-22/emulation/) |
+| Final headless suite, fresh depth-1 clone | **56/56** scripts (51 existing + 5 new). [results.json](releases/candidate-22/results.json) |
+| Candidate-22 regressions | 28/28 checks (23 original + 5 for the addendum). [log](releases/candidate-22/candidate22-regressions.log); cancellation: [log](releases/candidate-22/cancellation.log); pause policy: [log](releases/candidate-22/pause-policy.log); review repairs: [log](releases/candidate-22/review-repairs.log) |
+| Browser emulation (headless Chromium: 393×659 and 734×343 with touch, 1280×720 with a mouse; **not** Safari, **not** a physical iPhone) | 16/16 scenarios (7 original + 7 addendum + 1 pause policy + 1 review-repair keyboard/Freeze/affordability), 0 console errors, 0 unhandled rejections. [results + screenshots](releases/candidate-22/emulation/) |
 | Stress script `tests/stress/tstress.mjs` | Completed; worst game-day 164 ms, peak save 671 KB |
 
 ### Seeded F3 journeys (`tthreefloor_journeys.mjs`, seeds 1–4)
@@ -157,6 +157,10 @@ Implemented at the owner's authorization on top of `5fbcbfa` in code commit `b7e
 - **Regression proof:** all 14 checks in `tests/headless/treview_repairs.mjs` fail when run against `5fbcbfa`, so each reproduces its failure path.
 
 ## Remaining limitations
+
+- **Optional-lesson offers:** an offer chip holds time like other temporary pauses. Until it is started or dismissed, run-speed taps are inert, as designed. Browser scenario P dismisses offers so it measures only the paths it is testing.
+- **Hallway sequencing:** this is verified headlessly with real construction ticks and source-level redirects. The full build-up lesson was not played through in the browser.
+- **Label placement:** collision avoidance is checked headlessly against blueprint captions. Final visual spacing on Safari is unverified.
 
 - **No physical iPhone or Safari/WebKit was used.** Browser evidence is from headless Chromium device emulation. Touch feel, Safari rendering, background/foreground behavior and memory still need the private Safari playtest.
 - Phone landscape is deliberately unsupported: a rotate prompt is shown. iPad and desktop landscape layouts were not re-certified beyond confirming the prompt does not appear at 1280×720.
