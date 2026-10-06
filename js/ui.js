@@ -9,6 +9,7 @@ import { financialTime } from './finance.js';
 import { guideFor } from './handbook.js';
 import { verticalLayout, verticalDone, verticalCheck, authoredPlacement } from './blueprint.js';
 import { expansionEvidence, cancellationBreakdown } from './vertical.js';
+import { layoutCaptions, edgePoint, CAPTION_PRIORITY as CP } from './captions.js';
 // Results of savearchive.keep(): older callers and test doubles may still return a plain boolean.
 const stored = (r) => r === true || !!(r && r.ok);
 const namesOf = (metas) => metas.map((m) => (m && m.name) || 'Saved game').join(', ');
@@ -738,7 +739,7 @@ export class UI {
   viewReportedTarget(l) {
     const target=reportedTarget(this.sim,l); if(!target) return;
     this.select(null); this.setTab(null);
-    const f=Number.isInteger(target.f)&&this.sim.objs('shell').some(o=>o.floors>target.f)?target.f:0;
+    const f=this.sim.objs('shell').some(o=>(o.floors||1)>target.f)?target.f:0; // stale floor (no building reaches it now): F1
     this.setView(f); this.rend.lookAt(target.x,target.y);
     const o=this.sim.s.objects[target.obj]; if(o && (o.f||0)===f) this.select(o.id);
   }
@@ -1334,8 +1335,11 @@ export class UI {
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
       </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button><button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
+  // The placement the current RESOLVED step asks for. A step that is waiting on, or missing, a prerequisite (e.g. an
+  // elevator committed before its hallways finished) asks for no placement, so nothing invites placing again.
   currentBlueprintPlan() {
-    const step=stepState(this.sim,this).cur, st=curBeat(this.sim)?.steps[step];
+    const step=stepState(this.sim,this).cur, raw=curBeat(this.sim)?.steps[step], st=raw&&this.resolveStep(raw);
+    if(raw&&(raw.blueprint||raw.placement)&&!(st.blueprint||st.placement)) return null;
     if(this.sim.s.lesson?.id!=='up') return authoredPlacement(this.sim,st);
     const key=st?.blueprint;
     const l=verticalLayout(this.sim); if(!l?.plans) return null;
@@ -1349,7 +1353,8 @@ export class UI {
   showBlueprintTarget() {
     const a=this.currentBlueprintPlan(); if(!a) return;
     this.rend.lookAt((a.a.x+a.b.x)/2,(a.a.y+a.b.y)/2);
-    this.autoPanKey=null;
+    // Asked for by the player: frame the whole step outline (building + target) in the uncovered map area now.
+    if(this.frameOutline()) this.autoPanKey=this.guideKey; else this.autoPanKey=null;
   }
   // Bring a required control into view inside its own scroller (e.g. a build card off-screen to the right on iPhone).
   revealGuideEl(el) {
@@ -1377,18 +1382,72 @@ export class UI {
     if (hit && !(hit.id === 'view' || (hit.closest && hit.closest('#pins, #blueprint, #bubbles')))) return false;
     return !['.tut','.sheet','.actionbar','.hud','.viewctl','.tabs','#feed .convo','.modal','#celebrate.on'].some(sel=>[...this.root.ownerDocument.querySelectorAll(sel)].some(el=>{const r=el.getBoundingClientRect();return r.width>0&&p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom;}));
   }
+  // The lesson prerequisite currently holding the step (waiting on or missing a hallway), or null.
+  lessonPrereq() { const step=stepState(this.sim,this).cur, raw=curBeat(this.sim)?.steps[step]; return raw?.prereq ? raw.prereq(this.sim) : null; }
+  // Interface rectangles captions must not cover (HUD, instruction, panels, navigation, toasts, the coach ring).
+  captionObstacles() {
+    const out=[]; if(typeof document==='undefined'||!this.root?.querySelectorAll) return out;
+    for(const el of this.root.querySelectorAll('.hud > *, #speed, .viewctl, .viewextra, #tut .tut, #tabs, .sheet, .actionbar, #feed .toast, #feed .convo, #guide:not([hidden])')) {const r=el.getBoundingClientRect(); if(r.width>0&&r.height>0) out.push({l:r.left,t:r.top,r:r.right,b:r.bottom});}
+    return out;
+  }
+  measureCaption(t,cls) {
+    if(this.capCtx===undefined){try{this.capCtx=document.createElement('canvas').getContext('2d')||null;}catch(e){this.capCtx=null;}}
+    const c=this.capCtx; if(!c) return t.length*(cls==='secondary'?6:7); c.font=`700 ${cls==='secondary'?10:12}px system-ui`; return c.measureText(t).width;
+  }
   updateBlueprint() {
     const box=this.$('blueprint'); if(!box) return;
-    if(this.title||this.modalOpen()||!curBeat(this.sim)||this.menuTouch) {box.innerHTML='';return;}
-    const l=this.sim.s.lesson?.id==='up'?verticalLayout(this.sim):null,a=this.currentBlueprintPlan(); if(!a&&!l?.plans) {box.innerHTML='';return;}
+    if(this.title||this.modalOpen()||!curBeat(this.sim)||this.menuTouch) {box.innerHTML='';this.capPrev=null;return;}
+    const sim=this.sim,l=sim.s.lesson?.id==='up'?verticalLayout(sim):null,a=this.currentBlueprintPlan(),pre=l?.plans?this.lessonPrereq():null; if(!a&&!l?.plans) {box.innerHTML='';return;}
     const project=(x,y,f=0)=>this.rend.project(x,y,f*FLOOR_H);
-    const polygon=(a,b,f,color,label)=>{const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1; const pts=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(([x,y])=>project(x,y,f)); if(!pts.every(p=>p.vis))return '';const c=project(x+w/2,y+h/2,f);return `<polygon points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="${color}" fill-opacity=".12" stroke="${color}" stroke-width="2" stroke-dasharray="6 4"/><text x="${c.x}" y="${c.y}" class="bp-label">${label}</text>`;};
-    let html=l?.plans ? polygon(l.plans.shell2.a,l.plans.shell2.b,0,'#7adbe8',`${l.sh.w} × ${l.sh.h} · 2 floors`)+polygon(l.plans.aisle.a,l.plans.aisle.b,0,'#7adbe8','Drive aisle') : '';
-    if(a) { const planned=this.sim.plan(a),items=planned.items||[], cells=items.filter(c=>c.x!=null&&c.y!=null); const start=cells.length?{x:Math.min(...cells.map(c=>c.x)),y:Math.min(...cells.map(c=>c.y))}:a.a,end=cells.length?{x:Math.max(...cells.map(c=>c.x)),y:Math.max(...cells.map(c=>c.y))}:a.b; html+=polygon(start,end,a.f,'#ffd23a',TOOLS[a.tool].name); for(const u of planned.units||[]) {html+=polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,'#ffd23a','');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)html+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="#ffd23a" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="#ffd23a"/>`; }for(const [c,label] of [[a.a,'Start here'],[a.b,'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(p.vis)html+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/><text x="${p.x}" y="${p.y+(label==='Start here'?-15:23)}" class="bp-label">${a.a.x===a.b.x&&a.a.y===a.b.y ? (label==='Start here'?'Place here':'') : label}</text>`;}}
-    // Secondary captions never repeat a caption already drawn (e.g. the active Elevator placement's own label).
-    if(l?.plans) { const taken=[...html.matchAll(/<text x="([\d.-]+)" y="([\d.-]+)"[^>]*>([^<]*)</g)].filter(m=>m[3]).map(m=>({x:+m[1],y:+m[2],t:m[3]}));
-      for(const [c,label] of [[l.door,'Entrance'],[l.outer,'Loading'],[l.plans.elevator.a,'Elevator']]) {const p=project(c.x+.5,c.y+.5,a?.f||0);if(!p.vis||taken.some(q=>q.t.toLowerCase()===label.toLowerCase()))continue;taken.push({x:p.x,y:p.y-9,t:label});html+=`<text x="${p.x}" y="${p.y-9}" class="bp-label secondary">${label}</text>`;} }
+    const caps=[]; let shapes='';
+    // Outline only; its caption (if any) joins the shared layout with its priority.
+    const polygon=(a,b,f,color,label,prio,cls)=>{const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1; const pts=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(([x,y])=>project(x,y,f)); if(!pts.every(p=>p.vis))return;const c=project(x+w/2,y+h/2,f);shapes+=`<polygon points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="${color}" fill-opacity=".12" stroke="${color}" stroke-width="2" stroke-dasharray="6 4"/>`; if(label) caps.push({t:label,ax:c.x,ay:c.y,prio,cls});};
+    const done=(k)=>verticalDone(sim,k);
+    if(l?.plans) {
+      // Building context: the footprint, captioned only before it exists. Completed work is not re-advertised.
+      polygon(l.plans.shell2.a,l.plans.shell2.b,0,'#7adbe8',l.proposed?`${l.sh.w} × ${l.sh.h} · 2 floors`:'',CP.context);
+      if(!done('aisle')&&a?.tool!=='aisle') polygon(l.plans.aisle.a,l.plans.aisle.b,0,'#7adbe8','Drive aisle',CP.secondary,'secondary');
+      // Waiting on / missing a hallway: show that hallway, never a placement cue for the step being held.
+      if(pre) pre.states.forEach((st,f)=>{ if(st==='built') return; const hp=l.plans[f===0?'hall':'hall2']; if(hp) polygon(hp.a,hp.b,f,'#ffb648',st==='ordered'?`F${f+1} hallway · under construction`:`F${f+1} hallway needed`,CP.prerequisite); });
+    }
+    if(a) { const planned=this.sim.plan(a),items=planned.items||[], cells=items.filter(c=>c.x!=null&&c.y!=null); const start=cells.length?{x:Math.min(...cells.map(c=>c.x)),y:Math.min(...cells.map(c=>c.y))}:a.a,end=cells.length?{x:Math.max(...cells.map(c=>c.x)),y:Math.max(...cells.map(c=>c.y))}:a.b; polygon(start,end,a.f,'#ffd23a',TOOLS[a.tool].name,CP.target); for(const u of planned.units||[]) {polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,'#ffd23a','');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)shapes+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="#ffd23a" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="#ffd23a"/>`; }
+      const single=a.a.x===a.b.x&&a.a.y===a.b.y;
+      for(const [c,label] of [[a.a,single?'Place here':'Start here'],[a.b,single?'':'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(!p.vis)continue;shapes+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/>`;if(label)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.target,dy:label==='End here'?23:-15});}}
+    if(l?.plans) { // secondary route context, only while that part is still to be placed
+      for(const [c,label,k] of [[l.door,'Entrance','doorWide'],[l.outer,'Loading','loading'],[l.plans.elevator.a,'Elevator','elevator']]) {if(!c||done(k)||(k==='elevator'&&(pre||a?.tool==='elevator')))continue;const p=project(c.x+.5,c.y+.5,a?.f||0);if(p.vis)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.secondary,cls:'secondary',dy:-9});} }
+    const L=layoutCaptions(caps,{width:innerWidth,height:innerHeight,obstacles:this.captionObstacles(),measure:(t,c)=>this.measureCaption(t,c),prev:this.capPrev});
+    this.capPrev=new Map(L.placed.map(c=>[c.t,c.pick])); this.capLayout=L;
+    let html=shapes;
+    for(const c of L.placed) { if(c.leader){const e=edgePoint(c.box,c.ax,c.ay);html+=`<line class="bp-leader" x1="${c.ax}" y1="${c.ay}" x2="${e.x}" y2="${e.y}"/>`;} html+=`<text x="${c.x}" y="${c.y}" class="bp-label${c.cls?' '+c.cls:''}${c.prio===CP.prerequisite?' prereq':''}" data-prio="${c.prio}">${esc(c.t)}</text>`; }
     box.setAttribute('viewBox',`0 0 ${innerWidth} ${innerHeight}`); if(box.innerHTML!==html)box.innerHTML=html;
+  }
+  // Once per tutorial step (waiting states included): if the step's outline is not inside the uncovered map area,
+  // pan it there (zooming out only if it cannot fit). Never during a drag or pinch; a step that changes mid-gesture is
+  // left alone, and after framing the player's own camera movement is never undone.
+  stepOutline() {
+    const l=this.sim.s.lesson?.id==='up'?verticalLayout(this.sim):null; if(!l?.plans) return null;
+    const rects=[[l.plans.shell2.a,l.plans.shell2.b,0,2]], a=this.currentBlueprintPlan(), pre=this.lessonPrereq();
+    if(a) rects.push([a.a,a.b,a.f||0,1]);
+    if(pre) pre.states.forEach((st,f)=>{const hp=st!=='built'&&l.plans[f===0?'hall':'hall2']; if(hp) rects.push([hp.a,hp.b,f,1]);});
+    const pts=[]; for(const [p,q,f,fl] of rects){const x0=Math.min(p.x,q.x),x1=Math.max(p.x,q.x)+1,y0=Math.min(p.y,q.y),y1=Math.max(p.y,q.y)+1; for(const x of [x0,x1])for(const y of [y0,y1])for(const z of [f*FLOOR_H,(f+fl)*FLOOR_H])pts.push([x,y,z]);}
+    return pts;
+  }
+  frameStep() {
+    const key=this.guideKey; if(!key||key===this.frameKey||this.title||this.modalOpen()) return;
+    this.frameKey=key; if(this.pointerBusy) return; // the player is mid-gesture: leave the camera to them
+    if(this.frameOutline()) this.autoPanKey=key; // the ring's own once-per-step pan is now satisfied
+  }
+  // Fit the current step's outline inside the measured usable area. Returns false when there is nothing to frame.
+  frameOutline() {
+    if(typeof innerWidth==='undefined'||!this.$('tabs')?.getBoundingClientRect||!this.rend?.project) return false; // no page to measure (headless)
+    const pts=this.stepOutline(); if(!pts) return false;
+    const r=this.safeRect(), m=12, R=this.rend;
+    const bb=()=>{let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;for(const [x,y,z] of pts){const p=R.project(x,y,z);x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);}return {x0,x1,y0,y1};};
+    let b=bb(); if(b.x0>=r.left+m&&b.x1<=r.right-m&&b.y0>=r.top+m&&b.y1<=r.bottom-m) return true;
+    const k=Math.min((r.right-r.left-2*m)/(b.x1-b.x0),(r.bottom-r.top-2*m)/(b.y1-b.y0));
+    if(k<1&&R.zoomBy){R.zoomBy(k*0.97);b=bb();} // zoom out only as far as needed; never zoom in on the player
+    R.pan((r.left+r.right)/2-(b.x0+b.x1)/2,(r.top+r.bottom)/2-(b.y0+b.y1)/2);
+    return true;
   }
   // Coach ring: points at the current step's DOM control, or the control that leads to it, or its map spot.
   guideTarget() {
@@ -1435,7 +1494,7 @@ export class UI {
     const hit = rs.some((r) => p.x > r.left - 24 && p.x < r.right + 24 && p.y > r.top - 40 && p.y < r.bottom + 24);
     const off = !p.vis || p.y < 70 || p.y > H - 100 || p.x < 20 || p.x > W - 70;
     if (!hit && !off) return false;
-    let top = 64, bot = H - 96, left = 8, right = W - 64;
+    const sr = this.safeRect(); let top = Math.max(64, sr.top), bot = Math.min(H - 96, sr.bottom), left = 8, right = W - 64; // measured HUD, not an assumed 64px
     for (const r of rs) {
       if (r.width > W * 0.6) { if ((r.top + r.bottom) / 2 > H / 2) bot = Math.min(bot, r.top); else top = Math.max(top, r.bottom); }
       else if (r.left < W / 2 && r.right < W * 0.6) left = Math.max(left, r.right);
@@ -1572,7 +1631,7 @@ export class UI {
     if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy && !this.menuTouch && now >= (this.menuScrollUntil || 0)) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
     if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.syncOrientation(); this.renderTut(); if (this.floorsOpen) this.refreshFloors(); }
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
-    this.updateBubbles(); this.updatePins(); this.updateGuide(); this.updateBlueprint();
+    this.updateBubbles(); this.updatePins(); this.frameStep(); this.updateGuide(); this.updateBlueprint();
   }
   setMeta(name, mode) {
     this.$('pname').innerHTML = `${esc(name)}<small>${esc(mode)}</small>`;
@@ -1591,7 +1650,11 @@ export class UI {
     let top = 8, bottom = tabs.top - 8, left = 8, right = W - 8;
     for (const selector of ['.hud', '.speed', '.viewctl', '.viewextra', '#coach', '#feed']) {
       const el = this.root.querySelector(selector); if (!el || el.hidden) continue;
-      const r = el.getBoundingClientRect(); if (r.width && r.height) top = Math.max(top, r.bottom + 8);
+      const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+      // A tall, narrow control column at a side (desktop view controls) narrows the width; it does not push the top down.
+      if (r.height > r.width * 1.5 && r.left > W / 2) right = Math.min(right, r.left - 8);
+      else if (r.height > r.width * 1.5 && r.right < W / 2) left = Math.max(left, r.right + 8);
+      else top = Math.max(top, r.bottom + 8);
     }
     for (const id of ['sheet', 'abar', 'tut']) {
       const el = this.$(id).firstElementChild; if (!el) continue;

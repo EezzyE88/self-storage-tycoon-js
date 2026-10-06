@@ -22,7 +22,11 @@ test('Confirm footer and tutorial primary action are outside scroll bodies',()=>
 test('blueprint start/end labels follow all four camera rotations',()=>{
   const s=fixture(), ui=Object.create(UI.prototype),box={innerHTML:'',firstChild:null,setAttribute(){}};ui.g={sim:s,rend:{view:0}};ui.$=()=>box;ui.modalOpen=()=>false;
   globalThis.innerWidth=393;globalThis.innerHeight=720;
-  for(let rot=0;rot<4;rot++){ui.rend.project=(x,y,f)=>({x:rot%2?y*4:x*4,y:rot<2?x*3:y*3,vis:true});ui.updateBlueprint();assert.match(box.innerHTML,/Start here/);assert.match(box.innerHTML,/End here/);assert.match(box.innerHTML,/Entrance/);const a=verticalLayout(s).plans.aisle.a,p=ui.rend.project(a.x+.5,a.y+.5);assert.ok(box.innerHTML.includes(`cx="${p.x}" cy="${p.y}"`));}
+  // Captions are laid out together: none overlap; target captions always survive; with room, secondary route context
+  // (Entrance) is drawn too; in a squeezed view only lower-priority captions may be left out.
+  const noOverlap=()=>{const b=ui.capLayout.placed.map(c=>c.box);for(let i=0;i<b.length;i++)for(let j=i+1;j<b.length;j++)assert.ok(!(b[i].l<b[j].r&&b[j].l<b[i].r&&b[i].t<b[j].b&&b[j].t<b[i].b),'captions overlap');};
+  for(const [kx,ky,room] of [[8,8,true],[4,3,false]])for(let rot=0;rot<4;rot++){ui.rend.project=(x,y,f)=>({x:rot%2?y*kx:x*kx,y:rot<2?x*ky:y*ky,vis:true});ui.updateBlueprint();assert.match(box.innerHTML,/Start here/);assert.match(box.innerHTML,/End here/);if(room)assert.match(box.innerHTML,/Entrance/);noOverlap();
+    assert.ok(ui.capLayout.dropped.every(t=>!/Start here|End here|Drive Aisle/.test(t)),'target guidance is never dropped');const a=verticalLayout(s).plans.aisle.a,p=ui.rend.project(a.x+.5,a.y+.5);assert.ok(box.innerHTML.includes(`cx="${p.x}" cy="${p.y}"`));}
 });
 test('clipped, covered and disabled menu targets never get a false Tap here',()=>{
   const ui=Object.create(UI.prototype);globalThis.innerWidth=393;globalThis.innerHeight=720;const hit={};globalThis.document={elementFromPoint:()=>hit};

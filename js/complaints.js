@@ -1,4 +1,5 @@
 // Read-only explanations. No dispatch, routing, randomness or economy changes.
+import { floorCount, RELEASE_FLOORS } from './vertical.js';
 export const COMPLAINTS = [
   ['loading', /^Loading bays are full\.$/, 'Temporary congestion', 'All reachable marked loading bays were occupied and no free reachable overflow parking was found. This is a temporary space shortage, not proof of a disconnected route.', 'Keep time running for vehicles to leave. If this repeats, paint more Loading Zone on vehicle-connected pavement near this building. Keep its door and hallway reachable. A canopy gives weather protection, not extra capacity.', 'build'],
   ['gate_queue', /^Gate line is backing up\.$/, 'Temporary congestion', 'Several vehicles are waiting for keypad service.', 'Let the queue clear. Inspect the keypad and power if delays persist; repair faults rather than adding unrelated loading bays.', 'operate'],
@@ -30,8 +31,14 @@ export function complaintKey(th) {
   const l=th.location;
   return JSON.stringify([th.text,th.kind,th.requestedSize??null,th.requestedClimate??null,l?.obj??null,l?.building??null,l?.x??null,l?.y??null,l?.f??null,th.loadingBays??null,th.overflowAvailable??null]);
 }
+// A reported floor must be a whole floor index within the playable release limit (F1-F3) and within this property's
+// floor layers. Floors beyond either are unsupported and rejected. (A playable floor that no building reaches any
+// more is a stale report: viewReportedTarget() shows its spot from F1 instead.)
+export function supportedFloor(sim,f) {
+  return Number.isInteger(f) && f>=0 && f<Math.min(RELEASE_FLOORS,floorCount(sim.s));
+}
 export function reportedTarget(sim,l) {
-  if(!l || !Number.isFinite(l.x) || !Number.isFinite(l.y) || l.x<0 || l.y<0 || l.x>=sim.s.W || l.y>=sim.s.H || ![0,1].includes(l.f??0)) return null;
+  if(!l || !Number.isFinite(l.x) || !Number.isFinite(l.y) || l.x<0 || l.y<0 || l.x>=sim.s.W || l.y>=sim.s.H || !supportedFloor(sim,l.f??0)) return null;
   return {...l,f:l.f??0};
 }
 export function complaintType(text) { return COMPLAINTS.find(x => x[1].test(text)); }

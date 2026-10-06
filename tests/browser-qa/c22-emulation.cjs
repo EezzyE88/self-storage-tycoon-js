@@ -235,6 +235,72 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     await p.evaluate(async () => { const g = __game, sim = g.sim, s = sim.s, B = await import('./js/blueprint.js'); for (let i = 0; i < 20000 && B.shaftHallState(sim).some((x) => x !== 'built'); i++) { s.t++; sim.step(); sim.events.length = 0; } s.convos.length = 0; g.ui.renderFeed(true); g.ui.renderTut(true); }); await frames(p);
     assert.match(await tutText(p), /Light both hallways/);
   });
+  // ---- Final bounded repair (I-L). Setup is disclosed in each scenario; builds use sim.dispatch, the command Confirm sends.
+  const MEASURE = () => { const R = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }; const hit = (a, c) => a.l < c.r && c.l < a.r && a.t < c.b && c.t < a.b;
+    const texts = [...document.querySelectorAll('#blueprint text')].filter((t) => t.textContent).map((t) => ({ n: t.textContent, ...R(t) })); const ov = [];
+    for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) if (hit(texts[i], texts[j])) ov.push(texts[i].n + ' × ' + texts[j].n);
+    const obs = [...document.querySelectorAll('.hud > *, #speed, .viewctl, #tut .tut, #tabs, #guide:not([hidden])')].map(R).filter((o) => o.r > o.l); const under = texts.filter((t) => obs.some((o) => hit(t, o))).map((t) => t.n);
+    const sr = __game.ui.safeRect(), pts = __game.ui.stepOutline() || [], pr = pts.map(([x, y, z]) => __game.rend.project(x, y, z)); const inside = pr.length > 0 && pr.every((q) => q.x >= sr.left - 1 && q.x <= sr.right + 1 && q.y >= sr.top - 1 && q.y <= sr.bottom + 1);
+    return { captions: texts.map((t) => t.n), overlaps: ov, underUi: under, inside, cam: [+__game.rend.center.x.toFixed(3), +__game.rend.center.z.toFixed(3), +__game.rend.zoom.toFixed(3)] }; };
+  // Disclosed setup: Maple, tutorial off, $1M, build-up lesson state set directly, construction fast-forwarded by sim.step(), generated requests cleared.
+  const upLessonAt = (p, phase) => p.evaluate(async (phase) => { const g = __game, sim = g.sim, s = sim.s, B = await import('./js/blueprint.js'); s.open = false; s.speed = 0; s.lesson = { id: 'up', idMark: s.nextId, built: [], flags: {}, entered: true };
+    const L = () => B.verticalLayout(sim), bd = (k) => sim.dispatch({ type: 'build', ...L().plans[k] }).ok, settle = () => { for (let i = 0; i < 20000 && s.orders.some((o) => o.st === 'construction'); i++) { s.t++; sim.step(); sim.events.length = 0; } s.convos.length = 0; };
+    bd('aisle'); bd('shell2'); settle(); for (const k of ['hall', 'doorWide', 'loading', 'hall2']) bd(k); if (phase === 'place') settle(); if (phase === 'wait') bd('elevator'); s.convos.length = 0; s.speed = 0; g.ui.renderFeed(true); g.ui.renderTut(true); }, phase);
+  for (const [w, h] of [[393, 659], [430, 932]]) await scenario(`I. ${w}x${h} captions never collide; waiting shows hallways, not "Place here"; outline framed; labels hold through pan and zoom`, w, h, async (p) => {
+    await plainGame(p); await upLessonAt(p, 'place'); await frames(p); let m = await p.evaluate(MEASURE);
+    assert.deepEqual([m.overlaps, m.underUi], [[], []], 'placement: no caption collisions'); assert.ok(m.captions.includes('Place here') && m.captions.includes('Elevator'), 'target guidance visible'); assert.ok(m.inside, 'outline in the usable area');
+    await shot(p, `final-place-${w}x${h}`);
+    await p.evaluate(() => { __game.rend.pan(-60, -35); }); await frames(p); m = await p.evaluate(MEASURE); assert.deepEqual([m.overlaps, m.underUi], [[], []], 'after a pan');
+    await p.evaluate(() => { __game.rend.zoomAt(innerWidth / 2, innerHeight / 2, 1.5); }); await frames(p); m = await p.evaluate(MEASURE); assert.deepEqual([m.overlaps, m.underUi], [[], []], 'after a zoom'); assert.ok(m.captions.includes('Place here'), 'target caption survives zoom');
+    await plainGame(p); await upLessonAt(p, 'wait'); await frames(p); m = await p.evaluate(MEASURE);
+    assert.ok(!m.captions.includes('Place here') && !m.captions.includes('Elevator'), 'no placement cue while waiting: ' + m.captions); assert.ok(m.captions.some((c) => /F1 hallway · under construction/.test(c)), 'unfinished hallway shown');
+    assert.deepEqual([m.overlaps, m.underUi], [[], []]); assert.ok(m.inside, 'waiting outline framed in the usable area'); assert.match(await tutText(p), /Elevator committed: let the F1 hallway finish/); assert.equal((await guide(p)).lbl, 'Run time');
+    assert.equal(await p.evaluate(() => __game.sim.s.speed), 0, 'Pause kept'); await shot(p, `final-wait-${w}x${h}`);
+  });
+  await scenario('J. framing respects gestures and the player\'s camera; desktop usable area, Fit and keep-selection-visible', 1280, 720, async (p) => {
+    await plainGame(p); await upLessonAt(p, 'place'); await frames(p);
+    // A real mouse drag is in progress when the step changes (elevator committed): the camera follows the drag only.
+    await p.mouse.move(640, 300); await p.mouse.down(); await p.mouse.move(600, 280, { steps: 4 }); const mid = await p.evaluate(MEASURE);
+    await p.evaluate(() => { const g = __game, B = g.sim; return import('./js/blueprint.js').then((M) => { B.dispatch({ type: 'build', ...M.verticalLayout(B).plans.elevator }); g.ui.renderTut(true); }); }); await frames(p);
+    const during = await p.evaluate(MEASURE); assert.deepEqual(during.cam, mid.cam, 'no camera move during the drag'); await p.mouse.move(560, 260, { steps: 4 }); await p.mouse.up(); await frames(p);
+    const released = await p.evaluate(MEASURE); await frames(p); await frames(p); assert.deepEqual((await p.evaluate(MEASURE)).cam, released.cam, 'no snap back after the gesture');
+    // The player pans; the step stays the same; framing never undoes it.
+    await p.evaluate(() => { __game.ui.renderTut(true); __game.rend.pan(200, 120); }); await frames(p); const moved = await p.evaluate(MEASURE); await frames(p); assert.deepEqual((await p.evaluate(MEASURE)).cam, moved.cam);
+    // Desktop usable area: the side view-control column narrows the width, the top follows the HUD.
+    const sr = await p.evaluate(() => ({ r: __game.ui.safeRect(), col: document.querySelector('.viewctl').getBoundingClientRect().left })); assert.ok(sr.r.top < 100, 'top ' + sr.r.top); assert.ok(sr.r.right <= sr.col - 8); assert.ok(sr.r.bottom - sr.r.top > 450);
+    await p.click('[data-a="fit"]'); await frames(p);
+    const fit = await p.evaluate(() => { const g = __game, r = g.ui.safeRect(); return g.sim.objs('shell').every((o) => [[o.x, o.y], [o.x + o.w, o.y + o.h], [o.x + o.w, o.y], [o.x, o.y + o.h]].every(([x, y]) => { const q = g.rend.project(x, y, 0); return q.x >= r.left - 2 && q.x <= r.right + 2 && q.y >= r.top - 2 && q.y <= r.bottom + 2; })); }); assert.ok(fit, 'Fit frames every building in the usable area');
+    await shot(p, 'final-desktop-fit');
+    const kept = await p.evaluate(() => { const g = __game, u = g.sim.objs('unit').at(-1); g.rend.lookAt(u.x - 40, u.y - 30); g.ui.select(u.id); g.ui.keepSelVisible(); const r = g.ui.safeRect(), q = g.rend.project(u.x + 0.5, u.y + 0.5, 0); return q.x >= r.left && q.x <= r.right && q.y >= r.top && q.y <= r.bottom; }); assert.ok(kept, 'keep-selection-visible brings the unit into the usable area');
+  });
+  await scenario('K. F3 complaint: Operate → Customer feedback → View reported location opens F3 at the reported unit', 393, 659, async (p) => {
+    // Disclosed setup: F2 then F3 built through the real staged packages (fast-forwarded) and commissioned; one complaint
+    // injected with sim.thought() from a visitor at an F3 unit (the production complaint path).
+    await plainGame(p); const info = await p.evaluate(() => { const g = __game, sim = g.sim; for (let n = 0; n < 2; n++) { const R = sim.verticalPlan(12); sim.dispatch({ type: 'verticalUpgrade', ...R }); const o = sim.s.orders.at(-1); for (let i = 0; i < 60000 && o.st === 'construction'; i++) { sim.step(); if (sim.events.length > 50) g.drain(); } g.drain(); sim.dispatch({ type: 'commission', order: o.id }); }
+      const u = sim.objs('unit').find((x) => x.f === 2 && x.access === 'interior'); sim.s.thoughts = []; sim.thought({ id: 990, unit: u.id, x: u.x, y: u.y, f: 2, size: u.size }, 'The hallway is dark.'); sim.s.convos.length = 0; g.ui.renderFeed(true); return { id: u.id, num: u.num, x: u.x, y: u.y }; });
+    await frames(p); await p.click('#tabs [data-v="operate"]'); await frames(p); await p.locator('[data-a="feedback"]:visible').first().click(); await frames(p);
+    const item = p.locator('.sheet article.item', { hasText: 'The hallway is dark.' }).first(); assert.match(await item.innerText(), new RegExp(`Unit ${info.num} · F3`)); assert.doesNotMatch(await item.innerText(), /unavailable/);
+    await item.locator('[data-a="complaintView"]').click(); await frames(p);
+    const r = await p.evaluate(() => ({ view: __game.rend.view, sel: __game.ui.sel, cx: __game.rend.center.x, cz: __game.rend.center.z, speed: __game.sim.s.speed }));
+    assert.equal(r.view, 2, 'F3 view'); assert.equal(r.sel, info.id, 'reported unit selected'); assert.ok(Math.abs(r.cx - (info.x + 0.5)) < 6 && Math.abs(r.cz - (info.y + 0.5)) < 6, 'camera at the reported spot'); assert.equal(r.speed, 0, 'Pause kept');
+    assert.match(await p.evaluate(() => document.querySelector('#viewF') ? document.querySelector('#viewF').innerText : document.body.innerText), /F3|Floor 3/); await shot(p, 'final-f3-complaint');
+  });
+  await scenario('L. walkthrough with ordinary controls: instruction → locate target → action → visible result (elevator step)', 393, 659, async (p) => {
+    // Disclosed setup: lesson state and prior construction prepared as in I (fast-forwarded). From here only ordinary controls are used.
+    await plainGame(p); await upLessonAt(p, 'place'); await frames(p);
+    const t0 = await tutText(p); assert.match(t0, /Elevator/, 'instruction: ' + t0 + ' | feed: ' + await p.evaluate(() => document.querySelector('#feed').innerText.slice(0, 120))); const ring = await guide(p); assert.ok(ring && /Tap here/.test(ring.lbl), 'ring locates the target'); const m = await p.evaluate(MEASURE); assert.ok(m.captions.includes('Place here') && m.inside);
+    await p.click('#tut [data-a="tutMin"]'); await frames(p);
+    // Locate: "Show me where" frames the target; captions stay clear.
+    await p.locator('#tut [data-a="showPlacement"]').first().click(); await frames(p); const shown = await p.evaluate(MEASURE); assert.deepEqual([shown.overlaps, shown.underUi], [[], []]); assert.ok(shown.captions.includes('Place here') && shown.inside, 'target located');
+    // Act: "Use suggested placement" opens the placement review on the build bar.
+    if (!(await p.locator('#tut [data-a="suggestPlacement"]:visible').count())) { await p.click('#tut [data-a="tutMin"]'); await frames(p); }
+    await p.locator('#tut [data-a="suggestPlacement"]:visible').first().click(); await frames(p);
+    const bar = await p.evaluate(() => document.querySelector('#abar').innerText); assert.match(bar, /Elevator/); assert.match(bar, /\$9,500/); const cash = await p.evaluate(() => __game.sim.s.cash);
+    await p.click('#abar [data-a="confirm"]'); await frames(p);
+    const r = await p.evaluate((c) => ({ spent: c - __game.sim.s.cash, elevators: __game.sim.objs('elevator').length, speed: __game.sim.s.speed }), cash); assert.equal(r.spent, 9500, 'charged once'); assert.equal(r.speed, 0, 'manual Pause kept through Confirm');
+    const toastTexts = await p.evaluate(() => __game.ui.toasts.map((t) => t.text).join(' | ') + ' || ' + document.querySelector('#feed').innerText); assert.ok(r.elevators >= 1, 'elevator ordered'); assert.match(toastTexts, /Elevator/, 'visible confirmation: ' + toastTexts); await frames(p); await p.evaluate(() => { if (__game.ui.tutMin === false) document.querySelector('#tut [data-a="tutMin"]')?.click(); }); await frames(p);
+    assert.match(await tutText(p), /Light both hallways/, 'visible result: the lesson moves on'); const after = await p.evaluate(MEASURE); assert.deepEqual([after.overlaps, after.underUi], [[], []]); await shot(p, 'final-walkthrough-result');
+  });
   const pass = results.filter((r) => r.pass).length;
   fs.writeFileSync(path.join(OUT, 'c22-emulation-results.json'), JSON.stringify({ environment: 'headless Chromium (Playwright) device emulation; not a physical iPhone', results, consoleErrors: errors }, null, 2));
   console.log(`${pass}/${results.length} emulation scenarios passed; console errors/unhandled rejections: ${errors.length}`); if (errors.length) console.log(errors.join('\n'));
