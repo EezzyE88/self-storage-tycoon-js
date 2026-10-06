@@ -62,10 +62,16 @@ function access(sim,sh,entry=null) {
   }
   return best;
 }
-// Hallway beside the planned shaft, per floor: 'built' (hall===1), 'ordered' (queued or under construction, hall===2)
+// Hallway beside the shaft, per floor: 'built' (hall===1), 'ordered' (queued or under construction, hall===2)
 // or 'missing'. The elevator needs built hallways on both floors; ordered ones only need construction time.
+// Once an elevator is committed in this building (it may be placed before its hallways finish), its own position is
+// checked; before that, the planned shaft position.
+const NEXT=[[1,0],[-1,0],[0,1],[0,-1]];
+const hallsBuilt=(sim,c)=>[0,1].every(f=>NEXT.some(([dx,dy])=>sim.inb(c.x+dx,c.y+dy)&&sim.s.hall[f]?.[sim.idx(c.x+dx,c.y+dy)]===1));
+const shaftAt=(sim,l)=>sim.objs('elevator').filter(o=>inside(l.sh,o));
 export function shaftHallState(sim) {
-  const l=verticalLayout(sim); if(!l||l.blocked||l.proposed||!l.plans?.elevator) return null; const c=l.plans.elevator.a;
+  const l=verticalLayout(sim); if(!l||l.blocked||l.proposed||!l.plans?.elevator) return null;
+  const els=shaftAt(sim,l), c=els.find(o=>hallsBuilt(sim,o))||els[0]||l.plans.elevator.a;
   return [0,1].map(f=>{const v=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>sim.inb(c.x+dx,c.y+dy)?sim.s.hall[f]?.[sim.idx(c.x+dx,c.y+dy)]:0);return v.includes(1)?'built':v.some(x=>x)?'ordered':'missing';});
 }
 export function verticalDone(sim,key) {
@@ -77,7 +83,8 @@ export function verticalDone(sim,key) {
   if(key==='hall'||key==='hall2') { const p=plans[key],f=p.f; const lo=Math.min(p.a.x,p.b.x),hi=Math.max(p.a.x,p.b.x),ly=Math.min(p.a.y,p.b.y),hy=Math.max(p.a.y,p.b.y); for(let y=ly;y<=hy;y++)for(let x=lo;x<=hi;x++)if(!sim.s.hall[f][sim.idx(x,y)])return false; return true; }
   if(key==='loading') { const p=plans.loading; for(let y=p.a.y;y<=p.b.y;y++)for(let x=p.a.x;x<=p.b.x;x++)if(sim.groundAt(sim.idx(x,y))!==G.LOADING && !sim.s.orders.some(o=>o.st==='construction'&&o.tool==='loading'&&o.cells.some(c=>c.x===x&&c.y===y)))return false; return true; }
   if(key==='doorWide') return objs('door',0).some(o=>o.kind==='wide'&&sim.s.hall[0][sim.idx(o.x,o.y)]);
-  if(key==='elevator') return objs('elevator').some(o=>[0,1].every(f=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>sim.s.hall[f][sim.idx(o.x+dx,o.y+dy)])));
+  // Complete only when a committed shaft has FINISHED hallways beside it on both floors; an ordered hallway (2) is not one.
+  if(key==='elevator') return objs('elevator').some(o=>hallsBuilt(sim,o));
   if(key==='lights') return [0,1].every(f=>objs('light',f).some(o=>sim.s.hall[f][sim.idx(o.x,o.y)]));
   if(key==='units') return objs('unit',1).length>0;
   if(key==='finished') return objs('unit',1).some(o=>['ready','operating'].includes(o.cstate));

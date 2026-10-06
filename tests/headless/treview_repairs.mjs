@@ -91,7 +91,7 @@ await test('#6 Confirm is disabled below the hard cash requirement and states th
 const main=readFileSync('js/main.js','utf8');
 function harness(){const ctx=vm.createContext({Sim,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},localsave,savearchive,cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
   vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initial world'))+main.slice(main.indexOf('function validState('),main.indexOf('function makeMapleSeedPrice'))+';globalThis.game=game;',ctx);
-  const g=ctx.game;g.localsave=localsave;g.ui={title:false};g.rend={view:'ext'};g.autosave=()=>{}; // main.js assigns game.localsave outside the evaluated slice
+  const g=ctx.game;g.localsave=localsave;g.ui={title:false};g.rend={view:'ext'};g.autosave=async()=>localsave.put(await g.saveCode(),g.saveMeta()); // main.js assigns game.localsave outside the evaluated slice; a restore removes its archive copy only after this browser save succeeds
   g.attach=function(s){this.sim=s;};return g;}
 async function codeFor(g,name,cash){const sim=makeMaple(7);sim.s.cash=cash;const keep=[g.sim,g.company];g.sim=sim;g.company={props:[{name,sim}],active:0,feed:[]};const code=await g.saveCode();[g.sim,g.company]=keep;return {code,meta:{name,day:1,cash}};}
 function session(g,name,cash){const sim=makeMaple(9);sim.s.cash=cash;g.sim=sim;g.company={props:[{name,sim}],active:0,feed:[]};}
@@ -111,8 +111,8 @@ await test('#7 Archive restore under storage failure keeps every archived game, 
   const after=savearchive.list().map(r=>r.meta.name);assert.equal(after.length,ARCHIVE_MAX,'still full: one restored out, displaced previous game in');assert.ok(!after.includes(target));assert.ok(after.includes('Kept Older'));assert.equal(localsave.getKept().meta.name,'Running Lot');});
 await test('#7 keeping the outgoing game is atomic: a failed write leaves no half-moved previous game',async()=>{
   mem.clear();failWrite=null;const g=harness();localsave.keep({...(await codeFor(g,'Kept Older',555)),at:1});session(g,'Running Lot',2222);const before=snap();
-  failWrite=k=>k==='sst.kept.previous';assert.equal(await g.keepCurrent(null),false);assert.equal(snap(),before,'archive not left holding a duplicate');assert.equal(savearchive.list().length,0);
-  failWrite=null;assert.equal(await g.keepCurrent(null),true);assert.equal(savearchive.list()[0].meta.name,'Kept Older');assert.equal(localsave.getKept().meta.name,'Running Lot');});
+  failWrite=k=>k==='sst.kept.previous';{const r=await g.keepCurrent(null);assert.equal(r.ok,false);assert.equal(r.verified&&r.unchanged,true,'failure verified as no change');}assert.equal(snap(),before,'archive not left holding a duplicate');assert.equal(savearchive.list().length,0);
+  failWrite=null;assert.equal((await g.keepCurrent(null)).ok,true);assert.equal(savearchive.list()[0].meta.name,'Kept Older');assert.equal(localsave.getKept().meta.name,'Running Lot');});
 
 // ---------- #8 handover presentation (real F3 service test) vs genuine disconnection
 await test('#8 held upper units show "Handover test" everywhere, not a fault; genuine disconnections still warn',()=>{

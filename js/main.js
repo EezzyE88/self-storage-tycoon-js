@@ -188,15 +188,21 @@ const game = {
     }
   },
   cloud,
-  // before New game / Load replaces what the player has: copy it to the kept slot (browser storage only)
+  // before New game / Load replaces what the player has: copy it to the kept slot (browser storage only).
+  // Returns savearchive.keep()'s report: {ok} or {ok:false, reason, verified, unchanged, extras, lost}.
   async keepCurrent(fallback) {
-    if (!localsave.ok) return false;
-    const rec = await this.outgoingRecord(fallback); if (!rec) return true; // nothing to keep
+    if (!localsave.ok) return { ok: false, reason: 'none', verified: false, unchanged: true, extras: [], lost: [] };
+    const rec = await this.outgoingRecord(fallback); if (!rec) return { ok: true }; // nothing to keep
     return this.keepRecord(rec);
   },
-  // The existing previous game is archived, never silently overwritten; any failed write rolls both slots back.
-  keepRecord(rec) {
-    return savearchive.transaction(() => { const old = localsave.getKept(); if (old && old.code !== rec.code && !savearchive.push(old)) return false; return localsave.keep(rec); });
+  // The existing previous game is archived before the kept slot is overwritten (preservation first, see savearchive.js).
+  // `hold` (restores) leaves the archive untidied until the restored game is saved.
+  keepRecord(rec, hold) { return savearchive.keep(rec, (r) => localsave.keep(r), hold); },
+  // Autosave the game just loaded and report whether it reached browser storage (not only the save server).
+  async persistLoaded() {
+    for (let i = 0; i < 100 && this.saving; i++) await new Promise((r) => setTimeout(r, 20)); // let an in-flight save finish
+    const before = localsave.lastAt; const ok = await this.autosave();
+    return !!ok && localsave.lastAt !== before;
   },
   // What would become the "previous game" if the running (or last autosaved) game were replaced now.
   async outgoingRecord(fallback) {

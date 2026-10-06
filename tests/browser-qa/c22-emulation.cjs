@@ -187,6 +187,54 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
     assert.deepEqual(await p.evaluate(() => [__game.ui.verticalPreviewing, __game.rend.previewG.children.length]), [false, 0]);
     await p.evaluate(() => __game.ui.showVertical(12)); await frames(p); await p.click('[data-qa="vr-close-review"]'); await frames(p); assert.equal(await p.evaluate(() => !!document.querySelector('.modal-bg')), false);
   });
+  // Follow-up repair 1 on the real page: localStorage writes fail persistently mid-sequence; nothing is lost, the
+  // message matches what storage holds, extra copies survive a reload, and a clean retry succeeds.
+  await scenario('G. save recovery: failing storage during archive restore keeps every game; reload and retry', 393, 659, async (p) => {
+    await plainGame(p); await frames(p);
+    const seed = () => p.evaluate(async () => { const g = __game, keepCash = g.sim.s.cash, rec = []; for (const c of [101, 102, 103, 104, 105, 555]) { g.sim.s.cash = c; rec.push({ code: await g.saveCode(), meta: { name: c === 555 ? 'Previous' : 'Archive ' + (c - 100), day: 1, cash: c }, at: 1 }); } g.sim.s.cash = keepCash;
+      localStorage.setItem('sst.kept.archive', JSON.stringify(rec.slice(0, 5).reverse())); localStorage.setItem('sst.kept.previous', JSON.stringify({ ...rec[5], keptAt: 1, v: 1 })); g.saving = false; });
+    const names = () => p.evaluate(() => JSON.parse(localStorage.getItem('sst.kept.archive')).map((r) => r.meta.name));
+    // Fail the kept slot always, and the archive after its first write: the duplicate copy cannot be removed.
+    const fail = (mode) => p.evaluate((mode) => { const S = Storage.prototype; window.__set = window.__set || S.setItem; let arch = 0; window.__toasts = [];
+      const t = __game.ui.toast.bind(__game.ui); __game.ui.toast = (m, k) => { window.__toasts.push(m); t(m, k); };
+      S.setItem = function (k, v) { if (mode === 'kept' && (k === 'sst.kept.previous' || (k === 'sst.kept.archive' && arch++ > 0))) throw new DOMException('quota', 'QuotaExceededError'); if (mode === 'autosave' && /^sst\.autosave/.test(k)) throw new DOMException('quota', 'QuotaExceededError'); return window.__set.call(this, k, v); }; }, mode);
+    const heal = () => p.evaluate(() => { Storage.prototype.setItem = window.__set; });
+    await seed(); const cash0 = await p.evaluate(() => __game.sim.s.cash); await fail('kept');
+    await p.evaluate(() => __game.ui.showArchive()); await frames(p); await p.click('[data-a="archiveRestore"][data-v="2"]'); await p.waitForFunction(() => window.__toasts.length > 0, null, { timeout: 30000 }); await frames(p);
+    const t1 = await p.evaluate(() => window.__toasts.at(-1)); assert.match(t1, /nothing was restored\. No saved game was lost\. Older saved games now also holds an extra copy of Previous\./); assert.doesNotMatch(t1, /Nothing was changed/);
+    assert.equal(await p.evaluate(() => __game.sim.s.cash), cash0, 'running game not replaced'); assert.deepEqual(await names(), ['Previous', 'Archive 5', 'Archive 4', 'Archive 3', 'Archive 2', 'Archive 1']);
+    await heal(); await p.reload(); await p.waitForFunction(() => window.__game && __game.ui, null, { timeout: 30000 }); await frames(p);
+    assert.deepEqual(await names(), ['Previous', 'Archive 5', 'Archive 4', 'Archive 3', 'Archive 2', 'Archive 1'], 'extra copy survives reload, untrimmed');
+    assert.match(await p.evaluate(() => document.querySelector('[data-a="archiveOpen"]').innerText), /6 kept/);
+    await p.click('[data-a="archiveOpen"]'); await frames(p); assert.match(await p.evaluate(() => document.querySelector('.modal').innerText), /Extra copy of your previous game/); await shot(p, 'followup-archive-extra');
+    // Autosave fails after a successful store: the restored game keeps its archive copy and the message says so.
+    await fail('autosave'); await p.click('[data-a="archiveRestore"][data-v="3"]'); await p.waitForFunction(() => window.__toasts.length > 0, null, { timeout: 30000 }); await frames(p);
+    assert.match(await p.evaluate(() => window.__toasts.at(-1)), /Restored .*could not be saved yet, so Archive 3 also stays in Older saved games/);
+    assert.ok((await names()).includes('Archive 3')); assert.equal(await p.evaluate(() => __game.sim.s.cash), 103);
+    // Clean retry of another restore: succeeds, removes only the restored entry after its save, nothing lost.
+    await heal(); await p.evaluate(() => __game.ui.showArchive()); await frames(p); const before = await names(); const idx = before.indexOf('Archive 1');
+    await p.evaluate(() => { window.__toasts = []; }); await p.click(`[data-a="archiveRestore"][data-v="${idx}"]`); await p.waitForFunction(() => window.__toasts.length > 0, null, { timeout: 30000 }); await frames(p); const after = await names();
+    // Every game is still stored somewhere (archive, previous-game slot or autosave), identified by its unique cash.
+    const ids = await p.evaluate(() => { const j = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }; return [...(j('sst.kept.archive') || []).map((r) => +r.meta.cash), ...['sst.kept.previous', 'sst.autosave.main', 'sst.autosave.backup'].map((k) => j(k)).filter(Boolean).map((r) => +r.meta.cash)]; });
+    assert.ok(!after.includes('Archive 1'), 'restored entry removed after its save'); for (const c of [101, 102, 103, 104, 105, 555]) assert.ok(ids.includes(c), c + ' still stored');
+    assert.equal(await p.evaluate(() => __game.sim.s.cash), 101);
+  });
+  // Follow-up repair 2 on the real page: an elevator committed while both hallways are only ordered keeps the lesson on
+  // the elevator step, guides to the time controls without resuming a Pause, and moves on once the hallways finish.
+  await scenario('H. early elevator commitment waits for finished hallways; Pause is never resumed by the guide', 393, 659, async (p) => {
+    await plainGame(p);
+    const r = await p.evaluate(async () => { const g = __game, sim = g.sim, s = sim.s, B = await import('./js/blueprint.js'); s.open = false; s.speed = 0;
+      s.lesson = { id: 'up', idMark: s.nextId, built: [], flags: {}, entered: true }; const L = () => B.verticalLayout(sim); if (!L() || L().blocked) return { skip: 'no layout' };
+      const b = (k) => sim.dispatch({ type: 'build', ...L().plans[k] }).ok; const settle = () => { for (let i = 0; i < 20000 && s.orders.some((o) => o.st === 'construction'); i++) { s.t++; sim.step(); sim.events.length = 0; } s.convos.length = 0; }; // requests raised while fast-forwarding are answered, as a player would
+      if (!b('aisle') || !b('shell2')) return { skip: 'shell' }; settle(); for (const k of ['hall', 'doorWide', 'loading', 'hall2']) if (!b(k)) return { skip: k };
+      const st = B.shaftHallState(sim).join(','); const ok = b('elevator'); s.convos.length = 0; s.speed = 0; g.ui.renderFeed(true); g.ui.renderTut(true); return { st, ok, done: B.verticalDone(sim, 'elevator') }; });
+    assert.ok(!r.skip, 'lesson layout available: ' + r.skip); assert.deepEqual([r.st, r.ok, r.done], ['ordered,ordered', true, false]); await frames(p);
+    assert.match(await tutText(p), /Elevator committed: let the F1 hallway finish/); const gd = await guide(p); assert.ok(gd && /Run time/.test(gd.lbl), 'ring on the time controls');
+    assert.equal(await p.evaluate(() => __game.sim.s.speed), 0, 'the guide never resumes time'); await shot(p, 'followup-elevator-wait');
+    await p.click('#speed [data-v="4"]'); await frames(p); assert.equal(await p.evaluate(() => __game.sim.s.speed), 4, 'time controls usable');
+    await p.evaluate(async () => { const g = __game, sim = g.sim, s = sim.s, B = await import('./js/blueprint.js'); for (let i = 0; i < 20000 && B.shaftHallState(sim).some((x) => x !== 'built'); i++) { s.t++; sim.step(); sim.events.length = 0; } s.convos.length = 0; g.ui.renderFeed(true); g.ui.renderTut(true); }); await frames(p);
+    assert.match(await tutText(p), /Light both hallways/);
+  });
   const pass = results.filter((r) => r.pass).length;
   fs.writeFileSync(path.join(OUT, 'c22-emulation-results.json'), JSON.stringify({ environment: 'headless Chromium (Playwright) device emulation; not a physical iPhone', results, consoleErrors: errors }, null, 2));
   console.log(`${pass}/${results.length} emulation scenarios passed; console errors/unhandled rejections: ${errors.length}`); if (errors.length) console.log(errors.join('\n'));

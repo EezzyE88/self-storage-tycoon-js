@@ -9,6 +9,19 @@ import { financialTime } from './finance.js';
 import { guideFor } from './handbook.js';
 import { verticalLayout, verticalDone, verticalCheck, authoredPlacement } from './blueprint.js';
 import { expansionEvidence, cancellationBreakdown } from './vertical.js';
+// Results of savearchive.keep(): older callers and test doubles may still return a plain boolean.
+const stored = (r) => r === true || !!(r && r.ok);
+const namesOf = (metas) => metas.map((m) => (m && m.name) || 'Saved game').join(', ');
+// What a failed store left behind, read back from storage, never assumed.
+export function storeFailText(r, what) {
+  const head = r && r.reason === 'read' ? `Your saved games could not be read, so ${what}. Nothing was written.` : `Your current game could not be stored safely, so ${what}.`;
+  if (!r || r.reason === 'read' || r.reason === 'none') return head + (r && r.reason === 'none' ? ' Nothing was changed.' : '');
+  if (!r.verified) return `${head} Browser storage could not be checked afterwards. No saved game was deliberately removed; check Older saved games before trying again.`;
+  if (r.lost.length) return `${head} Browser storage no longer holds: ${namesOf(r.lost)}.`;
+  if (r.unchanged) return `${head} Nothing was changed.`;
+  return `${head} No saved game was lost.${r.extras.length ? ` Older saved games now also holds an extra copy of ${namesOf(r.extras)}.` : ''}`;
+}
+const dropText = (list, ui) => (list && list.length ? ` To make room, ${list.length === 1 ? 'the oldest archived game' : `the ${list.length} oldest archived games`} (${list.map((r) => ui.metaLine(r.meta)).join('; ')}) will be removed.` : '');
 
 const PIN = {
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-8.3 8.3a2 2 0 0 1-2.8-2.8l8.3-8.3"/><path d="M14.5 5.5 17 3"/></svg>',
@@ -236,7 +249,7 @@ export class UI {
       case 'modalClose': this.closeModal(); break;
       case 'tabFromModal': this.closeModal(); this.setTab(v); break;
       case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); }); break;
-      case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then((ok) => { if (ok || !this.g.localsave.ok) run(); else this.toast('Your current game could not be stored safely, so no new game was started.', 'bad'); }); break; }
+      case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then((r) => { if (stored(r) || !this.g.localsave.ok) run(); else this.toast(storeFailText(r, 'no new game was started'), 'bad'); }); break; }
       case 'replaceNo': this.pendingNew = null; if (this.title) this.showTitle(); else this.closeModal(); break;
       case 'restoreKept': this.restoreKept(); break;
       case 'scenarios': this.showScenarios(); this.sfx('click'); break;
@@ -1259,8 +1272,8 @@ export class UI {
     if (!step) return step;
     // Prerequisites distinguish missing, ordered (needs construction time) and built; only built satisfies a step.
     const pre = step.prereq && step.prereq(this.sim);
-    if (pre && pre.state === 'ordered') step = { ...step, redirect: 'wait', placement: undefined, blueprint: undefined, t: `F${pre.floor} hallway ordered: let construction finish`, d: `The elevator needs a <b>finished</b> hallway beside the shaft on F1 and F2. F${pre.floor}'s hallway is ordered but still under construction. Close panels, then run time with <b>1x</b> or <b>4x</b>; this step continues when it is built.`, sel: '#speed [data-v="4"]', lbl: 'Run time' };
-    else if (pre && pre.state === 'missing') step = { ...step, redirect: 'prereq', placement: undefined, blueprint: undefined, t: `Build the F${pre.floor} hallway first`, d: `The elevator needs a finished hallway beside the shaft on F1 and F2; F${pre.floor} has none there yet. Place the F${pre.floor} hallway along the outlined route, let it finish, then place the elevator.`, sel: null, lbl: '' };
+    if (pre && pre.state === 'ordered') step = { ...step, redirect: 'wait', placement: undefined, blueprint: undefined, t: pre.committed ? `Elevator committed: let the F${pre.floor} hallway finish` : `F${pre.floor} hallway ordered: let construction finish`, d: `${pre.committed ? 'The elevator is ordered. It' : 'The elevator'} needs a <b>finished</b> hallway beside the shaft on F1 and F2. F${pre.floor}'s hallway is ordered but still under construction. Close panels, then run time with <b>1x</b> or <b>4x</b>; this step continues when it is built.`, sel: '#speed [data-v="4"]', lbl: 'Run time' };
+    else if (pre && pre.state === 'missing') step = { ...step, redirect: 'prereq', placement: undefined, blueprint: undefined, t: pre.committed ? `Build the F${pre.floor} hallway beside the elevator` : `Build the F${pre.floor} hallway first`, d: pre.committed ? `The elevator needs a finished hallway beside its shaft on F1 and F2; F${pre.floor} has none there yet. Place the F${pre.floor} hallway so it touches the shaft, then let it finish.` : `The elevator needs a finished hallway beside the shaft on F1 and F2; F${pre.floor} has none there yet. Place the F${pre.floor} hallway along the outlined route, let it finish, then place the elevator.`, sel: null, lbl: '' };
     const sel = step.sel || '';
     if (/^#speed /.test(sel) && this.timeLocked()) {
       if (this.tool && TOOLS[this.tool]) return { ...step, redirect: 'tool', t: 'Put away the build tool', d: `Time is held while the <b>${TOOLS[this.tool].name}</b> placement review is open. Tap <b>×</b> on the build bar, then use the time controls.`, sel: '#abar [data-a="cancelTool"]', lbl: 'Stop building' };
@@ -1747,7 +1760,7 @@ export class UI {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal confirm-new"><h2>Start a new game?</h2>
       <p>Your current game: <b>${esc(meta.name || 'Saved game')}</b> · Day ${+meta.day || 1} · ${money(+meta.cash || 0)}.</p>
       <p class="note">${keep ? 'It will be kept as your <b>previous game</b>. You can restore it from the title screen or the menu.' : 'This browser cannot store a second game, so the new game will replace it. Make a save code first if you want to keep it.'}</p>
-      ${(() => { const P = this.importPlan(); return keep && P.displaced ? `<p class="note">The existing previous game (${this.metaLine(P.displaced)}) moves to <b>Older saved games</b>; it is not deleted.${P.dropped ? ` The oldest archived game (${this.metaLine(P.dropped.meta)}) will be removed to make room.` : ''}</p>` : ''; })()}
+      ${(() => { const P = this.importPlan(); return keep && P.displaced ? `<p class="note">The existing previous game (${this.metaLine(P.displaced)}) moves to <b>Older saved games</b>; it is not deleted.${dropText(P.dropped, this)}</p>` : ''; })()}
       <div class="row wrap" style="margin-top:10px"><button class="btn pri" data-a="replaceYes">Start new game</button>${keep ? '' : '<button class="btn" data-a="saveCode">Make a save code</button>'}<button class="btn" data-a="replaceNo">Cancel</button></div></div></div>`;
   }
   archiveLabel() { const n = this.g.savearchive ? this.g.savearchive.list().length : 0; return n ? `<button class="btn" data-a="archiveOpen">Older saved games <small>${n} kept</small></button>` : ''; }
@@ -1958,7 +1971,7 @@ export class UI {
   importPlan() { // exactly what the slots will hold if the import is confirmed
     const g = this.g, running = g.playing() ? g.saveMeta() : null, outgoing = g.outgoingMeta(this.contSave), kept = g.localsave.getKept();
     const keptRec = kept && kept.meta, displaced = outgoing && keptRec ? keptRec : null;
-    return { running, outgoing, displaced, dropped: displaced && g.savearchive.wouldDrop(kept), canKeep: g.localsave.ok };
+    return { running, outgoing, displaced, dropped: (displaced && g.savearchive.wouldDrop(kept)) || [], canKeep: g.localsave.ok };
   }
   showImportConfirm(prep) {
     const P = this.importPlan();
@@ -1967,45 +1980,50 @@ export class UI {
       <p>Currently running: ${P.running ? this.metaLine(P.running) : 'no game (title screen)'}.</p>
       ${!P.canKeep ? '<p class="note bad">This browser cannot store a previous game. The running game will be replaced. Make a save code first if you want to keep it.</p>'
         : P.outgoing ? `<p>Stored as your <b>previous game</b>: ${this.metaLine(P.outgoing)}.</p>` : '<p class="note">There is no current game to store.</p>'}
-      ${P.canKeep && P.displaced ? `<p class="note">The existing previous game (${this.metaLine(P.displaced)}) moves to <b>Older saved games</b> in the menu; it is not deleted.${P.dropped ? ` The oldest archived game (${this.metaLine(P.dropped.meta)}) will be removed to make room.` : ''}</p>` : ''}
+      ${P.canKeep && P.displaced ? `<p class="note">The existing previous game (${this.metaLine(P.displaced)}) moves to <b>Older saved games</b> in the menu; it is not deleted.${dropText(P.dropped, this)}</p>` : ''}
       <p class="note">The loaded game starts paused.</p>
       <div class="row wrap" style="margin-top:10px"><button class="btn pri" data-a="importYes">Load ${esc(prep.meta.name || 'save')}</button>${P.canKeep ? '' : '<button class="btn" data-a="saveCode">Make a save code</button>'}<button class="btn" data-a="importNo">Cancel</button></div></div></div>`;
   }
   async confirmImport() {
     const prep = this.pendingImport; this.pendingImport = null; if (!prep) return;
-    if (this.g.localsave.ok && !(await this.g.keepCurrent(this.contSave))) { this.toast('Your current game could not be stored safely, so nothing was loaded.', 'bad'); this.showLoad(); return; }
+    if (this.g.localsave.ok) { const r = await this.g.keepCurrent(this.contSave); if (!stored(r)) { this.toast(storeFailText(r, 'nothing was loaded'), 'bad'); this.showLoad(); return; } }
     this.g.applyLoad(prep); this.closeModal(); this.sfx('confirm');
     this.toast(`Save loaded: ${prep.meta.name}, Day ${prep.meta.day}. Paused.`, 'good'); this.g.autosave();
   }
   showArchive() {
-    const list = this.g.savearchive.list();
+    const list = this.g.savearchive.list(), kept = this.g.localsave.getKept();
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Older saved games</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
       <p class="note">Previous games that were replaced by a newer previous game. Restoring one keeps your current game as the previous game.</p>
-      ${list.map((r, i) => `<div class="item"><div class="grow">${this.metaLine(r.meta)}</div><button class="btn" data-a="archiveRestore" data-v="${i}">Restore</button></div>`).join('') || '<p>No older saved games.</p>'}</div></div>`;
+      ${list.map((r, i) => `<div class="item"><div class="grow">${this.metaLine(r.meta)}${kept && kept.code === r.code ? '<br><small>Extra copy of your previous game</small>' : list.findIndex((x) => x.code === r.code) !== i ? '<br><small>Extra copy</small>' : ''}</div><button class="btn" data-a="archiveRestore" data-v="${i}">Restore</button></div>`).join('') || '<p>No older saved games.</p>'}</div></div>`;
   }
-  // Restore previous game: validate, store the outgoing game first, and only then load. Nothing loads if the store fails.
+  // Restore previous game: validate, then store the outgoing game as the previous game while the game being restored
+  // keeps an archive copy; only after the restored game is autosaved is that copy removed. Nothing loads if the
+  // store fails, and the failure message reports what storage actually holds afterwards.
   async restoreKept() {
     const g = this.g, k = g.localsave.getKept(); if (!k) return false;
     const prep = await g.prepareLoad(k.code); if (!prep.ok) { this.toast('The previous game could not be loaded. Nothing was changed.', 'bad'); return false; }
     const cur = await g.outgoingRecord(this.contSave);
-    if (cur && !g.savearchive.transaction(() => g.localsave.keep(cur))) { this.toast('Your current game could not be stored safely, so the previous game was not restored. Nothing was changed.', 'bad'); return false; }
+    if (cur) { const r = g.keepRecord(cur, true); if (!r.ok) { this.toast(storeFailText(r, 'the previous game was not restored'), 'bad'); return false; } }
     g.applyLoad(prep); this.closeModal(); this.sfx('confirm'); const m = k.meta || {};
-    this.toast(`Restored your previous game: ${m.name || 'Saved game'}, Day ${+m.day || 1}, ${money(+m.cash || 0)} cash.${cur ? ' The game you left is now the previous game.' : ''}`, 'good'); g.autosave(); return true;
+    const msg = `Restored your previous game: ${m.name || 'Saved game'}, Day ${+m.day || 1}, ${money(+m.cash || 0)} cash.${cur ? ' The game you left is now the previous game.' : ''}`;
+    this.toast(msg + (cur ? await this.settleRestore(k.code, m.name) : ''), 'good'); if (!cur) g.autosave(); return true;
   }
-  // Archive restore: remove the record, archive the displaced previous game and keep the outgoing one in a single
-  // transaction; any failed write restores both slots exactly, so no archived game can be dropped.
+  // Archive restore: the displaced previous game is archived and the outgoing game kept before anything is removed;
+  // the restored entry stays in Older saved games until the restored game has been autosaved.
   async restoreArchived(i) {
     const g = this.g, rec = g.savearchive.list()[i]; if (!rec) return false;
     const prep = await g.prepareLoad(rec.code); if (!prep.ok) { this.toast('That saved game could not be loaded. It was left in place.', 'bad'); return false; }
+    if (g.savearchive.list()[i]?.code !== rec.code) { this.toast('Older saved games changed. Nothing was restored.', 'bad'); return false; }
     const cur = await g.outgoingRecord(this.contSave);
-    const ok = g.savearchive.transaction(() => {
-      if (g.savearchive.list()[i]?.code !== rec.code || !g.savearchive.take(i)) return false;
-      if (!cur) return true; const old = g.localsave.getKept();
-      if (old && old.code !== cur.code && !g.savearchive.push(old)) return false;
-      return g.localsave.keep(cur);
-    });
-    if (!ok) { this.toast('Your current game could not be stored safely, so nothing was restored. Nothing was changed.', 'bad'); return false; }
-    g.applyLoad(prep); this.closeModal(); this.sfx('confirm'); this.toast(`Restored ${prep.meta.name}, Day ${prep.meta.day}.${cur ? ' Your previous game is kept.' : ''}`, 'good'); g.autosave(); return true;
+    if (cur) { const r = g.keepRecord(cur, true); if (!r.ok) { this.toast(storeFailText(r, 'nothing was restored'), 'bad'); return false; } }
+    g.applyLoad(prep); this.closeModal(); this.sfx('confirm');
+    this.toast(`Restored ${prep.meta.name}, Day ${prep.meta.day}.${cur ? ' Your previous game is kept.' : ''}` + await this.settleRestore(rec.code, rec.meta && rec.meta.name), 'good'); return true;
+  }
+  // Save the restored game, then drop its now-redundant archive copy. Says so when the copy has to stay.
+  async settleRestore(code, name) {
+    const g = this.g;
+    if (!(await g.persistLoaded())) return ` This game could not be saved yet, so ${name || 'its earlier copy'} also stays in Older saved games.`;
+    return g.savearchive.settle(code) ? '' : ` ${name || 'It'} also still appears in Older saved games as an extra copy.`;
   }
   showLoad() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Load game</h2><button class="x" data-a="${this.title ? 'showTitle' : 'modalClose'}" aria-label="Close">${I.x}</button></div>

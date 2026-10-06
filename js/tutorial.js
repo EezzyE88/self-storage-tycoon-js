@@ -186,7 +186,8 @@ export const LESSONS = [
       ].map(([blueprint,t,cat,d]) => ({blueprint,cat,t,d:d+' Use suggested placement, review, then Confirm. You can also place manually.',done:(sim)=>verticalDone(sim,blueprint),
         // The shaft needs BUILT hallways beside it on both floors: an ordered hallway means waiting, not placing;
         // a missing hallway outranks waiting, because time alone cannot fix it.
-        prereq:blueprint==='elevator'?(sim)=>{const st=shaftHallState(sim);if(!st||verticalDone(sim,'elevator'))return null;const miss=st.indexOf('missing'),f=miss>=0?miss:st.findIndex(x=>x!=='built');return f<0?null:{state:st[f],floor:f+1,states:st};}:null})),
+        // An elevator committed early (allowed) does not complete the step: it waits for those hallways the same way.
+        prereq:blueprint==='elevator'?(sim)=>{const st=shaftHallState(sim);if(!st||verticalDone(sim,'elevator'))return null;const miss=st.indexOf('missing'),f=miss>=0?miss:st.findIndex(x=>x!=='built');const l=verticalLayout(sim);return f<0?null:{state:st[f],floor:f+1,states:st,committed:sim.objs('elevator').some(o=>o.x>=l.sh.x&&o.x<l.sh.x+l.sh.w&&o.y>=l.sh.y&&o.y<l.sh.y+l.sh.h)};}:null})),
       {t:'Finish construction and check access',d:'Run time to finish construction. Recheck my layout lists any missing connection, lighting or power.',blueprint:'finished',sel:FAST,done:(sim)=>verticalDone(sim,'finished')},
       {t:'Commission upstairs units',d:'Tap a ready upstairs unit in this building and Commission whole order.',obj:(sim)=>{const l=verticalLayout(sim);return l&&!l.proposed&&sim.objs('unit').find(u=>u.f===1&&u.x>=l.sh.x&&u.x<l.sh.x+l.sh.w&&u.y>=l.sh.y&&u.y<l.sh.y+l.sh.h&&u.cstate==='ready')?.id;},sel:COMMISSION,done:(sim)=>verticalDone(sim,'commissioned')},
     ],

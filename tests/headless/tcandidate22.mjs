@@ -64,7 +64,9 @@ await test('3. handover topology is held, not reported; a real disconnection sti
 
 // Production save path, as in tthreefloor_save.mjs, with spies on the slots.
 function harness(){const main=readFileSync('js/main.js','utf8');const writes=[];const kept={rec:{code:'OLD',meta:{name:'Maple Street Storage',day:40,cash:5000}}};
-  const localsave={ok:true,get:()=>({main:null}),getKept:()=>kept.rec,keep:r=>{writes.push(['keep',r.meta.name]);kept.rec=r;return true;}};const archive=[];const savearchive={list:()=>archive,push:r=>{writes.push(['archive',r.meta.name]);archive.unshift(r);return true;},wouldDrop:()=>null,transaction:fn=>!!fn()};
+  const localsave={ok:true,get:()=>({main:null}),getKept:()=>kept.rec,keep:r=>{writes.push(['keep',r.meta.name]);kept.rec=r;return true;}};const archive=[];const savearchive={list:()=>archive,push:r=>{writes.push(['archive',r.meta.name]);archive.unshift(r);return true;},wouldDrop:()=>[],
+    // Spy double of savearchive.keep's order (archive the displaced game, then overwrite the kept slot); the real module's sequence is tested over failing storage in tsave_recovery.mjs.
+    keep:(cur,keepFn)=>{const old=kept.rec;if(old&&old.code!==cur.code)savearchive.push(old);return {ok:keepFn(cur)};}};
   const context=vm.createContext({Sim,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},localsave,savearchive,cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
   vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initial world'))+main.slice(main.indexOf('function validState('),main.indexOf('function makeMapleSeedPrice'))+';globalThis.game=game;',context);
   const g=context.game;const attached=[];g.ui={title:false};g.rend={view:'ext'};g.attach=function(s,k,o){this.sim=s;attached.push(o&&o.view);};return{g,writes,kept,archive,attached};}
@@ -74,7 +76,7 @@ await test('6. import validates fully with no slot writes; a valid import keeps 
   assert.deepEqual(writes,[]);assert.equal(g.sim,running,'running game untouched by failed parses');
   const incoming=makeMaple(5);incoming.s.cash=4321;const prep=await g.prepareLoad(await (async()=>{const c=g.sim;g.sim=incoming;g.company={props:[{name:'Maple Street Storage',sim:incoming}],active:0,feed:[]};const code=await g.saveCode();g.sim=c;g.company={props:[{name:'Sandbox Lot',sim:c}],active:0,feed:[]};return code;})());
   assert.equal(prep.ok,true);assert.equal(prep.meta.cash,4321);assert.equal(prep.meta.day,1);assert.equal(g.sim,running);assert.deepEqual(writes,[]);
-  assert.equal(await g.keepCurrent(null),true);assert.deepEqual(writes,[['archive','Maple Street Storage'],['keep','Sandbox Lot']],'previous game archived before the outgoing game is kept');
+  assert.equal((await g.keepCurrent(null)).ok,true);assert.deepEqual(writes,[['archive','Maple Street Storage'],['keep','Sandbox Lot']],'previous game archived before the outgoing game is kept');
   g.applyLoad(prep);assert.equal(g.sim.s.cash,4321);assert.equal(g.sim.s.speed,0,'imports load paused');assert.equal(archive[0].meta.name,'Maple Street Storage');});
 await test('6. legacy Candidate-21 saves (no view field) and expanded saves load; reload after import restores the saved floor',async()=>{
   const {g,attached}=harness();g.sim=clone(three);g.company={props:[{name:'A',sim:g.sim}],active:0,feed:[]};g.rend.view=2;const code=await g.saveCode();assert.match(JSON.stringify(JSON.parse(g.saveJSON())),/"uiView":2/);

@@ -85,10 +85,11 @@ export class Sim {
     // Legacy expenses and billing already ran at midnight. Do not run that day again.
     if (!state.finance) {
       state.finance = financeState(dayOf(state.t));
-      const truncated = state.ledger.length >= 250;
-      state.finance.cashCompleteFrom = truncated && state.ledger.length ? dayOf(state.ledger[0].t) + 1 : 1;
-      for (const row of state.ledger) {
-        if (row.info) continue; // information-only rows never count as cash movement
+      // Information-only rows never count as cash movement, nor toward the old 250-row cap or the first cash row.
+      const cashRows = state.ledger.filter((row) => !row.info);
+      const truncated = cashRows.length >= 250;
+      state.finance.cashCompleteFrom = truncated && cashRows.length ? dayOf(cashRows[0].t) + 1 : 1;
+      for (const row of cashRows) {
         const d = dayOf(row.t); let bucket = state.finance.cashDays.find((x) => x.day === d);
         if (!bucket) { bucket = { day: d, incoming: 0, outgoing: 0, categories: {}, complete: d >= state.finance.cashCompleteFrom }; state.finance.cashDays.push(bucket); }
         if (row.amt >= 0) bucket.incoming = cents(bucket.incoming + row.amt); else bucket.outgoing = cents(bucket.outgoing - row.amt);
