@@ -130,7 +130,10 @@ const plainGame = (p) => p.evaluate(() => { const g = __game; g.newGame('maple')
 
   await scenario('R. real keyboard: Space during a hold or photo Freeze records Pause; Unfreeze/Done keep it; unaffordable Confirm is disabled', 1280, 720, async (p) => {
     const speed = () => p.evaluate(() => __game.sim.s.speed), clock = () => p.evaluate(() => __game.sim.s.t);
-    await plainGame(p); await p.click('#speed [data-v="4"]'); await frames(p);
+    // Disclosed setup, as in P: optional-lesson offers hold time by design until answered (making run-speed taps inert), so
+    // they are dismissed up front; otherwise one arriving mid-scenario decides what "the previous speed" is.
+    await plainGame(p); await p.evaluate(async () => { const m = await import('./js/tutorial.js'); for (const L of m.LESSONS) __game.sim.dispatch({ type: 'lesson', op: 'dismiss', id: L.id }); __game.ui.resumePopup('lessonOffer'); });
+    await p.click('#speed [data-v="4"]'); await frames(p);
     await p.click('#tabs [data-v="business"]'); await frames(p); await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0);
     await p.keyboard.press('Space'); await frames(p); assert.equal(await speed(), 0, 'Space during the hold never runs time');
     await p.click('[data-a="sheetGrow"]'); await frames(p); assert.equal(await speed(), 0, 'Back to map keeps the manual Pause');
