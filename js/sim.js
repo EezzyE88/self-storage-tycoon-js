@@ -1136,8 +1136,10 @@ export class Sim {
   act_policy(a) { this.s.policies[a.key] = a.v; return { ok: true }; }
   act_convo(a) {
     const s = this.s, c = s.convos.find((x) => x.id === a.id); if (!c) return { ok: false };
+    const act = c.actions[a.i];
+    if (!act || this.requestActionDisabled(act)) return { ok: false, msg: 'That response is no longer available. Choose a remaining response.' };
     s.convos = s.convos.filter((x) => x !== c);
-    const act = c.actions[a.i]; if (act && act.action) return this.dispatch(act.action);
+    if (act.action) return this.dispatch(act.action);
     return { ok: true };
   }
   renovateOptions(u) { // what a vacant unit can be turned into (after the tutorial)
@@ -1739,8 +1741,8 @@ export class Sim {
       actions: [{ label: 'Explain the market rate', action: { type: 'cv', op: 'rateExplain', lease: L.id } }, { label: `Hold ${this.fmtMoney(L.prevRent)} for 6 months`, action: { type: 'cv', op: 'rateHold', lease: L.id } }, { label: 'Ignore', action: { type: 'cv', op: 'rateIgnore', lease: L.id } }] });
   }
   moveoutConvo(tn, L, u, price) {
-    const offer = this.s.policies.retention;
-    this.convo({ key: 'mo' + tn.id, who: tn.name, obj: u.id, sev: 'attention', ttl: 10 * 60, def: 1, auto: offer && price ? 0 : 1,
+    const offer = this.s.policies.retention && !tn.retainTried;
+    this.convo({ key: 'mo' + tn.id, who: tn.name, obj: u.id, sev: 'attention', ttl: 10 * 60, def: 1, auto: offer && price ? 0 : 1, waitForOffice: !(offer && price) && (this.hour < OFFICE_HOURS[0] || this.hour >= OFFICE_HOURS[1]),
       text: price ? `The rent on Unit ${u.num} is more than I want to pay. I'm moving out. What do I need to do?` : `I'm done with Unit ${u.num}. What do I need to do?`,
       actions: [{ label: `Offer 10% off (${this.fmtMoney(Math.round(L.rent * 0.9))}/mo) to stay`, action: { type: 'cv', op: 'retain', tenant: tn.id } }, { label: 'Explain move-out steps', action: { type: 'cv', op: 'moveoutOk', tenant: tn.id } }] });
   }
@@ -1771,7 +1773,7 @@ export class Sim {
           this.milestone('first_retention'); this.emit('retained', { unit: L.unit });
           return { ok: true, msg: `${tn.name} is staying at ${this.fmtMoney(L.rent)}/mo.` };
         }
-        return { ok: false, msg: `${tn.name} thanked you but is still moving out.` };
+        return { ok: false, resolved: true, msg: `${tn.name} declined the offer and is still moving out. Move-out steps: empty the unit, sweep it, and return the lock.` };
       }
       case 'moveoutOk': return { ok: true, msg: 'Move-out explained: empty the unit, sweep it, and return the lock.' };
       case 'sizeUp': case 'sizeKeep': {
@@ -1784,20 +1786,45 @@ export class Sim {
     }
     return { ok: false };
   }
+  requestActionDisabled(a) {
+    if (a?.action?.op !== 'retain') return false;
+    const tn = this.s.tenants[a.action.tenant], L = tn && this.s.leases[tn.lease];
+    return !tn || !L || !tn.leaving || !!tn.retainTried;
+  }
+  requestOfferStatus(c) {
+    const a = c.actions?.find(a => a.action?.op === 'retain');
+    if (!a) return '';
+    const tn = this.s.tenants[a.action.tenant], L = tn && this.s.leases[tn.lease];
+    return !tn || !L || !tn.leaving ? 'Retention unavailable: this move-out is no longer active.' : tn.retainTried ? 'Offer already sent. The tenant is still moving out; explain the move-out steps.' : '';
+  }
+  routineMoveout(c) {
+    return String(c.key || '').startsWith('mo') && (c.actions?.[c.auto]?.action?.op === 'moveoutOk');
+  }
   // Shared by the simulation and UI: retain the existing Clerk/Manager response rules.
   requestHandler(c) {
     const s = this.s;
     if (c.auto == null || !c.actions?.[c.auto] || c.sev === 'critical' || c.ownerReview || s.policies.manualRequests) return null;
-    if (this.hour < OFFICE_HOURS[0] || this.hour >= OFFICE_HOURS[1]) return null;
+    if (this.hour < OFFICE_HOURS[0] || this.hour >= OFFICE_HOURS[1]) {
+      // Routine move-out instructions can wait for employed staff's next office shift.
+      if (this.routineMoveout(c) && c.waitForOffice) return s.staff.some(st => st.role === 'clerk') ? 'Clerk' : this.hasManager() ? 'Manager' : null;
+      return null;
+    }
     if (s.agents.some((a) => a.kind === 'staff' && a.role === 'clerk' && a.st === 'office')) return 'Clerk';
     return this.hasManager() ? 'Manager' : null;
   }
   syncRequestHandling() {
     for (const c of this.s.convos) {
+      const offer = c.actions?.findIndex(a => a.action?.op === 'retain');
+      if (offer >= 0 && this.requestActionDisabled(c.actions[offer])) {
+        const steps = c.actions.findIndex(a => a.action?.op === 'moveoutOk');
+        if (steps >= 0 && c.auto === offer) c.auto = steps;
+      }
       const handler = this.requestHandler(c);
       // Once handed back, the owner decides even if coverage subsequently returns.
       if (c.staffHandling && !handler && !c.ownerReview && !this.s.policies.manualRequests) c.ownerReview = 'coverage';
       c.staffHandling = this.requestHandler(c);
+      c.staffWaiting = !!c.staffHandling && (this.hour < OFFICE_HOURS[0] || this.hour >= OFFICE_HOURS[1]);
+      if (c.staffHandling && !c.staffWaiting) c.waitForOffice = false;
     }
   }
   act_requestReview(a) {
@@ -1814,11 +1841,11 @@ export class Sim {
     this.syncRequestHandling();
     for (const c of [...s.convos]) {
       const age = s.t - c.t, handler = c.staffHandling;
-      if (handler && age >= 15) {
+      if (handler && !c.staffWaiting && age >= 15) {
         const act = c.actions[c.auto];
         s.convos = s.convos.filter((x) => x !== c);
         const r = act.action ? this.dispatch(act.action) : { ok: true };
-        if (r?.ok === false) {
+        if (r?.ok === false && !r.resolved) {
           c.ownerReview = 'failed'; c.staffHandling = null; s.convos.push(c);
           this.mgr(`${handler} could not complete ${c.who}: ${r.msg || act.label}. Owner review needed.`, { request: true });
         } else this.mgr(`${handler} answered ${c.who}: ${act.label}${r?.msg ? ' - ' + r.msg : ''}`, { request: true });
@@ -1854,7 +1881,7 @@ export class Sim {
     let settling = false;
     if (!cands.length && v.climate) { cands = ready.filter((u) => u.env === 'std'); settling = true; }
     if (!cands.length && !v.climate) { cands = ready.filter((u) => u.env === 'climate'); }
-    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: 'Nothing ready to rent today.' }[reason] || 'I\'ll keep shopping.', 'bad', {requestedSize:v.size,requestedClimate:!!v.climate}); return null; };
+    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: this.availabilityReport(v.size).text }[reason] || 'I\'ll keep shopping.', 'bad', {requestedSize:v.size,requestedClimate:!!v.climate,...(reason === 'noReady' ? {complaint:'noReady',availability:this.availabilityReport(v.size).availability} : {})}); return null; };
     if (!cands.length) return lose(all.length ? (v.climate ? 'noClimate' : 'noReady') : v.climate && this.objs('unit').some((u) => u.size === v.size) ? 'noClimate' : 'noSize');
     const rep = this.reputation(); const cp = this.compPrice();
     let best = null, bestP = -1;
@@ -2001,6 +2028,13 @@ export class Sim {
     const set = new Set(targets);
     this.navCart = !!ag.cart; const p = this.bfs([from], (n) => set.has(n), (n) => this.pedNbr(n)); this.navCart = false;
     ag.path = p; ag.pi = 0; return p;
+  }
+  availabilityReport(size) {
+    const all = this.objs('unit'), units = all.filter(u => u.size === size);
+    const full = all.length > 0 && all.every(u => u.commercial === 'occupied' || u.commercial === 'reserved');
+    const reason = full ? 'full' : units.some(u => !u.lease && u.commercial === 'unready') ? 'makeReady' : units.some(u => u.blocked) ? 'access' : units.some(u => u.cstate !== 'operating') ? 'construction' : 'sizeFull';
+    const text = {full:'All units occupied or reserved.', makeReady:`Vacant ${size} units need make-ready.`, access:`${size} rental access is blocked.`, construction:`New ${size} units are not open yet.`, sizeFull:`No ${size} units ready to rent.`}[reason];
+    return {text, availability:reason};
   }
   thought(ag, text, kind = 'bad', extra = {}) {
     if (!text) return;

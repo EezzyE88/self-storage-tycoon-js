@@ -1,0 +1,104 @@
+[
+  {
+    "script": "tc24_requests",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.3
+  },
+  {
+    "script": "tc27_availability",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tcomplaints",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tcomplaint_capacity",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tcomplaint_hardening",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tfeedback_interactions",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tpause_policy",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.3
+  },
+  {
+    "script": "tcalm",
+    "exit": 0,
+    "passed": true,
+    "seconds": 8.8
+  },
+  {
+    "script": "tclock24",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tstafffirst",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tdelegation",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tmanagement",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "script": "tbplus",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.4
+  },
+  {
+    "script": "tfin",
+    "exit": 0,
+    "passed": true,
+    "seconds": 1.1
+  },
+  {
+    "script": "tfinancial_trust",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.1
+  },
+  {
+    "script": "tsave_recovery",
+    "exit": 0,
+    "passed": true,
+    "seconds": 5.8
+  },
+  {
+    "script": "tc23_crash_repairs",
+    "exit": 0,
+    "passed": true,
+    "seconds": 0.2
+  }
+]

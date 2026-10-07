@@ -250,4 +250,47 @@ test('in-window Pause survives X, later response and other panel closure', () =>
   const f = fixture(null, 4); f.ui.pauseForPopup('panel'); const c = request(f); f.ui.showRequests(); f.click({a: 'requestPause'}); f.ui.closeModal();
   f.click({a: 'convo', id: c.id, i: 1}); f.ui.resumePopup('panel'); assert.equal(f.sim.s.speed, 0);
 });
+test('old saved attempted offers disable repeat actions without losing valid move-out response', () => {
+  const f=fixture('manager',4),u=f.sim.objs('unit').find(u=>u.lease),L=f.sim.s.leases[u.lease],tn=f.sim.s.tenants[L.tenant];
+  tn.leaving=true;tn.retainTried=true;f.sim.moveoutConvo(tn,L,u,true);
+  const loaded=new Sim(JSON.parse(JSON.stringify(f.sim.s)));f.ui.g.sim=loaded;f.ui.renderFeed(true);
+  const c=loaded.s.convos.at(-1),rent=loaded.s.leases[L.id].rent;
+  assert.equal(c.auto,1);assert.match(f.ui.requestCards.join(''),/Offer already sent/);assert.match(f.ui.requestCards.join(''),/disabled aria-disabled/);
+  assert.equal(loaded.dispatch({type:'convo',id:c.id,i:0}).ok,false);assert.ok(loaded.s.convos.includes(c));assert.equal(loaded.s.leases[L.id].rent,rent);
+  assert.equal(loaded.dispatch({type:'convo',id:c.id,i:1}).ok,true);assert.equal(loaded.s.convos.length,0);
+});
+test('declined staff offer resolves once without a false owner failure or repeat discount', () => {
+  const f=fixture('manager',4),u=f.sim.objs('unit').find(u=>u.lease),L=f.sim.s.leases[u.lease],tn=f.sim.s.tenants[L.tenant];
+  tn.leaving=true;f.sim.rnd=()=>0.99;f.sim.moveoutConvo(tn,L,u,true);const rent=L.rent,cash=f.sim.s.cash;
+  f.ticks(15);assert.equal(f.sim.s.convos.length,0);assert.equal(f.sim.s.speed,4);assert.equal(L.rent,rent);assert.equal(f.sim.s.cash,cash);
+  assert.equal(tn.retainTried,true);assert.match(f.sim.requestHistory()[0].msg,/declined.*Move-out steps/);
+});
+for(const role of ['manager','clerk']) test(`midnight routine move-out waits for ${role} office coverage across save/load`,()=>{
+  const f=fixture(role,4);f.sim.s.t=0;const u=f.sim.objs('unit').find(u=>u.lease),L=f.sim.s.leases[u.lease],tn=f.sim.s.tenants[L.tenant];tn.leaving=true;
+  f.sim.moveoutConvo(tn,L,u,false);f.ui.renderFeed(true);const c=f.sim.s.convos.at(-1);
+  assert.equal(c.staffWaiting,true);assert.equal(f.sim.s.speed,4);assert.match(f.ui.requestCards.join(''),/when the office opens/);
+  f.ticks(20);assert.ok(f.sim.s.convos.includes(c));const loaded=new Sim(JSON.parse(JSON.stringify(f.sim.s)));loaded.s.t=10*60;loaded.convoTick();
+  assert.equal(loaded.s.convos.length,0);assert.equal(loaded.requestHistory().length,1);assert.match(loaded.requestHistory()[0].msg,/Move-out explained/);
+});
+test('midnight routine still requires owner if staff absent or manual review selected',()=>{
+  for(const manual of [false,true]){const f=fixture(manual?'manager':null,4);f.sim.s.t=0;f.sim.s.policies.manualRequests=manual;
+  const u=f.sim.objs('unit').find(u=>u.lease),L=f.sim.s.leases[u.lease],tn=f.sim.s.tenants[L.tenant];tn.leaving=true;f.sim.moveoutConvo(tn,L,u,false);f.ui.renderFeed(true);
+  assert.equal(f.sim.s.speed,0);assert.equal(f.sim.s.convos.at(-1).staffHandling,null);}
+});
+test('firing deferred staff escalates; active routine coverage loss remains sticky',()=>{
+  for(const midnight of [true,false]){const f=fixture('manager',4);if(midnight)f.sim.s.t=0;
+  const u=f.sim.objs('unit').find(u=>u.lease),L=f.sim.s.leases[u.lease],tn=f.sim.s.tenants[L.tenant];tn.leaving=true;f.sim.moveoutConvo(tn,L,u,false);f.ui.renderFeed(true);
+  const c=f.sim.s.convos.at(-1);if(midnight)f.sim.dispatch({type:'fire',id:f.sim.s.staff.find(st=>st.role==='manager').id});else f.sim.s.t=OFFICE_HOURS[1]*60;
+  f.ui.renderFeed(true);assert.equal(c.ownerReview,'coverage');assert.equal(f.sim.s.speed,0);}
+});
+test('stale double taps and invalid indices cannot consume another pending decision',()=>{
+  const f=fixture(null,4),a=request(f),b=request(f,{key:'second'});f.ui.showRequests();
+  assert.equal(f.sim.dispatch({type:'convo',id:a.id,i:99}).ok,false);assert.equal(f.sim.s.convos.length,2);
+  f.click({a:'convo',id:a.id,i:1});f.click({a:'convo',id:a.id,i:1});assert.ok(f.sim.s.convos.includes(b));assert.equal(f.sim.s.speed,0);
+  f.click({a:'convo',id:b.id,i:1});assert.equal(f.sim.s.speed,4);assert.equal(f.ui.modalOpen(),false);
+});
+test('previously attempted price offer at midnight becomes routine staff steps',()=>{
+  const f=fixture('manager',4);f.sim.s.t=0;const u=f.sim.objs('unit').find(u=>u.lease),L=f.sim.s.leases[u.lease],tn=f.sim.s.tenants[L.tenant];tn.leaving=true;tn.retainTried=true;
+  f.sim.moveoutConvo(tn,L,u,true);f.ui.renderFeed(true);const c=f.sim.s.convos.at(-1);assert.equal(c.auto,1);assert.equal(c.staffWaiting,true);assert.equal(f.sim.s.speed,4);
+});
 console.log(`${passed} request handling and window checks passed`);

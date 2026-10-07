@@ -1126,7 +1126,7 @@ export class UI {
   }
   renderFeed(force = false) {
     const s = this.sim.s; this.sim.syncRequestHandling();
-    const key = s.convos.map((c) => `${c.id}:${c.staffHandling}:${c.ownerReview}`).join(',') + ':' + !!s.policies.manualRequests + ':' + (s.mgrLog[0]?.t ?? '') + ':' + (s.mgrLog[0]?.msg ?? '');
+    const key = s.convos.map((c) => `${c.id}:${c.staffHandling}:${c.staffWaiting}:${c.ownerReview}:${this.sim.requestOfferStatus(c)}`).join(',') + ':' + !!s.policies.manualRequests + ':' + (s.mgrLog[0]?.t ?? '') + ':' + (s.mgrLog[0]?.msg ?? '');
     if (!force && key === this.convoKey) return; this.convoKey = key;
     const feed = this.$('feed');
     for (const el of feed.querySelectorAll('.convo, .request-handling')) el.remove();
@@ -1144,13 +1144,13 @@ export class UI {
       const due = c.ttl ? c.t + c.ttl : null;
       const calm = c.staffHandling ? 'Pause or choose manual review whenever you want to intervene.' : c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. Time stays paused while you review.` : 'No rush. Time stays paused until you choose.';
       const advice=diagnoseRequest(this.sim,c);
-      const handling = c.staffHandling ? `${c.staffHandling} handling this · ${c.actions[c.auto].label}` : c.ownerReview === 'coverage' ? 'Staff coverage ended. Waiting for your decision.' : c.ownerReview === 'failed' ? 'Staff could not complete this. Waiting for your decision.' : 'Waiting for your decision · no rush';
-      el.innerHTML = `<p class="note request-status">${esc(handling)}</p>${c.staffHandling ? `<button class="btn sm" data-a="requestReview" data-id="${c.id}">I’ll handle this</button>` : ''}<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
+      const handling = c.staffHandling ? `${c.staffHandling} ${c.staffWaiting ? "will handle this when the office opens" : "handling this"} · ${c.actions[c.auto].label}` : c.ownerReview === 'coverage' ? 'Staff coverage ended. Waiting for your decision.' : c.ownerReview === 'failed' ? 'Staff could not complete this. Waiting for your decision.' : 'Waiting for your decision · no rush';
+      el.innerHTML = `<p class="note request-status">${esc(handling)}</p>${c.staffHandling ? `<button class="btn sm" data-a="requestReview" data-id="${c.id}">I’ll handle this</button>` : ''}<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div>${this.sim.requestOfferStatus(c) ? `<p class="note">${esc(this.sim.requestOfferStatus(c))}</p>` : ''}<div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}" ${this.sim.requestActionDisabled(a) ? 'disabled aria-disabled="true"' : ''}>${esc(this.sim.requestActionDisabled(a) ? 'Retention unavailable' : a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
       this.requestCards.push(el.outerHTML);
       if (!c.staffHandling) this.ownerRequestCards.push(el.outerHTML);
     }
     if(ownerCount) { const b=document.createElement('button'); b.className='convo inbox-chip';b.dataset.a='requests';b.textContent=`${ownerCount} owner request${ownerCount===1?'':'s'} · paused · Review`;frag.appendChild(b); }
-    else if(staffCount) { const b=document.createElement('div'); b.className='request-handling inbox-chip';const handlers=[...new Set(order.map(c=>c.staffHandling))].join(' / ');b.textContent=`${handlers} handling ${staffCount} request${staffCount===1?'':'s'}`;frag.appendChild(b); }
+    else if(staffCount) { const b=document.createElement('div'); b.className='request-handling inbox-chip';const handlers=[...new Set(order.map(c=>c.staffHandling))].join(' / ');b.textContent=`${handlers} ${order.every(c=>c.staffWaiting) ? 'awaiting office hours for' : 'handling'} ${staffCount} request${staffCount===1?'':'s'}`;frag.appendChild(b); }
     feed.prepend(frag);
     if(this.requestPanel && this.modalOpen()) this.renderRequestPanel();
   }
@@ -1199,17 +1199,19 @@ export class UI {
     // Merge identical customer thoughts without letting rapid repeats pin a bubble on-screen forever.
     // On phones, routine shopper outcomes get a short real-time cooldown; Business still keeps the full lost-demand totals.
     this.syncFeedbackProperty();
-    const now = performance.now(), key=complaintKey(th);
-    const same = this.bubbles.find((b) => complaintKey(b.th) === key);
+    const routine = th.complaint === 'noReady' || th.text === 'Nothing ready to rent today.' || th.text === "I'll keep shopping.";
+    // Visual grouping only: history retains size/location-specific reports.
+    const visualKey = t => t.complaint === 'noReady' || t.text === 'Nothing ready to rent today.' ? 'availability:'+t.text : t.text === "I'll keep shopping." ? 'shopping' : complaintKey(t);
+    const now = performance.now(), key=visualKey(th);
+    const same = this.bubbles.find((b) => visualKey(b.th) === key);
     if (same) {
       same.n = (same.n || 1) + 1;
       same.el.innerHTML = `<span class="i">${th.kind === 'bad' ? '&#9888;' : th.kind === 'good' ? '&#9786;' : '&#8226;'}</span>${esc(th.text)} <b class="n">×${same.n}</b>`;
       return;
     }
-    const routine = th.text === 'Nothing ready to rent today.' || th.text === "I'll keep shopping.";
     this.bubbleSeen ||= new Map();
-    const seen = this.bubbleSeen.get(key) || 0;
-    if (this.phone() && routine && now - seen < 12000) return;
+    const seen = this.bubbleSeen.get(key);
+    if (this.phone() && routine && seen != null && now - seen < 12000) return;
     if(routine) {
       this.bubbleSeen.set(key, now);
       if(this.bubbleSeen.size>128) this.bubbleSeen.delete(this.bubbleSeen.keys().next().value);
