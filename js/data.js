@@ -2,7 +2,7 @@
 // Numbers are tuning values (GDD §61): they are deliberately centralized here.
 
 export const MIN_PER_DAY = 1440;
-export const TICKS_PER_SEC_1X = 24;          // 1x = one game day per real minute
+export const TICKS_PER_SEC_1X = 60;          // One tick = one game minute; 1x = one game hour per real second (24-second day)
 export const BILLING_CYCLE_DAYS = 30;
 export const OFFICE_HOURS = [8, 18];
 export const ACCESS_HOURS = [6, 22];

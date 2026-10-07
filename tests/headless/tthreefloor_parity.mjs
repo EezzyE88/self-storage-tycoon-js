@@ -6,6 +6,11 @@ import {makeMaple} from '../../js/maple.js';
 import {makeScenario} from '../../js/scenarios.js';
 // Candidate-19 baseline (da4c72a339345fa89a5375014daa2ae17158ef28) committed under tests/fixtures/candidate19 so a fresh clone needs no history.
 const base='tests/fixtures/candidate19/';let code=readFileSync(base+'sim.js','utf8');code=code.replace(/(['"])(\.\/[^'"]+)\1/g,(_,q,p)=>JSON.stringify(pathToFileURL(process.cwd()+'/js/'+p.slice(2)).href));const Old=(await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'))).Sim;
-for(const file of ['js/data.js','js/finance.js','js/maple.js','js/scenarios.js','js/localsave.js'])assert.equal(readFileSync(file,'utf8'),readFileSync(base+file.slice(3),'utf8'));
+// Only the wall-clock rate may differ; all economy/catalog data stays exact.
+const withoutClock = s => s.replace(/^export const TICKS_PER_SEC_1X = .*$/m, '');
+for(const file of ['js/data.js','js/finance.js','js/maple.js','js/scenarios.js','js/localsave.js']) {
+  const now=readFileSync(file,'utf8'), before=readFileSync(base+file.slice(3),'utf8');
+  assert.equal(file==='js/data.js'?withoutClock(now):now,file==='js/data.js'?withoutClock(before):before);
+}
 for(const state of [makeMaple().s,makeScenario('vertical').s]){const a=new Sim(JSON.parse(JSON.stringify(state))),b=new Old(JSON.parse(JSON.stringify(state)));for(let i=0;i<1440*7;i++){a.step();b.step();a.events.length=0;b.events.length=0;}assert.deepEqual(a.s,b.s);}
 console.log('PASS exact seven-day legacy simulation state/RNG/economy parity against candidate19; unchanged rates, factories, finance and save slots');

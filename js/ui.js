@@ -81,7 +81,7 @@ export class UI {
         <div class="chip" data-a="finances" role="button" aria-label="Open finances"><div class="cash num" id="cash">$0<small>Cash</small></div><i id="goalbar" class="goalbar" hidden aria-hidden="true"><b></b></i></div>
         <div class="chip clock" data-a="calendar" role="button" aria-label="Open calendar"><b class="num" id="clock">7:00 AM</b><span id="date">Day 1</span><span class="sbflag" id="sbflag" hidden></span></div>
         <div class="spacer"></div>
-        <div class="chip speed" id="speed"><button data-a="speed" data-v="0" aria-label="Pause">${I.pause}</button><button data-a="speed" data-v="1">1x</button><button data-a="speed" data-v="2">2x</button><button data-a="speed" data-v="4">4x</button></div>
+        <div class="chip speed" id="speed"><button data-a="speed" data-v="0" aria-label="Pause">${I.pause}</button><button data-a="speed" data-v="1" aria-label="1×: 24-second day" title="1×: 24-second day">1x</button><button data-a="speed" data-v="2" aria-label="2×: 12-second day" title="2×: 12-second day">2x</button><button data-a="speed" data-v="4" aria-label="4×: 6-second day" title="4×: 6-second day">4x</button></div>
         <button class="iconbtn" data-a="menu" aria-label="Menu">${I.menu}</button>
       </div>
       <div class="viewctl">
