@@ -678,7 +678,7 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .status-key { margin-bottom: 12px; border-bottom: 1px solid var(--line); }
 .status-key summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 14px; }
 .ulbl.available { background: #215e47; color: white; }
-.ulbl.occupied { background: #edf1f4; color: #344652; border-color: #8796a1; }
+.ulbl.occupied { background: rgba(237,241,244,.86); color: #344652; border-color: #8796a1; font-weight: 600; padding: 0 3px; }
 .ulbl.reserved { background: #604780; color: white; }
 .ulbl.turnover { background: #f3d18a; color: #493411; }
 .ulbl.blocked { background: #963d34; color: white; }

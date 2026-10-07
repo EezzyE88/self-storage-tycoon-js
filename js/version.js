@@ -1,2 +1,2 @@
-// Dollhouse visual pass; physical-iPhone visual acceptance pending.
-export const BUILD = { name: 'bplus-dollhouse-visuals-candidate-30', date: '2026-10-07' };
+// Second dollhouse pass; physical-iPhone visual acceptance pending.
+export const BUILD = { name: 'bplus-dollhouse-detail-candidate-31', date: '2026-10-07' };

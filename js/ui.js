@@ -796,7 +796,7 @@ export class UI {
   }
   statusLegendHtml() {
     const bays=loadingStatus(this.sim), counts=k=>bays.filter(b=>b.state===k).length;
-    return '<details class="status-key"><summary>Map status · '+counts('free')+' free loading bays</summary><p class="note">Doors: '+Object.values(UNIT_STATUS).map(v=>v.mark+' '+v.label).join(' · ')+'</p><p class="note">Cyan outline: selection. Gold ring: tutorial target. Red pins: urgent problems. Occupied units stay quiet; zoom in for status labels.</p><p class="note">Loading: + free · — occupied or vehicle arriving · × inaccessible. '+counts('occupied')+' occupied · '+counts('inaccessible')+' inaccessible. Free means vehicle and pedestrian access at the bay; the route to a particular unit must also connect.</p>'+bays.map(b=>'<p class="note"><b>Bay ('+b.x+', '+b.y+'): '+b.state+'</b> · '+(b.state==='inaccessible'?'Reconnect this pavement to the gate and keep its pedestrian exit clear. Check the destination door, hall and floor access.':b.state==='occupied'?'Let this vehicle finish its visit. Repeated queues here may justify another connected bay near this building; hiring and canopies do not add bays.':'Available for an arriving vehicle. Preserve the route to the destination building.')+'</p>').join('')+'</details>';
+    return '<details class="status-key"><summary>Map status · '+counts('free')+' free loading bays</summary><p class="note">Doors: '+Object.values(UNIT_STATUS).map(v=>v.mark+' '+v.label).join(' · ')+'</p><p class="note">Cyan outline: selection. Gold ring: tutorial target. Red pins: urgent problems. Occupied units show compact numbers; select one for its full status. Exceptions retain status labels.</p><p class="note">Loading: + free · — occupied or vehicle arriving · × inaccessible. '+counts('occupied')+' occupied · '+counts('inaccessible')+' inaccessible. Free means vehicle and pedestrian access at the bay; the route to a particular unit must also connect.</p>'+bays.map(b=>'<p class="note"><b>Bay ('+b.x+', '+b.y+'): '+b.state+'</b> · '+(b.state==='inaccessible'?'Reconnect this pavement to the gate and keep its pedestrian exit clear. Check the destination door, hall and floor access.':b.state==='occupied'?'Let this vehicle finish its visit. Repeated queues here may justify another connected bay near this building; hiring and canopies do not add bays.':'Available for an arriving vehicle. Preserve the route to the destination building.')+'</p>').join('')+'</details>';
   }
   operateSheet() {
     const sim = this.sim, s = sim.s;
@@ -1866,12 +1866,12 @@ export class UI {
     const px = (R.canvas.clientHeight || 800) / (R.frustum / R.zoom); // screen px per world unit
     const show = !this.title && px >= 24 && !this.tool;
     if (show) {
-      for (const o of Object.values(s.objects)) {
+      for (const o of Object.values(s.objects).sort((a,b)=>Number(b.id===this.sel)-Number(a.id===this.sel))) {
         if (o.type !== 'unit' || o.cstate === 'construction' || n >= 90) continue;
         const f = o.f || 0; if (!(R.view === 'ext' ? (o.access === 'drive' && f === 0) : R.view === f)) continue;
         const w0 = o.w || 1, h0 = o.h || 1, dr = o.dir || [0, 0]; const cx = o.x + w0 / 2 + dr[0] * (w0 / 2 + 0.15), cy = o.y + h0 / 2 + dr[1] * (h0 / 2 + 0.15);
         const pr = R.project(cx, cy, f * 1.9 + 0.95); if (!pr.vis || pr.x < 0 || pr.y < 0 || pr.x > innerWidth || pr.y > innerHeight) continue;
-        const status=unitStatus(o), cue=UNIT_STATUS[status]; const id=String(o.num ?? String(o.name || '').replace(/^Unit\s*/, '')); const txt=px>=38 ? `${id} · ${cue.label}` : `${cue.mark} ${id}`; const w = 8 + txt.length * 7.5, r = { x: pr.x - w / 2, y: pr.y - 9, w, h: 18 };
+        const status=unitStatus(o), cue=UNIT_STATUS[status]; const id=String(o.num ?? String(o.name || '').replace(/^Unit\s*/, '')); const selected=o.id===this.sel; const txt=selected || (status!=='occupied' && px>=38) ? `${id} · ${cue.label}` : status==='occupied' ? id : `${cue.mark} ${id}`; const w = 8 + txt.length * 7.5, r = { x: pr.x - w / 2, y: pr.y - 9, w, h: 18 };
         if (placed.some((q) => r.x < q.x + q.w + 2 && r.x + r.w + 2 > q.x && r.y < q.y + q.h + 1 && r.y + r.h + 1 > q.y)) continue;
         placed.push(r);
         let el = pool[n]; if (!el) { el = document.createElement('span'); el.className = 'ulbl'; pool.push(el); root.appendChild(el); }

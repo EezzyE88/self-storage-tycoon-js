@@ -350,6 +350,10 @@ export class Renderer {
       if (gv === G.GRASS) {
         const shade = (Math.sin(x * .22) + Math.cos(y * .19)) * .012 + .025 + (Math.floor((x+y)*.18)%2)*.018;
         g.fillStyle = `rgba(45,66,34,${shade})`; g.fillRect(px, py, C, C);
+        const paved=v=>[G.ASPHALT,G.CONCRETE,G.PARKING,G.LOADING].includes(v);
+        g.fillStyle='rgba(128,117,91,.16)';
+        if(x>0&&paved(s.ground[i-1]))g.fillRect(px,py,3,C);
+        if(y>0&&paved(s.ground[i-W]))g.fillRect(px,py,C,3);
         for (let k = 0; k < 6; k++) { g.fillStyle = hash(i * 31 + k) < .5 ? 'rgba(43,66,32,.07)' : 'rgba(220,224,175,.08)'; g.fillRect(px + hash(i * 7 + k) * C, py + hash(i * 13 + k) * C, 1, 2); }
       }
       else if (gv === G.ASPHALT || gv === G.STREET || gv === G.PARKING || gv === G.LOADING) { for (let k = 0; k < 5; k++) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(px + hash(i * 5 + k) * C, py + hash(i * 3 + k) * C, 1.5, 1.5); } }
@@ -419,6 +423,7 @@ export class Renderer {
     const disposed=new Set();
     root.traverse((o) => {
       if (o.geometry && !this.isShared(o.geometry) && !disposed.has(o.geometry)) { disposed.add(o.geometry); o.geometry.dispose(); }
+      if(o.isInstancedMesh) o.dispose();
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
       for (const m of ms) if (!this.isShared(m) && !disposed.has(m)) { disposed.add(m); m.dispose(); }
     });
@@ -443,8 +448,43 @@ export class Renderer {
       try { this.buildObj(o); } catch (e) { console.warn('render obj', o.type, e); }
     }
     for(const ord of s.orders.filter(o=>o.st==='construction'&&o.vertical)){const v=ord.vertical,sh=s.objects[v.shell];if(sh&&v.phase<2){const edge=new THREE.LineSegments(this.geo.edges,this.mat.scaffold);edge.scale.set(sh.w,FLOOR_H,sh.h);edge.position.set(sh.x+sh.w/2,v.f*FLOOR_H+FLOOR_H/2,sh.y+sh.h/2);this.add(edge,v.f,{obj:sh.id,pendingFloor:true});}}
+    this.buildArchitectureDetail();
     this.buildFence();
     this.applyView();
+  }
+  // Decorative batches are floor-scoped and non-shadowing; simulation footprints stay authoritative.
+  buildArchitectureDetail() {
+    const batches=new Map();
+    const add=(f,kind,x,y,z,w,h,d)=>{const key=f+':'+kind;if(!batches.has(key))batches.set(key,{f,kind,parts:[]});batches.get(key).parts.push({x,y,z,w,h,d});};
+    for(const o of this.sim.objs('unit')) {
+      if(o.cstate==='construction')continue;
+      const f=o.f||0,H=o.access==='drive'?WALL_H:1.05,cx=o.x+o.w/2,cz=o.y+o.h/2,along=o.dir[0]?o.h:o.w;
+      const x=cx+o.dir[0]*(o.w/2+.025),z=cz+o.dir[1]*(o.h/2+.025),side=[-o.dir[1],o.dir[0]];
+      for(const k of [-1,1])add(f,'frame',x+side[0]*along*.405,H*.40,z+side[1]*along*.405,o.dir[0]?.055:.075,H*.80,o.dir[0]?.075:.055);
+      add(f,'frame',x,H*.81,z,o.dir[0]?.06:along*.86,.065,o.dir[0]?along*.86:.06);
+      if(o.access==='drive') {
+        const adjoining=(x,y)=>{if(x<0||y<0||x>=this.sim.s.W||y>=this.sim.s.H)return false;const id=this.sim.D.unitAt[f]?.[y*this.sim.s.W+x],u=this.sim.s.objects[id];return u&&u.id!==o.id&&u.access==='drive'&&u.cstate!=='construction';};
+        const edgeX=y=>Array.from({length:o.w},(_,i)=>adjoining(o.x+i,y)).every(Boolean);
+        const edgeY=x=>Array.from({length:o.h},(_,i)=>adjoining(x,o.y+i)).every(Boolean);
+        if(!edgeX(o.y-1))add(f,'eave',cx,H+.01,o.y-.035,o.w+.13,.10,.065);
+        if(!edgeX(o.y+o.h))add(f,'eave',cx,H+.01,o.y+o.h+.035,o.w+.13,.10,.065);
+        if(!edgeY(o.x-1))add(f,'eave',o.x-.035,H+.01,cz,.065,.10,o.h+.13);
+        if(!edgeY(o.x+o.w))add(f,'eave',o.x+o.w+.035,H+.01,cz,.065,.10,o.h+.13);
+      }
+    }
+    for(const {f,kind,parts} of batches.values()) {
+      const mesh=new THREE.InstancedMesh(this.geo.box,kind==='frame'?this.mat.metal:this.mat.roofTrim,parts.length);
+      const m=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),sc=new THREE.Vector3();
+      parts.forEach((p,i)=>{m.compose(v.set(p.x,p.y+f*FLOOR_H,p.z),q,sc.set(p.w,p.h,p.d));mesh.setMatrixAt(i,m);});
+      mesh.castShadow=false;mesh.receiveShadow=true;this.add(mesh,f,{decoration:kind});
+    }
+    // Small shrubs only in empty grass beside the office, never in doorways or rental routes.
+    const shrubs=[];const S=this.sim.s;
+    for(const o of this.sim.objs('office'))if(o.cstate!=='construction')for(let k=0;k<o.h;k++)for(const x of [o.x-1,o.x+o.w]){
+      const y=o.y+k,i=y*S.W+x;
+      if(x>=0&&x<S.W&&y>=0&&y<S.H&&S.ground[i]===G.GRASS&&!this.sim.D.solid[i]&&!this.sim.D.shellAt[i])shrubs.push({x:x+.5,z:y+.5});
+    }
+    if(shrubs.length){const mesh=new THREE.InstancedMesh(this.geo.sph,this.mat.leaf2,shrubs.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),sc=new THREE.Vector3();shrubs.forEach((p,i)=>{m.compose(v.set(p.x,.20,p.z),q,sc.set(.72,.55,.64));mesh.setMatrixAt(i,m);});mesh.castShadow=false;this.add(mesh,0,{decoration:'shrubs'});}
   }
   scaffold(o, x, z, w, d, h, f) {
     const ord = this.sim.s.orders.find((q) => q.id === o.order);
@@ -505,7 +545,10 @@ export class Renderer {
         const dxw = o.door.x + 0.5 - d[0] * 0.5, dzw = o.door.y + 0.5 - d[1] * 0.5;
         this.faceMesh(0.6, 1.1, this.mat.officeTrim, dxw + d[0] * 0.03, 0.55, dzw + d[1] * 0.03, d, 0);
         this.faceMesh(0.45, 0.9, this.mat.glass, dxw + d[0] * 0.04, 0.5, dzw + d[1] * 0.04, d, 0);
-        this.box(d[0] ? 0.6 : 1.2, 0.06, d[0] ? 1.2 : 0.6, this.mat.officeTrim, dxw + d[0] * 0.3, 1.35, dzw + d[1] * 0.3, 0);
+        this.box(d[0] ? .85 : 1.8, .10, d[0] ? 1.8 : .85, this.mat.officeTrim, dxw + d[0] * .4, 1.4, dzw + d[1] * .4, 0,{obj:o.id});
+        for(const side of [-1,1])this.box(.06,1.35,.06,this.mat.metal,dxw+d[0]*.7-d[1]*side*.78,.675,dzw+d[1]*.7+d[0]*side*.78,0,{obj:o.id});
+        this.box(o.w+.18,.12,.10,this.mat.roofTrim,cx,1.89,o.y-.04,0,{obj:o.id});
+        this.box(o.w+.18,.12,.10,this.mat.roofTrim,cx,1.89,o.y+o.h+.04,0,{obj:o.id});
         const sg = this.faceMesh(2.2, 0.55, new THREE.MeshBasicMaterial({ map: this.signTex('OFFICE') }), fx + d[0] * 0.03, 2.15, fz + d[1] * 0.03, d, 0);
         this.box(0.05, 0.5, 0.05, this.mat.darkMetal, fx, 1.95, fz, 0);
         break;
@@ -693,10 +736,23 @@ export class Renderer {
       const cab = new THREE.Mesh(this.geo.box, this.mat.glass); cab.scale.set(L * (v.type === 'van' ? 0.8 : 0.55), Hh * 0.45, W * 0.88); cab.position.set(v.type === 'van' ? -L * 0.05 : -L * 0.05, 0.12 + Hh * 0.75, 0); g.add(cab);
       const top = new THREE.Mesh(this.geo.box, paint); top.scale.set(L * (v.type === 'van' ? 0.78 : 0.5), 0.05, W * 0.86); top.position.set(-L * 0.05, 0.12 + Hh + 0.0, 0); g.add(top);
     }
-    const tire = new THREE.Mesh(this.geo.box, this.mat.doorDark); tire.scale.set(L * 0.9, 0.16, W * 1.04); tire.position.y = 0.1; g.add(tire);
+    const wheels=[];
+    for(const x of [-L*.31,L*.31])for(const side of [-1,1]){
+      const wheel=new THREE.Group();wheel.position.set(x,.14,side*W*.48);
+      const tire=new THREE.Mesh(this.geo.cyl,this.mat.doorDark);tire.scale.set(.28,.11,.28);tire.rotation.x=Math.PI/2;wheel.add(tire);
+      const hub=new THREE.Mesh(this.geo.cyl,this.mat.metal);hub.scale.set(.15,.012,.15);hub.rotation.x=Math.PI/2;hub.position.z=side*.06;wheel.add(hub);
+      wheel.userData.side=side;g.add(wheel);wheels.push(wheel);
+    }
+    g.userData.wheels=wheels;g.userData.wheelPhase=0;
+    const bumper=new THREE.Mesh(this.geo.box,this.mat.metal);bumper.scale.set(.045,.075,W*.86);bumper.position.set(L/2+.015,.20,0);g.add(bumper);
+    if(v.type==='box'||v.type==='pickup'){
+      const wind=new THREE.Mesh(this.geo.box,this.mat.glass);wind.scale.set(.025,Hh*.28,W*.76);wind.position.set(L*(v.type==='box'?.505:.275),.12+Hh*.69,0);g.add(wind);
+    }
+    // Opaque side pillars break up the existing glass cabin without extra glass layers.
+    const pillar=new THREE.Mesh(this.geo.box,paint);pillar.scale.set(.055,Hh*.42,W*.91);pillar.position.set(-L*.05,.12+Hh*.76,0);g.add(pillar);
     const hl = new THREE.Mesh(this.geo.box, this.mat.head); hl.scale.set(0.03, 0.08, W * 0.8); hl.position.set(L / 2 + 0.01, 0.3, 0); g.add(hl);
     const tl = new THREE.Mesh(this.geo.box, this.mat.tail); tl.scale.set(0.03, 0.08, W * 0.8); tl.position.set(-L / 2 - 0.01, 0.3, 0); g.add(tl);
-    g.traverse((c) => { c.castShadow = true; });
+    g.traverse((c) => { c.castShadow = true; });for(const w of wheels)w.traverse(c=>{c.castShadow=false;});bumper.castShadow=false;pillar.castShadow=false;
     return g;
   }
   personMesh(a) {
@@ -713,7 +769,10 @@ export class Renderer {
     const vestCol = { owner: 0x1f3a5f, porter: 0x2f8f5b, tech: 0xd9772b, clerk: 0x6a4fa0 }[a.role];
     const shirtHue = hash(a.look || a.id) ;
     const shirt = new THREE.MeshStandardMaterial({ color: vestCol ?? new THREE.Color().setHSL(shirtHue, 0.45, 0.5), roughness: 0.8 });
-    const legs = new THREE.Mesh(this.geo.cyl, new THREE.MeshStandardMaterial({ color: 0x34393f })); legs.scale.set(0.2, 0.32, 0.2); legs.position.y = 0.16; g.add(legs);
+    const legs=new THREE.Group(),pants=new THREE.MeshStandardMaterial({color:0x34393f});legs.scale.set(1,.32,1);legs.position.y=.32;
+    const strides=[-1,1].map(side=>{const limb=new THREE.Group();limb.position.z=side*.065;
+      const trouser=new THREE.Mesh(this.geo.cyl,pants);trouser.scale.set(.09,1,.10);trouser.position.y=-.5;limb.add(trouser);
+      const shoe=new THREE.Mesh(this.geo.box,this.mat.doorDark);shoe.scale.set(.16,.14,.11);shoe.position.set(.025,-.98,0);limb.add(shoe);legs.add(limb);return limb;});g.add(legs);
     const body = new THREE.Mesh(this.geo.cyl, shirt); body.scale.set(0.27, 0.32, 0.22); body.position.y = 0.46; g.add(body);
     const head = new THREE.Mesh(this.geo.sph, this.mat.skin[Math.floor(hash((a.look || a.id) + 5) * 4)]); head.scale.setScalar(0.2); head.position.y = 0.72; g.add(head);
     if (vestCol != null) { // hi-vis stripe + cap: role cue beyond colour
@@ -727,9 +786,9 @@ export class Renderer {
       const arm = new THREE.Mesh(this.geo.cyl, shirt); arm.scale.set(.08,.27,.08);
       arm.position.set(0,.46,side*.16); arm.castShadow=false; g.add(arm); return arm;
     });
-    g.userData.arms=arms;
+    g.userData.arms=arms;g.userData.strides=strides;
     g.userData.box = box; g.userData.legs = legs; g.userData.body = body; g.userData.head = head; g.userData.reusableCustomer = reusable;
-    g.traverse((c) => { c.castShadow = true; }); for(const arm of arms) arm.castShadow=false;
+    g.traverse((c) => { c.castShadow = true; }); for(const arm of arms) arm.castShadow=false;legs.traverse(c=>{c.castShadow=false;});
     return g;
   }
   posePerson(m, a, movement, phase) {
@@ -738,10 +797,11 @@ export class Renderer {
     const bob=walking ? Math.abs(sway)*.018 : 0;
     m.userData.body.position.y=.46+bob; m.userData.head.position.y=.72+bob;
     m.userData.box.position.y=.5+bob;
+    for(let i=0;i<m.userData.strides.length;i++)m.userData.strides[i].rotation.z=walking?sway*(i===0?-.30:.30):0;
     for(let i=0;i<m.userData.arms.length;i++) {
       const arm=m.userData.arms[i];
       arm.position.y=.46+bob;
-      arm.rotation.z=carrying || a.cart ? -1.05 : working ? -.65+sway*.22 : walking ? sway*(i===0?.45:-.45) : 0;
+      arm.rotation.z=carrying || a.cart ? -1.05+(a.st==='atunit'?sway*.10:0) : working ? -.65+sway*.22 : walking ? sway*(i===0?.45:-.45) : 0;
     }
   }
   cartMesh() {
@@ -791,6 +851,8 @@ export class Renderer {
     this.syncPool(this.pool.veh, s.vehicles, (v) => this.vehMesh(v), (m, v) => {
       const px = m.position.x, pz = m.position.z;
       this.smooth(m, v.x, 0, v.y, dt, 14, snap);
+      const distance=Math.hypot(m.position.x-px,m.position.z-pz);
+      if(!m.userData.fresh&&s.speed>0&&distance<.5){m.userData.wheelPhase+=distance/.14;for(const w of m.userData.wheels)w.rotation.z=m.userData.wheelPhase;}
       const dx = m.position.x - px, dz = m.position.z - pz;
       if (Math.abs(dx) + Math.abs(dz) > 0.002) this.face(m, dx, dz, dt); else if (m.userData.fresh) m.rotation.y = Math.atan2(-(v.hy || 0), v.hx || 1);
       m.visible = this.view !== 1 || true;

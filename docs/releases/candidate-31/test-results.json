@@ -1,0 +1,128 @@
+[
+  {
+    "script": "tvisual31",
+    "passed": true,
+    "tail": [
+      "10 second visual pass checks passed"
+    ]
+  },
+  {
+    "script": "tvisual30",
+    "passed": true,
+    "tail": [
+      "9 visual presentation checks passed"
+    ]
+  },
+  {
+    "script": "tperformance",
+    "passed": true,
+    "tail": [
+      "11 performance/UI regressions passed"
+    ]
+  },
+  {
+    "script": "tart_design",
+    "passed": true,
+    "tail": [
+      "PASS architecture reuse, bounded trees, read-only lighting and concise vacancy guidance; visual acceptance pending"
+    ]
+  },
+  {
+    "script": "tstatus_hierarchy",
+    "passed": true,
+    "tail": [
+      "23 status/hierarchy checks passed"
+    ]
+  },
+  {
+    "script": "tproperty_ui",
+    "passed": true,
+    "tail": [
+      "21 executed checks passed; physical Safari acceptance pending"
+    ]
+  },
+  {
+    "script": "tgestures",
+    "passed": true,
+    "tail": [
+      "12 executed checks passed; physical Safari acceptance pending"
+    ]
+  },
+  {
+    "script": "tmenu_touch",
+    "passed": true,
+    "tail": [
+      "ALL PASS: 8 menu/touch checks"
+    ]
+  },
+  {
+    "script": "tguidance_banner",
+    "passed": true,
+    "tail": [
+      "7 guidance/banner checks passed"
+    ]
+  },
+  {
+    "script": "tfeedback_interactions",
+    "passed": true,
+    "tail": [
+      "16 feedback checks passed; 0 failed"
+    ]
+  },
+  {
+    "script": "tc29_climate_bubbles",
+    "passed": true,
+    "tail": [
+      "10 climate bubble checks passed"
+    ]
+  },
+  {
+    "script": "tc27_availability",
+    "passed": true,
+    "tail": [
+      "8 availability checks passed"
+    ]
+  },
+  {
+    "script": "tc24_requests",
+    "passed": true,
+    "tail": [
+      "53 request handling and window checks passed"
+    ]
+  },
+  {
+    "script": "tsoft_audio",
+    "passed": true,
+    "tail": [
+      "33 soft-audio checks passed"
+    ]
+  },
+  {
+    "script": "tclock24",
+    "passed": true,
+    "tail": [
+      "PASS 24/12/6-second days, unchanged one-minute simulation ticks, and speed guidance"
+    ]
+  },
+  {
+    "script": "tthreefloor_save",
+    "passed": true,
+    "tail": [
+      "PASS production compressed save/reload across all five expansion stages, completion and no repeated charge"
+    ]
+  },
+  {
+    "script": "tsave_recovery",
+    "passed": true,
+    "tail": [
+      "13 save-recovery checks passed"
+    ]
+  },
+  {
+    "script": "tblueprint",
+    "passed": true,
+    "tail": [
+      "ALL PASS: 26 blueprint/recovery checks"
+    ]
+  }
+]

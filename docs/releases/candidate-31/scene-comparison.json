@@ -1,0 +1,147 @@
+{
+  "environment": "Node/Three.js with stubbed Canvas/WebGL. Scene counts and CPU submission work only; no GPU, actual draws, raster screenshots or physical-iPhone acceptance.",
+  "baseline": "8a344eea7c799b8a6a169e54e72f21f70136e663",
+  "movement": "Scripted walking, at-unit carrying, stationary staff work and moving vehicles at speed 4; these are rendering inputs, not a leasing/economy benchmark.",
+  "scenes": {
+    "day": {
+      "units": 23,
+      "people": 20,
+      "baseline": {
+        "meshes": 483,
+        "shadowCasters": 313,
+        "triangles": 26680,
+        "instanceBufferBytes": 21840,
+        "geometries": 11,
+        "materials": 121,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 3.259,
+        "groundMedianMs": 2.205,
+        "dynamicFrameMedianMs": 0.009
+      },
+      "candidate": {
+        "meshes": 626,
+        "shadowCasters": 293,
+        "triangles": 32464,
+        "instanceBufferBytes": 27856,
+        "geometries": 11,
+        "materials": 123,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 4.813,
+        "groundMedianMs": 1.748,
+        "dynamicFrameMedianMs": 0.017
+      }
+    },
+    "night": {
+      "units": 23,
+      "people": 20,
+      "baseline": {
+        "meshes": 483,
+        "shadowCasters": 313,
+        "triangles": 26680,
+        "instanceBufferBytes": 21840,
+        "geometries": 11,
+        "materials": 121,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 3.943,
+        "groundMedianMs": 2.006,
+        "dynamicFrameMedianMs": 0.012
+      },
+      "candidate": {
+        "meshes": 626,
+        "shadowCasters": 293,
+        "triangles": 32464,
+        "instanceBufferBytes": 27856,
+        "geometries": 11,
+        "materials": 123,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 3.512,
+        "groundMedianMs": 1.675,
+        "dynamicFrameMedianMs": 0.016
+      }
+    },
+    "rain": {
+      "units": 23,
+      "people": 20,
+      "baseline": {
+        "meshes": 483,
+        "shadowCasters": 313,
+        "triangles": 26680,
+        "instanceBufferBytes": 21840,
+        "geometries": 11,
+        "materials": 121,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 2.549,
+        "groundMedianMs": 1.503,
+        "dynamicFrameMedianMs": 0.008
+      },
+      "candidate": {
+        "meshes": 626,
+        "shadowCasters": 293,
+        "triangles": 32464,
+        "instanceBufferBytes": 27856,
+        "geometries": 11,
+        "materials": 123,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 2.99,
+        "groundMedianMs": 1.364,
+        "dynamicFrameMedianMs": 0.013
+      }
+    },
+    "upperF3": {
+      "units": 51,
+      "people": 20,
+      "baseline": {
+        "meshes": 667,
+        "shadowCasters": 381,
+        "triangles": 28028,
+        "instanceBufferBytes": 21840,
+        "geometries": 11,
+        "materials": 155,
+        "mappedTextures": 62,
+        "rebuildMedianMs": 4.337,
+        "groundMedianMs": 2.104,
+        "dynamicFrameMedianMs": 0.01
+      },
+      "candidate": {
+        "meshes": 812,
+        "shadowCasters": 361,
+        "triangles": 34820,
+        "instanceBufferBytes": 33232,
+        "geometries": 11,
+        "materials": 157,
+        "mappedTextures": 62,
+        "rebuildMedianMs": 5.362,
+        "groundMedianMs": 1.948,
+        "dynamicFrameMedianMs": 0.015
+      }
+    },
+    "dense": {
+      "units": 550,
+      "people": 100,
+      "baseline": {
+        "meshes": 4384,
+        "shadowCasters": 1823,
+        "triangles": 79588,
+        "instanceBufferBytes": 21840,
+        "geometries": 11,
+        "materials": 913,
+        "mappedTextures": 560,
+        "rebuildMedianMs": 41.716,
+        "groundMedianMs": 1.514,
+        "dynamicFrameMedianMs": 0.036
+      },
+      "candidate": {
+        "meshes": 4919,
+        "shadowCasters": 1715,
+        "triangles": 122420,
+        "instanceBufferBytes": 165968,
+        "geometries": 11,
+        "materials": 916,
+        "mappedTextures": 560,
+        "rebuildMedianMs": 44.445,
+        "groundMedianMs": 1.482,
+        "dynamicFrameMedianMs": 0.06
+      }
+    }
+  }
+}
