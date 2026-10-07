@@ -1,0 +1,54 @@
+[
+  {
+    "script": "tsection32",
+    "pass": true
+  },
+  {
+    "script": "tlayout_hierarchy",
+    "pass": true
+  },
+  {
+    "script": "tmenu_touch",
+    "pass": true
+  },
+  {
+    "script": "tc24_requests",
+    "pass": true
+  },
+  {
+    "script": "tc27_availability",
+    "pass": true
+  },
+  {
+    "script": "tc29_climate_bubbles",
+    "pass": true
+  },
+  {
+    "script": "tsoft_audio",
+    "pass": true
+  },
+  {
+    "script": "tclock24",
+    "pass": true
+  },
+  {
+    "script": "tthreefloor_save",
+    "pass": true
+  },
+  {
+    "script": "tsave_recovery",
+    "pass": true
+  },
+  {
+    "script": "tguidance_banner",
+    "pass": true
+  },
+  {
+    "script": "tvisual31",
+    "pass": true
+  },
+  {
+    "script": "tfeedback_interactions",
+    "pass": true
+  }
+]

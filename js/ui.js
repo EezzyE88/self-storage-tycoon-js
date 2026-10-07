@@ -195,7 +195,9 @@ export class UI {
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
       case 'staffHelp': this.hireRoleFocus = ROLES[v] ? v : null; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); this.sfx('click'); break;
-      case 'section': this.sheetTall = true; this.renderSheet(true); this.jumpSection(v); this.sfx('click'); break;
+      case 'sectionMenu': this.sectionMenuKey = this.tab; this.sheetTall = true; this.renderSheet(true); this.sfx('click'); break;
+      case 'sectionMenuClose': this.closeSectionMenu(); this.sfx('click'); break;
+      case 'section': this.sectionMenuKey = null; this.sheetTall = true; this.renderSheet(true); this.jumpSection(v); this.sfx('click'); break;
       case 'cat': this.cat = v; this.renderSheet(true); this.sfx('click'); break;
       case 'tool': this.pickTool(v); break;
       case 'goTool': if (TOOLS[v]) { this.select(null); this.cat = TOOLS[v].cat; this.setTab('build'); this.pickTool(v); } break; // opening checklist shortcuts
@@ -319,6 +321,7 @@ export class UI {
 
   // ------------------------------------------------------------ tabs / sheets
   setTab(t, expanded = false) {
+    this.sectionMenuKey = null; this.sectionChoice = null;
     if (t === 'growth' && this.plan && this.plan.args) this.growthPlanArgs = { ...this.plan.args };
     if(t!=='feedback') { this.feedbackFocus=null; this.feedbackRequest=null; }
     this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
@@ -344,6 +347,7 @@ export class UI {
   }
   // A different game/property starts from clean transient UI. Only the save-owned view is carried over (validated).
   resetSession(view) {
+    this.sectionMenuKey = null; this.sectionChoice = null;
     if (this.rend.setOverlay) this.rend.setOverlay(null);
     if (this.rend.setPreview) this.rend.setPreview(null);
     this.verticalReview = null; this.verticalQuote = null; this.verticalPreviousView = null; this.verticalPreviewing = false;
@@ -354,6 +358,7 @@ export class UI {
   // Selected view to restore from a save: 'ext' or an existing completed floor, otherwise a safe fallback.
   validView(v) { if (v === 'ext') return 'ext'; const max = Math.max(1, ...this.sim.objs('shell').map((o) => o.floors || 1)); return Number.isInteger(v) && v >= 0 && v < max ? v : 'ext'; }
   select(id, keepTab = false) {
+    if (id != null) this.sectionMenuKey = null;
     this.sel = id; this.rend.setSelection(typeof id === 'number' ? id : null);
     if (id == null && !this.tab) this.sheetTall = false;
     if (id != null && !keepTab) { this.sheetTall = false; this.tab = null; for (const b of this.root.querySelectorAll('#tabs button')) b.classList.remove('on'); }
@@ -365,6 +370,10 @@ export class UI {
   renderSheet(force = false) {
     this.syncFeedbackProperty();
     const box = this.$('sheet');
+    // Keep the actual choice buttons (and an in-progress tap) stable through background refreshes.
+    // This is transient UI only; switching panel/property or choosing/closing releases the hold.
+    if (this.sectionMenuKey && this.sectionMenuKey === this.tab && this.sel == null && !this.tool && box.querySelector('[data-section-menu]')) return;
+    if (this.sectionMenuKey && this.sectionMenuKey !== this.tab) this.sectionMenuKey = null;
     if (this.tool) { box.innerHTML = ''; this.resumePopup('panel'); return; }
     let html = '';
     if (this.sel != null) html = this.inspector();
@@ -388,10 +397,14 @@ export class UI {
     const cv = box.querySelector('canvas.chart'); if (cv) this.drawChart(cv);
 
   }
+  closeSectionMenu() {
+    this.sectionMenuKey = null; this.renderSheet(true);
+  }
   jumpSection(label) {
+    this.sectionMenuKey = null; this.sectionChoice = { tab: this.tab, label };
     const body = this.$('sheet').querySelector('.body'); if (!body) return;
     if(!this.sheetTall) { this.sheetTall=true; this.renderSheet(true); return this.jumpSection(label); }
-    const picker = this.$('sheet').querySelector('[data-section-picker]'); if (picker) picker.value = label;
+    const picker = this.$('sheet').querySelector('[data-section-picker]'); if (picker) { picker.textContent = label + ' ▾'; picker.setAttribute('aria-expanded', 'false'); }
     const heading = [...body.querySelectorAll('h3[data-section]')].find((h) => h.dataset.section === label);
     if (heading) body.scrollTop += heading.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
   }
@@ -407,7 +420,10 @@ export class UI {
       });
       const order = title === 'Business' ? ['Bills', 'Financing', 'Pricing', 'Demand', 'Collections', 'Statement'] : sections.map(([, label]) => label);
       jumps.sort((a, b) => order.findIndex((label) => a.endsWith(`>${label}</button>`)) - order.findIndex((label) => b.endsWith(`>${label}</button>`)));
-      extra += `<label class="section-picker"><span>${title} section</span><select data-section-picker="true" aria-label="${title} section"><option value="">Choose section…</option>${jumps.map(j => j.replace(/<button data-a="section" data-v="([^"]+)">(.*?)<\/button>/, '<option value="$1">$2</option>')).join('')}</select>${title==='Operate'?'<button class="btn sm" data-a="feedback">Feedback</button>':''}</label>`;
+      const menuOpen = this.sectionMenuKey === this.tab && !!this.sectionMenuKey;
+      const choice = this.sectionChoice?.tab === this.tab ? this.sectionChoice?.label : null;
+      extra += `<div class="section-picker"><span>${title} section</span><button data-section-picker="true" data-a="sectionMenu" aria-label="${title} section" aria-expanded="${menuOpen}" aria-controls="section-menu">${esc(choice || 'Choose section…')} ▾</button>${title==='Operate'?'<button class="btn sm" data-a="feedback">Feedback</button>':''}</div>`;
+      if (menuOpen) extra += `<nav id="section-menu" class="section-menu" data-section-menu="true" aria-label="Choose ${title.toLowerCase()} section"><div class="section-menu-head"><b>Choose section</b><button class="btn sm" data-a="sectionMenuClose" aria-label="Close section menu">Close</button></div><div class="section-menu-options">${jumps.join('')}</div></nav>`;
       extra += `<nav class="section-shortcuts" aria-label="${title} sections">${jumps.join('')}${title==='Operate'?'<button data-a="feedback">Feedback</button>':''}</nav>`;
     }
     const build=title==='Build';
@@ -1742,7 +1758,7 @@ export class UI {
     if (p.y > r.bottom - 20 || p.y < r.top + 20) dy = my - p.y; if (p.x > r.right - 20 || p.x < r.left + 20) dx = mx - p.x;
     if (dx || dy) this.rend.pan(dx, dy);
   }
-  applySheetSize() { this.renderSheet(true); }
+  applySheetSize() { if (!this.sheetTall) this.sectionMenuKey = null; this.renderSheet(true); }
   slowHud() {
     const sim = this.sim, s = sim.s; const oc = sim.occupancy();
     if (!oc.n || s.creative) { this.cashSub = null; return; }
