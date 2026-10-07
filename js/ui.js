@@ -167,6 +167,8 @@ export class UI {
   // pause holds time; with only the tutorial/scenario card open, a run speed closes the card and is applied.
   requestSpeed(v) {
     v = +v;
+    // An explicit run choice ends the Sandbox building pause; Confirm never does.
+    if (v > 0) this.resumePopup('sandboxBuild');
     if (v > 0 && this.popupBlocks?.size && [...this.popupBlocks].every((k) => k === 'tutorial' || k === 'scenario')) {
       this.tutMin = true; this.scMin = true; this.resumePopup('tutorial'); this.resumePopup('scenario'); this.renderTut(true);
     }
@@ -446,6 +448,12 @@ export class UI {
   pickTool(k) {
     if(k) {this.sheetTall=false;this.tutMin=true;this.resumePopup('tutorial');}
     if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
+    // Capture the visible paused state before selecting a tool closes the Build panel.
+    // Otherwise its remembered 1x can leak back into placement and Confirm.
+    if (k && this.sim.s.mode === 'sandbox' && this.sim.s.speed === 0) {
+      this.pauseForPopup('sandboxBuild'); this.notePause(0);
+    }
+    if (!k) this.resumePopup('sandboxBuild');
     this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
