@@ -128,10 +128,10 @@ await test('4. instructions use current UI terms and navigation',()=>{
 await test('4. passive watch steps are labelled as watching, not tapping',()=>{const src=readFileSync('js/ui.js','utf8');assert.match(src,/'Watch here'/);});
 
 await test('5. Requests navigation closes the dialog first, keeps time paused and returns predictably',()=>{
-  const {ui,sim,boxes}=fixture();sim.s.convos=[{id:1,text:'x',actions:[]}];ui.popupBlocks=new Set(['convo']);ui.renderFeed=()=>{};ui.showRequests();assert.equal(ui.requestPanel,true);assert.match(boxes.modal.innerHTML,/Requests/);
+  const {ui,sim,boxes}=fixture();sim.s.convos=[{id:1,text:'x',actions:[]}];ui.popupBlocks=new Set(['convo']);ui.renderFeed=()=>{};ui.ownerRequestCards=['<p>x</p>'];ui.showRequests();assert.equal(ui.requestPanel,true);assert.match(boxes.modal.innerHTML,/Your decision/);
   let tab=null;ui.setTab=t=>{tab=t;ui.tab=t;};ui.select=()=>{};const inModal={closest:s=>s==='.modal'?{}:null};
   ui.onClick({target:{closest:()=>({dataset:{a:'requestHelp',id:'1'},...inModal})}});assert.equal(boxes.modal.innerHTML,'');assert.equal(ui.requestPanel,false);assert.equal(tab,'feedback');assert.equal(sim.s.speed,0);assert.ok(!ui.popupBlocks.has('modal'));
-  ui.onClick({target:{closest:()=>({dataset:{a:'close'}})}});assert.match(boxes.modal.innerHTML,/Requests/,'closing Cause & remedy returns to Requests');
+  ui.onClick({target:{closest:()=>({dataset:{a:'close'}})}});assert.match(boxes.modal.innerHTML,/Your decision/,'closing Cause & remedy returns to the decision');
   ui.onClick({target:{closest:()=>({dataset:{a:'overlay',v:'security'},...inModal})}});assert.equal(boxes.modal.innerHTML,'');assert.equal(ui.rend.overlay,'security');assert.equal(sim.s.speed,0);});
 
 await test('8/12. review keeps full terms, exact price, preview on map without losing the quote, and demand evidence',()=>{

@@ -92,25 +92,25 @@ test('missing staff leave an owner request rather than silently applying its def
   f.sim.s.t += 100; f.sim.convoTick(); assert.ok(f.sim.s.convos.includes(c));
 });
 for (const speed of [0, 1, 2, 4]) test(`request review and its closure preserve prior ${speed}x`, () => {
-  const f = fixture('manager', speed); request(f); f.ui.showRequests();
+  const f = fixture('manager', speed); request(f); f.ui.showRequests(true);
   assert.equal(f.sim.s.speed, 0); assert.match(f.boxes.modal.innerHTML, /Manager handling this/);
   f.ui.closeModal(); assert.equal(f.sim.s.speed, speed);
 });
 test('manual Pause remains sticky through review, mode changes and answering', () => {
-  const f = fixture('manager', 4), c = request(f); f.ui.showRequests();
+  const f = fixture('manager', 4), c = request(f); f.ui.showRequests(true);
   f.click({a: 'speed', v: '0'}); f.click({a: 'requestMode'}); f.ui.closeModal();
   assert.equal(f.sim.s.speed, 0); assert.equal(f.sim.s.policies.manualRequests, true);
-  f.ui.showRequests(); f.click({a: 'requestMode'}); f.click({a: 'convo', id: c.id, i: 0}); f.ui.closeModal();
+  f.ui.showRequests(true); f.click({a: 'requestMode'}); f.click({a: 'convo', id: c.id, i: 0}); f.ui.closeModal();
   assert.equal(f.sim.s.speed, 0); assert.equal(f.sim.s.drama.noted, 1);
 });
 test('per-request owner intervention remains held after closing review', () => {
-  const f = fixture('manager', 4), c = request(f); f.ui.showRequests();
+  const f = fixture('manager', 4), c = request(f); f.ui.showRequests(true);
   f.click({a: 'requestReview', id: c.id}); f.ui.closeModal(); f.ticks(240);
   assert.equal(c.ownerReview, 'owner'); assert.equal(f.sim.s.speed, 0); assert.equal(f.sim.s.drama?.noted || 0, 0);
   f.click({a: 'convo', id: c.id, i: 1}); assert.equal(f.sim.s.speed, 4); assert.equal(f.sim.s.convos.length, 0);
 });
 test('saved manual preference and pending escalation survive reload; old saves default to staff handling', () => {
-  const f = fixture('manager'), c = request(f); f.ui.showRequests(); f.click({a: 'requestMode'});
+  const f = fixture('manager'), c = request(f); f.ui.showRequests(true); f.click({a: 'requestMode'});
   f.sim.dispatch({type: 'requestReview', id: c.id});
   const loaded = new Sim(JSON.parse(JSON.stringify(f.sim.s)));
   assert.equal(loaded.s.policies.manualRequests, true); assert.equal(loaded.s.convos[0].ownerReview, 'owner');
@@ -139,9 +139,78 @@ test('history remains compact and Requests stays accessible without a pending ca
   const f = fixture('manager');
   for (let i = 0; i < 25; i++) f.sim.mgr('Clerk answered ' + i, {request: true});
   assert.equal(f.sim.s.mgrLog.length, 20); assert.equal(f.sim.requestHistory().length, 5);
-  f.ui.showRequests(); assert.match(f.boxes.modal.innerHTML, /No active requests/);
+  f.ui.showRequests(true); assert.match(f.boxes.modal.innerHTML, /No active requests/);
   assert.match(f.boxes.modal.innerHTML, /Recent staff responses/); assert.match(f.boxes.modal.innerHTML, /Review every request myself/);
   const src = readFileSync(new URL('../../js/ui.js', import.meta.url), 'utf8');
-  assert.match(src, /data-a="requests">Customer requests/); assert.match(src, /Requests &amp; staff responses/);
+  assert.match(src, /data-a="requests" data-v="settings">Customer requests/); assert.match(src, /Requests &amp; staff responses/);
 });
-console.log(`${passed} Candidate 24 request checks passed`);
+for (const speed of [0, 1, 2, 4]) test(`stale or empty decision review does nothing at prior ${speed}x`, () => {
+  const f = fixture('manager', speed); f.click({a: 'requests'});
+  assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, speed);
+  assert.equal(f.ui.popupBlocks?.size || 0, 0);
+});
+for (const speed of [0, 1, 2, 4]) test(`answering the final owner decision dismisses it and restores prior ${speed}x`, () => {
+  const f = fixture(null, speed); f.sim.s.policies.manualRequests = false;
+  const c = request(f); f.click({a: 'requests'});
+  assert.match(f.boxes.modal.innerHTML, /Your decision/);
+  assert.doesNotMatch(f.boxes.modal.innerHTML, /requestMode|preference|Recent staff responses/);
+  f.click({a: 'convo', id: c.id, i: 0});
+  assert.equal(f.sim.s.convos.length, 0); assert.equal(f.ui.modalOpen(), false);
+  assert.equal(f.sim.s.speed, speed); assert.equal(f.sim.s.policies.manualRequests, false);
+  assert.equal(f.ui.popupBlocks.size, 0); assert.equal(f.boxes.feed.children.length, 0);
+  f.click({a: 'requests'}); assert.equal(f.ui.modalOpen(), false);
+});
+test('staff-only progress stays passive and never opens a decision or pauses time', () => {
+  const f = fixture('manager', 4); request(f);
+  assert.equal(f.boxes.feed.children[0].dataset.a, undefined);
+  assert.doesNotMatch(f.boxes.feed.children[0].textContent, /Review/);
+  f.ui.showRequests(); assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 4);
+  f.ticks(15); assert.equal(f.sim.s.convos.length, 0); assert.equal(f.sim.requestHistory().length, 1);
+  assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 4);
+});
+test('multiple owner decisions remain visible until the final response', () => {
+  const f = fixture(null, 2), first = request(f); request(f, {key: 'second', text: 'Second decision'});
+  f.ui.showRequests(); f.click({a: 'convo', id: first.id, i: 1});
+  assert.equal(f.ui.modalOpen(), true); assert.equal(f.sim.s.speed, 0);
+  assert.match(f.boxes.modal.innerHTML, /Second decision/); assert.doesNotMatch(f.boxes.modal.innerHTML, /requestMode/);
+  f.click({a: 'convo', id: f.sim.s.convos[0].id, i: 1}); assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 2);
+});
+test('mixed queues show only owner decisions and resume the remaining staff response', () => {
+  const f = fixture('manager', 4), staff = request(f, {text: 'Staff-only question'});
+  const owner = request(f, {key: 'owner', text: 'Owner-only decision', auto: undefined});
+  f.ui.showRequests(); assert.match(f.boxes.modal.innerHTML, /Owner-only decision/);
+  assert.doesNotMatch(f.boxes.modal.innerHTML, /Staff-only question|requestMode|Recent staff responses/);
+  f.click({a: 'convo', id: owner.id, i: 1});
+  assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 4); assert.ok(f.sim.s.convos.includes(staff));
+  f.ticks(15); assert.equal(f.sim.s.convos.length, 0); assert.equal(f.sim.requestHistory().length, 1);
+});
+test('manual Pause selected during a decision survives automatic dismissal', () => {
+  const f = fixture(null, 4), c = request(f); f.ui.showRequests(); f.click({a: 'speed', v: '0'});
+  f.click({a: 'convo', id: c.id, i: 1}); assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 0);
+});
+test('a decision removed by the simulation closes its obsolete window', () => {
+  const f = fixture(null, 2); request(f); f.ui.showRequests(); f.sim.dropConvo('probe'); f.ui.renderFeed(true);
+  assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 2);
+});
+test('explicit Menu settings remain accessible when empty and retain the saved choice', () => {
+  const f = fixture('manager', 4); f.click({a: 'requests', v: 'settings'});
+  assert.match(f.boxes.modal.innerHTML, /Request settings &amp; history|requestMode|No active requests/);
+  f.ui.renderFeed(true); assert.equal(f.ui.modalOpen(), true);
+  f.click({a: 'requestMode'}); assert.equal(f.sim.s.policies.manualRequests, true);
+  const loaded = new Sim(JSON.parse(JSON.stringify(f.sim.s))); assert.equal(loaded.s.policies.manualRequests, true);
+  f.click({a: 'requestMode'}); assert.equal(f.sim.s.policies.manualRequests, false);
+  const staffMode = new Sim(JSON.parse(JSON.stringify(f.sim.s))); assert.equal(staffMode.s.policies.manualRequests, false);
+  f.ui.closeModal(); assert.equal(f.sim.s.speed, 4);
+});
+test('an explicitly opened settings window remains open after its final request is answered', () => {
+  const f = fixture(null, 1), c = request(f); f.ui.showRequests(true); f.click({a: 'convo', id: c.id, i: 1});
+  assert.equal(f.ui.modalOpen(), true); assert.match(f.boxes.modal.innerHTML, /No active requests/);
+  assert.equal(f.sim.s.speed, 0); f.ui.closeModal(); assert.equal(f.sim.s.speed, 1);
+});
+test('automatic decision dismissal preserves another panel pause', () => {
+  const f = fixture(null, 4); f.ui.pauseForPopup('panel'); const c = request(f); f.ui.showRequests();
+  f.click({a: 'convo', id: c.id, i: 1}); assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 0);
+  assert.equal(f.ui.popupBlocks.size, 1); assert.ok(f.ui.popupBlocks.has('panel'));
+  f.ui.resumePopup('panel'); assert.equal(f.sim.s.speed, 4);
+});
+console.log(`${passed} request handling and window checks passed`);
