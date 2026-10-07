@@ -1,0 +1,136 @@
+{
+  "environment": "Node/Three.js with stubbed Canvas/WebGL. Scene counts and CPU submission work only; no GPU, actual draws, raster screenshots or physical-iPhone acceptance.",
+  "baseline": "e0137369d255640d9edde443b1a6e289bc20c8c7",
+  "scenes": {
+    "day": {
+      "units": 23,
+      "people": 20,
+      "baseline": {
+        "meshes": 389,
+        "shadowCasters": 259,
+        "triangles": 24208,
+        "geometries": 11,
+        "materials": 109,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 3.273,
+        "groundMedianMs": 1.466,
+        "dynamicFrameMedianMs": 0.004
+      },
+      "candidate": {
+        "meshes": 429,
+        "shadowCasters": 259,
+        "triangles": 25808,
+        "geometries": 11,
+        "materials": 109,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 3.322,
+        "groundMedianMs": 1.43,
+        "dynamicFrameMedianMs": 0.007
+      }
+    },
+    "night": {
+      "units": 23,
+      "people": 20,
+      "baseline": {
+        "meshes": 389,
+        "shadowCasters": 259,
+        "triangles": 24208,
+        "geometries": 11,
+        "materials": 109,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 3.013,
+        "groundMedianMs": 1.35,
+        "dynamicFrameMedianMs": 0.009
+      },
+      "candidate": {
+        "meshes": 429,
+        "shadowCasters": 259,
+        "triangles": 25808,
+        "geometries": 11,
+        "materials": 109,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 3.066,
+        "groundMedianMs": 2.06,
+        "dynamicFrameMedianMs": 0.008
+      }
+    },
+    "rain": {
+      "units": 23,
+      "people": 20,
+      "baseline": {
+        "meshes": 389,
+        "shadowCasters": 259,
+        "triangles": 24208,
+        "geometries": 11,
+        "materials": 109,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 2.521,
+        "groundMedianMs": 1.204,
+        "dynamicFrameMedianMs": 0.004
+      },
+      "candidate": {
+        "meshes": 429,
+        "shadowCasters": 259,
+        "triangles": 25808,
+        "geometries": 11,
+        "materials": 109,
+        "mappedTextures": 34,
+        "rebuildMedianMs": 2.57,
+        "groundMedianMs": 1.221,
+        "dynamicFrameMedianMs": 0.007
+      }
+    },
+    "upperF3": {
+      "units": 51,
+      "people": 20,
+      "baseline": {
+        "meshes": 573,
+        "shadowCasters": 327,
+        "triangles": 25556,
+        "geometries": 11,
+        "materials": 143,
+        "mappedTextures": 62,
+        "rebuildMedianMs": 3.688,
+        "groundMedianMs": 1.514,
+        "dynamicFrameMedianMs": 0.003
+      },
+      "candidate": {
+        "meshes": 613,
+        "shadowCasters": 327,
+        "triangles": 27156,
+        "geometries": 11,
+        "materials": 143,
+        "mappedTextures": 62,
+        "rebuildMedianMs": 4.047,
+        "groundMedianMs": 1.508,
+        "dynamicFrameMedianMs": 0.006
+      }
+    },
+    "dense": {
+      "units": 550,
+      "people": 100,
+      "baseline": {
+        "meshes": 4006,
+        "shadowCasters": 1645,
+        "triangles": 68332,
+        "geometries": 11,
+        "materials": 881,
+        "mappedTextures": 560,
+        "rebuildMedianMs": 44.129,
+        "groundMedianMs": 1.407,
+        "dynamicFrameMedianMs": 0.014
+      },
+      "candidate": {
+        "meshes": 4206,
+        "shadowCasters": 1645,
+        "triangles": 76332,
+        "geometries": 11,
+        "materials": 881,
+        "mappedTextures": 560,
+        "rebuildMedianMs": 43.987,
+        "groundMedianMs": 1.516,
+        "dynamicFrameMedianMs": 0.028
+      }
+    }
+  }
+}

@@ -158,8 +158,8 @@ canvas.chart { width: 100%; height: 120px; display: block; background: #fff; bor
 
 /* thought bubbles */
 #bubbles { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-.bub { position: absolute; transform: translate(-50%, -100%); background: #fff; color: var(--ink); font-size: 12px; font-weight: 700; padding: 5px 9px; border-radius: 11px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: opacity 0.4s; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
-.bub::after { content: ''; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-top-color: #fff; border-bottom: 0; }
+.bub { position: absolute; transform: translate(-50%, -100%); background: #fffdf7; color: var(--ink); font-size: 12px; font-weight: 700; padding: 5px 9px; border-radius: 11px; white-space: nowrap; box-shadow: 0 3px 10px rgba(20,35,40,0.18), inset 0 0 0 1px rgba(65,80,75,.10); transition: opacity 0.4s; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.bub::after { content: ''; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-top-color: #fffdf7; border-bottom: 0; }
 .bub.bad { border-left: 4px solid var(--red); } .bub.good { border-left: 4px solid var(--green); } .bub.neutral { border-left: 4px solid var(--blue); }
 .bub .i { margin-right: 4px; }
 

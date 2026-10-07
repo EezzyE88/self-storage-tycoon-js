@@ -6,10 +6,10 @@ import { G, FLOOR_H, TOOLS } from './data.js';
 const CELL = 32; // px per cell on ground textures
 const WALL_H = 1.25; // drive-up unit height
 const COL = {
-  grass: '#82996b', grass2: '#7b9364', asphalt: '#515a5d', concrete: '#d2ccbc', street: '#3d474e', sidewalk: '#ded8c9',
+  grass: '#91a779', grass2: '#879e71', asphalt: '#626970', concrete: '#ded5c4', street: '#46525b', sidewalk: '#e6decd',
   loading: '#4f5257', parking: '#4c4f54', stripe: '#f1efe6', yellow: '#e8b923', hall: '#e4e0d6', shellFloor: '#bdb8ad',
-  unitWall: '#e7dfcf', unitWall2: '#d9cfbb', roof: '#788995', roofTrim: '#405763', door: '#d9772b', doorInt: '#2f5e8e',
-  shellWall: '#ded5c3', shellRoof: '#6c808b', office: '#f0ebe0', officeTrim: '#1f3a5f', glass: '#8fb3c8',
+  unitWall: '#e7dfcf', unitWall2: '#d9cfbb', roof: '#8b9da6', roofTrim: '#435c68', door: '#d9772b', doorInt: '#2f5e8e',
+  shellWall: '#ded5c3', shellRoof: '#7e929e', office: '#f0ebe0', officeTrim: '#1f3a5f', glass: '#8fb3c8',
 };
 function tex(canvas, repeat = false) {
   const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
@@ -24,7 +24,11 @@ function rollupTexture() {
   const c = mkCanvas(64, 64), g = c.getContext('2d');
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 64);
   for (let y = 0; y < 64; y += 5) { g.fillStyle = 'rgba(0,0,0,0.16)'; g.fillRect(0, y, 64, 1.4); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, y + 1.5, 64, 1); }
-  g.fillStyle = 'rgba(0,0,0,0.28)'; g.fillRect(0, 60, 64, 4); g.fillRect(28, 52, 8, 3);
+  // Recessed rails, latch and a worn threshold, all on the shared door map.
+  g.fillStyle = 'rgba(15,30,40,.28)'; g.fillRect(0, 0, 3, 64); g.fillRect(61, 0, 3, 64);
+  g.fillStyle = 'rgba(255,255,255,.42)'; g.fillRect(3, 0, 1, 60);
+  g.fillStyle = 'rgba(0,0,0,.30)'; g.fillRect(0, 60, 64, 4); g.fillRect(26, 50, 12, 4);
+  g.fillStyle = '#b7c0bf'; g.fillRect(28, 50, 8, 2);
   return tex(c);
 }
 // Shared architecture textures add legible detail without a mesh per seam or frame.
@@ -32,13 +36,19 @@ function architectureTexture(kind) {
   const c = mkCanvas(128, 128), g = c.getContext('2d');
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 128, 128);
   if (kind === 'roof') {
-    for (let x = 0; x < 128; x += 32) {
+    for (let x = 0; x < 128; x += 16) {
       g.fillStyle = 'rgba(25,43,56,.25)'; g.fillRect(x, 0, 2, 128);
-      g.fillStyle = 'rgba(255,255,255,.30)'; g.fillRect(x + 2, 0, 1, 128);
+      g.fillStyle = 'rgba(255,255,255,.38)'; g.fillRect(x + 2, 0, 1, 128);
+      g.fillStyle = 'rgba(20,35,45,.20)';
+      for (let y = 12; y < 128; y += 32) g.fillRect(x + 5, y, 2, 2);
     }
   } else {
     for (let i = 0; i < 360; i++) { g.fillStyle = 'rgba(72,62,43,.035)'; g.fillRect(hash(i * 3) * 128, hash(i * 7) * 128, 2, 2); }
+    g.strokeStyle = 'rgba(86,79,64,.12)'; g.lineWidth = 1;
+    for (let y = 24; y < 105; y += 20) { g.beginPath(); g.moveTo(0,y); g.lineTo(128,y); g.stroke(); }
     g.fillStyle = '#c8ccca'; g.fillRect(0, 105, 128, 23);
+    g.fillStyle = 'rgba(44,55,61,.14)'; g.fillRect(0, 104, 128, 2);
+    g.fillStyle = 'rgba(255,255,255,.26)'; g.fillRect(4, 8, 3, 96); g.fillRect(121, 8, 3, 96);
     g.fillStyle = '#71838a'; g.fillRect(0, 0, 128, 8);
     if (kind === 'facade') {
       g.fillStyle = '#637f8a'; g.fillRect(12, 42, 104, 36);
@@ -97,7 +107,7 @@ function signTexture(text, bg = COL.officeTrim) {
 function glowTexture(inner = 'rgba(255,226,160,0.85)') {
   const c = mkCanvas(128, 128), g = c.getContext('2d');
   const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  gr.addColorStop(0, inner); gr.addColorStop(0.55, 'rgba(255,210,140,0.28)'); gr.addColorStop(1, 'rgba(255,200,120,0)');
+  gr.addColorStop(0, inner); gr.addColorStop(0.24, 'rgba(255,224,177,.40)'); gr.addColorStop(0.60, 'rgba(255,218,164,.12)'); gr.addColorStop(1, 'rgba(255,218,164,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return tex(c);
 }
 function ringTexture() {
@@ -138,7 +148,7 @@ export class Renderer {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(sim.s.W, sim.s.H), new THREE.MeshStandardMaterial({ map: this.groundTex, roughness: 0.95 }));
     ground.rotation.x = -Math.PI / 2; ground.position.set(sim.s.W / 2, 0, sim.s.H / 2); ground.receiveShadow = true;
     this.scene.add(ground); this.ground = ground;
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x7b9364, roughness: 1 }));
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x879e71, roughness: 1 }));
     outer.rotation.x = -Math.PI / 2; outer.position.set(sim.s.W / 2, -0.02, sim.s.H / 2); outer.receiveShadow = true; this.scene.add(outer); this.outer = outer; this.worldW = sim.s.W; this.worldH = sim.s.H;
     // Reused selected upper-floor plate
     this.f2Canvas = mkCanvas(sim.s.W * CELL, sim.s.H * CELL); this.f2Tex = tex(this.f2Canvas);
@@ -222,8 +232,8 @@ export class Renderer {
     spots.forEach(([x, y, k], i) => {
       m.compose(v.set(x, 0.5 * k, y), q.identity(), sc.set(k, k, k)); trunks.setMatrixAt(i, m);
       q.setFromEuler(new THREE.Euler(hash(i) * 3, hash(i + 9) * 3, 0));
-      m.compose(v.set(x, 1.25 * k, y), q, sc.set(k * 1.1, k * 1.25, k * 1.1)); leaves.setMatrixAt(i, m);
-      leaves.setColorAt(i, new THREE.Color().setHSL(0.25 + hash(i * 5) * 0.04, 0.26, 0.34 + hash(i * 13) * 0.09));
+      m.compose(v.set(x, 1.25 * k, y), q, sc.set(k * (1.0 + hash(i+4)*.25), k * (1.12 + hash(i+8)*.30), k * 1.1)); leaves.setMatrixAt(i, m);
+      leaves.setColorAt(i, new THREE.Color().setHSL(0.25 + hash(i * 5) * 0.04, 0.30, 0.40 + hash(i * 13) * 0.12));
     });
     trunks.castShadow = leaves.castShadow = true; this.envG.add(trunks, leaves);
     // neighbours: a couple of simple buildings across the street for context
@@ -338,12 +348,18 @@ export class Renderer {
       }
       g.fillStyle = base; g.fillRect(px, py, C, C);
       if (gv === G.GRASS) {
-        const shade = (Math.sin(x * .22) + Math.cos(y * .19)) * .012 + .025;
+        const shade = (Math.sin(x * .22) + Math.cos(y * .19)) * .012 + .025 + (Math.floor((x+y)*.18)%2)*.018;
         g.fillStyle = `rgba(45,66,34,${shade})`; g.fillRect(px, py, C, C);
         for (let k = 0; k < 6; k++) { g.fillStyle = hash(i * 31 + k) < .5 ? 'rgba(43,66,32,.07)' : 'rgba(220,224,175,.08)'; g.fillRect(px + hash(i * 7 + k) * C, py + hash(i * 13 + k) * C, 1, 2); }
       }
       else if (gv === G.ASPHALT || gv === G.STREET || gv === G.PARKING || gv === G.LOADING) { for (let k = 0; k < 5; k++) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(px + hash(i * 5 + k) * C, py + hash(i * 3 + k) * C, 1.5, 1.5); } }
-      else if (gv === G.CONCRETE || gv === G.SIDEWALK) { g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1); }
+      // Pale edge paint makes paved boundaries legible; it is decoration, not a route or curb object.
+      if ([G.ASPHALT,G.PARKING,G.LOADING].includes(gv)) {
+        g.fillStyle='rgba(226,217,190,.32)';
+        if(x>0 && s.ground[i-1]===G.GRASS) g.fillRect(px,py,1.5,C);
+        if(y>0 && s.ground[i-W]===G.GRASS) g.fillRect(px,py,C,1.5);
+      }
+      if (gv === G.CONCRETE || gv === G.SIDEWALK) { g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1); }
       if (gv === G.LOADING) {
         const state=bays.get(i); g.strokeStyle = state==='inaccessible' ? '#ef9d91' : state==='occupied' ? '#aabac6' : '#9ed9c0'; g.lineWidth = 3; g.strokeRect(px + 2, py + 2, C - 4, C - 4);
         g.fillStyle=g.strokeStyle; g.font='bold 23px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(state==='inaccessible'?'×':state==='occupied'?'—':'+',px+C/2,py+C/2); g.textAlign='start'; g.textBaseline='alphabetic';
@@ -399,11 +415,12 @@ export class Renderer {
     if (!this._shared) { this._shared = new Set([...Object.values(this.geo), ...Object.values(this.mat).flat()]); }
     return this._shared.has(x) || Object.values(this.tx.plaques).includes(x) || Object.values(this.ringGeo).includes(x);
   }
-  disposeTree(root) { // free per-instance GPU resources; shared geometries/materials/textures stay cached
+  disposeTree(root) { // free each resource once, including materials shared by a person's body and arms
+    const disposed=new Set();
     root.traverse((o) => {
-      if (o.geometry && !this.isShared(o.geometry)) o.geometry.dispose();
+      if (o.geometry && !this.isShared(o.geometry) && !disposed.has(o.geometry)) { disposed.add(o.geometry); o.geometry.dispose(); }
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-      for (const m of ms) if (!this.isShared(m)) m.dispose();
+      for (const m of ms) if (!this.isShared(m) && !disposed.has(m)) { disposed.add(m); m.dispose(); }
     });
   }
   clearGroup(g) { while (g.children.length) { const c = g.children[0]; g.remove(c); this.disposeTree(c); } }
@@ -689,7 +706,7 @@ export class Renderer {
       g.userData.body.material.color.setHSL(hash(a.look || a.id), 0.45, 0.5);
       g.userData.head.material = this.mat.skin[Math.floor(hash((a.look || a.id) + 5) * 4)];
       g.position.set(0, 0, 0); g.rotation.set(0, 0, 0); g.visible = true;
-      g.userData.legs.scale.y = 0.32; g.userData.box.visible = false;
+      g.userData.legs.scale.y = 0.32; g.userData.box.visible = false; this.posePerson(g, a, 0, 0);
       return g;
     }
     const g = new THREE.Group();
@@ -705,9 +722,27 @@ export class Renderer {
       if (a.role === 'tech') { const tb = new THREE.Mesh(this.geo.box, this.mat.cartDmg); tb.scale.set(0.16, 0.1, 0.07); tb.position.set(0, 0.3, 0.16); g.add(tb); }
     }
     const box = new THREE.Mesh(this.geo.box, this.mat.boxc); box.scale.set(0.24, 0.18, 0.2); box.position.set(0.2, 0.5, 0); box.visible = false; g.add(box);
+    // Shared geometry and existing shirt material: two non-shadowing arm draws per visible person.
+    const arms = [-1,1].map(side => {
+      const arm = new THREE.Mesh(this.geo.cyl, shirt); arm.scale.set(.08,.27,.08);
+      arm.position.set(0,.46,side*.16); arm.castShadow=false; g.add(arm); return arm;
+    });
+    g.userData.arms=arms;
     g.userData.box = box; g.userData.legs = legs; g.userData.body = body; g.userData.head = head; g.userData.reusableCustomer = reusable;
-    g.traverse((c) => { c.castShadow = true; });
+    g.traverse((c) => { c.castShadow = true; }); for(const arm of arms) arm.castShadow=false;
     return g;
+  }
+  posePerson(m, a, movement, phase) {
+    const walking=movement>.003, working=a.kind==='staff' && a.st==='work', carrying=!!a.carry && !a.cart;
+    const sway=this.sim.s.speed>0 ? Math.sin(phase*9+a.id) : 0;
+    const bob=walking ? Math.abs(sway)*.018 : 0;
+    m.userData.body.position.y=.46+bob; m.userData.head.position.y=.72+bob;
+    m.userData.box.position.y=.5+bob;
+    for(let i=0;i<m.userData.arms.length;i++) {
+      const arm=m.userData.arms[i];
+      arm.position.y=.46+bob;
+      arm.rotation.z=carrying || a.cart ? -1.05 : working ? -.65+sway*.22 : walking ? sway*(i===0?.45:-.45) : 0;
+    }
   }
   cartMesh() {
     const g = new THREE.Group();
@@ -752,6 +787,7 @@ export class Renderer {
   updateDynamic(dt) {
     const sim = this.sim, s = sim.s;
     const snap = s.speed >= 4 ? 6 : 3;
+    this.lifeTime=(this.lifeTime||0)+(s.speed>0?dt:0);
     this.syncPool(this.pool.veh, s.vehicles, (v) => this.vehMesh(v), (m, v) => {
       const px = m.position.x, pz = m.position.z;
       this.smooth(m, v.x, 0, v.y, dt, 14, snap);
@@ -770,6 +806,7 @@ export class Renderer {
       if (mv > 0.001) this.face(m, dx, dz, dt);
       m.userData.legs.scale.y = 0.32 * (1 + (mv > 0.003 ? Math.sin(this.time * 18 + a.id) * 0.08 : 0));
       m.userData.box.visible = !!a.carry && !a.cart;
+      this.posePerson(m,a,mv,this.lifeTime);
       m.visible = this.floorVisible(Math.round(y / FLOOR_H)) && !(this.view === 'ext' && sim.D.shellAt[Math.floor(a.y) * s.W + Math.floor(a.x)]);
       if (this.view === 0 && y > 0.5) m.visible = false;
     }, dt);
@@ -851,11 +888,11 @@ export class Renderer {
     this.sun.position.set(this.center.x + sx, sy, this.center.z + 22); this.sun.target.position.copy(this.center);
     const lf = rain && this.lightningAt ? performance.now() - this.lightningAt : 9999;
     const flash = lf < 85 ? 1 : lf > 130 && lf < 210 ? 0.45 : 0;
-    this.sun.intensity = (0.15 + dayK * 2.3) * (1 - rain * 0.45) + flash * 2.8;
+    this.sun.intensity = (0.10 + dayK * 1.95) * (1 - rain * 0.45) + flash * 2.8;
     this.sun.color.setRGB(1, 0.93 - golden * 0.2, 0.84 - golden * 0.35);
-    this.hemi.intensity = 0.72 + dayK * 0.28 - rain * 0.1 + flash * 1.25;
-    this.hemi.color.setRGB(0.55 + dayK * 0.35, 0.62 + dayK * 0.3, 0.8 + dayK * 0.15);
-    this.ambient.intensity = night * 1.05 + flash * 0.75;
+    this.hemi.intensity = 0.88 + dayK * 0.24 - rain * 0.06 + flash * 1.25;
+    this.hemi.color.setRGB(0.66 + dayK * 0.27, 0.72 + dayK * 0.23, 0.88 + dayK * 0.10);
+    this.ambient.intensity = night * 0.85 + flash * 0.75;
     const sky = new THREE.Color().setRGB(0.12 + dayK * 0.57 + golden * 0.12 - rain * 0.12, 0.09 + dayK * 0.7 - rain * 0.1, 0.17 + dayK * 0.72 - rain * 0.05);
     if (flash) sky.lerp(new THREE.Color(0xe8efff), flash * 0.62);
     this.scene.background = sky; this.scene.fog.color.copy(sky);

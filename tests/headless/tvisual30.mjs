@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {loadRenderer} from '../performance/renderer-fixture.mjs';
+import {makeMaple} from '../../js/maple.js';
+import {unitStatus} from '../../js/status.js';
+const Renderer=await loadRenderer();const sim=makeMaple(30);sim.s.speed=4;const r=new Renderer({clientWidth:393,clientHeight:720},sim);let n=0;
+const test=(name,f)=>{f();n++;console.log('PASS '+name);};
+test('scene construction and presentation never mutate saved simulation',()=>{const before=JSON.stringify(sim.s);r.rebuildStatic();for(const h of [6,12,18,23]){r.todOverride=h;r.weatherOverride='rain';r.updateSky(.016);r.updateDynamic(.016);r.updateAnim(.016);}assert.equal(JSON.stringify(sim.s),before);});
+test('all unit states retain original status materials and object picking tags',()=>{for(const u of sim.objs('unit')){const a=r.anim.find(a=>a.k==='rollup'&&a.o.id===u.id);if(!a)continue;assert.equal(a.mesh.material,r.statusMaterials[unitStatus(u)]);assert.equal(a.mesh.userData.obj,u.id);}assert.ok(r.staticG.children.some(m=>m.userData.obj));});
+const a={id:900,kind:'cust',x:4,y:4,f:0,carry:true};const person=r.personMesh(a);
+test('carrying and cart poses are readable without extra shadow casters or materials',()=>{r.posePerson(person,a,0,1);assert.equal(person.userData.arms.length,2);for(const arm of person.userData.arms){assert.equal(arm.castShadow,false);assert.equal(arm.material,person.userData.body.material);assert.equal(arm.rotation.z,-1.05);}r.posePerson(person,{...a,carry:false,cart:1},0,1);assert.equal(person.userData.arms[0].rotation.z,-1.05);});
+test('walking swings opposite arms and gently lifts the body',()=>{r.posePerson(person,{...a,carry:false},.02,1);assert.equal(person.userData.arms[0].rotation.z,-person.userData.arms[1].rotation.z);assert.ok(person.userData.body.position.y>=.46);});
+test('staff work gesture follows actual work state; idle has neutral arms',()=>{r.posePerson(person,{...a,kind:'staff',st:'work',carry:false},0,1);assert.notEqual(person.userData.arms[0].rotation.z,0);r.posePerson(person,{...a,carry:false},0,1);assert.equal(person.userData.arms[0].rotation.z,0);assert.equal(person.userData.head.position.y,.72);});
+test('manual pause freezes presentation clock and active arm oscillation',()=>{sim.s.speed=0;const old=r.lifeTime;r.updateDynamic(.2);assert.equal(r.lifeTime,old);r.posePerson(person,{...a,kind:'staff',st:'work',carry:false},0,20);assert.equal(person.userData.arms[0].rotation.z,-.65);sim.s.speed=4;});
+test('customer reuse resets arm pose, box and body height',()=>{r.customerFree.push(person);const m=r.personMesh({id:901,kind:'cust'});assert.equal(m,person);assert.equal(m.userData.box.visible,false);assert.equal(m.userData.arms[0].rotation.z,0);assert.equal(m.userData.body.position.y,.46);});
+test('private shirt material disposed once; shared skin survives',()=>{let disposed=0,skin=0;person.userData.body.material.addEventListener('dispose',()=>disposed++);person.userData.head.material.addEventListener('dispose',()=>skin++);r.disposeTree(person);assert.equal(disposed,1);assert.equal(skin,0);});
+test('light curves and rain remain finite throughout day/night',()=>{for(const weather of ['clear','rain'])for(let h=0;h<24;h+=.5){r.weatherOverride=weather;r.todOverride=h;r.updateSky(.016);for(const light of [r.sun,r.hemi,r.ambient])assert.ok(Number.isFinite(light.intensity)&&light.intensity>=0);}assert.equal(r.rain.geometry.attributes.position.count,900);});
+console.log(`${n} visual presentation checks passed`);
