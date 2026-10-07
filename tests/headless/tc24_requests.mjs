@@ -213,4 +213,41 @@ test('automatic decision dismissal preserves another panel pause', () => {
   assert.equal(f.ui.popupBlocks.size, 1); assert.ok(f.ui.popupBlocks.has('panel'));
   f.ui.resumePopup('panel'); assert.equal(f.sim.s.speed, 4);
 });
+for (const speed of [1, 2, 4]) test(`in-window Keep paused records manual Pause and prevents ${speed}x restart`, () => {
+  const f = fixture(null, speed); f.sim.s.policies.manualRequests = false; const c = request(f); f.ui.showRequests();
+  assert.match(f.boxes.modal.innerHTML, /class="row request-decision-head"/);
+  assert.match(f.boxes.modal.innerHTML, /data-a="requestPause" data-qa="request-keep-paused" aria-pressed="false">Keep paused after answering/);
+  f.click({a: 'requestPause'}); assert.equal(f.ui.popupResume, 0); assert.equal(f.sim.s.speed, 0);
+  assert.match(f.boxes.modal.innerHTML, /aria-pressed="true">Will stay paused after answering/);
+  f.click({a: 'convo', id: c.id, i: 1}); assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 0);
+  const t = f.sim.s.t; f.ticks(240); assert.equal(f.sim.s.t, t); assert.equal(f.sim.s.policies.manualRequests, false);
+});
+test('a decision opened from manual Pause already reports the correct stay-paused state', () => {
+  const f = fixture(null, 0), c = request(f); f.ui.showRequests();
+  assert.match(f.boxes.modal.innerHTML, /aria-pressed="true">Will stay paused after answering/);
+  f.click({a: 'convo', id: c.id, i: 1}); assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 0);
+});
+test('in-window Pause persists across multiple decisions and repeated taps', () => {
+  const f = fixture(null, 4), first = request(f); request(f, {key: 'second'}); f.ui.showRequests();
+  f.click({a: 'requestPause'}); f.click({a: 'requestPause'}); f.click({a: 'convo', id: first.id, i: 1});
+  assert.equal(f.ui.modalOpen(), true); assert.match(f.boxes.modal.innerHTML, /aria-pressed="true">Will stay paused after answering/);
+  f.click({a: 'convo', id: f.sim.s.convos[0].id, i: 1}); assert.equal(f.ui.modalOpen(), false); assert.equal(f.sim.s.speed, 0);
+});
+test('Keep paused does not change saved staff policy or create a permanent resume preference', () => {
+  const f = fixture(null, 4); f.sim.s.policies.manualRequests = false; const c = request(f); f.ui.showRequests(); f.click({a: 'requestPause'});
+  f.click({a: 'convo', id: c.id, i: 1}); const loaded = new Sim(JSON.parse(JSON.stringify(f.sim.s)));
+  assert.equal(loaded.s.policies.manualRequests, false); f.click({a: 'speed', v: '4'});
+  const next = request(f); f.ui.showRequests(); assert.match(f.boxes.modal.innerHTML, /aria-pressed="false">Keep paused after answering/);
+  f.click({a: 'convo', id: next.id, i: 1}); assert.equal(f.sim.s.speed, 4);
+});
+test('stale Pause actions do nothing after dismissal or inside request settings', () => {
+  const f = fixture(null, 2), c = request(f); f.ui.showRequests(); f.click({a: 'convo', id: c.id, i: 1});
+  f.click({a: 'requestPause'}); assert.equal(f.sim.s.speed, 2);
+  f.ui.showRequests(true); assert.doesNotMatch(f.boxes.modal.innerHTML, /data-a="requestPause"/);
+  f.click({a: 'requestPause'}); f.ui.closeModal(); assert.equal(f.sim.s.speed, 2);
+});
+test('in-window Pause survives X, later response and other panel closure', () => {
+  const f = fixture(null, 4); f.ui.pauseForPopup('panel'); const c = request(f); f.ui.showRequests(); f.click({a: 'requestPause'}); f.ui.closeModal();
+  f.click({a: 'convo', id: c.id, i: 1}); f.ui.resumePopup('panel'); assert.equal(f.sim.s.speed, 0);
+});
 console.log(`${passed} request handling and window checks passed`);

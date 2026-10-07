@@ -239,6 +239,7 @@ export class UI {
       case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = true; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
       case 'rush': this.rush = !this.rush; this.replan(); this.sfx('click'); break;
       case 'requestMode': this.do({ type: 'policy', key: 'manualRequests', v: !this.sim.s.policies.manualRequests }); this.renderFeed(true); this.renderSheet(true); break;
+      case 'requestPause': if (this.requestPanel && !this.requestSettings) { this.requestSpeed(0); this.renderRequestPanel(); this.sfx('click'); } break;
       case 'requestReview': this.do({ type: 'requestReview', id: +el.dataset.id }, true); this.renderFeed(true); break;
       case 'requests': this.showRequests(v === 'settings'); break;
       case 'convoAll': this.showRequests(); break;
@@ -1186,8 +1187,8 @@ export class UI {
     const cards = settings ? this.requestCards : this.ownerRequestCards;
     // The last owner decision has been answered (or removed): release only this window's temporary pause.
     if (!settings && !cards?.length) { this.closeModal(); return; }
-    const history = settings ? this.sim.requestHistory() : [];
-    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">${settings ? 'Request settings &amp; history' : 'Your decision'} · paused</h2><button class="x" data-a="modalClose" aria-label="Close requests">${I.x}</button></div>
+    const history = settings ? this.sim.requestHistory() : [], keepPaused = this.popupResume === 0;
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row${settings ? '' : ' request-decision-head'}"><h2 style="flex:1">${settings ? 'Request settings &amp; history' : 'Your decision'} · paused</h2><button class="x" data-a="modalClose" aria-label="Close requests">${I.x}</button>${settings ? '' : `<button class="btn${keepPaused ? ' pri' : ''}" data-a="requestPause" data-qa="request-keep-paused" aria-pressed="${keepPaused}">${keepPaused ? 'Will stay paused after answering' : 'Keep paused after answering'}</button>`}</div>
       ${settings ? `<div class="item"><div class="grow"><b>${manual ? 'Owner reviews every request' : 'Staff handle eligible requests'}</b><small>Staff use existing response and retention policies. Owner decisions always wait for you.</small></div></div>
       <button class="btn" data-a="requestMode" aria-pressed="${manual}">${manual ? 'Let staff handle eligible requests' : 'Review every request myself'}</button>
       <p class="note">Your choice is saved with this game. Manual Pause stops staff responses.</p>` : ''}
