@@ -238,6 +238,8 @@ export class UI {
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
       case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = true; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
       case 'rush': this.rush = !this.rush; this.replan(); this.sfx('click'); break;
+      case 'requestMode': this.do({ type: 'policy', key: 'manualRequests', v: !this.sim.s.policies.manualRequests }); this.renderFeed(true); this.renderSheet(true); break;
+      case 'requestReview': this.do({ type: 'requestReview', id: +el.dataset.id }, true); this.renderFeed(true); break;
       case 'requests': this.showRequests(); break;
       case 'convoAll': this.showRequests(); break;
       case 'lessonEnd': this.do({ type: 'lesson', op: 'end' }); this.renderTut(true); break;
@@ -826,6 +828,7 @@ export class UI {
     const roleWhy = { porter: 'Adds another 8h/day for make-ready, cleaning and carts.', tech: 'Adds another 8h/day for repairs, including elevators and HVAC.', clerk: 'Handles office shoppers so those 0.5h service blocks stop consuming Owner capacity.', manager: 'Automates commissioning, vendor escalation, cart restocking and monthly pricing.' };
     h += `</div><h3>Hire capacity</h3><div class="list">${['porter', 'tech', 'clerk', 'manager'].sort((a, b) => Number(b === this.hireRoleFocus) - Number(a === this.hireRoleFocus)).map((r) => { const E = sim.staffingEvidence(r); return `<div class="item"><div class="grow"><b>${ROLES[r].name} · ${money(ROLES[r].wage, true)}/day</b><small>${roleWhy[r]} ${esc(E.evidence)} Payroll adds ${money(E.monthlyWages)} over 30 employed days; no guaranteed return.</small>${this.spendingHtml(0, ROLES[r].wage, 'after hire')}</div><button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire</button></div>`; }).join('')}</div>
       <p class="note">Owner, Porters and Techs each have 8 task-hours per game day. Each in-person office shopper costs the Owner 0.5h without a Clerk. Employed at 7:00 AM: one daily wage accrues. Hire after 7:00 AM: first wage tomorrow. Letting someone go keeps today's accrued wage owed. Routine bills settle weekly.</p>`;
+    h += `<h3>Customer requests</h3><p class="note">${s.policies.manualRequests ? 'Owner reviews every request.' : 'Clerks and Managers handle eligible requests using existing policies.'} Owner decisions pause the game.</p><button class="btn" data-a="requests">Requests &amp; staff responses</button>`;
     if (sim.hasManager() || s.mgrLog.length) h += `<h3>Manager log</h3><div class="kv">${s.mgrLog.length ? s.mgrLog.slice(0, 8).map((l) => `<span>Day ${dayOf(l.t)} ${fmtTime(l.t)}</span><span>${esc(l.msg)}</span>`).join('') : '<span>No decisions yet</span><span></span>'}</div>`;
     h += `<h3>Overlays</h3><div class="row wrap">${[['security', 'Security'], ['carts', 'Carts'], ['hvac', 'HVAC'], ['clean', 'Cleanliness'], ['power', 'Power']].map(([k, n]) => `<button class="btn sm ${this.rend.overlay === k ? 'pri' : ''}" data-a="overlay" data-v="${k}">${n}</button>`).join('')}</div>`;
     if (this.rend.overlay === 'security') h += `<p class="note legend">Each patch shows a mark as well as a color. <b>No mark</b> (green): lit and on camera. <b>Dot</b> (blue): camera only. <b>One stripe</b> (yellow): lit only. <b>Cross</b> (red): dark and unwatched - where thieves look first.</p>`;
@@ -1121,29 +1124,33 @@ export class UI {
     while (this.toasts.length > (this.phone() ? 1 : 3)) { const o = this.toasts.shift(); o.el.remove(); }
   }
   renderFeed(force = false) {
-    const s = this.sim.s; const key = s.convos.map((c) => c.id).join(',') + ':' + (s.convos.length ? Math.floor(s.t / 15) : 0) + ':' + !!this.convoAll;
+    const s = this.sim.s; this.sim.syncRequestHandling();
+    const key = s.convos.map((c) => `${c.id}:${c.staffHandling}:${c.ownerReview}`).join(',') + ':' + !!s.policies.manualRequests + ':' + (s.mgrLog[0]?.t ?? '') + ':' + (s.mgrLog[0]?.msg ?? '');
     if (!force && key === this.convoKey) return; this.convoKey = key;
     const feed = this.$('feed');
-    for (const el of feed.querySelectorAll('.convo')) el.remove();
+    for (const el of feed.querySelectorAll('.convo, .request-handling')) el.remove();
     const frag = document.createDocumentFragment(); this.requestCards=[];
     // phone declutter: one request at a time, most urgent first (critical, then soonest to expire)
     const urg = (c) => (c.sev === 'critical' ? 0 : 1e6) + (c.ttl ? Math.max(0, c.ttl - (s.t - c.t)) : 5e5);
     const order = s.convos.slice().sort((a, b) => urg(a) - urg(b)); const cap = this.convoAll ? 3 : 1;
-    if (order.length) this.pauseForPopup('convo'); else this.resumePopup('convo');
+    const ownerCount = order.filter((c) => !c.staffHandling).length, staffCount = order.length - ownerCount;
+    if (ownerCount) this.pauseForPopup('convo'); else this.resumePopup('convo');
     if (false && order.length > cap) { const m = document.createElement('button'); m.className = 'convo more'; m.dataset.a = 'convoAll'; m.textContent = this.convoAll ? 'Show fewer' : `+${order.length - cap} more request${order.length - cap > 1 ? 's' : ''} waiting`; frag.appendChild(m); }
     else if (this.convoAll && order.length <= 1) this.convoAll = false;
     for (const c of order) {
       const el = document.createElement('div'); el.className = 'convo ' + (c.sev || 'attention');
       // no countdowns (concept §9): say calmly what happens if the player leaves it; only collections keep a real-world date
-      const defA = c.def != null && c.actions && c.actions[c.def]; const due = c.ttl ? c.t + c.ttl : null;
-      const calm = c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. If you leave it: ${defA ? defA.label : 'nothing happens'}.` : defA && c.actions.length > 1 ? `No rush. If you leave it, the game picks: ${defA.label}.` : '';
+      const due = c.ttl ? c.t + c.ttl : null;
+      const calm = c.staffHandling ? 'Pause or choose manual review whenever you want to intervene.' : c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. Time stays paused while you review.` : 'No rush. Time stays paused until you choose.';
       const advice=diagnoseRequest(this.sim,c);
-      el.innerHTML = `<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
+      const handling = c.staffHandling ? `${c.staffHandling} handling this · ${c.actions[c.auto].label}` : c.ownerReview === 'coverage' ? 'Staff coverage ended. Waiting for your decision.' : c.ownerReview === 'failed' ? 'Staff could not complete this. Waiting for your decision.' : 'Waiting for your decision · no rush';
+      el.innerHTML = `<p class="note request-status">${esc(handling)}</p>${c.staffHandling ? `<button class="btn sm" data-a="requestReview" data-id="${c.id}">I’ll handle this</button>` : ''}<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div><div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}">${esc(a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
       this.requestCards.push(el.outerHTML);
     }
-    if(order.length) { const b=document.createElement('button'); b.className='convo inbox-chip';b.dataset.a='requests';b.textContent=`${order.length} request${order.length===1?'':'s'} · paused · Review`;frag.appendChild(b); }
+    if(ownerCount) { const b=document.createElement('button'); b.className='convo inbox-chip';b.dataset.a='requests';b.textContent=`${ownerCount} owner request${ownerCount===1?'':'s'} · paused · Review`;frag.appendChild(b); }
+    else if(staffCount) { const b=document.createElement('button'); b.className='request-handling inbox-chip';b.dataset.a='requests';const handlers=[...new Set(order.map(c=>c.staffHandling))].join(' / ');b.textContent=`${handlers} handling ${staffCount} request${staffCount===1?'':'s'} · Review`;frag.appendChild(b); }
     feed.prepend(frag);
-    if(this.requestPanel && this.modalOpen()) {if(order.length) this.showRequests();else this.closeModal();}
+    if(this.requestPanel && this.modalOpen()) this.renderRequestPanel();
   }
   // Cancelling destroys an active construction order, so it always takes a deliberate second tap, even for a full refund.
   confirmCancelOrder(id) {
@@ -1167,8 +1174,17 @@ export class UI {
     this.requestPanel = false; this.$('modal').innerHTML = ''; this.returnToRequests = !!returnAfter;
   }
   showRequests() {
-    this.pauseForPopup('modal');this.requestPanel=true;
-    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Requests · paused</h2><button class="x" data-a="modalClose" aria-label="Close requests">${I.x}</button></div>${(this.requestCards||[]).join('') || '<p>No active requests.</p>'}</div></div>`;
+    this.renderFeed(true); this.pauseForPopup('modal'); this.requestPanel = true;
+    this.renderRequestPanel();
+  }
+  renderRequestPanel() {
+    const manual = !!this.sim.s.policies.manualRequests, history = this.sim.requestHistory();
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Requests · paused</h2><button class="x" data-a="modalClose" aria-label="Close requests">${I.x}</button></div>
+      <div class="item"><div class="grow"><b>${manual ? 'Owner reviews every request' : 'Staff handle eligible requests'}</b><small>Staff use existing response and retention policies. Owner decisions always wait for you.</small></div></div>
+      <button class="btn" data-a="requestMode" aria-pressed="${manual}">${manual ? 'Let staff handle eligible requests' : 'Review every request myself'}</button>
+      <p class="note">This preference stays saved. Manual Pause always stops staff responses.</p>
+      ${(this.requestCards || []).join('') || '<p>No active requests.</p>'}
+      <h3>Recent staff responses</h3>${history.length ? `<div class="list">${history.map(l => `<div class="item"><div class="grow"><small>Day ${dayOf(l.t)} · ${fmtTime(l.t)}</small><b>${esc(l.msg)}</b></div></div>`).join('')}</div>` : '<p class="note">Staff responses will appear here.</p>'}</div></div>`;
   }
   addBubble(th) {
     // Merge identical customer thoughts without letting rapid repeats pin a bubble on-screen forever.
@@ -1255,7 +1271,7 @@ export class UI {
       case 'sb_goal': this.sfx('milestone'); this.toast(`Goal met: ${e.label}. Keep playing - the facility is still yours.`, 'good'); break;
       case 'scenario_end': this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
       case 'rent_review': this.sfx('rent'); break;
-      case 'manager': if (s.speed <= 2) this.toast(/^(Clerk|Manager) /.test(e.msg) ? e.msg : 'Manager: ' + e.msg); this.renderFeed(true); break;
+      case 'manager': if (!e.request && s.speed <= 2) this.toast(/^(Clerk|Manager) /.test(e.msg) ? e.msg : 'Manager: ' + e.msg); this.renderFeed(true); break;
       case 'pastdue': { const u = s.objects[e.unit]; if (s.speed <= 2) this.toast(`${u ? u.name : 'A unit'} missed its rent payment`); break; }
       case 'overlock': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A unit'} overlocked for non-payment`, 'bad'); break; }
       case 'lien_notice': { const u = s.objects[e.unit]; this.toast(`Lien notice sent - ${u ? u.name : 'unit'}`); break; }
@@ -2026,7 +2042,7 @@ export class UI {
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
-      <div class="menu-list"><button class="btn" data-a="handbook">Builder\'s handbook <small>How, why and when to use every build item</small></button><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}</div>
+      <div class="menu-list"><button class="btn" data-a="requests">Customer requests <small>Staff responses and manual-review preference</small></button><button class="btn" data-a="handbook">Builder\'s handbook <small>How, why and when to use every build item</small></button><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}</div>
       <details class="settings"><summary>Audio &amp; performance</summary><h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
       <div class="row wrap"><button class="btn sm" data-a="music">Music ${a.musicOn ? 'on' : 'off'}</button><button class="btn sm" data-a="fps">Performance stats ${this.g.showFps ? 'on' : 'off'}</button></div>
       ${this.g.showFps ? `<details class="performance-panel"><summary>Performance samples</summary><pre id="fps">${esc(this.g.performanceText ? this.g.performanceText() : 'Collecting samples…')}</pre><p class="note">CPU submission is not GPU time. Resource counts are not memory bytes. Samples remain separate while this menu is open.</p></details>` : ''}

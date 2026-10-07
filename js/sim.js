@@ -979,7 +979,7 @@ export class Sim {
   }
   // ---------------------------------------------------------------- Manager automation (GDD §46.3)
   hasManager() { return this.s.staff.some((x) => x.role === 'manager'); }
-  mgr(msg) { const s = this.s; s.mgrLog.unshift({ t: s.t, msg }); s.mgrLog.length = Math.min(s.mgrLog.length, 20); this.emit('manager', { msg }); }
+  mgr(msg, extra = {}) { const s = this.s; s.mgrLog.unshift({ t: s.t, msg, ...extra }); s.mgrLog.length = Math.min(s.mgrLog.length, 20); this.emit('manager', { msg, ...extra }); }
   managerTick() {
     const s = this.s; if (!this.hasManager()) return;
     const h = this.hour; if (h < OFFICE_HOURS[0] || h >= OFFICE_HOURS[1]) return;
@@ -1784,18 +1784,49 @@ export class Sim {
     }
     return { ok: false };
   }
-  convoTick() { // every 5 game minutes: staff answer routine conversations; unanswered ones expire to their default
+  // Shared by the simulation and UI: retain the existing Clerk/Manager response rules.
+  requestHandler(c) {
+    const s = this.s;
+    if (c.auto == null || !c.actions?.[c.auto] || c.sev === 'critical' || c.ownerReview || s.policies.manualRequests) return null;
+    if (this.hour < OFFICE_HOURS[0] || this.hour >= OFFICE_HOURS[1]) return null;
+    if (s.agents.some((a) => a.kind === 'staff' && a.role === 'clerk' && a.st === 'office')) return 'Clerk';
+    return this.hasManager() ? 'Manager' : null;
+  }
+  syncRequestHandling() {
+    for (const c of this.s.convos) {
+      const handler = this.requestHandler(c);
+      // Once handed back, the owner decides even if coverage subsequently returns.
+      if (c.staffHandling && !handler && !c.ownerReview && !this.s.policies.manualRequests) c.ownerReview = 'coverage';
+      c.staffHandling = this.requestHandler(c);
+    }
+  }
+  act_requestReview(a) {
+    const c = this.s.convos.find((x) => x.id === a.id);
+    if (!c) return { ok: false, msg: 'That request has already been handled' };
+    c.ownerReview = 'owner'; c.staffHandling = null;
+    return { ok: true, msg: 'This request is waiting for your decision' };
+  }
+  requestHistory() {
+    return this.s.mgrLog.filter((l) => l.request || /^(Clerk|Manager) answered /.test(l.msg)).slice(0, 5);
+  }
+  convoTick() { // every 5 game minutes; staff still use the existing 15-minute response delay
     const s = this.s; if (!s.convos.length) return;
-    const h = this.hour, inHours = h >= OFFICE_HOURS[0] && h < OFFICE_HOURS[1];
-    const clerk = inHours && s.agents.some((a) => a.kind === 'staff' && a.role === 'clerk' && a.st === 'office');
-    const mgr = inHours && this.hasManager();
+    this.syncRequestHandling();
     for (const c of [...s.convos]) {
-      const age = s.t - c.t;
-      if (c.auto != null && (clerk || mgr) && age >= 15) {
-        const act = c.actions[c.auto]; s.convos = s.convos.filter((x) => x !== c);
-        if (act && act.action) { const r = this.dispatch(act.action); this.mgr(`${clerk ? 'Clerk' : 'Manager'} answered ${c.who}: ${act.label}${r && r.msg ? ' - ' + r.msg : ''}`); }
+      const age = s.t - c.t, handler = c.staffHandling;
+      if (handler && age >= 15) {
+        const act = c.actions[c.auto];
+        s.convos = s.convos.filter((x) => x !== c);
+        const r = act.action ? this.dispatch(act.action) : { ok: true };
+        if (r?.ok === false) {
+          c.ownerReview = 'failed'; c.staffHandling = null; s.convos.push(c);
+          this.mgr(`${handler} could not complete ${c.who}: ${r.msg || act.label}. Owner review needed.`, { request: true });
+        } else this.mgr(`${handler} answered ${c.who}: ${act.label}${r?.msg ? ' - ' + r.msg : ''}`, { request: true });
         continue;
       }
+      // Automatic requests handed to the owner cannot expire while coverage is missing,
+      // manual review is selected, or a staff response is still pending.
+      if (c.auto != null || c.ownerReview || s.policies.manualRequests) continue;
       if (c.ttl && age >= c.ttl) {
         s.convos = s.convos.filter((x) => x !== c);
         const act = c.def != null && c.actions[c.def]; if (act && act.action) this.dispatch(act.action);

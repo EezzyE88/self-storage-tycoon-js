@@ -1008,3 +1008,6 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 /* Candidate 22 review: the docked instruction strip keeps the step's how-to line visible (the expandable help is hidden there). */
 #ui .tut .how-line { display:none; }
 #ui.has-sheet .tut:not(.offer):not(.scen) .how-line, #ui:has(.actionbar) .tut:not(.offer):not(.scen) .how-line { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; margin-top:2px; font-size:12px; line-height:1.3; font-weight:500; color:#c9d3dc; }
+
+/* Routine requests report staff handling without an owner-alert card. */
+#ui .request-handling { background:var(--paper); border-radius:12px; box-shadow:var(--shadow); border-left-color:var(--green); color:var(--ink); text-align:left; }

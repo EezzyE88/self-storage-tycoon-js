@@ -305,12 +305,17 @@ function stepTicks(n) {
   const sim = game.sim, C = game.company;
   const others = C ? C.props.map((p, k) => ({ p, k })).filter((x) => x.p.sim !== sim) : [];
   for (let i = 0; i < n; i++) {
+    // Review between minutes, not just between frames: 4x can batch many ticks.
+    if (!game.ui.title && sim.s.convos.length) game.ui.renderFeed();
+    if (!game.ui.title && sim.s.speed === 0) break;
     sim.step(); if (sim.events.length > 400) game.drain(); if (sim.s.t % 60 === 0) game.syncTier();
     for (const { p, k } of others) {
       p.sim.step();
       for (const e of p.sim.events) { const f = BG_EVENTS[e.type]; const msg = f && f(e, p.sim); if (msg) { game.note(k, msg); if (e.type !== 'lease' && e.type !== 'moveout') game.ui.toast(`${p.name}: ${msg}`, 'bad'); } }
       p.sim.events.length = 0;
     }
+    if (!game.ui.title && sim.s.convos.length) game.ui.renderFeed();
+    if (!game.ui.title && sim.s.speed === 0) break;
   }
   game.drain();
 }
