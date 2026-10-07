@@ -1,2 +1,2 @@
-// Request outcome and availability fixes; physical-iPhone acceptance pending.
-export const BUILD = { name: 'bplus-request-outcome-candidate-27', date: '2026-10-07' };
+// Soft audio candidate; physical-iPhone listening acceptance pending.
+export const BUILD = { name: 'bplus-soft-audio-candidate-28', date: '2026-10-07' };
