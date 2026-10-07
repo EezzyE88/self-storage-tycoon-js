@@ -1,0 +1,38 @@
+[
+  {
+    "script": "tc29_climate_bubbles",
+    "passed": true
+  },
+  {
+    "script": "tc27_availability",
+    "passed": true
+  },
+  {
+    "script": "tcomplaints",
+    "passed": true
+  },
+  {
+    "script": "tcomplaint_capacity",
+    "passed": true
+  },
+  {
+    "script": "tcomplaint_hardening",
+    "passed": true
+  },
+  {
+    "script": "tfeedback_interactions",
+    "passed": true
+  },
+  {
+    "script": "tc24_requests",
+    "passed": true
+  },
+  {
+    "script": "tsoft_audio",
+    "passed": true
+  },
+  {
+    "script": "tclock24",
+    "passed": true
+  }
+]

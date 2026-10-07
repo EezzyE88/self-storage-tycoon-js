@@ -1199,9 +1199,9 @@ export class UI {
     // Merge identical customer thoughts without letting rapid repeats pin a bubble on-screen forever.
     // On phones, routine shopper outcomes get a short real-time cooldown; Business still keeps the full lost-demand totals.
     this.syncFeedbackProperty();
-    const routine = th.complaint === 'noReady' || th.text === 'Nothing ready to rent today.' || th.text === "I'll keep shopping.";
+    const routine = ['noReady', 'noClimate'].includes(th.complaint) || th.text === 'Nothing ready to rent today.' || th.text === 'I need climate control.' || th.text === "I'll keep shopping.";
     // Visual grouping only: history retains size/location-specific reports.
-    const visualKey = t => t.complaint === 'noReady' || t.text === 'Nothing ready to rent today.' ? 'availability:'+t.text : t.text === "I'll keep shopping." ? 'shopping' : complaintKey(t);
+    const visualKey = t => t.complaint === 'noClimate' || t.text === 'I need climate control.' ? JSON.stringify(['climate', t.text, t.kind, t.availability ?? null]) : t.complaint === 'noReady' || t.text === 'Nothing ready to rent today.' ? 'availability:'+t.text : t.text === "I'll keep shopping." ? 'shopping' : complaintKey(t);
     const now = performance.now(), key=visualKey(th);
     const same = this.bubbles.find((b) => visualKey(b.th) === key);
     if (same) {
