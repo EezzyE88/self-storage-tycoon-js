@@ -2681,7 +2681,7 @@ export class Sim {
     const s = this.s; const WS = ag.cart ? 0.19 : 0.24;
     if (ag.role === 'owner') this.rebalanceOwnerQueue();
     const t = ag.task && s.tasks.find((x) => x.id === ag.task);
-    if (ag.task && !t) { ag.task = null; if (ag.st === 'walk' || ag.st === 'work') ag.st = 'idle'; if (ag.cart) this.dropCart(ag); }
+    if (!t && (ag.task || ag.st === 'walk' || ag.st === 'work')) { ag.task = null; if (ag.st === 'walk' || ag.st === 'work') ag.st = 'idle'; if (ag.cart) this.dropCart(ag); }
     switch (ag.st) {
       case 'office': case 'idle': {
         if (ag.queue && ag.queue.length && (ag.role === 'owner' || this.onShift())) {
@@ -2730,7 +2730,10 @@ export class Sim {
   finishTask(t, ag, aborted = false) {
     const s = this.s;
     s.tasks = s.tasks.filter((x) => x !== t);
-    if (ag) ag.task = null;
+    if (ag) {
+      ag.task = null;
+      if (aborted && (ag.st === 'walk' || ag.st === 'work')) ag.st = 'idle';
+    }
     if (aborted) return;
     const o = t.obj != null && s.objects[t.obj];
     if (t.type === 'makeready' && o) { o.commercial = 'ready'; this.milestone('first_makeready'); this.emit('rentready', { unit: o.id, x: o.x, y: o.y, f: o.f || 0 }); }

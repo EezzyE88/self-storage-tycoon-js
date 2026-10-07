@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {makeMaple} from '../../js/maple.js';
+import {Sim} from '../../js/sim.js';
+let failed=0;
+const test=(name,fn)=>{try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name+': '+e.message);}};
+function plant(sim){for(let y=sim.s.parcel.y0;y<=sim.s.parcel.y1;y++)for(let x=sim.s.parcel.x0;x<=sim.s.parcel.x1;x++){const R=sim.plan({tool:'hvac',a:{x,y},b:{x,y},f:0});if(R.status!=='invalid'&&R.creates[0]?.serves===12){const o={...R.creates[0],id:sim.id(),cond:1,cstate:'operating'};sim.s.objects[o.id]=o;sim.markDirty();sim.ensure();return o;}}throw Error('No plant pad');}
+function quoteCase(kind){const sim=makeMaple();sim.s.cash=1e6;sim.s.open=false;
+ if(kind==='hvac'){for(const u of sim.objs('unit'))if(u.access==='interior')u.env='climate';sim.markDirty();sim.ensure();const hv=plant(sim);hv.cond=0.25;sim.markDirty();}
+ if(kind==='power'){for(let n=0;n<4;n++)plant(sim);}
+ sim.ensure();return sim;}
+for(const kind of ['hvac','power'])test('upstairs quote adds required '+kind+' pad without throwing or changing cash',()=>{const sim=quoteCase(kind),cash=sim.s.cash;const R=sim.verticalPlan(12);assert.ok(R.ok,R.msg);assert.ok(R.creates.some(o=>o.type===kind));assert.equal(sim.s.cash,cash);assert.equal(R.cost,R.rows.reduce((sum,r)=>sum+r.cost,0));assert.ok(sim.dispatch({type:'verticalUpgrade',...R}).ok);assert.equal(sim.s.cash,cash-R.cost);assert.equal(sim.dispatch({type:'verticalUpgrade',...R}).ok,false);assert.equal(sim.s.cash,cash-R.cost);const restored=new Sim(JSON.parse(JSON.stringify(sim.s)));assert.equal(restored.s.orders.at(-1).cost,R.cost);});
+test('pad-free quote retains its exact price',()=>{const sim=makeMaple();const R=sim.verticalPlan(12);assert.ok(R.ok);assert.equal(R.cost,17810);assert.ok(!R.creates.some(o=>['hvac','power'].includes(o.type)));});
+function staff(){const sim=makeMaple();sim.s.tut.on=false;sim.s.policies.ownerChores=false;sim.s.t=7*60+1;const st=sim.s.staff.find(x=>x.role==='owner');const ag=sim.s.agents.find(x=>x.sid===st.id)||sim.spawnStaffAgent(st);return{sim,ag};}
+test('cart return abort after a missing corral clears walking state before the next tick',()=>{const {sim,ag}=staff();for(const o of sim.objs('corral'))delete sim.s.objects[o.id];sim.markDirty();sim.ensure();const cart={id:sim.id(),home:999999,st:'stranded',cond:1,f:0,x:ag.x,y:ag.y};sim.s.carts.push(cart);const t=sim.addTask({type:'carts',need:'carts',cart:cart.id,phase:1,work:60});Object.assign(ag,{st:'walk',hidden:false,task:t.id,path:null});t.assigned=ag.sid;sim.updateStaff(ag);assert.doesNotThrow(()=>sim.updateStaff(ag));assert.equal(ag.task,null);assert.ok(!['walk','work'].includes(ag.st));assert.equal(cart.st,'stranded');assert.equal(ag.cart,null);assert.ok(!sim.s.tasks.includes(t));});
+for(const state of ['walk','work'])for(const task of [null,999999])test(`orphan ${state} task=${task} recovers after reload`,()=>{const {sim,ag}=staff();Object.assign(ag,{st:state,task,path:null,hidden:false});const loaded=new Sim(JSON.parse(JSON.stringify(sim.s))),a=loaded.s.agents.find(x=>x.id===ag.id);assert.doesNotThrow(()=>loaded.updateStaff(a));assert.equal(a.task,null);assert.ok(!['walk','work'].includes(a.st));});
+if(failed)process.exitCode=1;

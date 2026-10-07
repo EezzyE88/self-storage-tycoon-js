@@ -36,7 +36,7 @@ export function verticalPlan(sim,id,{fitout=true,stairs=false}={}){
  if(!creates.some(o=>o.type==='unit'))return bad('This floor has no interior unit layout to copy. Choose structure only, then fit it out manually.');
  }
  const occupied=new Set(creates.filter(o=>o.f===0).map(o=>sim.idx(o.x,o.y)));
- const pad=tool=>{for(let y=s.parcel.y0;y<=s.parcel.y1;y++)for(let x=s.parcel.x0;x<=s.parcel.x1;x++){const i=sim.idx(x,y);if(occupied.has(i))continue;const R=sim.plan({tool,a:{x,y},f:0});if(R.status!=='invalid'&&R.creates[0]&&(tool!=='hvac'||R.creates[0].serves===id)){occupied.add(i);creates.push(R.creates[0]);add(`Required ${TOOLS[tool].name}`,R.cost,R.dur);return true;}}return false;};
+ const pad=tool=>{for(let y=s.parcel.y0;y<=s.parcel.y1;y++)for(let x=s.parcel.x0;x<=s.parcel.x1;x++){const i=sim.idx(x,y);if(occupied.has(i))continue;const R=sim.plan({tool,a:{x,y},b:{x,y},f:0});if(R.status!=='invalid'&&R.creates[0]&&(tool!=='hvac'||R.creates[0].serves===id)){occupied.add(i);creates.push(R.creates[0]);add(`Required ${TOOLS[tool].name}`,R.cost,R.dur);return true;}}return false;};
  const climate=creates.filter(o=>o.type==='unit'&&o.env==='climate').reduce((a,o)=>a+SIZES[o.size].sqft/25,0),hv=sim.D.hvac[id];
  let extraPlants=Math.max(0,Math.ceil((climate+(hv?.load||0)-(hv?.cap||0))/TOOLS.hvac.capacity));
  while(extraPlants-->0)if(!pad('hvac'))return bad('No free HVAC pad beside this building.');
