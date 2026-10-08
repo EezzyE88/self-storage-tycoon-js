@@ -36,7 +36,7 @@ export function climateRemedy(r) {
   if(c.blocked)parts.push('For blocked operating units, inspect the recorded doorway, hallway, entrance or freight route. A freight-handover hold can be temporary; check its current status before building more.');
   if(c.unfinished)parts.push('Finish existing construction and its actual commissioning checklist first, including HVAC capacity only where listed as a prerequisite.');
   if(c.other)parts.push('Inspect the listed units and their current readiness before spending.');
-  if(!parts.length)parts.push('Matching climate units are currently eligible to offer. Review historical conditions before spending.');
+  if(!parts.length)parts.push('Matching climate units were eligible to offer in this inventory snapshot. The detailed rejection cause is unknown; inspect current stock before spending.');
   return parts.join(' ')+' Adding stock does not guarantee leases.';
 }
 

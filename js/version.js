@@ -1,2 +1,2 @@
-// Reporting-only candidate; physical-iPhone acceptance pending.
-export const BUILD = { name: 'bplus-reporting-guidance-candidate-34', date: '2026-10-08' };
+// Feedback presentation candidate; physical-iPhone acceptance pending.
+export const BUILD = { name: 'bplus-concise-feedback-candidate-35', date: '2026-10-08' };
