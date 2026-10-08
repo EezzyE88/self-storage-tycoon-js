@@ -7,6 +7,7 @@ import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
+import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
 import { guideFor } from './handbook.js';
 import { verticalLayout, verticalDone, verticalCheck, authoredPlacement } from './blueprint.js';
 import { expansionEvidence, cancellationBreakdown } from './vertical.js';
@@ -881,7 +882,9 @@ export class UI {
     if (!R) return sim.pressureOn() || s.mode !== 'tutorial' ? `<h3>Monthly report</h3><p class="note">Your first report card arrives on Day ${Math.max(31, Math.ceil((sim.day - 1) / 30) * 30 + 1)}: a grade, what changed, and the top things to fix.</p>` : '';
     const chg = (a, b, f) => b == null ? '' : ` <span class="${a >= b ? 'up' : 'down'}">${a >= b ? '▲' : '▼'} ${f(Math.abs(a - b))}</span>`;
     const L = R.lost || {}; const lostN = Object.values(L).reduce((a, b) => a + b, 0);
-    return `<h3>Monthly report · Month ${R.month}</h3><div class="report"><div class="grade g${R.grade}">${R.grade}</div><div class="rgrow">
+    const periods = monthlyReportPeriods(R);
+    const reportDates = periods.legacy ? `Saved legacy report · generated ${Number.isInteger(R.day) ? `Day ${R.day}` : 'date not recorded'}. Financial dates were not recorded. Shopper counts: ${periodText(periods.shoppers)} (legacy window; original totals retained).` : `Saved report · completed ${periodText(periods.financial)} · generated Day ${R.day}. Shopper totals and operating contribution use this completed period; occupancy and rent roll are snapshots at generation.`;
+    return `<h3>Monthly report · Month ${R.month}</h3><p class="note">${esc(reportDates)}</p><div class="report"><div class="grade g${R.grade}">${R.grade}</div><div class="rgrow">
       <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span>${R.upkeep != null ? `<span>Upkeep</span><span class="${R.upkeep < 6 ? 'neg' : ''}">${R.upkeep}/10</span><span>Growth</span><span>${R.growPts}/15</span>` : ''}<span>Unconverted shoppers</span><span>${lostN}</span></div>${R.stale ? `<p class="note">${R.stale} job${R.stale > 1 ? 's' : ''} waiting 2+ days.</p>` : ''}${R.upkeep != null ? `<p class="note">Rent roll ${R.growth >= 0 ? '+' : ''}${Math.round(R.growth * 100)}% over 3 months.</p>` : ''}${(() => { const ti = this.g.tierInfo && !s.scenario && this.g.tierInfo(), nx = ti && ti.next; return nx ? `<p class="note goalnote"><b>Next goal: ${esc(nx.name)}.</b> Rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo (${Math.round(Math.min(1, ti.roll / nx.roll) * 100)}%)${nx.props > 1 ? `, properties ${ti.n} of ${nx.props}` : ''}. Unlocks ${nx.perks.map(esc).join('; ')}.</p>` : ''; })()}
       <small class="note">${esc(R.season)}${R.comps.length ? ' · Competing with ' + esc(R.comps.join(', ')) : ''}</small></div></div>
       ${R.sug.length ? `<div class="list sug">${R.sug.map((t, i) => `<div class="item"><span class="num">${i + 1}</span><div class="grow">${esc(climateSuggestionText(t))}</div></div>`).join('')}</div>` : '<p class="note">Nothing urgent. Keep it up.</p>'}`;
@@ -928,7 +931,7 @@ export class UI {
     // why shoppers didn't sign
     const lost = sim.lostRecent(30); const tot = Object.values(lost).reduce((a, b) => a + b, 0);
     const WHY = { noReady: ['Nothing ready to rent', 'Review the requested size: occupied/reserved, unfinished, unready and blocked units are different causes. Inspect access and make-ready before expanding.'], noSize: ['Size not offered', 'No suitable ready unit of the requested size was available. Review inventory and repeated size demand before building.'], noClimate: ['Needed climate control', 'Review ready climate inventory and existing HVAC capacity/eligibility before adding climate units.'], price: ['Too expensive', 'This shopper rejected the asking rent. Compare market rents and quality; one refusal does not require a price cut.'], competitor: ['Went to a competitor', 'A cheaper facility nearby. Close the price gap or out-compete on quality.'], convenience: ['Inconvenient', 'Long walks, cart shortages or elevator waits.'], reputation: ['Put off by reputation', 'Low reputation and reviews. Fix what customers complain about.'], shopping: ['Kept shopping', 'Normal: some shoppers always compare.'], service: ['Gave up waiting', 'Check office coverage, hours and Owner capacity. A Clerk serves during office hours; hiring does not recover departed shoppers.'] };
-    h += `<h3>Why shoppers didn't sign · 30 days</h3>`;
+    h += `<h3>Why shoppers didn't sign · rolling 30-day window</h3><p class="note">${periodText(rollingShopperPeriod(sim.day))} · today so far. Recorded losses across all sizes and climate preferences; separate from the saved monthly report.</p>`;
     if (!tot) h += `<p class="note">No lost shoppers in the last 30 days.</p>`;
     else h += `<div class="list">${Object.entries(lost).sort((a, b) => b[1] - a[1]).map(([k, n]) => { const w = WHY[k] || [k, '']; return `<div class="item"><div class="grow"><b>${w[0]}</b><small>${w[1]}</small></div><b class="num">${n}</b></div>`; }).join('')}</div>`;
     // reviews
@@ -1944,7 +1947,7 @@ export class UI {
   diagnosticHtml(obj = null) {
     const rows = this.sim.diagnostics().filter((d) => obj == null || d.obj === obj).slice(0, obj == null ? 4 : 2);
     if (!rows.length) return '';
-    return `<h3>What needs attention</h3><div class="list">${rows.map((d) => `<div class="item"><div class="grow"><b>${esc(d.cause)}</b><small>${esc(d.effect)} → ${esc(d.consequence)}</small><small><b>Action:</b> ${esc(d.action)}</small></div></div>`).join('')}</div>`;
+    return `<h3>What needs attention</h3><p class="note">Current conditions now. Shopper losses: rolling 30-day window · ${periodText(rollingShopperPeriod(this.sim.day))}, today so far. Availability counts separate standard and climate requests; saved monthly size advice combines them and lists climate losses separately.</p><div class="list">${rows.map((d) => `<div class="item"><div class="grow"><b>${esc(d.cause)}</b><small>${esc(d.effect)} → ${esc(d.consequence)}</small><small><b>Action:</b> ${esc(d.action)}</small></div></div>`).join('')}</div>`;
   }
   financialHtml() {
     const sim = this.sim, P = sim.financialPosition(), F = sim.scheduledOutlook();

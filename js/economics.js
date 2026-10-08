@@ -1,6 +1,7 @@
 // Small derived views of existing simulation state. Recommendations never mutate gameplay.
 import { ROLES, OPEX, SIZES, MIN_PER_DAY } from './data.js';
 import { cents } from './finance.js';
+import { rollingShopperPeriod } from './reporting.js';
 const key = (u) => `${u.size}|${u.env || 'std'}`;
 const sum = (a, f) => a.reduce((n, x) => n + f(x), 0);
 
@@ -26,6 +27,7 @@ export function operations(sim) {
     critical: ['gate', 'elevator', 'hvac'].flatMap((type) => sim.objs(type).filter((o) => o.cstate === 'operating' && !sim.works(o))),
     equipmentRisk: ['gate', 'elevator', 'hvac'].flatMap((type) => sim.objs(type).filter((o) => o.cstate === 'operating' && ((o.cond ?? 1) < 0.45 || o.unpowered))),
     officeQueue: s.officeQ.length,
+    officeServing: s.officeQ.filter((id) => s.agents.some((a) => a.id === id && a.serveT > 0)).length,
     cartsAvailable: s.carts.filter((c) => c.st === 'corral').length,
     cartsTotal: s.carts.filter((c) => c.st !== 'damaged').length,
     lost: sim.lostRecent(30),
@@ -40,12 +42,20 @@ export function diagnostics(sim) {
   }
   if (o.unavailable.length) add(`${o.unavailable.length} units unavailable`, `${o.makeReady} await make-ready; ${o.leasedBlocked.length} leased units have access problems`, `${o.askingOffline ? `$${Math.round(o.askingOffline).toLocaleString()}/mo asking-rent capacity offline (not guaranteed revenue). ` : ''}${o.contractedAffected ? `$${Math.round(o.contractedAffected).toLocaleString()}/mo contracted rent affected by access.` : ''}`, 'Restore routes or use Owner, Porter or vendor work');
   const bySize = {};
-  for (const x of s.mkt.lostLog) if (x.d > sim.day - 30 && ['noSize', 'noReady', 'noClimate'].includes(x.r)) {
+  const period = rollingShopperPeriod(sim.day);
+  for (const x of s.mkt.lostLog) if (x.d >= period.start && x.d <= period.end && ['noSize', 'noReady', 'noClimate'].includes(x.r)) {
     const k = x.sz + (x.climate || x.r === 'noClimate' ? ' climate' : ''); bySize[k] = (bySize[k] || 0) + 1;
   }
   for (const [size, n] of Object.entries(bySize).sort((a, b) => b[1] - a[1]).slice(0, 2)) add(`${n} shoppers wanted ${size} and found none`, 'Suitable rentable inventory missing', 'Observed demand opportunity; shoppers are not promised leases', 'Turn over suitable units first, then assess an expansion', 'growth');
   if (o.exhausted >= 3) add(`Owner capacity exhausted on ${o.exhausted} of ${o.workDays.length} measured days`, 'Office service and property work compete for time', 'Backlogs can keep inventory unavailable', 'Hire for the measured workload or schedule work before expanding');
-  if (o.officeQueue || o.lost.service) add(`${o.officeQueue} waiting at the office${o.lost.service ? `; ${o.lost.service} service-related shopper losses recorded` : ''}`, 'Office service capacity constrained', 'Shoppers wait while Owner work capacity is consumed', 'Free Owner office hours or consider a Clerk');
+  if (o.officeQueue || o.lost.service) {
+    const waiting = o.officeQueue - o.officeServing;
+    const history = o.lost.service ? `${o.lost.service} service-related shopper losses in the rolling window` : 'No service-related shopper losses in the rolling window';
+    add(`${waiting} waiting now; ${o.officeServing} being served · ${history}`,
+      o.officeQueue ? 'Current office queue; historical losses are separate' : 'Historical office losses; no shoppers at the office now',
+      waiting ? 'A current wait does not by itself establish a staffing shortage' : 'Historical losses do not establish a current staffing shortage',
+      waiting ? 'Check office hours, current coverage and whether waits persist before changing staffing' : o.officeServing ? 'Let current service finish; reassess if waits persist' : 'Monitor current office coverage and future queues before changing staffing');
+  }
   if (o.open.some((u) => u.access === 'interior') && !o.cartsAvailable) add('No carts currently in a corral', 'Interior customers may wait or carry by hand', 'Convenience suffers; carts may be in use rather than missing', o.cartsTotal ? 'Return stranded carts or inspect cart demand' : 'Buy carts at a loading corral');
   for (const x of sim.objs('elevator').filter((e) => (e.avgWait || 0) >= 10)) add(`Elevator average wait ${Math.round(x.avgWait)} min`, 'Upper-floor customer flow constrained', 'Upper-floor convenience reduces leasing appeal', 'Check elevator condition and cart routing', 'operate', x.id);
   if (o.unavailable.some((u) => u.missing && u.missing.length)) add('Unit requirements or routes missing', 'Built inventory cannot offer reliable access', 'Capital is tied up in unavailable units', 'Tap a blocked unit and fix its listed requirements', 'growth');

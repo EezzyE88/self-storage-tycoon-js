@@ -11,6 +11,7 @@ import {
 
 import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, outlook, recordCash, cashWindow, firstFinancialDay } from './finance.js';
 import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';
+import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -1534,16 +1535,17 @@ export class Sim {
     return { ok: true, msg: `${label} running for 30 days` };
   }
   promoFactor() { const m = this.s.mkt; return m && m.promoUntil && this.day <= m.promoUntil ? 1.18 : 1; }
-  lostRecent(days = 30) { const d0 = this.day - days; const out = {}; for (const x of this.s.mkt.lostLog) if (x.d > d0) out[x.r] = (out[x.r] || 0) + 1; return out; }
+  lostRecent(days = 30) { return lossesInPeriod(this.s.mkt.lostLog, rollingShopperPeriod(this.day, days)); }
   monthReport(day) {
     const s = this.s, last = s.days.slice(-30); if (last.length < 20) return;
     const sum = (k) => last.reduce((a, d) => a + (d[k] || 0), 0);
     const collected = sum('rent') + sum('anc'), contrib = collected - sum('opex') - sum('payroll') - sum('service') - sum('marketing');
-    const oc = this.occupancy(), roll = this.rentRoll(), rep = this.reputation(), rating = this.rating(), lost = this.lostRecent(30);
+    const period = { start: last[0].day, end: last[last.length - 1].day };
+    const oc = this.occupancy(), roll = this.rentRoll(), rep = this.reputation(), rating = this.rating(), lost = lossesInPeriod(s.mkt.lostLog, period);
     const prev = s.mkt.reports[s.mkt.reports.length - 1];
     const sug = [];
     const lostN = (k) => lost[k] || 0;
-    const sizeLost = {}; for (const x of s.mkt.lostLog) if (x.d > day - 30 && (x.r === 'noSize' || x.r === 'noReady')) sizeLost[x.sz] = (sizeLost[x.sz] || 0) + 1;
+    const sizeLost = {}; for (const x of s.mkt.lostLog) if (x.d >= period.start && x.d <= period.end && (x.r === 'noSize' || x.r === 'noReady')) sizeLost[x.sz] = (sizeLost[x.sz] || 0) + 1;
     const topSize = Object.entries(sizeLost).sort((a, b) => b[1] - a[1])[0];
     if (topSize && topSize[1] >= 3) sug.push({ w: topSize[1] * 3, k: 'build', text: `${topSize[1]} shoppers wanted a ${topSize[0]} and found none available. Build more ${topSize[0]} units or turn vacant ones over faster.` });
     if (lostN('noClimate') >= 2) sug.push({ w: lostN('noClimate') * 3, k: 'climate', text: climateSuggestion(lostN('noClimate')) });
@@ -1573,7 +1575,7 @@ export class Sim {
     const growPts = clamp(4 + growth * 80, 0, 15);
     const score = (oc.pct * 20 + clamp(contrib / Math.max(1, roll), 0, 0.7) / 0.7 * 20 + rep * 20 + (rating != null ? (rating - 1) / 4 * 10 : 7) + clamp((priceR - 0.8) / 0.2, 0, 1) * 10 + upkeep + growPts) * 100 / 105;
     const grade = score >= 88 ? 'A' : score >= 76 ? 'B' : score >= 64 ? 'C' : score >= 52 ? 'D' : 'F';
-    const R = { day, month: s.mkt.reports.length + 1, grade, score: Math.round(score), priceR, growth, upkeep: Math.round(upkeep), growPts: Math.round(growPts), stale, eqOk, occ: oc.pct, occN: oc.occ, units: oc.n, roll, rollPrev: prev ? prev.roll : null, collected, contrib, rep, repPrev: prev ? prev.rep : null, rating, leases: sum('leases'), moveouts: sum('moveouts'), lost, sug: sug.slice(0, 3).map((x) => x.text), season: this.seasonName(day), comps: this.openComps().map((c) => c.name) };
+    const R = { day, period, month: s.mkt.reports.length + 1, grade, score: Math.round(score), priceR, growth, upkeep: Math.round(upkeep), growPts: Math.round(growPts), stale, eqOk, occ: oc.pct, occN: oc.occ, units: oc.n, roll, rollPrev: prev ? prev.roll : null, collected, contrib, rep, repPrev: prev ? prev.rep : null, rating, leases: sum('leases'), moveouts: sum('moveouts'), lost, sug: sug.slice(0, 3).map((x) => x.text), season: this.seasonName(day), comps: this.openComps().map((c) => c.name) };
     s.mkt.reports.push(R); if (s.mkt.reports.length > 12) s.mkt.reports.shift();
     this.emit('report', { month: R.month, grade });
   }

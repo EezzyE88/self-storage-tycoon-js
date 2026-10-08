@@ -66,11 +66,11 @@ test('feedback exposes historical and current unit inspection through existing g
  assert.equal(JSON.stringify(sim.s),before);
 });
 test('monthly climate suggestion describes recorded losses, no promised leases or automatic HVAC purchase',()=>{
- const {sim}=setup();sim.s.days=Array.from({length:30},()=>({rent:100,opex:1,payroll:1,service:0,marketing:0}));sim.s.mkt.lostLog=[{d:sim.day,r:'noClimate',sz:'5x5',climate:true},{d:sim.day,r:'noClimate',sz:'10x10',climate:true}];sim.monthReport(sim.day);
+ const {sim}=setup();sim.s.t=30*1440;sim.s.days=Array.from({length:30},(_,i)=>({day:i+1,rent:100,opex:1,payroll:1,service:0,marketing:0}));sim.s.mkt.lostLog=[{d:30,r:'noClimate',sz:'5x5',climate:true},{d:30,r:'noClimate',sz:'10x10',climate:true}];sim.monthReport(sim.day);
  const report=sim.s.mkt.reports.at(-1);assert.ok(report);const all=JSON.stringify(report);assert.match(all,/climate-related availability losses/);assert.match(all,/does not guarantee leases/);assert.doesNotMatch(all,/would capture|An HVAC plant/);
 });
 test('legacy monthly advice is corrected at display time without rewriting saved history',()=>{
- const {sim}=setup();sim.s.days=Array.from({length:30},()=>({rent:100}));sim.monthReport(sim.day);const r=sim.s.mkt.reports.at(-1);
+ const {sim}=setup();sim.s.t=30*1440;sim.s.days=Array.from({length:30},(_,i)=>({day:i+1,rent:100}));sim.monthReport(sim.day);const r=sim.s.mkt.reports.at(-1);delete r.period;
  r.sug=['27 shoppers needed climate control. An HVAC plant plus climate units would capture them.'];const ui=uiFor(sim),before=JSON.stringify(sim.s),html=ui.reportHtml();assert.match(html,/27 climate-related availability losses/);assert.doesNotMatch(html,/would capture/);assert.equal(JSON.stringify(sim.s),before);
 });
 function normalized(s){const copy=JSON.parse(JSON.stringify(s));delete copy.thoughts;for(const a of copy.agents)if(a.complaintKeys)a.complaintKeys=a.complaintKeys.map(k=>{const arr=JSON.parse(k);return JSON.stringify(arr.slice(0,11));});return copy;}
