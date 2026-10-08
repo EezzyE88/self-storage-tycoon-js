@@ -1,0 +1,210 @@
+{
+  "url": "https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site/",
+  "candidate_commit": "3bdba09dfff381dbb8bf881632028903a4f5b43a",
+  "build": "bplus-climate-diagnostics-candidate-33",
+  "hosting_commit": "d2c8b42be360bd9941229f20ee0dd5a4cd3fb305",
+  "version": 37,
+  "deployment": "appgdep_6ac79496ad1c8191b01c7de4c248e7ed",
+  "results": [
+    {
+      "path": "css/game.css",
+      "sha256": "f539f4cdbcc61e4d43212294dfb57c4e43d83f508a7cc09161869e892d7f108e",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "icon-180.png",
+      "sha256": "1dcb24ded34fae1397a50b4bd1a4d9645f659044a5a4037f649240d9aa46ff62",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "icon-512.png",
+      "sha256": "352f59f1fbf73f64b7d0326ba042c2443dfc207b3452e1320203c5cdc8615323",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "index.html",
+      "sha256": "d810e949cefa9334eb23737619d0c7bae6b5130e302bb91c719de0decde790e9",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/audio.js",
+      "sha256": "f38783ad832d542b4cbadf9d0c1a528a43c84328b3f5cba84f953a1fecab0050",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/bannerplace.js",
+      "sha256": "17b4b169901a6b44bd39771d8e0fd178f4eeb1aeed24e61f88c7b57662b8a016",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/blueprint.js",
+      "sha256": "bdd3dd4f87fef0c2174bbd75e09707f229dc2740469dc110ee85a4f720ac55ca",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/captions.js",
+      "sha256": "23db5f142f70d31da5cad3c31c4f7be6e7b11f8947f25268284af7a92121cd4d",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/cloud.js",
+      "sha256": "cc784d86fb0d2a7165700f33a6cc2c309f5ae2bc9be079001707ca86b96676e7",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/complaints.js",
+      "sha256": "260a439260fbbf9761d941e5b08776a7a55343a7b7ed0cbaee020a8a49d3637b",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/data.js",
+      "sha256": "8bd7420f9ada82b88b6bceaee3d95339c69fb6862503e54414d778c1d0e9af41",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/economics.js",
+      "sha256": "e061c060d7f61adbf81ba3d5b5f83408982acea289e276fab9e9c8a3ece8440c",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/finance.js",
+      "sha256": "15603232ee9c0a4bf5c960ad7c3d0a9825c4ccce6b8dd94cdf10fd79a917de19",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/fx.js",
+      "sha256": "5fc2f184b9137262be5b3e27c41bc17a6671f366dddeed4b8999b73094946476",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/handbook.js",
+      "sha256": "1dc69d5236d182a05d93aafb375bd5087b0e3c6020e1c1e849a6f8d2274ef6ea",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/localsave.js",
+      "sha256": "fe3915174398f314eadc84a28831322fc09e4b830c15b76a20c73706465b7873",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/main.js",
+      "sha256": "d4b58a2150992e6be3bf83f3a52bf10ef5c388afe72a9af6b657bc34842922c9",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/maple.js",
+      "sha256": "2d1593e8512d5a46c6926fe04b57be01ad2e76c38298ff60eb2664142c37fafb",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/performance.js",
+      "sha256": "3e89f8b54e7e76e0a83fdfe5a938b9f1ca75ab178066ec63eced613a2991f5ac",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/post.js",
+      "sha256": "4930e21fd5afc935f6f8bd22902226a47cda917bbf3fcc70af7b67d93537b8a1",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/render.js",
+      "sha256": "67ebe33f1ebe71e1589e9aa0f37e6a83c82068373b6675a6eca7144a321195fe",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/savearchive.js",
+      "sha256": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/scenarios.js",
+      "sha256": "5653df873cccce49d77101737ff1f38b638a2f54420ad2c9e449e186902536e4",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/showcase.js",
+      "sha256": "915b1bc2408fe5af7bb2c234f6b4cb4dcb65b9085ec93cdb4f0a4fdeb3b9e2a0",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/sim.js",
+      "sha256": "9159d04ef92ee703154df4fdc1e2b348a020ac7dc56234ccd6812b69abf14aed",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/status.js",
+      "sha256": "a7e0d8a43c6e07b6dfda1d0a2d3e6b3a442b7035ab35957061fd06e059a936a6",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/tutorial.js",
+      "sha256": "a9927e87c563933fbb28d1299fbd9b685a2c3af6f2a8bcba7476d821b78abe43",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/ui.js",
+      "sha256": "59686ee7e1694e49939c91ecc2e21b03c12fccae45e99b7811ddce7ac8b3f813",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/version.js",
+      "sha256": "3023705e8811458f7aebf8c3483e3897bc341d7515932fc3618d2a27b45a175e",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/vertical.js",
+      "sha256": "b54c627060ee63cb864400521d89f32fe8c96de4a822dbeace89e16717b85548",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "manifest.webmanifest",
+      "sha256": "520fe2e57ac009a56b9b7e6f9d972ff4b999c646820d4df7826088d12503e99b",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "vendor/three.module.min.js",
+      "sha256": "08fd7545d13d2c7fb65ab691530a802dafefd638596501854f267d0fb13c39e7",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    },
+    {
+      "path": "js/climateavailability.js",
+      "sha256": "9906e679a50803b603a0e3f45d3c9faaa1de60e4b7fbfd5ce3e9f112c541d5cd",
+      "manifest_matches": true,
+      "git_bytes_match": true
+    }
+  ],
+  "physical_iPhone": "pending",
+  "note": "curl follows the index.html redirect to root; checks verify served bytes, not browser execution."
+}
