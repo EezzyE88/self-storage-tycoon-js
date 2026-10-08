@@ -19,7 +19,7 @@ function fixture(tab='growth',speed=4){
  const click=(a,v)=>ui.onClick({target:{closest:()=>({dataset:{a,v}})}});
  return {ui,sim,box,body,click,writes:()=>writes,menu:()=>menu};
 }
-test('Candidate 31 refresh path replaces the panel under an open picker',()=>{
+if(process.env.SST_C31_HISTORY === '1') test('Candidate 31 refresh path replaces the panel under an open picker',()=>{
  const source=execFileSync('git',['show','dbc895cc2d471d3bcd13c36a624da9859e9878a1:js/ui.js'],{encoding:'utf8'});
  const code=source.slice(source.indexOf('  renderSheet(force = false) {'),source.indexOf('  jumpSection(label) {')).trim();
  const baseline=Function('return function '+code)();const f=fixture();f.click('sectionMenu');const node=f.menu();f.sim.s.cash+=200;baseline.call(f.ui,true);assert.notEqual(f.menu(),node);
@@ -55,4 +55,5 @@ test('Back to map explicitly closes chooser and releases the expanded panel hold
 test('save/reload contains no transient chooser fields and preserves policies',()=>{
  const f=fixture();const policies=JSON.stringify(f.sim.s.policies);f.click('sectionMenu');const saved=JSON.stringify(f.sim.s);const reload=new Sim(JSON.parse(saved));assert.equal(JSON.stringify(reload.s.policies),policies);assert.equal(reload.s.sectionMenuKey,undefined);assert.equal(reload.s.sectionChoice,undefined);
 });
+if(process.env.SST_C31_HISTORY !== '1') console.log('SKIP exact Candidate 31 reproduction: opt in with SST_C31_HISTORY=1 in a history-bearing checkout');
 console.log(n+' stable section-menu checks passed (DOM fixture, not physical Safari)');

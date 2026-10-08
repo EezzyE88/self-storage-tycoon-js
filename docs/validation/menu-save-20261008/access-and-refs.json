@@ -1,0 +1,19 @@
+{
+  "verified_at_utc": "2026-10-08T03:49:01.695201+00:00",
+  "repository": "EezzyE88/self-storage-tycoon-js",
+  "refs": {
+    "master": "055d2a871945c565c3affbda89ecd46be7a4cfac",
+    "candidate/persistent-section-menu-20261007": "24b5c35502388cbb2e292139fd15fb0965499333",
+    "candidate/climate-availability-diagnostics-20261007": "24b5c35502388cbb2e292139fd15fb0965499333"
+  },
+  "sites": {
+    "project_id": "appgprj_6ac1995912248191b1c0a51153e182a3",
+    "status": "active",
+    "current_user_role": "owner",
+    "audience": "public",
+    "version": 36,
+    "ordinary_write_credential_granted": true,
+    "automatic_publication_requested": false,
+    "hosting_push_or_deploy_performed": false
+  }
+}
