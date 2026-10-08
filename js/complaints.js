@@ -1,3 +1,4 @@
+import { climateInventory, climateInventoryText, climateRemedy, validClimateSnapshot } from './climateavailability.js';
 // Read-only explanations. No dispatch, routing, randomness or economy changes.
 import { floorCount, RELEASE_FLOORS } from './vertical.js';
 export const COMPLAINTS = [
@@ -18,7 +19,7 @@ export const COMPLAINTS = [
   ['elevator_fault', /^The elevator is out of service\.$/, 'Access failure', 'This elevator was not working while passengers waited.', 'Inspect condition and its repair job. Review Tech shift, remaining capacity and route, or the existing paid vendor option. Preserve access to its landings.', 'operate'],
   ['elevator_queue', /^I've been waiting forever for the elevator\.$/, 'Temporary congestion', 'The passenger waited over 40 simulation ticks for boarding.', 'Let the current trip finish, then inspect queue and elevator status. Repeated queues on a working lift indicate capacity pressure; consider another connected elevator. If it is failed or unpowered, fix that first.', 'build'],
   ['noSize', /^No .+ available\.$/, 'Market / product availability', 'No suitable ready unit of the requested size was available.', 'Review size demand and the unit states: occupied/reserved stock is unavailable; unfinished or unready stock needs commissioning/make-ready. Add this size only if repeated unmet demand and finances justify it.', 'business'],
-  ['noClimate', /^I need climate control\.$/, 'Market / product availability', 'This shopper required a climate product that was unavailable.', 'Review climate demand and ready climate units. Check this building’s HVAC capacity and eligibility before commissioning climate units. Climate construction and operation have costs.', 'business'],
+  ['noClimate', /^I need climate control\.$/, 'Market / product availability', 'This shopper requested climate control, but no matching climate unit was available to offer.', 'Review climate demand and ready climate units. Check this building’s HVAC capacity and eligibility before commissioning climate units. Climate construction and operation have costs.', 'business'],
   ['price', /^Too expensive for me\.$/, 'Market outcome', 'The asking rent exceeded this shopper’s willingness to pay.', 'Compare Asking rents with Your market and lost-demand totals. Consider price/quality tradeoffs; one refusal does not require a price cut or guarantee a lease.', 'business'],
   ['convenience', /^Not convenient enough\.$/, 'Market outcome', 'The shopper rejected the property’s convenience relative to their preferences.', 'Review Customer experience: walking routes, carts, doors and elevator waits. Improve the recurring local bottleneck rather than assuming more staff or lower rent fixes every shopper.', 'growth'],
   ['shopping', /^I'll keep shopping\.$/, 'Normal market outcome', 'Some shoppers leave without signing even when the property is usable.', 'No immediate fix is required. Track repeated lost-demand reasons before investing or lowering rents; conversion is not guaranteed.', 'business'],
@@ -29,7 +30,7 @@ export const COMPLAINTS = [
 // Group only equivalent observations; do not discard product or observed overflow differences.
 export function complaintKey(th) {
   const l=th.location;
-  return JSON.stringify([th.text,th.kind,th.requestedSize??null,th.requestedClimate??null,l?.obj??null,l?.building??null,l?.x??null,l?.y??null,l?.f??null,th.loadingBays??null,th.overflowAvailable??null]);
+  return JSON.stringify([th.text,th.kind,th.requestedSize??null,th.requestedClimate??null,l?.obj??null,l?.building??null,l?.x??null,l?.y??null,l?.f??null,th.loadingBays??null,th.overflowAvailable??null,...(validClimateSnapshot(th.climateAvailability)?[th.availability??null]:[])]);
 }
 // A reported floor must be a whole floor index within the playable release limit (F1-F3) and within this property's
 // floor layers. Floors beyond either are unsupported and rejected. (A playable floor that no building reaches any
@@ -59,7 +60,16 @@ export function diagnoseComplaint(sim, th) {
   const e=complaintType(th.text); if(!e || th.kind!=='bad') return null;
   const l=th.location || {x:th.x,y:th.y,f:th.f||0}, target=reportedTarget(sim,l), o=sim.s.objects[l.obj], b=sim.s.objects[l.building];
   const location=[b ? (b.name||'Building '+b.id) : l.building ? 'Building '+l.building+' (removed)' : 'Property', o ? (o.name||sim.objName(o)) : l.obj ? 'Target '+l.obj+' (removed)' : 'reported position', 'F'+((l.f||0)+1), Number.isFinite(l.x)&&Number.isFinite(l.y)?`(${Math.floor(l.x)}, ${Math.floor(l.y)})`:''].filter(Boolean).join(' · ');
-  let cause=e[3], remedy=e[4];
+  let cause=e[3], remedy=e[4], climate=null;
+  if(e[0]==='noClimate' || (e[0]==='noSize' && th.requestedClimate)) {
+    const historical=validClimateSnapshot(th.climateAvailability) ? th.climateAvailability : null;
+    const current=th.requestedSize ? climateInventory(sim,th.requestedSize) : null;
+    climate={historical,current};
+    cause='This shopper requested climate control, but no matching climate unit was available to offer. '+(historical ? 'At report time: '+climateInventoryText(historical) : 'The original detailed climate-availability cause was not recorded in this older report.');
+    if(current)cause+=' Current matching climate inventory (not the original observation): '+climateInventoryText(current);
+    else cause+=' The requested size was not recorded; current matching stock cannot be identified.';
+    remedy=historical ? climateRemedy(historical)+' These remedies describe the report-time conditions; check current stock before acting.' : current ? 'Original conditions are unknown. For current matching inventory: '+climateRemedy(current) : 'Review current size-and-climate demand and unit readiness before spending. Adding stock does not guarantee leases.';
+  }
   if(e[0]==='noReady' && th.availability) {
     const guidance = {
       full:['All units were occupied or reserved when this shopper arrived.', 'Wait for turnover or review Growth Readiness and cash before expanding. Cleaning occupied units does not create vacancies.'],
@@ -82,8 +92,8 @@ export function diagnoseComplaint(sim, th) {
     if(tasks.length) remedy+=' Current local jobs: '+tasks.slice(0,5).map(t=>sim.taskDelegation(t)?.message || 'Review this job in Operate.').join(' ') ;
   }
   if(e[0]==='loading' && Number.isFinite(th.loadingBays)) cause+=` At report time: ${th.loadingBays} reachable bays were occupied; ${th.overflowAvailable?'overflow parking was available':'no free overflow space was found'}.`;
-  if(['noReady','noSize','noClimate'].includes(e[0])) { const units=sim.objs('unit').filter(u=>!th.requestedSize || u.size===th.requestedSize); cause+=` Current ${th.requestedSize||'all-size'} inventory: ${units.filter(u=>u.commercial==='occupied').length} occupied, ${units.filter(u=>u.commercial==='reserved').length} reserved, ${units.filter(u=>u.commercial==='unready').length} unready, ${units.filter(u=>u.cstate==='operating' && u.commercial==='ready' && !u.blocked).length} accessible rent-ready, ${units.filter(u=>u.blocked).length} blocked. Ready stock may still differ from the requested climate product.`; }
-  return {id:e[0],category:e[2],cause,remedy,tab:e[5],location:target?location:location+' · reported location unavailable',target,legacy:!th.location};
+  if(!climate && ['noReady','noSize','noClimate'].includes(e[0])) { const units=sim.objs('unit').filter(u=>!th.requestedSize || u.size===th.requestedSize); cause+=` Current ${th.requestedSize||'all-size'} inventory: ${units.filter(u=>u.commercial==='occupied').length} occupied, ${units.filter(u=>u.commercial==='reserved').length} reserved, ${units.filter(u=>u.commercial==='unready').length} unready, ${units.filter(u=>u.cstate==='operating' && u.commercial==='ready' && !u.blocked).length} accessible rent-ready, ${units.filter(u=>u.blocked).length} blocked. Ready stock may still differ from the requested climate product.`; }
+  return {id:e[0],category:e[2],cause,remedy,tab:e[5],location:target?location:location+' · reported location unavailable',target,legacy:!th.location,climate};
 }
 
 // Existing message choices keep their original prices, effects, expiry and automation.

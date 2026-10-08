@@ -1,0 +1,26 @@
+  decideLease(v, ag) {
+    const s = this.s, M = MARKETS[s.market.id];
+    s.today.prospects++;
+    const all = this.objs('unit').filter((u) => u.cstate === 'operating' && !u.blocked && u.size === v.size);
+    const ready = all.filter((u) => u.commercial === 'ready');
+    let cands = ready.filter((u) => (v.climate ? u.env === 'climate' : u.env === 'std'));
+    let settling = false;
+    if (!cands.length && v.climate) { cands = ready.filter((u) => u.env === 'std'); settling = true; }
+    if (!cands.length && !v.climate) { cands = ready.filter((u) => u.env === 'climate'); }
+    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: this.availabilityReport(v.size).text }[reason] || 'I\'ll keep shopping.', 'bad', {requestedSize:v.size,requestedClimate:!!v.climate,...(reason === 'noReady' ? {complaint:'noReady',availability:this.availabilityReport(v.size).availability} : {})}); return null; };
+    if (!cands.length) return lose(all.length ? (v.climate ? 'noClimate' : 'noReady') : v.climate && this.objs('unit').some((u) => u.size === v.size) ? 'noClimate' : 'noSize');
+    const rep = this.reputation(); const cp = this.compPrice();
+    let best = null, bestP = -1;
+    for (const u of cands) {
+      const ratio = this.askFor(u) / this.marketRent(u) / clamp(0.72 + 0.34 * rep, 0.85, 1.02); // a poorly kept facility has to charge less to sign
+      let pPrice = ratio <= 0.9 ? 0.95 : 0.95 * Math.exp(-4.2 * (ratio - 0.9));
+      if (v.keen) pPrice = ratio > 1.25 ? pPrice : 0.97;
+      const conv = v.keen ? 1 : u.conv * (u.f > 0 ? this.elevatorFactor(u) : 1);
+      let p = pPrice * clamp(conv, 0.4, 1) * (v.keen ? 1 : 0.72 + 0.35 * rep) * (settling ? 0.35 : 1) * clamp(0.42 + 1.0 * s.exp.access, 0.42, 1); // shoppers who see a broken gate walk away
+      if (cp != null && !v.keen && ratio > cp + 0.04) p *= clamp(1 - (ratio - cp) * 2.2, 0.35, 1);
+      if (p > bestP) { bestP = p; best = u; }
+    }
+    if (this.rnd() < bestP) return this.signLease(best, v);
+    const ratio = this.askFor(best) / this.marketRent(best);
+    return lose(cp != null && ratio > cp + 0.04 && this.rnd() < 0.6 ? 'competitor' : ratio > 1.08 ? 'price' : best.conv < 0.82 ? 'convenience' : rep < 0.68 ? 'reputation' : 'shopping');
+  }

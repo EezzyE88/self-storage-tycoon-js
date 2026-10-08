@@ -1,3 +1,4 @@
+import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
@@ -1545,7 +1546,7 @@ export class Sim {
     const sizeLost = {}; for (const x of s.mkt.lostLog) if (x.d > day - 30 && (x.r === 'noSize' || x.r === 'noReady')) sizeLost[x.sz] = (sizeLost[x.sz] || 0) + 1;
     const topSize = Object.entries(sizeLost).sort((a, b) => b[1] - a[1])[0];
     if (topSize && topSize[1] >= 3) sug.push({ w: topSize[1] * 3, k: 'build', text: `${topSize[1]} shoppers wanted a ${topSize[0]} and found none available. Build more ${topSize[0]} units or turn vacant ones over faster.` });
-    if (lostN('noClimate') >= 2) sug.push({ w: lostN('noClimate') * 3, k: 'climate', text: `${lostN('noClimate')} shoppers needed climate control. An HVAC plant plus climate units would capture them.` });
+    if (lostN('noClimate') >= 2) sug.push({ w: lostN('noClimate') * 3, k: 'climate', text: climateSuggestion(lostN('noClimate')) });
     const cp = this.compPrice();
     if (lostN('price') + lostN('competitor') >= 3) sug.push({ w: (lostN('price') + lostN('competitor')) * 2.5, k: 'price', text: `${lostN('price') + lostN('competitor')} shoppers left over price${cp ? `; ${this.openComps()[0].name} charges about ${Math.round((1 - cp) * 100)}% under market` : ''}. Trim asking rents in Business, or win on quality.` });
     const waiting = s.tasks.filter((t) => !t.assigned).length;
@@ -1881,7 +1882,7 @@ export class Sim {
     let settling = false;
     if (!cands.length && v.climate) { cands = ready.filter((u) => u.env === 'std'); settling = true; }
     if (!cands.length && !v.climate) { cands = ready.filter((u) => u.env === 'climate'); }
-    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: this.availabilityReport(v.size).text }[reason] || 'I\'ll keep shopping.', 'bad', {requestedSize:v.size,requestedClimate:!!v.climate,...(reason === 'noReady' ? {complaint:'noReady',availability:this.availabilityReport(v.size).availability} : {})}); return null; };
+    const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: this.availabilityReport(v.size).text }[reason] || 'I\'ll keep shopping.', 'bad', {requestedSize:v.size,requestedClimate:!!v.climate,...(reason === 'noReady' ? {complaint:'noReady',availability:this.availabilityReport(v.size).availability} : v.climate && ['noClimate','noSize'].includes(reason) ? (()=>{const climateAvailability=climateInventory(this,v.size);return {climateAvailability,availability:climateCauseKey(climateAvailability)};})() : {})}); return null; };
     if (!cands.length) return lose(all.length ? (v.climate ? 'noClimate' : 'noReady') : v.climate && this.objs('unit').some((u) => u.size === v.size) ? 'noClimate' : 'noSize');
     const rep = this.reputation(); const cp = this.compPrice();
     let best = null, bestP = -1;
