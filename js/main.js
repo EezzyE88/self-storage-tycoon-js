@@ -37,6 +37,7 @@ const game = {
     else { sim = makeEmptyLot({ creative: kind === 'creative' }); name = kind === 'creative' ? 'Creative Lot' : 'Empty Lot'; }
     this.company = { props: [{ name, sim }], active: 0, feed: [] };
     this.attach(sim, kind);
+    if (kind === 'sc:comeback' && this.ui) this.ui.scMin = false;
   },
   metaName() { const C = this.company; if (!C) return null; const p = C.props[C.active]; return p.name + (C.props.length > 1 ? ` (${C.active + 1}/${C.props.length})` : ''); },
   switchProperty(k) {

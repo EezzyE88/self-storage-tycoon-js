@@ -1,4 +1,3 @@
-import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';
 import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
@@ -100,7 +99,6 @@ export class Sim {
       }
     }
     ensureFloors(state,floorCount(state));
-    normalizeComeback(state);
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -805,12 +803,8 @@ export class Sim {
     this.ensure();
     const fn = this['act_' + a.type];
     if (!fn) return { ok: false, msg: 'Unknown action ' + a.type };
-    const track = isComeback(this.s) && ['build', 'renovate'].includes(a.type);
-    const before = track ? new Set(Object.keys(this.s.objects)) : null;
     const r = fn.call(this, a) || { ok: true };
     this.ensure();
-    if (track && r.ok) mapComebackReplacements(this, Object.keys(this.s.objects).filter(id => !before.has(id)).map(Number));
-    checkComeback(this);
     return r;
   }
   verticalPlan(id,options) { return verticalPlan(this,id,options); }
@@ -1203,12 +1197,7 @@ export class Sim {
     if (a.op === 'dismiss') { s.lessonsSeen = s.lessonsSeen || {}; s.lessonsSeen[a.id] = this.day; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
     return { ok: false };
   }
-  poll() { this.ensure(); if (this.onTick) this.onTick(this); if (this.dirty) this.rebuild(); checkComeback(this); }
-  act_comebackAck() {
-    const c = this.s.scenario;
-    if (!isComeback(this.s) || c.status !== 'won') return { ok: false };
-    c.acknowledged = true; return { ok: true };
-  }
+  poll() { this.ensure(); if (this.onTick) this.onTick(this); if (this.dirty) this.rebuild(); }
   act_tutSkip() { this.s.tut.on = false; this.s.tut.done = true; this.emit('tut_skip'); return { ok: true }; }
   milestone(k) { if (!this.s.milestones[k]) { this.s.milestones[k] = this.s.t; this.emit('milestone', { k }); } }
 
@@ -1248,7 +1237,6 @@ export class Sim {
     // tutorial hooks run in tutorial module via sim.onTick
     if (this.onTick) this.onTick(this);
     if (this.dirty) this.rebuild();
-    checkComeback(this);
   }
   newDay() {
     const s = this.s, day = this.day;
@@ -1351,7 +1339,6 @@ export class Sim {
   goalMet(g) { const v = this.metric(g.k); return g.cmp === '<' ? v < g.v : v >= g.v; }
   scenarioCheck(day) {
     const s = this.s, sc = s.scenario;
-    if (isComeback(s)) { checkComeback(this); return; }
     // The deadline day's 7:00 batch is the final eligible goal checkpoint.
     if (day > sc.deadline) { sc.status = 'lost'; sc.endDay = day; sc.why = `Day ${sc.deadline} deadline passed`; this.emit('scenario_end', { won: false }); return; }
     const f = sc.fail; let failing = false;
@@ -2839,7 +2826,6 @@ export class Sim {
       }
       if (ag) ag.cart = null;
     }
-    recordComebackWork(this, t, ag);
     if (ag && ag.role !== 'owner') this.milestone('first_delegated');
     this.emit('task_done', { type: t.type });
   }

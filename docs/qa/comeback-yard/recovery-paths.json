@@ -1,0 +1,440 @@
+{
+  "device": "Native deterministic simulation; not browser or physical iPhone",
+  "runs": [
+    {
+      "path": "owner",
+      "seed": 4401,
+      "day": 2,
+      "minutes": 1553,
+      "position": {
+        "cash": 1150,
+        "committed": 74.5,
+        "reserve": 1021.93,
+        "available": 53.57,
+        "netLiquid": 1075.5
+      },
+      "totals": {
+        "ownerWork": 15,
+        "payroll": 0
+      },
+      "ownerCompleted": 6,
+      "staffCompleted": 0,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 81
+        },
+        {
+          "t": 425,
+          "task": 85,
+          "assigned": 81
+        },
+        {
+          "t": 430,
+          "task": 86,
+          "assigned": 81
+        },
+        {
+          "t": 1440,
+          "task": 87,
+          "assigned": 81
+        },
+        {
+          "t": 1445,
+          "task": 88,
+          "assigned": 81
+        },
+        {
+          "t": 1450,
+          "task": 89,
+          "assigned": 81
+        }
+      ]
+    },
+    {
+      "path": "owner",
+      "seed": 4402,
+      "day": 2,
+      "minutes": 1553,
+      "position": {
+        "cash": 1388,
+        "committed": 74.5,
+        "reserve": 1021.93,
+        "available": 291.57,
+        "netLiquid": 1313.5
+      },
+      "totals": {
+        "ownerWork": 15,
+        "payroll": 0
+      },
+      "ownerCompleted": 6,
+      "staffCompleted": 0,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 81
+        },
+        {
+          "t": 425,
+          "task": 85,
+          "assigned": 81
+        },
+        {
+          "t": 430,
+          "task": 86,
+          "assigned": 81
+        },
+        {
+          "t": 1440,
+          "task": 87,
+          "assigned": 81
+        },
+        {
+          "t": 1445,
+          "task": 88,
+          "assigned": 81
+        },
+        {
+          "t": 1450,
+          "task": 89,
+          "assigned": 81
+        }
+      ]
+    },
+    {
+      "path": "owner",
+      "seed": 4403,
+      "day": 2,
+      "minutes": 1553,
+      "position": {
+        "cash": 1387.75,
+        "committed": 74.5,
+        "reserve": 1021.93,
+        "available": 291.32,
+        "netLiquid": 1313.25
+      },
+      "totals": {
+        "ownerWork": 15,
+        "payroll": 0
+      },
+      "ownerCompleted": 6,
+      "staffCompleted": 0,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 81
+        },
+        {
+          "t": 425,
+          "task": 85,
+          "assigned": 81
+        },
+        {
+          "t": 430,
+          "task": 86,
+          "assigned": 81
+        },
+        {
+          "t": 1440,
+          "task": 87,
+          "assigned": 81
+        },
+        {
+          "t": 1445,
+          "task": 88,
+          "assigned": 81
+        },
+        {
+          "t": 1450,
+          "task": 89,
+          "assigned": 81
+        }
+      ]
+    },
+    {
+      "path": "owner",
+      "seed": 4404,
+      "day": 2,
+      "minutes": 1553,
+      "position": {
+        "cash": 1150,
+        "committed": 74.5,
+        "reserve": 1021.93,
+        "available": 53.57,
+        "netLiquid": 1075.5
+      },
+      "totals": {
+        "ownerWork": 15,
+        "payroll": 0
+      },
+      "ownerCompleted": 6,
+      "staffCompleted": 0,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 81
+        },
+        {
+          "t": 425,
+          "task": 85,
+          "assigned": 81
+        },
+        {
+          "t": 430,
+          "task": 86,
+          "assigned": 81
+        },
+        {
+          "t": 1440,
+          "task": 87,
+          "assigned": 81
+        },
+        {
+          "t": 1445,
+          "task": 88,
+          "assigned": 81
+        },
+        {
+          "t": 1450,
+          "task": 89,
+          "assigned": 81
+        }
+      ]
+    },
+    {
+      "path": "owner",
+      "seed": 4405,
+      "day": 2,
+      "minutes": 1553,
+      "position": {
+        "cash": 1150,
+        "committed": 74.5,
+        "reserve": 1021.93,
+        "available": 53.57,
+        "netLiquid": 1075.5
+      },
+      "totals": {
+        "ownerWork": 15,
+        "payroll": 0
+      },
+      "ownerCompleted": 6,
+      "staffCompleted": 0,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 81
+        },
+        {
+          "t": 425,
+          "task": 85,
+          "assigned": 81
+        },
+        {
+          "t": 430,
+          "task": 86,
+          "assigned": 81
+        },
+        {
+          "t": 1440,
+          "task": 87,
+          "assigned": 81
+        },
+        {
+          "t": 1445,
+          "task": 88,
+          "assigned": 81
+        },
+        {
+          "t": 1450,
+          "task": 89,
+          "assigned": 81
+        }
+      ]
+    },
+    {
+      "path": "staff",
+      "seed": 4401,
+      "day": 2,
+      "minutes": 1974,
+      "position": {
+        "cash": 1150,
+        "committed": 99.5,
+        "reserve": 1196.93,
+        "available": -146.43,
+        "netLiquid": 1050.5
+      },
+      "totals": {
+        "ownerWork": 0,
+        "payroll": 25
+      },
+      "ownerCompleted": 0,
+      "staffCompleted": 6,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 90
+        },
+        {
+          "t": 820,
+          "task": 86,
+          "assigned": 90
+        },
+        {
+          "t": 2235,
+          "task": 89,
+          "assigned": 90
+        }
+      ]
+    },
+    {
+      "path": "staff",
+      "seed": 4402,
+      "day": 2,
+      "minutes": 1974,
+      "position": {
+        "cash": 1388,
+        "committed": 99.5,
+        "reserve": 1196.93,
+        "available": 91.57,
+        "netLiquid": 1288.5
+      },
+      "totals": {
+        "ownerWork": 0.5,
+        "payroll": 25
+      },
+      "ownerCompleted": 0,
+      "staffCompleted": 6,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 90
+        },
+        {
+          "t": 820,
+          "task": 86,
+          "assigned": 90
+        },
+        {
+          "t": 2235,
+          "task": 89,
+          "assigned": 90
+        }
+      ]
+    },
+    {
+      "path": "staff",
+      "seed": 4403,
+      "day": 2,
+      "minutes": 1974,
+      "position": {
+        "cash": 1269,
+        "committed": 99.5,
+        "reserve": 1196.93,
+        "available": -27.43,
+        "netLiquid": 1169.5
+      },
+      "totals": {
+        "ownerWork": 0,
+        "payroll": 25
+      },
+      "ownerCompleted": 0,
+      "staffCompleted": 6,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 90
+        },
+        {
+          "t": 820,
+          "task": 86,
+          "assigned": 90
+        },
+        {
+          "t": 2235,
+          "task": 89,
+          "assigned": 90
+        }
+      ]
+    },
+    {
+      "path": "staff",
+      "seed": 4404,
+      "day": 2,
+      "minutes": 1974,
+      "position": {
+        "cash": 1150,
+        "committed": 99.5,
+        "reserve": 1196.93,
+        "available": -146.43,
+        "netLiquid": 1050.5
+      },
+      "totals": {
+        "ownerWork": 0,
+        "payroll": 25
+      },
+      "ownerCompleted": 0,
+      "staffCompleted": 6,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 90
+        },
+        {
+          "t": 820,
+          "task": 86,
+          "assigned": 90
+        },
+        {
+          "t": 2235,
+          "task": 89,
+          "assigned": 90
+        }
+      ]
+    },
+    {
+      "path": "staff",
+      "seed": 4405,
+      "day": 2,
+      "minutes": 1974,
+      "position": {
+        "cash": 1268.75,
+        "committed": 99.5,
+        "reserve": 1196.93,
+        "available": -27.68,
+        "netLiquid": 1169.25
+      },
+      "totals": {
+        "ownerWork": 1,
+        "payroll": 25
+      },
+      "ownerCompleted": 0,
+      "staffCompleted": 6,
+      "actions": [
+        {
+          "t": 420,
+          "task": 84,
+          "assigned": 90
+        },
+        {
+          "t": 820,
+          "task": 86,
+          "assigned": 90
+        },
+        {
+          "t": 2235,
+          "task": 89,
+          "assigned": 90
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { isComeback, targetInService } from './comeback.js';
 // Three.js presentation layer. Reads sim.s / sim.D; never mutates simulation state.
 import * as THREE from 'three';
 import { unitStatus, UNIT_STATUS, loadingStatus } from './status.js';
@@ -177,6 +178,7 @@ export class Renderer {
   makeMaterials() {
     const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o });
     return {
+      comebackWorn: std('#938574', {map:this.tx.wall}), comebackRestored: std('#eee8d7', {map:this.tx.wall}),
       unitWall: std(COL.unitWall, {map:this.tx.wall}), unitWall2: std(COL.unitWall2, {map:this.tx.wall}), roof: std(COL.roof, { map:this.tx.roof, roughness: 0.75, metalness: 0.15 }), roofTrim: std(COL.roofTrim),
       door: std(COL.door, { map: this.tx.rollup, roughness: 0.55, metalness: 0.2 }), doorInt: std(COL.doorInt, { map: this.tx.rollup, roughness: 0.55, metalness: 0.2 }),
       doorDark: std('#2a2c30'), shellWall: std(COL.shellWall, {map:this.tx.wall}), shellWallCut: std('#b8ae9b'), shellRoof: std(COL.shellRoof, { map:this.tx.roof, roughness: 0.75, metalness: 0.15 }),
@@ -502,6 +504,8 @@ export class Renderer {
         const cx = o.x + o.w / 2, cz = o.y + o.h / 2; const H = o.access === 'drive' ? WALL_H : 1.05;
         if (inConst) { this.scaffold(o, cx, cz, o.w, o.h, H, f); break; }
         const body = this.box(o.w - 0.06, H, o.h - 0.06, (o.num % 2) ? this.mat.unitWall : this.mat.unitWall2, cx, H / 2, cz, f, { obj: o.id });
+        const rescueTarget = isComeback(S) && S.scenario.targets?.find(t => t.ids.includes(o.id));
+        if (rescueTarget) { body.material = targetInService(S,rescueTarget) ? this.mat.comebackRestored : this.mat.comebackWorn; this.anim.push({k:'comeback',mesh:body,target:rescueTarget}); }
         if (o.access === 'drive') { this.box(o.w + 0.1, 0.08, o.h + 0.1, this.mat.roof, cx, H + 0.04, cz, f, { obj: o.id }); }
         else this.box(o.w - 0.02, 0.05, o.h - 0.02, this.mat.roofTrim, cx, H + 0.02, cz, f, { obj: o.id });
         const along = o.dir[0] !== 0 ? o.h : o.w;
@@ -901,6 +905,7 @@ export class Renderer {
       const o = A.o;
       switch (A.k) {
         case 'build': { if (!A.ord) break; const p = Math.max(0.02, A.ord.prog); A.mesh.scale.y = A.h * p; A.mesh.position.y = A.f * FLOOR_H + A.h * p / 2; A.mesh.material.opacity = A.ord.waiting ? 0.35 : 0.8; break; }
+        case 'comeback': { A.mesh.material = targetInService(s,A.target) ? this.mat.comebackRestored : this.mat.comebackWorn; break; }
         case 'unitStatus': { A.mesh.material=this.statusMaterials[unitStatus(o)]; break; }
         case 'rollup': { A.mesh.material = this.statusMaterials[unitStatus(o)]; const tgt = o.doorOpen ? 0.12 : 1; const cur = A.mesh.scale.y / (A.H * 0.74); const n = cur + (tgt - cur) * Math.min(1, dt * 5); A.mesh.scale.y = A.H * 0.74 * n; A.mesh.position.y = (o.f || 0) * FLOOR_H + A.H * 0.74 - A.H * 0.74 * n / 2; break; }
         case 'gate': { A.mesh.position.x = A.x0 - (o.open || 0) * 2.8; break; }

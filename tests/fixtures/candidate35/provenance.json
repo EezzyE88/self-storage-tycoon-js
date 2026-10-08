@@ -1,0 +1,18 @@
+{
+  "repository": "EezzyE88/self-storage-tycoon-js",
+  "commit": "e3a737011627ebb27db34a9104a8283e9d895b18",
+  "files": {
+    "savearchive.js": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
+    "localsave.js": "fe3915174398f314eadc84a28831322fc09e4b830c15b76a20c73706465b7873",
+    "maple.js": "2d1593e8512d5a46c6926fe04b57be01ad2e76c38298ff60eb2664142c37fafb",
+    "data.js": "8bd7420f9ada82b88b6bceaee3d95339c69fb6862503e54414d778c1d0e9af41",
+    "sim.js": "1dd5906039eaf073c71062f3f809cba36293898c76881fbb89adbe3eb3362f4c",
+    "reporting.js": "3b21ae7ae4c17b814f4f9d4db5cd62926aa62eb4fcb7725381f9d42cb946983f",
+    "economics.js": "634dd608d7bd04c448f54006f9a05af6dec1cb1feb7da39903e13a2ccbe11095",
+    "finance.js": "15603232ee9c0a4bf5c960ad7c3d0a9825c4ccce6b8dd94cdf10fd79a917de19",
+    "complaints.js": "5d15b9390b482ba74e427055bfbb56444bbf9e5ed346fb4625ba4300c873b6f0",
+    "vertical.js": "b54c627060ee63cb864400521d89f32fe8c96de4a822dbeace89e16717b85548",
+    "climateavailability.js": "640a3c48156d335abd15c8354b6b5de9c2189f416595392aa774140bd4cb9b5b",
+    "scenarios.js": "5653df873cccce49d77101737ff1f38b638a2f54420ad2c9e449e186902536e4"
+  }
+}

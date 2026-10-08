@@ -1,0 +1,472 @@
+{
+  "suite": "node tests/run-headless.mjs",
+  "passed": 77,
+  "total": 77,
+  "note": "Full suite followed by successful targeted reruns of two updated validation scripts. No additional production changes after the suite.",
+  "results": [
+    {
+      "file": "dbg.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "t9.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2
+    },
+    {
+      "file": "t9b.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.8
+    },
+    {
+      "file": "t9c.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.3
+    },
+    {
+      "file": "t9d.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 48.3
+    },
+    {
+      "file": "t9e.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.5
+    },
+    {
+      "file": "t9f.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 4.6
+    },
+    {
+      "file": "tads.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tart_design.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tbal.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 13.1
+    },
+    {
+      "file": "tblueprint.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.4
+    },
+    {
+      "file": "tbplus_payback.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 52.8
+    },
+    {
+      "file": "tbplus_scenarios.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 8.1
+    },
+    {
+      "file": "tbplus.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tbugs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tc23_crash_repairs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tc24_requests.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tc27_availability.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tc29_climate_bubbles.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tcalm.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 10.8
+    },
+    {
+      "file": "tcancellation.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tcandidate22.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6,
+      "retested": true
+    },
+    {
+      "file": "tcapacity.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tclim.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.6
+    },
+    {
+      "file": "tclimate33.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 4
+    },
+    {
+      "file": "tclock24.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tcomeback36_save.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "tcomeback36.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.9
+    },
+    {
+      "file": "tcomplaint_capacity.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tcomplaint_hardening.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tcomplaints.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tdelegation.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tdrama.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 18.8
+    },
+    {
+      "file": "tfeedback_interactions.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tfeedback35_equivalence.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.8
+    },
+    {
+      "file": "tfeedback35.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tfin.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1
+    },
+    {
+      "file": "tfinal_repairs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.1
+    },
+    {
+      "file": "tfinancial_trust.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tfix.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    },
+    {
+      "file": "tfollowup_repairs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.8
+    },
+    {
+      "file": "tfuzz.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 31.8
+    },
+    {
+      "file": "tgestures.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tguidance_banner.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1
+    },
+    {
+      "file": "tlayout_hierarchy.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tmanagement.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tmenu_touch.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tp.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 4.5
+    },
+    {
+      "file": "tp2.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 9.4
+    },
+    {
+      "file": "tpause_policy.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tperformance.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tproperty_ui.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tr.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "treporting34_equivalence.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1.7
+    },
+    {
+      "file": "treporting34.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "treview_repairs.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 1
+    },
+    {
+      "file": "tsandbox_build_pause.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tsandbox.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.1
+    },
+    {
+      "file": "tsave_recovery.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2
+    },
+    {
+      "file": "tsc.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 8.1
+    },
+    {
+      "file": "tsection32.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tsoft_audio.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tstafffirst.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tstaffing_compare.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.1
+    },
+    {
+      "file": "tstatus_hierarchy.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tsystems.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.7
+    },
+    {
+      "file": "tthreefloor_hardening.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 8.6
+    },
+    {
+      "file": "tthreefloor_journeys.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 3.2
+    },
+    {
+      "file": "tthreefloor_parity.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.8,
+      "retested": true
+    },
+    {
+      "file": "tthreefloor_save.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.7
+    },
+    {
+      "file": "tthreefloor.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tv.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "tvert.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 2.4
+    },
+    {
+      "file": "tvisual30.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "file": "tvisual31.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.3
+    },
+    {
+      "file": "tw.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "file": "twalk.mjs",
+      "passed": true,
+      "exit": 0,
+      "seconds": 0.4
+    }
+  ]
+}

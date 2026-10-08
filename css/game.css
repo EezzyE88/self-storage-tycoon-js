@@ -1020,3 +1020,13 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .section-menu-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 #ui .section-menu-options button { min-height:48px; padding:8px; border-radius:8px; background:var(--paper2); color:var(--ink); font:inherit; font-weight:700; }
 #ui .sheet:has([data-section-menu]) .section-shortcuts { display:none; }
+
+/* Comeback Yard: compact property progress with a reachable close while details scroll. */
+#ui .tut.comeback:not(.min) { max-height: min(52dvh, 430px); overflow-y:auto; }
+#ui .tut.comeback .ch { position:sticky; top:0; z-index:2; background:#203740; margin-top:0; padding:4px 0; }
+#ui .tut.comeback .ch button { min-height:44px; min-width:44px; }
+#ui .tut.comeback .comeback-current { font-size:13px; margin:8px 0; }
+#ui .tut.comeback .comeback-details summary { min-height:44px; display:flex; align-items:center; cursor:pointer; }
+#ui .tut.comeback .btn { min-height:44px; }
+#ui .tut.comeback.min > :not(.ch) { display:none; }
+#ui.has-sheet .tut.comeback.min { display:none; }

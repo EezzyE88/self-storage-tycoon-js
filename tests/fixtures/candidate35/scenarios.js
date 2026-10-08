@@ -2,15 +2,9 @@
 // Every scenario shows its goals and fail condition from the first minute.
 import { newState, Sim } from './sim.js';
 import { makeMaple } from './maple.js';
-import { G, WORK } from './data.js';
-import { COMEBACK_GOALS, comebackProgress, isComeback } from './comeback.js';
+import { G } from './data.js';
 
 export const SCENARIOS = {
-  comeback: {
-    name: 'The Comeback Yard',
-    blurb: 'Six drive-up spaces need make-ready. Spend your own work hours, or hire a Porter and preserve time for the office. Restore the wing at your own pace.',
-    goals: COMEBACK_GOALS, deadline: null, fail: null,
-  },
   turnaround: {
     name: 'Maple Turnaround',
     blurb: 'The previous owner let Maple Street slide: broken lights, a failing gate, dirty loading bays and ten empty units. Legacy rents are low and cash is thin.',
@@ -45,8 +39,7 @@ function prebuild(sim, list) {
 }
 function freshBooks(s) { s.today = { day: 1, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; s.days = []; s.milestones = {}; }
 
-export function makeScenario(id, seed = 4401) {
-  if (id === 'comeback') return makeComeback(seed);
+export function makeScenario(id) {
   if (id === 'turnaround') {
     const sim = makeMaple(4401); const s = sim.s;
     s.mode = 'scenario'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true;
@@ -109,31 +102,6 @@ export function makeScenario(id, seed = 4401) {
   return null;
 }
 
-
-export function makeComeback(seed = 4401) {
-  const sim = makeMaple(seed), s = sim.s;
-  s.mode = 'scenario'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.lesson = null; s.open = true; s.speed = 0;
-  // Starting condition only: a working core, six turnover spaces, and normal economy coefficients.
-  s.cash = 1150; s.policies.ownerChores = false;
-  s.tasks = []; for (const a of s.agents) { a.task = null; a.queue = []; }
-  for (const o of Object.values(s.objects)) o.cond = 1;
-  for (const cart of s.carts) cart.cond = 1;
-  for (const d of s.dirt) d.fill(0);
-  const targets = sim.objs('unit').filter(u => u.access === 'drive' && u.num >= 101 && u.num <= 106).sort((a,b) => a.num-b.num);
-  for (const u of sim.objs('unit')) if (!u.lease) u.commercial = 'ready';
-  for (const u of targets) {
-    const L = s.leases[u.lease]; if (L) { delete s.tenants[L.tenant]; delete s.leases[L.id]; }
-    u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t;
-    sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Make-ready ' + u.name, work: WORK.makeready });
-  }
-  s.visits = s.visits.filter(v => !v.tenant || s.tenants[v.tenant]);
-  s.scenario = { id: 'comeback', name: SCENARIOS.comeback.name, v: 1, goals: COMEBACK_GOALS.map(g => ({ ...g })),
-    targets: targets.map(u => ({ id:u.id, ids:[u.id], num:u.num, x:u.x,y:u.y,w:u.w,h:u.h,f:u.f||0, access:u.access, env:u.env, dir:[...u.dir] })),
-    deadline: null, fail: null, status: 'active', ownerDone: [], staffDone: [], earned: [false,false,false], acknowledged: false };
-  freshBooks(s); s.ledger = []; s.lastCommit = null;
-  sim.markDirty(); sim.rebuild(); return sim;
-}
-
 // Sandbox with setup options (GDD §45; solidified sandbox v1).
 // Business: limited cash, everything costs money and time. Free Build: unlimited funds (every cost still recorded), optional instant construction.
 export const SB_PRESETS = {
@@ -169,7 +137,6 @@ export function makeSandbox(o = {}) {
 
 export function scenarioProgress(sim) {
   const sc = sim.s.scenario; if (!sc) return null;
-  if (isComeback(sim.s)) return comebackProgress(sim).goals;
   return sc.goals.map((g) => ({ ...g, cur: sim.metric(g.k), met: sim.goalMet(g) }));
 }
 

@@ -1,8 +1,9 @@
+import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
 import { climateSuggestionText } from './climateavailability.js';
 import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget, reviewRemedy } from './complaints.js';
 import { complaintCopy, requestCopy } from './feedbackcopy.js';
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
-import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H } from './data.js';
+import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
@@ -277,6 +278,16 @@ export class UI {
       case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
       case 'acquire': { const r = this.g.acquire(v, el.dataset.m); this.toast(r.msg, r.ok ? 'good' : 'bad'); this.renderSheet(true); break; }
       case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
+      case 'comebackClose': if (this.sim.s.scenario?.status === 'won') this.do({ type: 'comebackAck' }); this.scMin = true; this.renderTut(true); break;
+      case 'comebackWork': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('operate'); this.jumpSection('Work queue'); break;
+      case 'comebackHire': this.scMin = true; this.renderTut(true); this.hireRoleFocus = 'porter'; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); break;
+      case 'comebackUnit': {
+        const t = this.sim.s.scenario?.targets?.find(t => t.id === +v);
+        const us = t ? targetUnits(this.sim.s, t) : [];
+        const u = us.find(u => !unitInService(this.sim.s, u)) || us[0];
+        if (u) { this.scMin = true; this.renderTut(true); this.setTab(null); this.setView(u.f || 0); this.rend.lookAt(u.x + u.w/2, u.y + u.h/2); this.select(u.id); }
+        break;
+      }
       case 'scenMin': this.scMin = !this.scMin; this.renderTut(true); break;
       case 'saveCode': this.showSave(); break;
       case 'saveFile': if(this.sim.s.hall.length>2)this.toast('This expanded save requires a build with multi-floor support.');this.g.saveFile(); break;
@@ -351,6 +362,7 @@ export class UI {
   // A different game/property starts from clean transient UI. Only the save-owned view is carried over (validated).
   resetSession(view) {
     this.sectionMenuKey = null; this.sectionChoice = null;
+    this.scMin = true; this.scKey = null;
     if (this.rend.setOverlay) this.rend.setOverlay(null);
     if (this.rend.setPreview) this.rend.setPreview(null);
     this.verticalReview = null; this.verticalQuote = null; this.verticalPreviousView = null; this.verticalPreviewing = false;
@@ -1112,7 +1124,7 @@ export class UI {
       const fix = (m) => /gate/i.test(m) ? (sim.objs('gate').length ? '' : this.issueBtn('Place a gate', 'gate')) : /No operating office/.test(m) ? (sim.objs('office').length ? '<small> (being built)</small>' : this.issueBtn('Place an office', 'office')) : /Office door/.test(m) ? this.issueBtn('Pave a walkway', 'walk') : /commissioned/.test(m) ? (nReady ? `<button class="btn sm go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission ${nReady} ready</button>` : nUnits ? '<small> (units under construction)</small>' : this.issueBtn('Build units', 'du5x10')) : '';
       h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)} ${fix(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
     }
-    if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>Deadline</span><span>Day ${s.scenario.deadline} (${s.scenario.status})</span></div>`; }
+    if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>${isComeback(s)?'Pacing':'Deadline'}</span><span>${isComeback(s)?`No deadline (${s.scenario.status})`:`Day ${s.scenario.deadline} (${s.scenario.status})`}</span></div>`; }
     const growthPlan = this.growthPlanArgs ? sim.plan(this.growthPlanArgs) : null;
     if (growthPlan && this.growthPlanArgs.rush && (s.coTier || 1) >= 2 && !sim.instantOn() && growthPlan.dur) {
       growthPlan.cost = Math.round(growthPlan.cost * 1.25); growthPlan.dur *= 0.5;
@@ -1306,7 +1318,8 @@ export class UI {
       case 'power_shed': this.toast(`Power capacity exceeded - ${e.name} shut off`, 'bad'); this.sfx('attention'); break;
       case 'power_restored': break;
       case 'sb_goal': this.sfx('milestone'); this.toast(`Goal met: ${e.label}. Keep playing - the facility is still yours.`, 'good'); break;
-      case 'scenario_end': this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
+      case 'comeback_goal': this.toast(e.label + ' · complete', 'good'); this.renderTut(true); break;
+      case 'scenario_end': if (e.comeback) this.scMin = false; this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
       case 'rent_review': this.sfx('rent'); break;
       case 'manager': if (!e.request && s.speed <= 2) this.toast(/^(Clerk|Manager) /.test(e.msg) ? e.msg : 'Manager: ' + e.msg); this.renderFeed(true); break;
       case 'pastdue': { const u = s.objects[e.unit]; if (s.speed <= 2) this.toast(`${u ? u.name : 'A unit'} missed its rent payment`); break; }
@@ -1634,6 +1647,7 @@ export class UI {
   fmtGoal(g, v) { return g.fmt === 'pct' ? pct(v) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
   renderScenario(force) {
     const sim = this.sim, s = sim.s, sc = s.scenario, box = this.$('tut');
+    if (isComeback(s)) { this.renderComeback(force); return; }
     if(this.scMin==null) this.scMin=true;
     if(this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
     const prog = scenarioProgress(sim);
@@ -1647,10 +1661,40 @@ export class UI {
       <p class="fail ${sc.badDays ? 'on' : ''}">Fail: net liquid position (cash minus committed bills and credit line) below ${money(sc.fail.cashBelow)} for ${sc.fail.cashDays} days${sc.badDays ? ` · ${sc.badDays} so far` : ''}, or the deadline passes. Reserve is advisory.</p>
       ${sc.status !== 'active' ? `<p>${sc.status === 'won' ? `Finished on day ${sc.endDay}. Keep playing this property as a sandbox if you like.` : esc(sc.why || '')}</p><div class="row"><button class="btn pri" data-a="scenarios">Scenarios</button></div>` : ''}</div>`;
   }
+  renderComeback(force = false) {
+    if (this.pointerBusy && !force) return;
+    const box = this.$('tut'), previous = box.querySelector?.('.comeback'), detailOpen = !!previous?.querySelector('.comeback-details')?.open, scroll = previous?.scrollTop || 0;
+    const sim = this.sim, s = sim.s, c = s.scenario, p = comebackProgress(sim);
+    if (c.status === 'won' && !c.acknowledged) this.scMin = false;
+    if (this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
+    const owner = s.staff.find(st => st.role === 'owner'), left = owner ? sim.workRemaining(owner) : 0;
+    const porter = s.staff.find(st => st.role === 'porter'), pay = ROLES.porter.wage;
+    const next = p.goals.find(g => !g.met);
+    const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p, left, !!porter, sim.financialPosition(), s.tasks.map(t=>[t.obj,t.assigned,t.queued])]);
+    if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
+    const won = c.status === 'won', unavailable = c.status === 'unavailable';
+    const detail = unavailable ? `<p>${esc(c.notice)}</p>` : `
+      <h4>${won ? 'You brought the yard back.' : esc(next?.label || 'Keep improving the yard')}</h4>
+      <p>${won ? 'Six original unit spaces restored. Your recovery plan worked. Keep operating this facility and decide what to improve next.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>
+      <div class="comeback-current">${p.restored}/6 spaces usable now · ${p.ready} vacant ready · ${p.occupied} occupied${p.reserved ? ` · ${p.reserved} reserved` : ''}</div>
+      <div class="row wrap"><button class="btn" data-a="comebackWork">Review work</button><button class="btn" data-a="comebackHire">Review Porter hire</button></div>
+      <details class="comeback-details" ${detailOpen?'open':''}><summary>Goals and recovery choices</summary>
+        <ul class="goals">${p.goals.map(g => `<li class="${g.met?'met':''}"><span class="ck">${g.met?'&#10003;':''}</span><span>${esc(g.label)}</span><b>${g.k==='comebackWing'?`${p.restored}/6`:g.met?'Done':'Pending'}</b></li>`).join('')}</ul>
+        <p>Plan goal: complete two distinct restoration spaces through Owner work, or one target make-ready job through employed staff. Hiring alone does not complete it.</p>
+        <p><b>Owner-led:</b> no direct make-ready fee · ${sim.taskHours({total:WORK.makeready})}h per job · ${left}h of ${ROLES.owner.workHours}h available today. Office work also uses your capacity; you leave the desk while working on units.</p>
+        <p><b>Staff-led:</b> Porter ${money(pay,true)}/employed day · ${ROLES.porter.workHours} work hours/day · ${money(pay*30)} over 30 employed days. No upfront hiring fee. Payroll accrues by employment at 7 AM and settles weekly. ${porter?'A Porter is employed.':'Hiring preserves Owner capacity when staff handle the job.'}</p>
+        ${this.spendingHtml(0, porter?0:pay, porter?'with current staff':'after one Porter hire')}
+        <p>No lease or profit streak is needed to finish. Usable occupied units count; they are not vacant inventory. Goal achievements remain earned if conditions later change.</p>
+        <div class="row wrap">${c.targets.map(t => `<button class="btn sm" data-a="comebackUnit" data-v="${t.id}" ${targetUnits(s,t).length?'':'disabled'}>${targetInService(s,t)?'✓ ':''}Space ${t.num}</button>`).join('')}</div>
+        ${p.missing.length?`<p class="note">Missing original spaces: ${p.missing.join(', ')}. Rebuild the original footprint and door direction to reconnect a target; splitting a target maps both replacement units. Deletion never counts as restoration.</p>`:''}
+      </details>`;
+    box.innerHTML = `<div class="tut scen comeback ${this.scMin?'min':''}"><div class="ch"><span>Comeback · ${unavailable?'progress unavailable':won?'rescued':`${p.restored}/6 restored`}</span><button class="mini" data-a="${this.scMin?'scenMin':'comebackClose'}" aria-label="${this.scMin?'Show Comeback goals':'Close Comeback panel'}">${this.scMin?'Show':'Close'}</button></div>${detail}${won&&!this.scMin?'<button class="btn pri" data-a="comebackClose">Keep operating this property</button>':''}</div>`;
+    if (box.firstElementChild) box.firstElementChild.scrollTop = scroll;
+  }
   showScenarios() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Scenarios</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
-      <p class="note">Each scenario starts with its goals and fail condition in view. Goals are checked every morning.</p>
-      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map((g) => `<li>${esc(g.label)}</li>`).join('')}<li>Deadline: day ${S.deadline}</li><li class="f">Fail: cash minus committed bills and credit line below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li></ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
+      <p class="note">Comeback Yard has no deadline; its goals update as you restore the property. Other scenarios use morning checkpoints and the limits shown below.</p>
+      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map(g => `<li>${esc(g.label)}</li>`).join('')}${id==='comeback'?'<li>No deadline · keep playing after the rescue</li>':`<li>Deadline: day ${S.deadline}</li><li class="f">Fail: cash minus committed bills and credit line below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li>`}</ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
   }
   showSandbox() {
@@ -1926,7 +1970,7 @@ export class UI {
     this.title = true;
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
       <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
-      <button class="btn" data-a="scenarios">Scenarios <small>Turnaround, Go Vertical, Climate Boom</small></button>
+      <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
       <button class="btn" data-a="sandboxSetup">Sandbox <small>Business or Free Build, on your terms</small></button>
       <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>
       <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
@@ -1976,7 +2020,7 @@ export class UI {
   calendarEvents() {
     const s = this.sim.s, now = s.t, day = dayOf(now), E = [];
     const add = (t, label, detail, kind='') => { if (Number.isFinite(t) && t >= now - 1) E.push({ t, label, detail, kind }); };
-    if (s.scenario && s.scenario.status === 'active') add((s.scenario.deadline - 1) * 1440 + 7 * 60, 'Final scenario goal checkpoint', s.scenario.name || 'Scenario');
+    if (s.scenario && s.scenario.status === 'active' && Number.isFinite(s.scenario.deadline)) add((s.scenario.deadline - 1) * 1440 + 7 * 60, 'Final scenario goal checkpoint', s.scenario.name || 'Scenario');
     const bills = new Map();
     for (const L of Object.values(s.leases)) {
       if (L.nextBill >= day && L.status === 'current') { const x = bills.get(L.nextBill) || { n:0, amt:0 }; x.n++; x.amt += L.rent; bills.set(L.nextBill, x); }
