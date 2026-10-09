@@ -1,3 +1,4 @@
+import { portfolioCareer } from './career.js';
 // Boot, fixed-step simulation loop, input, save/load, test hooks.
 import { FINANCIAL_MINUTE } from './finance.js';
 import { Sim, fmtTime } from './sim.js';
@@ -45,16 +46,11 @@ const game = {
     const speed = this.sim.s.speed; C.active = k; const sim = C.props[k].sim; sim.s.speed = speed;
     this.attach(sim, 'switch');
   },
-  tierInfo() { // operator career: portfolio-wide rent roll + property count
-    const props = this.company ? this.company.props : [{ sim: this.sim }];
-    const roll = props.reduce((a, p) => a + p.sim.rentRoll(), 0), n = props.length;
-    let cur = TIERS[0]; for (const T of TIERS) if (roll >= T.roll && n >= T.props) cur = T;
-    return { cur, next: TIERS.find((T) => T.n === cur.n + 1) || null, roll, n };
-  },
-  syncTier() { // runs once a game-hour; tiers never go down
-    const s = this.sim.s; if (s.creative || s.scenario || (s.mode === 'tutorial' && !s.tut.done)) return;
-    const ti = this.tierInfo(); const props = this.company ? this.company.props : [{ sim: this.sim }];
-    for (const p of props) if ((p.sim.s.coTier || 1) < ti.cur.n) p.sim.dispatch({ type: 'coTier', tier: ti.cur.n });
+  tierInfo() { return portfolioCareer(this.company ? this.company.props : [{ sim: this.sim }]); },
+  syncTier() { // Once an hour, from the completed company minute; tiers never go down.
+    const ti = this.tierInfo();
+    if (!ti.target) return;
+    for (const p of ti.eligible) if ((p.sim.s.coTier || 1) < ti.target.n) p.sim.dispatch({ type: 'coTier', tier: ti.target.n });
   },
   offers() { // acquisition offers (GDD §46)
     const day = this.sim.day, n = this.company ? this.company.props.length : 1;
@@ -309,12 +305,13 @@ function stepTicks(n) {
     // Review between minutes, not just between frames: 4x can batch many ticks.
     if (!game.ui.title && sim.s.convos.length) game.ui.renderFeed();
     if (!game.ui.title && sim.s.speed === 0) break;
-    sim.step(); if (sim.events.length > 400) game.drain(); if (sim.s.t % 60 === 0) game.syncTier();
+    sim.step(); if (sim.events.length > 400) game.drain();
     for (const { p, k } of others) {
       p.sim.step();
       for (const e of p.sim.events) { const f = BG_EVENTS[e.type]; const msg = f && f(e, p.sim); if (msg) { game.note(k, msg); if (e.type !== 'lease' && e.type !== 'moveout') game.ui.toast(`${p.name}: ${msg}`, 'bad'); } }
       p.sim.events.length = 0;
     }
+    if (sim.s.t % 60 === 0) game.syncTier();
     if (!game.ui.title && sim.s.convos.length) game.ui.renderFeed();
     if (!game.ui.title && sim.s.speed === 0) break;
   }

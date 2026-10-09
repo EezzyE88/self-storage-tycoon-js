@@ -1,2 +1,2 @@
-// Comeback Yard candidate; physical-iPhone acceptance pending.
-export const BUILD = { name: 'bplus-comeback-yard-candidate-36', date: '2026-10-08' };
+// Comeback-to-career candidate; not published or physically accepted.
+export const BUILD = { name: 'bplus-comeback-career-candidate-37', date: '2026-10-09' };

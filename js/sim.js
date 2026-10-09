@@ -1,3 +1,4 @@
+import { lessonAllowed, lessonById } from './tutorial.js';
 import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';
 import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
@@ -1198,7 +1199,7 @@ export class Sim {
   act_tutFlag(a) { this.s.tut.flags[a.flag] = true; if (this.s.lesson) this.s.lesson.flags[a.flag] = true; return { ok: true }; }
   act_lesson(a) { // optional lessons after graduation (tutorial.js LESSONS)
     const s = this.s;
-    if (a.op === 'start') { if (s.tut && s.tut.on) return { ok: false, msg: 'Finish the tutorial first' }; s.lesson = { id: a.id, idMark: s.nextId, built: [], flags: {}, entered: false }; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
+    if (a.op === 'start') { if ((s.tut && s.tut.on) || !lessonAllowed(this, lessonById(a.id))) return { ok: false, msg: 'This lesson is not available at this property' }; s.lesson = { id: a.id, idMark: s.nextId, built: [], flags: {}, entered: false }; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
     if (a.op === 'end') { s.lesson = null; return { ok: true }; }
     if (a.op === 'dismiss') { s.lessonsSeen = s.lessonsSeen || {}; s.lessonsSeen[a.id] = this.day; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
     return { ok: false };

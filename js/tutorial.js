@@ -1,3 +1,4 @@
+import { careerEligibility } from './career.js';
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
 import { TOOLS } from './data.js';
@@ -261,12 +262,13 @@ export function tutorialTick(sim) {
   }
 }
 
-export const lessonAllowed = (sim, L) => L && (L.generic || (sim.s.market.id === 'maple' && !sim.s.mirror && sim.s.tut && sim.s.tut.done && sim.s.mode === 'tutorial'));
+export const lessonAllowed = (sim, L) => L && careerEligibility(sim.s).eligible && (L.generic || (sim.s.market.id === 'maple' && !sim.s.mirror && sim.s.tut && sim.s.tut.done && sim.s.mode === 'tutorial'));
 export function lessonTick(sim) {
-  const s = sim.s; if ((s.tut && s.tut.on) || s.scenario) return;
+  const s = sim.s; if ((s.tut && s.tut.on) || !careerEligibility(s).eligible) return;
   const ls = s.lesson;
   if (ls) {
     const b = lessonById(ls.id); if (!b) { s.lesson = null; return; }
+    if (!lessonAllowed(sim, b)) return;
     if (!ls.entered) { ls.entered = true; if (b.enter) b.enter(sim); sim.emit('tut_beat', { lesson: ls.id }); }
     if (b.check(sim)) { s.lessonsDone = s.lessonsDone || {}; s.lessonsDone[ls.id] = sim.day; s.lesson = null; sim.emit('lesson_done', { id: ls.id, title: b.title }); }
     return;

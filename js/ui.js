@@ -1,3 +1,4 @@
+import { careerEligibility } from './career.js';
 import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
 import { climateSuggestionText } from './climateavailability.js';
 import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget, reviewRemedy } from './complaints.js';
@@ -280,6 +281,8 @@ export class UI {
       case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
       case 'comebackClose': if (this.sim.s.scenario?.status === 'won') this.do({ type: 'comebackAck' }); this.scMin = true; this.renderTut(true); break;
       case 'comebackWork': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('operate'); this.jumpSection('Work queue'); break;
+      case 'comebackReadiness': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Growth Readiness'); break;
+      case 'comebackCareer': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Operator career'); break;
       case 'comebackHire': this.scMin = true; this.renderTut(true); this.hireRoleFocus = 'porter'; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); break;
       case 'comebackUnit': {
         const t = this.sim.s.scenario?.targets?.find(t => t.id === +v);
@@ -898,7 +901,7 @@ export class UI {
     const periods = monthlyReportPeriods(R);
     const reportDates = periods.legacy ? `Saved legacy report · generated ${Number.isInteger(R.day) ? `Day ${R.day}` : 'date not recorded'}. Financial dates were not recorded. Shopper counts: ${periodText(periods.shoppers)} (legacy window; original totals retained).` : `Saved report · completed ${periodText(periods.financial)} · generated Day ${R.day}. Shopper totals and operating contribution use this completed period; occupancy and rent roll are snapshots at generation.`;
     return `<h3>Monthly report · Month ${R.month}</h3><p class="note">${esc(reportDates)}</p><div class="report"><div class="grade g${R.grade}">${R.grade}</div><div class="rgrow">
-      <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span>${R.upkeep != null ? `<span>Upkeep</span><span class="${R.upkeep < 6 ? 'neg' : ''}">${R.upkeep}/10</span><span>Growth</span><span>${R.growPts}/15</span>` : ''}<span>Unconverted shoppers</span><span>${lostN}</span></div>${R.stale ? `<p class="note">${R.stale} job${R.stale > 1 ? 's' : ''} waiting 2+ days.</p>` : ''}${R.upkeep != null ? `<p class="note">Rent roll ${R.growth >= 0 ? '+' : ''}${Math.round(R.growth * 100)}% over 3 months.</p>` : ''}${(() => { const ti = this.g.tierInfo && !s.scenario && this.g.tierInfo(), nx = ti && ti.next; return nx ? `<p class="note goalnote"><b>Next goal: ${esc(nx.name)}.</b> Rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo (${Math.round(Math.min(1, ti.roll / nx.roll) * 100)}%)${nx.props > 1 ? `, properties ${ti.n} of ${nx.props}` : ''}. Unlocks ${nx.perks.map(esc).join('; ')}.</p>` : ''; })()}
+      <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span>${R.upkeep != null ? `<span>Upkeep</span><span class="${R.upkeep < 6 ? 'neg' : ''}">${R.upkeep}/10</span><span>Growth</span><span>${R.growPts}/15</span>` : ''}<span>Unconverted shoppers</span><span>${lostN}</span></div>${R.stale ? `<p class="note">${R.stale} job${R.stale > 1 ? 's' : ''} waiting 2+ days.</p>` : ''}${R.upkeep != null ? `<p class="note">Rent roll ${R.growth >= 0 ? '+' : ''}${Math.round(R.growth * 100)}% over 3 months.</p>` : ''}${(() => { const ti = this.g.tierInfo && careerEligibility(s).eligible && this.g.tierInfo(), nx = ti && ti.next; return nx ? `<p class="note goalnote"><b>Next goal: ${esc(nx.name)}.</b> Career rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo (${Math.round(Math.min(1, ti.roll / nx.roll) * 100)}%)${nx.props > 1 ? `, career properties ${ti.n} of ${nx.props}` : ''}. Unlocks ${nx.perks.map(esc).join('; ')}.</p>` : ''; })()}
       <small class="note">${esc(R.season)}${R.comps.length ? ' · Competing with ' + esc(R.comps.join(', ')) : ''}</small></div></div>
       ${R.sug.length ? `<div class="list sug">${R.sug.map((t, i) => `<div class="item"><span class="num">${i + 1}</span><div class="grow">${esc(climateSuggestionText(t))}</div></div>`).join('')}</div>` : '<p class="note">Nothing urgent. Keep it up.</p>'}`;
   }
@@ -1131,12 +1134,13 @@ export class UI {
     }
     const readiness = sim.growthReadiness(growthPlan);
     h += `<h3>Growth Readiness</h3>${growthPlan ? `<p class="note">Selected proposal: ${esc(growthPlan.label)} · ${money(growthPlan.cost)}. Includes selected construction only.</p>` : ''}<p class="note"><b>${readiness.title}</b></p><div class="list">${readiness.checks.map((c) => `<div class="item"><div class="grow"><b>${c.ok ? '&#10003;' : '!'} ${c.label}</b><small>${esc(c.detail)}</small></div></div>`).join('')}</div><p class="note">LAYOUT → OPERATIONS → ECONOMICS → GROWTH. Complete expansion packages aim for 12–18 months; reuse of existing infrastructure and spare capacity can pay back faster. Evidence is advisory, not a hidden score or build restriction.</p>`;
-    if (this.g.tierInfo && !s.creative && !s.scenario && !(s.mode === 'tutorial' && !s.tut.done)) {
+    if (this.g.tierInfo && careerEligibility(s).eligible) {
       const ti = this.g.tierInfo(), nx = ti.next;
       h += `<h3>Operator career</h3><div class="career"><div class="tier"><small>Level ${ti.cur.n} of ${TIERS.length}</small><b>${ti.cur.name}</b></div>`;
       if (nx) { const pr = Math.min(1, ti.roll / nx.roll), pp = Math.min(1, ti.n / nx.props);
-        h += `<div class="goal"><span>Next: <b>${nx.name}</b></span><div class="bar"><i style="width:${Math.round(pr * 100)}%"></i></div><small>Portfolio rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? ` · Properties ${ti.n} of ${nx.props}` : ''}</small>${nx.props > 1 ? `<div class="bar"><i style="width:${Math.round(pp * 100)}%"></i></div>` : ''}<small class="perks">Unlocks: ${nx.perks.map(esc).join(' · ')}</small></div>`; }
-      h += `<small class="perks">Your perks: ${TIERS.filter((T) => T.n <= ti.cur.n).flatMap((T) => T.perks).map(esc).join(' · ')}</small></div>`;
+        h += `<div class="goal"><span>Next: <b>${nx.name}</b></span><div class="bar"><i style="width:${Math.round(pr * 100)}%"></i></div><small>Career rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? ` · Career properties ${ti.n} of ${nx.props}` : ''}</small>${nx.props > 1 ? `<div class="bar"><i style="width:${Math.round(pp * 100)}%"></i></div>` : ''}<small class="perks">Unlocks: ${nx.perks.map(esc).join(' · ')}</small></div>`; }
+      if (ti.excluded?.length) h += `<details class="explanation"><summary>Career participation</summary><p>Only eligible properties count toward promotion.</p>${ti.excluded.map(p => `<p>${esc(p.name || 'Property')}: ${esc(careerEligibility(p.sim.s).reason)}</p>`).join('')}</details>`;
+      h += `<small class="perks">Unlocked perks: ${TIERS.filter((T) => T.n <= ti.cur.n).flatMap((T) => T.perks).map(esc).join(' · ')}</small></div>`;
     }
     h += `<h3>Customer experience</h3><div class="list">${Object.entries(EXP).map(([k, n]) => { const v = s.exp[k]; return `<div class="row" style="font-size:13px"><span style="width:92px;color:var(--muted)">${n}</span><div class="bar"><i class="${v < 0.5 ? 'r' : v < 0.7 ? 'a' : ''}" style="width:${Math.round(v * 100)}%"></i></div><b class="num" style="width:38px;text-align:right">${pct(v)}</b></div>`; }).join('')}</div>
       <p class="note">Reputation ${pct(sim.reputation())}. Built from what customers actually experienced on the property, not from what you built.</p>`;
@@ -1146,7 +1150,7 @@ export class UI {
       const chapters = [...new Set(BEATS.map((b) => b.chapter))];
       h += `<h3>Tutorial</h3><div class="list">${chapters.map((c) => { const idx = BEATS.map((b, i) => b.chapter === c ? i : -1).filter((i) => i >= 0); const done = s.tut.done || idx.every((i) => i < s.tut.beat); const cur = !done && idx.includes(s.tut.beat); return `<div class="item"><div class="grow"><b>${c}</b></div><span class="pill ${done ? 'g' : cur ? 'a' : ''}">${done ? 'Done' : cur ? 'Now' : 'Later'}</span></div>`; }).join('')}</div>`;
     }
-    if (!s.scenario && !(s.tut && s.tut.on)) {
+    if (careerEligibility(s).eligible && !(s.tut && s.tut.on)) {
       const avail = LESSONS.filter((L) => lessonAllowed(sim, L)); s.lessonsDone = s.lessonsDone || {};
       if (avail.length) h += `<h3>Lessons</h3><div class="list">${avail.map((L) => `<div class="item"><div class="grow"><b>${L.title}</b><small>${L.steps.length} steps${s.lessonsDone[L.id] ? ` · done Day ${s.lessonsDone[L.id]}` : ''}</small></div>${s.lesson && s.lesson.id === L.id ? '<span class="pill b">In progress</span>' : `<button class="btn sm ${s.lessonsDone[L.id] ? '' : 'pri'}" data-a="lessonStart" data-v="${L.id}" ${s.lesson ? 'disabled' : ''}>${s.lessonsDone[L.id] ? 'Replay' : 'Start'}</button>`}</div>`).join('')}</div>`;
     }
@@ -1381,7 +1385,8 @@ export class UI {
   renderTut(force = false) {
     const s = this.sim.s, box = this.$('tut');
     if(!this.title && !this.tutMin && curBeat(this.sim)) this.pauseForPopup('tutorial'); else this.resumePopup('tutorial');
-    if (s.scenario && !this.title) { this.renderScenario(force); return; }
+    if (s.scenario && !this.title && !(careerEligibility(s).eligible && (s.lesson || s.lessonOffer))) { this.renderScenario(force); return; }
+    this.resumePopup('scenario');
     const b = this.title ? null : curBeat(this.sim);
     if (!b) {
       this.guideStep = null;
@@ -1675,10 +1680,10 @@ export class UI {
     const won = c.status === 'won', unavailable = c.status === 'unavailable';
     const detail = unavailable ? `<p>${esc(c.notice)}</p>` : `
       <h4>${won ? 'You brought the yard back.' : esc(next?.label || 'Keep improving the yard')}</h4>
-      <p>${won ? 'Six original unit spaces restored. Your recovery plan worked. Keep operating this facility and decide what to improve next.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>
+      <p>${won ? 'Yard rescued. Keep it working and lease ready vacancies. Review demand and cash before investing.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>
       <div class="comeback-current">${p.restored}/6 spaces usable now · ${p.ready} vacant ready · ${p.occupied} occupied${p.reserved ? ` · ${p.reserved} reserved` : ''}</div>
-      <div class="row wrap"><button class="btn" data-a="comebackWork">Review work</button><button class="btn" data-a="comebackHire">Review Porter hire</button></div>
-      <details class="comeback-details" ${detailOpen?'open':''}><summary>Goals and recovery choices</summary>
+      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won && c.acknowledged ? '<button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
+      <details class="comeback-details" ${detailOpen?'open':''}><summary>${won && c.acknowledged ? 'Rescue history' : 'Goals and recovery choices'}</summary>
         <ul class="goals">${p.goals.map(g => `<li class="${g.met?'met':''}"><span class="ck">${g.met?'&#10003;':''}</span><span>${esc(g.label)}</span><b>${g.k==='comebackWing'?`${p.restored}/6`:g.met?'Done':'Pending'}</b></li>`).join('')}</ul>
         <p>Plan goal: complete two distinct restoration spaces through Owner work, or one target make-ready job through employed staff. Hiring alone does not complete it.</p>
         <p><b>Owner-led:</b> no direct make-ready fee · ${sim.taskHours({total:WORK.makeready})}h per job · ${left}h of ${ROLES.owner.workHours}h available today. Office work also uses your capacity; you leave the desk while working on units.</p>
@@ -1756,7 +1761,7 @@ export class UI {
     const cash = Math.round(s.cash);
     const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small>${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }
     if (now - (this.goalT || 0) > 1000) { // next career goal, always visible as a thin bar under the cash
-      this.goalT = now; const gb = this.$('goalbar'); const on = this.g.tierInfo && !this.title && !s.creative && !s.scenario && !(s.mode === 'tutorial' && !s.tut.done);
+      this.goalT = now; const gb = this.$('goalbar'); const on = this.g.tierInfo && !this.title && careerEligibility(s).eligible;
       const ti = on && this.g.tierInfo(), nx = ti && ti.next; gb.hidden = !nx;
       if (nx) { const pr = Math.min(1, Math.min(ti.roll / nx.roll, ti.n / nx.props)); gb.firstChild.style.width = Math.round(pr * 100) + '%'; gb.title = `Next: ${nx.name} - rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? `, ${ti.n} of ${nx.props} properties` : ''}`; }
     }

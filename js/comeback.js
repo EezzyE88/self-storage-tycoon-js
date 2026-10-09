@@ -36,16 +36,20 @@ export function comebackProgress(sim) {
     owner: c?.ownerDone?.length || 0, staff: c?.staffDone?.length || 0,
     goals: COMEBACK_GOALS.map((g, k) => ({ ...g, met: !!c?.earned?.[k], cur: k === 0 ? Math.min(1, restored) : k === 1 ? +(!!c?.staffDone?.length || (c?.ownerDone?.length || 0) >= 2) : restored })) };
 }
-export function normalizeComeback(s) {
-  if (!isComeback(s)) return;
+export function validComeback(s) {
   const c = s.scenario, ts = c.targets;
-  const valid = c.v === 1 && Array.isArray(ts) && ts.length === 6 && new Set(ts.map(t => t?.id)).size === 6 &&
+  return c.v === 1 && Array.isArray(ts) && ts.length === 6 && new Set(ts.map(t => t?.id)).size === 6 &&
     ts.every(t => t && int(t.id) && t.id > 0 && int(t.num) && [t.x,t.y,t.f,t.w,t.h].every(int) && t.w > 0 && t.h > 0 && t.x + t.w <= s.W && t.y + t.h <= s.H && t.f < s.hall.length && t.access === 'drive' && t.env === 'std' && Array.isArray(t.dir) && t.dir.length === 2 && Math.abs(t.dir[0]) + Math.abs(t.dir[1]) === 1 && t.dir.every(Number.isInteger) && Array.isArray(t.ids) && t.ids.length > 0 && t.ids.length <= 4 && t.ids.every(id => int(id) && id > 0) && new Set(t.ids).size === t.ids.length) &&
     ts.every((t,i) => ts.slice(i+1).every(u => t.f !== u.f || t.x+t.w <= u.x || u.x+u.w <= t.x || t.y+t.h <= u.y || u.y+u.h <= t.y)) &&
     new Set(ts.flatMap(t => t.ids)).size === ts.reduce((n,t) => n + t.ids.length,0) &&
     ['ownerDone','staffDone'].every(k => Array.isArray(c[k]) && c[k].every(id => ts.some(t => t.id === id)) && new Set(c[k]).size === c[k].length) &&
     Array.isArray(c.earned) && c.earned.length === 3 && c.earned.every(v => typeof v === 'boolean') && typeof c.acknowledged === 'boolean' &&
     ['active','won'].includes(c.status) && (c.status === 'won') === c.earned.every(Boolean) && (!c.acknowledged || c.status === 'won') && (!c.earned[2] || c.earned[0]) && (!c.earned[1] || c.staffDone.length > 0 || c.ownerDone.length >= 2);
+}
+export function normalizeComeback(s) {
+  if (!isComeback(s)) return;
+  const c = s.scenario;
+  const valid = validComeback(s);
   if (!valid) {
     s.scenario = { id: 'comeback', name: 'The Comeback Yard', status: 'unavailable', goals: [],
       notice: 'Comeback progress could not be read. Your property is still playable; start a new Comeback Yard for fresh goals.' };
