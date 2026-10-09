@@ -208,6 +208,7 @@ export class UI {
       case 'goTool': if (TOOLS[v]) { this.select(null); this.cat = TOOLS[v].cat; this.setTab('build'); this.pickTool(v); } break; // opening checklist shortcuts
       case 'cancelTool': this.pickTool(null); break;
       case 'confirm': this.confirmPlan(); break;
+      case 'returnGrowthProposal': this.returnGrowthProposal(); break;
       case 'flip': this.flip = !this.flip; this.replan(); break;
       case 'climate': this.climate = !this.climate; this.replan(); break;
       case 'floorChoose': this.showFloors(); break;
@@ -339,7 +340,10 @@ export class UI {
   // ------------------------------------------------------------ tabs / sheets
   setTab(t, expanded = false) {
     this.sectionMenuKey = null; this.sectionChoice = null;
-    if (t === 'growth' && this.plan && this.plan.args) this.growthPlanArgs = { ...this.plan.args };
+    if (t === 'growth' && this.plan && this.plan.args) {
+      this.growthPlanArgs = structuredClone(this.plan.args);
+      this.growthProposal = { sim: this.sim, args: this.growthPlanArgs, view: this.rend.view };
+    }
     if(t!=='feedback') { this.feedbackFocus=null; this.feedbackRequest=null; }
     this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
     if (t) this.sel = null, this.rend.setSelection(null);
@@ -364,6 +368,11 @@ export class UI {
   }
   // A different game/property starts from clean transient UI. Only the save-owned view is carried over (validated).
   resetSession(view) {
+    for (const toast of this.toasts || []) toast.el.remove();
+    this.toasts = [];
+    this.growthProposal = null; this.growthPlanArgs = null;
+    this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
+    this.cashSub = null; this.goalT = -Infinity; this.lastCoach = -Infinity;
     this.sectionMenuKey = null; this.sectionChoice = null;
     this.scMin = true; this.scKey = null;
     if (this.rend.setOverlay) this.rend.setOverlay(null);
@@ -482,7 +491,20 @@ export class UI {
     }).join('');
     return this.sheet('Build', s.creative ? 'Creative mode: instant and free' : s.sb && (s.sb.unlimited || s.sb.instant) ? [s.sb.unlimited ? 'Free Build funds' : '', s.sb.instant ? 'Instant construction' : ''].filter(Boolean).join(' · ') + '. Costs are still recorded.' : 'Place, preview, then confirm', `<div class="build-help"><button class="btn sm" data-a="handbook">Builder's handbook</button><span>How, why and when to use every build item</span></div><div class="tools">${cards}</div>`, catHtml);
   }
+  returnGrowthProposal() {
+    const saved = this.growthProposal;
+    if (!saved || saved.sim !== this.sim || !TOOLS[saved.args.tool] || !toolUnlocked(this.sim, saved.args.tool)) return false;
+    const a = saved.args;
+    this.pauseForPopup('review');
+    this.setTab(null); this.setView(this.validView(saved.view ?? a.f));
+    this.pickTool(a.tool);
+    this.flip = !!a.flip; this.climate = !!a.climate; this.rush = !!a.rush;
+    this.planArgs = { a: { ...a.a }, b: { ...a.b }, axis: a.axis, dir: a.dir };
+    this.replan(); // Requote current conditions; never spend or auto-confirm.
+    return true;
+  }
   pickTool(k) {
+    if (k) { this.growthProposal = null; this.growthPlanArgs = null; }
     if(k) {this.sheetTall=false;this.tutMin=true;this.resumePopup('tutorial');}
     if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
     // Capture the visible paused state before selecting a tool closes the Build panel.
@@ -526,7 +548,7 @@ export class UI {
       return;
     }
     const r = this.sim.dispatch({ type: 'build', ...this.plan.args });
-    if (r.ok) { this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); }
+    if (r.ok) { this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); }
     this.renderActionBar();
   }
@@ -1133,7 +1155,7 @@ export class UI {
       growthPlan.cost = Math.round(growthPlan.cost * 1.25); growthPlan.dur *= 0.5;
     }
     const readiness = sim.growthReadiness(growthPlan);
-    h += `<h3>Growth Readiness</h3>${growthPlan ? `<p class="note">Selected proposal: ${esc(growthPlan.label)} · ${money(growthPlan.cost)}. Includes selected construction only.</p>` : ''}<p class="note"><b>${readiness.title}</b></p><div class="list">${readiness.checks.map((c) => `<div class="item"><div class="grow"><b>${c.ok ? '&#10003;' : '!'} ${c.label}</b><small>${esc(c.detail)}</small></div></div>`).join('')}</div><p class="note">LAYOUT → OPERATIONS → ECONOMICS → GROWTH. Complete expansion packages aim for 12–18 months; reuse of existing infrastructure and spare capacity can pay back faster. Evidence is advisory, not a hidden score or build restriction.</p>`;
+    h += `<h3>Growth Readiness</h3>${growthPlan ? `<p class="note">Selected proposal: ${esc(growthPlan.label)} · ${money(growthPlan.cost)}. Includes selected construction only.</p>${this.growthProposal?.sim === sim ? '<button class="btn" data-a="returnGrowthProposal">Return to placement</button>' : ''}` : ''}<p class="note"><b>${readiness.title}</b></p><div class="list">${readiness.checks.map((c) => `<div class="item"><div class="grow"><b>${c.ok ? '&#10003;' : '!'} ${c.label}</b><small>${esc(c.detail)}</small></div></div>`).join('')}</div><p class="note">LAYOUT → OPERATIONS → ECONOMICS → GROWTH. Complete expansion packages aim for 12–18 months; reuse of existing infrastructure and spare capacity can pay back faster. Evidence is advisory, not a hidden score or build restriction.</p>`;
     if (this.g.tierInfo && careerEligibility(s).eligible) {
       const ti = this.g.tierInfo(), nx = ti.next;
       h += `<h3>Operator career</h3><div class="career"><div class="tier"><small>Level ${ti.cur.n} of ${TIERS.length}</small><b>${ti.cur.name}</b></div>`;

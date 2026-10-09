@@ -1,0 +1,8 @@
+PASS load/switch reset removes old messages and stale proposal without mutating save
+PASS Growth review restores exact proposal options without buying or unpausing
+PASS review cannot restore another property proposal
+PASS choosing a different tool discards reviewed proposal
+PASS production fixture 06 returns to valid $620 plan then normal debit
+PASS return requotes a proposal against changed map conditions
+6 UI regression groups passed
+PASS lifecycle: delayed cues cancelled, background silent, gesture resume, cleanup, resume race, hidden unlock

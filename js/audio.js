@@ -1,8 +1,9 @@
 // Procedural WebAudio: property sounds + calm generative music. Unlocked by the first user gesture.
 export class Audio {
-  constructor() { this.ctx = null; this.vol = { master: 0.75, sfx: 0.6, music: 0.4, amb: 0.35 }; this.last = {}; this.musicOn = true; }
+  constructor() { this.ctx = null; this.vol = { master: 0.75, sfx: 0.6, music: 0.4, amb: 0.35 }; this.last = {}; this.musicOn = true; this.background = false; this.sources = new Set(); this.reverbs = []; }
   unlock() {
-    if (this.ctx) { if (this.ctx.state !== 'running' && !document.hidden) this.ctx.resume().catch(() => {}); return; }
+    if (this.background || document.hidden) return;
+    if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().then(() => { if (!this.background && !document.hidden) { this.nextNote = this.ctx.currentTime + 0.1; this.applyVol(); } else this.ctx.suspend().catch(() => {}); }).catch(() => {}); else this.applyVol(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     const c = (this.ctx = new AC());
     // Smooth the entire mix, with headroom for several events in one simulation frame.
@@ -20,7 +21,7 @@ export class Audio {
     for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 4); }
     const wet = bus => {
       const send = c.createGain(), rv = c.createConvolver(), filter = c.createBiquadFilter();
-      send.gain.value = 0.16; rv.buffer = buf; filter.type = 'lowpass'; filter.frequency.value = 2200; filter.Q.value = 0.4;
+      send.gain.value = 0.16; rv.buffer = buf; this.reverbs.push({ rv, buf }); filter.type = 'lowpass'; filter.frequency.value = 2200; filter.Q.value = 0.4;
       send.connect(rv); rv.connect(filter); filter.connect(bus); return send;
     };
     this.revSfx = wet(this.sfx); this.revMusic = wet(this.mus);
@@ -30,10 +31,22 @@ export class Audio {
   applyVol() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.ramp(this.master.gain, this.vol.master, t, 0.035);
+    this.ramp(this.master.gain, this.background ? 0 : this.vol.master, t, 0.035);
     this.ramp(this.sfx.gain, this.vol.sfx, t, 0.035);
     this.ramp(this.mus.gain, this.musicOn ? this.vol.music * 0.5 : 0, t, 0.08);
     this.ramp(this.amb.gain, this.vol.amb * 0.4, t, 0.08);
+  }
+  setBackground(hidden) {
+    this.background = hidden;
+    const c = this.ctx; if (!c || !hidden) return;
+    // Cancel both playing and delayed cues before Safari freezes audio time.
+    this.master.gain.cancelScheduledValues(c.currentTime);
+    this.master.gain.setValueAtTime(0, c.currentTime); this.master.gain._tgt = 0;
+    for (const source of this.sources) { try { source.stop(c.currentTime); } catch (_) {} }
+    this.sources.clear();
+    for (const {rv,buf} of this.reverbs) { rv.buffer = null; rv.buffer = buf; }
+    this.nextNote = c.currentTime + 0.1; this.lift = 0;
+    c.suspend().catch(() => {});
   }
   setVol(k, v) { if (!(k in this.vol) || !Number.isFinite(v)) return; this.vol[k] = Math.max(0, Math.min(1, v)); this.applyVol(); }
   envelope(gain, dur, attack) {
@@ -46,29 +59,31 @@ export class Audio {
     curve[0] = curve[curve.length - 1] = 0; return curve;
   }
   tone(freq, dur, { type = 'sine', gain = 0.08, attack = 0.025, dest = this.sfx, slide = 0, delay = 0, rev = 0 } = {}) {
-    const c = this.ctx; if (!c || !(dur > 0)) return; const t = c.currentTime + Math.max(0, delay);
+    const c = this.ctx; if (!c || this.background || document.hidden || c.state !== 'running' || !(dur > 0)) return; const t = c.currentTime + Math.max(0, delay);
     const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(freq, t);
     if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t + dur);
     g.gain.setValueCurveAtTime(this.envelope(gain, dur, attack), t, dur);
     o.connect(g); g.connect(dest);
     let send;
     if (rev) { send = c.createGain(); send.gain.value = rev; g.connect(send); send.connect(dest === this.sfx ? this.revSfx : this.revMusic); }
-    o.onended = () => { o.disconnect(); g.disconnect(); send?.disconnect(); };
+    this.sources.add(o);
+    o.onended = () => { this.sources.delete(o); o.disconnect(); g.disconnect(); send?.disconnect(); };
     o.start(t); o.stop(t + dur + 0.015);
   }
   noise(dur, { gain = 0.035, freq = 700, q = 0.5, type = 'bandpass', delay = 0, dest = this.sfx, sweep = 0 } = {}) {
-    const c = this.ctx; if (!c || !(dur > 0)) return; const t = c.currentTime + Math.max(0, delay);
+    const c = this.ctx; if (!c || this.background || document.hidden || c.state !== 'running' || !(dur > 0)) return; const t = c.currentTime + Math.max(0, delay);
     const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
     const f = c.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
     if (sweep) f.frequency.linearRampToValueAtTime(Math.max(20, freq + sweep), t + dur);
     const g = c.createGain(); g.gain.setValueCurveAtTime(this.envelope(gain, dur, 0.04), t, dur);
     src.connect(f); f.connect(g); g.connect(dest);
-    src.onended = () => { src.disconnect(); f.disconnect(); g.disconnect(); };
+    this.sources.add(src);
+    src.onended = () => { this.sources.delete(src); src.disconnect(); f.disconnect(); g.disconnect(); };
     src.start(t); src.stop(t + dur + 0.015);
   }
   throttle(k, ms) { const n = performance.now(); if (this.last[k] != null && n - this.last[k] < ms) return false; this.last[k] = n; return true; }
   play(k) {
-    if (!this.ctx || document.hidden) return;
+    if (!this.ctx || this.background || document.hidden || this.ctx.state !== 'running') return;
     // Real-time limits, independent of 1x/2x/4x. Routine property activity remains a background layer.
     const cooldown = {click:90, tab:140, confirm:400, refuse:650, place:100, complete:1200, rent:1800,
       lease:1100, gate:1800, keypad:1600, rollup:1500, cart:1600, chime:1400, fault:2800,
@@ -118,7 +133,7 @@ export class Audio {
   }
   // called each frame with coarse world state
   update({ night = 0, rain = false, hvac = 0, speed = 1, mode = 'day' }) {
-    const c = this.ctx; if (!c) return; const t = c.currentTime;
+    const c = this.ctx; if (!c || this.background || document.hidden || c.state !== 'running') return; const t = c.currentTime;
     // automation events pile up if re-issued every frame: only touch a param when its target moves
     this.ramp(this.ambG.gain, 0.08 + (1 - night) * 0.06, t, 0.5);
     this.ramp(this.humG.gain, Math.min(0.05, hvac * 0.02), t, 0.5);

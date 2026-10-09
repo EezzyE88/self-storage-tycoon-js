@@ -1,0 +1,522 @@
+{
+  "complete": true,
+  "node": "v24.19.0",
+  "checks": 48,
+  "passed": 48,
+  "results": [
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tfeedback35.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS every registered complaint receives concise what/why/next without mutating state\nPASS absent climate stock is distinguished from unavailable matching stock\nPASS historical occupied stock stays historical when current stock becomes ready\nPASS make-ready, blocked, unfinished and mixed blockers remain distinct\nPASS matching totals are unique units while condition counts can overlap and lists stay bounded\nPASS snapshot eligibility is not a new power or commissioning validation\nPASS legacy and malformed snapshots never fabricate report-time inventory\nPASS standard availability retains full, make-ready, access, construction and size-specific causes\nPASS overflow available, absent and unknown remain different observations\nPASS both historical office losses avoid diagnosing present shortage or automatic hiring\nPASS visible cards are concise while context, inspection actions and original repeated text stay expandable\nPASS all supported request families have short guidance and retain detailed costs and choices\nPASS staff-handled request does not tell the Owner a decision is needed now\nPASS customer strings and recorded sizes remain escaped in cards and context\nPASS SST0/SST1 production save/load preserves snapshot report\nPASS SST0/SST1 production save/load preserves legacy report\n16 concise feedback checks passed; fixtures do not establish physical-iPhone acceptance\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tfeedback35_equivalence.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS seed 35: 35 days, full state and events unchanged after daily feedback rendering\nPASS seed 271: 35 days, full state and events unchanged after daily feedback rendering\n100800 paired ticks against immutable Candidate 34; no state exclusions\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/treporting34.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS monthly shopper counts include first and last completed days, excluding outside/today/future\nPASS all recorded loss categories use the same completed monthly endpoints\nPASS size recommendation includes earliest completed-day losses\nPASS partial first report uses the actual retained financial-day range\nPASS current rolling period includes today but excludes expired and future losses\nPASS saved monthly 14 and rolling 20 stay independent and display their dates\nPASS standard and climate availability counts are labeled separately\nPASS historical service losses with empty queue do not diagnose current shortage or advise hiring\nPASS resolved staffing does not turn old losses into an automatic Clerk recommendation\nPASS active service is counted separately from waiting, without claiming Owner use\nPASS empty office with no recent service losses produces no office warning\nPASS legacy monthly report labels original window and preserves original values\nPASS unknown legacy dates are disclosed instead of fabricated\nPASS whole-dollar display discrepancy remains independently rounded cents, not altered finances\nPASS production SST0/SST1 save/load retains new monthly report\nPASS production SST0/SST1 save/load retains legacy monthly report\n16 reporting-period and office-guidance checks passed (Node/DOM fixtures, not Safari acceptance)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/treporting34_equivalence.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS seed 34: 35 days preserve RNG, full non-report state, grade, financial report totals and events\nPASS seed 271: 35 days preserve RNG, full non-report state, grade, financial report totals and events\n100800 paired ticks against immutable Candidate 33; exclusions are only report period, shopper counts and advice\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tclimate33.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS absent records stock and provides cause-specific guidance\nPASS occupied records stock and provides cause-specific guidance\nPASS reserved records stock and provides cause-specific guidance\nPASS make-ready records stock and provides cause-specific guidance\nPASS blocked records stock and provides cause-specific guidance\nPASS unfinished records stock and provides cause-specific guidance\nPASS mixed/overlapping states retain every applicable count and remedy\nPASS wrong-size stock and climate noSize keep original outcome category\nPASS report stays historical after current stock and prerequisites change; save/reload retains snapshot\nPASS legacy and malformed reports acknowledge unknown history; standard ready stock excluded\nPASS diagnostics read stored readiness and never revalidate or consume RNG\nPASS snapshot list is bounded while counts and omitted totals stay complete\nPASS 4x burst groups identical causes across sizes and separates other causes without extending expiry\nPASS feedback exposes historical and current unit inspection through existing guarded navigation\nPASS monthly climate suggestion describes recorded losses, no promised leases or automatic HVAC purchase\nPASS legacy monthly advice is corrected at display time without rewriting saved history\n  standard fallback: 26 accepted, 102 rejected\nPASS 2048 directed offers across 128 seeds equal exact Candidate 32 outcomes and non-report state\nPASS 8 seeded one-day simulations (11520 ticks) preserve RNG, economic state and non-thought events\nPASS actual SST0/SST1 save/export/validation/load preserve climate snapshot and pause\n19 climate diagnostics checks passed (Node/DOM fixtures, not Safari acceptance)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tsection32.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS background refreshes retain the actual open buttons and scroll at prior 4x\nPASS all three panels offer reachable choices and an explicit Close\nPASS selection dismisses menu, jumps to requested heading and stays selected through refresh\nPASS repeated open taps do not rebuild menu; Close refreshes without releasing panel pause\nPASS manual Pause survives menu and panel closure\nPASS legitimate request hold does not remove the menu or resume underneath it\nPASS explicit panel navigation and property reset discard transient menu state\nPASS Back to map explicitly closes chooser and releases the expanded panel hold\nPASS save/reload contains no transient chooser fields and preserves policies\nSKIP exact Candidate 31 reproduction: opt in with SST_C31_HISTORY=1 in a history-bearing checkout\n9 stable section-menu checks passed (DOM fixture, not physical Safari)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tlayout_hierarchy.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS tighter read-only framing, occupied footprint containment, camera suppression, compact advice, complete section chooser and retained save actions\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tmenu_touch.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS successful loan advances financing lesson\nPASS refused loan retains lesson and cash\nPASS continue without borrowing completes lesson without debt\nPASS held placement stays compact; release restores B+ review without spending\nPASS shortcuts expose sections and keep header outside scroll body\nPASS growth readiness leads customer experience\nPASS guide never moves targets while touching or scrolling menus\nPASS map input wires a bounded double-tap to anchored camera zoom\nALL PASS: 8 menu/touch checks\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tc24_requests.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS clerk request runs at 1x and resolves exactly once after the existing delay\nPASS clerk request runs at 2x and resolves exactly once after the existing delay\nPASS clerk request runs at 4x and resolves exactly once after the existing delay\nPASS manager request runs at 1x and resolves exactly once after the existing delay\nPASS manager request runs at 2x and resolves exactly once after the existing delay\nPASS manager request runs at 4x and resolves exactly once after the existing delay\nPASS owner decisions block a 240-tick frame before any time or default advances\nPASS a new owner decision stops the same fast frame immediately after its creation\nPASS coverage loss escalates before expiry and remains an owner decision when staff return\nPASS firing the last handler hands the request back, while alternate coverage continues\nPASS missing staff leave an owner request rather than silently applying its default\nPASS request review and its closure preserve prior 0x\nPASS request review and its closure preserve prior 1x\nPASS request review and its closure preserve prior 2x\nPASS request review and its closure preserve prior 4x\nPASS manual Pause remains sticky through review, mode changes and answering\nPASS per-request owner intervention remains held after closing review\nPASS saved manual preference and pending escalation survive reload; old saves default to staff handling\nPASS existing retention policy controls the response without adding concessions or charges\nPASS a failed staff action is handed back once, without a retry or cash debit\nPASS history remains compact and Requests stays accessible without a pending card\nPASS stale or empty decision review does nothing at prior 0x\nPASS stale or empty decision review does nothing at prior 1x\nPASS stale or empty decision review does nothing at prior 2x\nPASS stale or empty decision review does nothing at prior 4x\nPASS answering the final owner decision dismisses it and restores prior 0x\nPASS answering the final owner decision dismisses it and restores prior 1x\nPASS answering the final owner decision dismisses it and restores prior 2x\nPASS answering the final owner decision dismisses it and restores prior 4x\nPASS staff-only progress stays passive and never opens a decision or pauses time\nPASS multiple owner decisions remain visible until the final response\nPASS mixed queues show only owner decisions and resume the remaining staff response\nPASS manual Pause selected during a decision survives automatic dismissal\nPASS a decision removed by the simulation closes its obsolete window\nPASS explicit Menu settings remain accessible when empty and retain the saved choice\nPASS an explicitly opened settings window remains open after its final request is answered\nPASS automatic decision dismissal preserves another panel pause\nPASS in-window Keep paused records manual Pause and prevents 1x restart\nPASS in-window Keep paused records manual Pause and prevents 2x restart\nPASS in-window Keep paused records manual Pause and prevents 4x restart\nPASS a decision opened from manual Pause already reports the correct stay-paused state\nPASS in-window Pause persists across multiple decisions and repeated taps\nPASS Keep paused does not change saved staff policy or create a permanent resume preference\nPASS stale Pause actions do nothing after dismissal or inside request settings\nPASS in-window Pause survives X, later response and other panel closure\nPASS old saved attempted offers disable repeat actions without losing valid move-out response\nPASS declined staff offer resolves once without a false owner failure or repeat discount\nPASS midnight routine move-out waits for manager office coverage across save/load\nPASS midnight routine move-out waits for clerk office coverage across save/load\nPASS midnight routine still requires owner if staff absent or manual review selected\nPASS firing deferred staff escalates; active routine coverage loss remains sticky\nPASS stale double taps and invalid indices cannot consume another pending decision\nPASS previously attempted price offer at midnight becomes routine staff steps\n53 request handling and window checks passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tc27_availability.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS full inventory shows capacity remedy with original lost-demand accounting\nPASS makeReady report has distinct cause and remedy\nPASS access report has distinct cause and remedy\nPASS construction report has distinct cause and remedy\nPASS historical availability diagnosis survives reload and later vacancy\nPASS identical visible availability bubbles collapse across different requested sizes\nPASS legacy identical availability text also collapses without losing history keys\nPASS distinct local faults remain distinct visual reports\n8 availability checks passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tc29_climate_bubbles.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS identical climate text merges across requested sizes\nPASS merged bubble retains original report and usable climate remedy\nPASS 4x demand bursts keep each product, historical location and economic count\nPASS legacy climate reports merge with modern reports\nPASS different complaint text and local fault targets remain separate\nPASS distinct recorded climate causes are not collapsed\nPASS different severity remains separate\nPASS repeated arrivals never extend original bubble lifetime\nPASS dismissed routine text respects cooldown then returns\nPASS save reload preserves detailed climate reports and resets visual cooldown\n10 climate bubble checks passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tsoft_audio.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS unavailable WebAudio and locked playback are harmless\nPASS gesture unlock creates one context and resumes it without rebuilding\nPASS master includes a low-pass and gentle dynamics control\nPASS wet reverb returns respect both effect and music volume buses\nPASS volume changes glide and reject invalid keys or values\nPASS click uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS tab uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS confirm uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS refuse uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS place uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS complete uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS rent uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS lease uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS gate uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS keypad uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS rollup uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS cart uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS chime uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS fault uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS repair uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS work uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS attention uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS milestone uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS flourish uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS shutter uses rounded envelopes, restrained peaks and no jagged waveforms\nPASS source stop occurs after silence and disconnected nodes are reclaimed\nPASS noise sources also stop silently and clean up filters\nPASS repeated taps at time zero cannot bypass cooldown\nPASS a burst of different routine property events schedules only one cue\nPASS routine activity cannot suppress an owner attention cue\nPASS musical catch-up is bounded after prolonged mute\nPASS music modes and rain transitions schedule finite, smoothed audio\nPASS hidden document neither resumes the context nor adds effects\n33 soft-audio checks passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tclock24.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS 24/12/6-second days, unchanged one-minute simulation ticks, and speed guidance\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tthreefloor_save.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS legacy elevator at F2, priced F3 package, no mandatory stairs\nPASS complete package charged exactly once; stale quote and duplicate refused\nPASS occupied legacy IDs/leases survive staged expansion; commissioning explicit\nPASS deterministic construction reload with no second charge\nPASS cart/person slot capacity, mixed directions, eventual pickup and save midflight\nPASS freight failure blocks F3 rental; cart cannot substitute stairs; repair retains riders\nPASS actual outbound/return cart path uses F3 elevator and ground wide door\nPASS cancellation does not strand a completed floor\nPASS migration waits for an occupied legacy cab, retaining passenger and queue identities\nPASS actual customer claims a cart, visits F3, returns cart and departs\nPASS multiple working shafts choose congestion then ID and rebalance waiting freight after failure\nPASS duplicate join preserves original waiting tick; stale callers do not survive\nALL PASS: 12 three-floor gameplay checks\nPASS actual SST0/SST1 export/load preserves F2/F3 objects, layers, charges and paused load\nPASS actual save/load retains construction phase, elapsed ticks and paid package\nPASS malformed height/version/layers/floors rejected atomically across portfolio\nPASS popup closure restores the previous speed (Pause, 1x, 4x)\nPASS three-floor cutaway/selected-floor plane under renderer stubs; Safari visual acceptance pending\nPASS reordered stages, inconsistent package totals, runaway elapsed time, unfinished completed phase and orphan passengers rejected atomically\nPASS production compressed save/reload across all five expansion stages, completion and no repeated charge\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tsave_recovery.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS import / keep current, 0 archived: every write position, transient and persistent, reload and retry\nPASS import / keep current, 3 archived: every write position, transient and persistent, reload and retry\nPASS import / keep current, 5 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 0 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 3 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 5 archived: every write position, transient and persistent, reload and retry\nPASS archive restore (index 1), 3 archived: every write position, transient and persistent, reload and retry\nPASS archive restore (index 1), 5 archived: every write position, transient and persistent, reload and retry\nPASS a full archive keeps every game through a persistent failure at each step, and the next keep discloses every drop\nPASS read failures are explicit: nothing is written and the message says the games could not be read\nPASS an unreadable archive or kept slot is copied aside before anything overwrites it\nPASS a restore keeps the restored game listed until it has been saved, then removes only that copy\nPASS reviewer's sequence: 5 archived, restore index 2, the third and every later write fails\nPASS unchanged archive report covers archive/previous slots, not unrelated autosave writes\n14 save-recovery checks passed; autosave=original double; delay=0ms\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tguidance_banner.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS Elevator Confirm -> \"Light both hallways\" with Elevator still armed: guided to switch, no actionable map cue (reproduced first)\nPASS Light F1 -> Light F2: the floor mismatch is guided too; tool+floor match gives the normal cue; then F2 units\nPASS repeated placement with the same tool and floor is unchanged; ordinary building outside lessons is unchanged\nPASS no recursion: the placement helpers never call resolveStep\nPASS manual Pause survives the whole chain; prior 2x is restored after each review; Space during a review hold records Pause\nPASS banner placement: below the measured phone control rows, clear of the panel; no room means wait\nPASS a lesson offer hidden behind an open panel waits without holding time, then shows and holds; Later restores the prior speed\n7 guidance/banner checks passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tvisual31.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS architecture batches cover built units without per-part draws or simulation mutations\nPASS batched trim follows actual selected floor\nPASS instance GPU resources are disposed on rebuild, shared geometry survives\nPASS individual wheels exist on all five vehicle types\nPASS wheel rotation follows real rendered travel and stops at manual pause\nPASS separate legs stride oppositely; carrying remains driven by carry state\nPASS recycled people reset strides and retained private resources dispose once\nPASS rendering a running simulation retains exact state and RNG parity\nPASS routine occupied labels are compact; selection and exceptions stay explicit\nPASS selected label wins collision budget over routine labels\n10 second visual pass checks passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tfeedback_interactions.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS bubble+map multitouch rejects click even after other finger releases\nPASS map-first then bubble-second gesture does not open feedback\nPASS lost pointer capture rejects delayed click and next clean tap works\nPASS focused report keeps latest grouped repeat count\nPASS opening request guidance resets previous feedback scroll position\nPASS actual upstairs elevator fault records the waiting floor\nPASS zero-detail delayed click cannot bypass pointer cancellation\nPASS background reset rejects pending click and permits a fresh solo touch\nPASS post-release interruption invalidates a delayed pointer click\nPASS normal capture release after valid pointerup keeps click eligible\nPASS standalone assistive click and explicit keyboard remain usable\nPASS global pointer bookkeeping clears after many mixed-target gestures\nPASS focused repeat count remains current after JSON resume\nPASS upper-floor elevator snapshot survives save without depending on customer\nPASS UI constructor wires document-wide capture and lifecycle reset once\nPASS all three-touch press/release orders reject help and recover cleanly\n16 feedback checks passed; 0 failed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tbplus.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS 7:00 batch is idempotent, expenses accrue without moving cash\nPASS midnight resets capacity but bills wait until 7:00\nPASS seventh processed day settles once and never double-books expenses\nPASS one wage at 7:00; firing preserves it and late hiring waits until tomorrow\nPASS credit interest accrues, term debt is serviced at 7:00\nPASS reserve uses future costs and future loan payments, never accrued commitments\nPASS net liquidity and scenario failure count bills/debt but exclude reserve\nPASS forecast excludes every non-current status and uses monthly bill dates\nPASS forecast agrees with actual deterministic settlements and final commitments\nPASS new lease first month paid immediately, next bill 30 days later\nPASS legacy migration preserves finances/history exactly and skips already-paid current day\nPASS cash history reconciles even beyond transaction retention; legacy truncation is disclosed\nPASS spending and hiring previews include obligations without mutating money\nPASS causal diagnostics use inventory, access, demand and measured capacity evidence\nPASS growth checklist can pass on evidence and fails when turnover blocks the opportunity\nPASS UI financial and calendar surfaces use B+ truths and authoritative 7:00 dates\nPASS career thresholds adjusted proportionally; property requirements unchanged\nPASS deadline day remains eligible, meeting goals after it cannot win\nPASS midcycle B+ save/resume preserves commitments and identical future settlement\nPASS overdue schedule forecast matches one bill/payment per future financial batch\nPASS Business, Operate, Growth and modal HTML render without invalid numbers\nALL PASS: 21 B+ tests\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tfinancial_trust.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS cash delta reconciles to ledger movement \u00b7 -76 vs -76\nPASS normalized operating estimate is finite \u00b7 7\nPASS scenario exposes authoritative deadline for calendar\nPASS leases expose billing dates for calendar\nPASS today cash movement is ledger-derived \u00b7 -76\nALL PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tcapacity.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS Owner begins with 8 work hours \u00b7 8\nPASS 2.5h make-ready can be assigned\nPASS Owner capacity drops to 5.5h \u00b7 5.5\nPASS second 2.5h make-ready can queue\nPASS Queued work reserves capacity \u00b7 3\nPASS third 2.5h make-ready can queue\nPASS Owner now has 0.5h left \u00b7 0.5\nPASS work exceeding remaining Owner capacity is refused \u00b7 Owner has 0.5h available today; this needs 2.5h. Wait for tomorrow, hire staff, or use a vendor.\nPASS Owner refreshes to 8h on new game day \u00b7 8\nPASS Porter wage supports first-facility hire\nPASS Tech wage supports first-facility hire\nPASS Clerk wage supports first-facility hire\nPASS Manager wage supports first-facility hire\nPASS Porter can be hired\nPASS Porter adds independent 8h task capacity \u00b7 8\nALL PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tstafffirst.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "PASS Porter hire succeeds\nPASS Eligible work delegates to Porter before Owner \u00b7 Porter Iris assigned \u00b7 Owner stays free\nPASS Delegation preserves Owner daily capacity \u00b7 8\nPASS Delegated work reserves Porter capacity \u00b7 5.5\nPASS Busy Porter queues another eligible job \u00b7 Porter Iris assigned \u00b7 Owner stays free\nPASS Queued delegation still leaves Owner free \u00b7 8\nPASS Queued delegation reserves remaining Porter capacity \u00b7 3\nPASS Second job begins in Owner queue before hire\nPASS Unstarted Owner queue rebalances to Porter \u00b7 85\nPASS Rebalance refunds queued Owner capacity \u00b7 5.5\nPASS Rebalanced work consumes Porter capacity \u00b7 5.5\nPASS Owner still handles work when no qualified staff can cover \u00b7 Owner started this work (2.5h) \u00b7 5.5h left today\nPASS Owner fallback still charges daily capacity \u00b7 5.5\nPASS Porter capacity is exhausted below another 1h job \u00b7 0.5\nPASS Owner becomes fallback when Porter lacks capacity \u00b7 Owner started this work (1h) \u00b7 7h left today\nPASS Porter can be fired while work is queued\nPASS Fired staff queued task is released\nPASS Queued Porter work waits outside staff shift\nPASS Save/resume preserves Porter active/queued assignment\nPASS Save/resume preserves Owner capacity\nPASS Save/resume preserves Porter reserved capacity\nPASS Save/resume preserves Owner fallback assignee\nPASS Save/resume preserves Owner fallback reservation \u00b7 5.5\nPASS Save/resume preserves migrated staff assignee\nPASS Save/resume does not double-refund Owner migration \u00b7 5.5\nPASS Save/resume does not double-reserve Porter migration \u00b7 5.5\nPASS Tech receives simple repair before Owner \u00b7 Tech Victor assigned \u00b7 Owner stays free\nPASS Simple repair delegation preserves Owner capacity \u00b7 8\nPASS Vendor can take over assigned repair\nPASS Vendor takeover refunds staff reservation once \u00b7 8\nPASS Cart policy off prevents Porter assignment \u00b7 Owner started this work (0.5h) \u00b7 7.5h left today\nPASS Two eligible jobs can split across two Porters\nALL PASS\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tcareer37.mjs"
+      ],
+      "environment": {
+        "SST_BASELINE_36": "/tmp/sst-candidate36-frslzsb7"
+      },
+      "exit_code": 0,
+      "stdout": "PASS eligibility matrix and pure reads\nPASS unacknowledged win excluded and acknowledgement changes only acknowledgement\nPASS historical win survives deterioration, deletion and reload\nPASS malformed completion is excluded and normalized safely\nPASS empty eligible portfolio cannot promote\nPASS all five thresholds and eligible property counts\nPASS selected active scenario cannot block or receive normal-property promotion\nPASS excluded legacy tier cannot propagate; stored tier is preserved\nPASS earned tier persists and eligible acquired property inherits it once\nPASS complete company hour snapshot is selection independent\nPASS generic lessons allowed only after handoff, Maple lessons still excluded\nPASS sandbox tier overrides and options untouched\nPASS acquisition and transfers preserve books and clock\nPASS raw and compressed portfolio saves preserve complete state without load-time promotion\nPASS completion markup and navigation reuse existing sections without spending\nPASS career markup shows earned perks after roll falls, excludes active challenge card\nPASS stale Maple-only lesson cannot tick on completed Comeback\nPASS generic lesson renders instead of rescue panel and returns to history\n18 career integration test groups passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tcareer37_economy.mjs"
+      ],
+      "environment": {
+        "SST_BASELINE_36": "/tmp/sst-candidate36-frslzsb7"
+      },
+      "exit_code": 0,
+      "stdout": "PASS Candidate36 exact state/event/RNG parity: maple 10080 ticks\nPASS Candidate36 exact state/event/RNG parity: business 10080 ticks\nPASS Candidate36 exact state/event/RNG parity: turnaround 10080 ticks\nPASS Candidate36 exact state/event/RNG parity: vertical 10080 ticks\nPASS Candidate36 exact state/event/RNG parity: climate 10080 ticks\nPASS organic rescue \u2192 justified investment \u2192 commissioning; no loans, cash injection or coefficients changed: {\"day\":15,\"cash\":2600.9300000000003,\"cost\":620,\"range\":[6.715043864399437,7.651487103541898]}\nPASS 70491 paired ticks; full state hourly and every event compared, no field exclusions. Comeback core run deliberately omits tutorial callbacks; generic lessons tested separately.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tcomeback36.mjs"
+      ],
+      "environment": {
+        "SST_BASELINE_36": "/tmp/sst-candidate36-frslzsb7"
+      },
+      "exit_code": 0,
+      "stdout": "PASS fresh valid property: six identified make-ready units, viable core, paused and normal costs\nPASS a hire or job assignment does not award a restoration or plan goal\nPASS successful owner work distinguishes target units; aborted and unrelated work give no credit\nPASS staff completion of one target job earns the plan without any owner restoration\nPASS goals can complete out of order, and no deadline or random rental is required\nPASS wing goal requires simultaneous serviceability, not six historical completions\nPASS valid occupied and reserved restored units count separately from ready inventory\nPASS deleting a target does not award it; explicit split maps full replacement footprint\nPASS replacement mapping rejects gaps, overlaps and wrong directions; partial rebuild can reconnect\nPASS save/load before, during and after work preserves cash, assignments, goals and acknowledgement\nPASS malformed scenario progress fails safely without resetting the property or awarding success\nPASS regular Maple, sandbox and other scenarios retain their ordinary mode and progress\nPASS both recovery paths complete across five seeds without cash injection, demand changes or loans\nPASS Comeback panel keeps current inventory distinct, costs honest and close controls accessible in markup\nPASS panel close restores prior speed and preserves manual Pause and other popup holds\nPASS completion keeps same property and acknowledgement suppresses automatic reopening on load\nPASS work and hire buttons open the existing relevant sections without hiring or replacing the game\nPASS existing new-game safeguards and map gesture handlers remain wired\nPASS restoration visibly changes only target bodies; existing door/status cues and RNG are preserved\n19 Comeback Yard checks passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tcomeback36_save.mjs"
+      ],
+      "environment": {
+        "SST_BASELINE_36": "/tmp/sst-candidate36-frslzsb7"
+      },
+      "exit_code": 0,
+      "stdout": "PASS before work: raw, compressed, autosave and Continue loader preserve state\nPASS active staff job: raw, compressed, autosave and Continue loader preserve state\nPASS completed rescue: raw, compressed, autosave and Continue loader preserve state\nPASS acknowledged rescue: raw, compressed, autosave and Continue loader preserve state\n4 production save checkpoints passed; malformed progress retains property with notice\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/twalk.mjs"
+      ],
+      "environment": {
+        "SST_BASELINE_36": "/tmp/sst-candidate36-frslzsb7"
+      },
+      "exit_code": 0,
+      "stdout": "graduated true beat 8\ncash before up 15023\nupper milestone true lesson null {\"interior\":2,\"quality\":2,\"climate\":3,\"up\":6}\n  [welcome] 00 tab=null tool=null step 1/2: Look around the property\n  [welcome] 10 tab=null tool=null step 2/2: Tap Look around when ready\n  [makeready] 0000 tab=null tool=null step 1/4: Tap Unit 107\n  [makeready] 1000 tab=null tool=null step 2/4: Tap Owner Make-Ready\n  [makeready] 1100 tab=null tool=null step 3/4: Start the clock: tap 1x\n  [makeready] 1110 tab=null tool=null step 4/4: Watch the Owner finish\n  [lease] 100 tab=null tool=null step 2/3: Watch for the prospect\n  [lease] 110 tab=null tool=null step 3/3: They sign a lease\n  [money] 00 tab=null tool=null step 1/2: Open Business\n  [money] 10 tab=business tool=null step 2/2: Read the cards, then tap Got it\n  [expand] 0000000 tab=business tool=null step 1/7: Open Build\n  [expand] 1000000 tab=build tool=null step 2/7: Choose Units\n  [expand] 1100000 tab=build tool=null step 3/7: Pick Drive-Up 10x10\n  [expand] 1110000 tab=build tool=du10x10 step 4/7: Drag a row down the grass beside the main aisle\n  [expand] 1111000 tab=build tool=du10x10 step 5/7: Tap Confirm\n  [expand] 1111100 tab=build tool=du10x10 step 6/7: Let construction finish\n  [expand] 1111110 tab=null tool=null step 7/7: Tap a new unit, then Commission\n  [repair] 0000 tab=null tool=null step 1/4: Look inside: tap F1\n  [repair] 1000 tab=null tool=null step 2/4: Tap the broken light\n  [repair] 1100 tab=null tool=null step 3/4: Tap Send Owner\n  [repair] 1110 tab=null tool=null step 4/4: Let the Owner fix it\n  [hire] 000 tab=null tool=null step 1/3: Open Operate\n  [hire] 100 tab=operate tool=null step 2/3: Tap Hire Porter\n  [hire] 110 tab=operate tool=null step 3/3: Watch the Porter work\n  [grad] 0 tab=null tool=null step 1/1: Tap Keep playing\n  [end]  tab=null tool=null step 0/0: \n  [interior] 011 tab=null tool=null step 1/3: Tap the Main Loading Corral\n  [interior] 111 tab=null tool=null step 3/3: Watch a customer use a cart\n  [end]  tab=null tool=null step 0/0: \n  [quality] 00000000 tab=null tool=null step 1/8: Open Operate\n  [quality] 10000000 tab=operate tool=null step 2/8: Turn on the Security overlay\n  [quality] 11000000 tab=operate tool=null step 3/8: Open Build\n  [quality] 11100000 tab=build tool=null step 4/8: Choose Access & Security\n  [quality] 11110000 tab=build tool=null step 5/8: Pick Camera\n  [quality] 11111000 tab=build tool=camera step 6/8: Tap the apron beside the loading stalls to place it\n  [quality] 11111100 tab=build tool=camera step 7/8: Tap Confirm\n  [quality] 11111110 tab=build tool=camera step 8/8: Let the installer finish\n  [end]  tab=null tool=null step 0/0: \n  [climate] 000000000000000000 tab=null tool=null step 1/18: Open Build (HVAC first)\n  [climate] 100001100010000000 tab=build tool=null step 2/18: Choose Utilities\n  [climate] 110001000010000000 tab=build tool=null step 3/18: Pick HVAC Plant\n  [climate] 111001000010000000 tab=build tool=hvac step 4/18: Tap the grass just west of the interior building\n  [climate] 111101000010000000 tab=build tool=hvac step 5/18: Tap Confirm\n  [climate] 111111000010000000 tab=build tool=hvac step 7/18: Choose Access & Security\n  [climate] 111110000000000000 tab=null tool=null step 6/18: Open Build again (Light)\n  [climate] 111111000010000000 tab=build tool=null step 7/18: Choose Access & Security\n  [climate] 111111100010000000 tab=build tool=null step 8/18: Pick Light\n  [climate] 111111110010000000 tab=build tool=light step 9/18: Tap F1 on the right, then tap the west corridor\n  [climate] 111111111010000000 tab=build tool=light step 10/18: Tap Confirm\n  [climate] 111111111110000000 tab=build tool=light step 12/18: Choose Interior\n  [climate] 111111111100000000 tab=null tool=null step 11/18: Open Build again (units)\n  [climate] 111111111110000000 tab=build tool=null step 12/18: Choose Interior\n  [climate] 111111111111000000 tab=build tool=null step 13/18: Pick Interior 5x5\n  [climate] 111111111111100000 tab=build tool=iu5x5 step 14/18: Turn Climate on\n  [climate] 111111111111110000 tab=build tool=iu5x5 step 15/18: Drag a column along the corridor's west side\n  [climate] 111111111111111100 tab=build tool=iu5x5 step 17/18: Let construction finish\n  [climate] 111111111111111110 tab=null tool=null step 18/18: Tap a new unit, then Commission\n  [end]  tab=null tool=null step 0/0: \n  [up] 00000000000 tab=null tool=null step 1/11: Connected drive aisle\n  [up] 11000000000 tab=null tool=null step 3/11: F1 hallway\n  [up] 11100000000 tab=build tool=hall step 4/11: Wide entrance\n  [up] 11110000000 tab=build tool=doorWide step 5/11: Loading zone\n  [up] 11111000000 tab=build tool=loading step 6/11: F2 hallway\n  [up] 11111100000 tab=build tool=hall step 7/11: Elevator\n  [up] 11111111100 tab=null tool=null step 10/11: Finish construction and check access\n  [up] 11111111110 tab=null tool=null step 11/11: Commission upstairs units\n  [end]  tab=null tool=null step 0/0: \ndone true day 5\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tr.mjs"
+      ],
+      "environment": {
+        "SST_BASELINE_36": "/tmp/sst-candidate36-frslzsb7"
+      },
+      "exit_code": 0,
+      "stdout": "[\n  { kind: 'split', label: 'Split into two 5x10', cost: 450, ok: true }\n] {\"ok\":true,\"msg\":\"Split into two 5x10: done. Make-ready queued.\"}\n[\n  'Unit 107,8,16,2,1,ready,false',\n  'Unit 108,8,17,2,1,occupied,false',\n  'Unit 101,8,4,2,1,ready,false',\n  'Unit 110,8,5,2,1,ready,false'\n]\n[] {\"ok\":true} { ok: true, order: 153, msg: '2 x Drive-Up 10x10 committed' }\n2450 276\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/career.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/main.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/tutorial.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/comeback.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "tests/headless/tcareer37.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "tests/headless/tcareer37_economy.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/headless/tsave_recovery.mjs"
+      ],
+      "environment": {
+        "SST_TEST_PRODUCTION_AUTOSAVE": "1",
+        "SST_TEST_AUTOSAVE_DELAY_MS": "100"
+      },
+      "exit_code": 0,
+      "stdout": "PASS import / keep current, 0 archived: every write position, transient and persistent, reload and retry\nPASS import / keep current, 3 archived: every write position, transient and persistent, reload and retry\nPASS import / keep current, 5 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 0 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 3 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 5 archived: every write position, transient and persistent, reload and retry\nPASS archive restore (index 1), 3 archived: every write position, transient and persistent, reload and retry\nPASS archive restore (index 1), 5 archived: every write position, transient and persistent, reload and retry\nPASS a full archive keeps every game through a persistent failure at each step, and the next keep discloses every drop\nPASS read failures are explicit: nothing is written and the message says the games could not be read\nPASS an unreadable archive or kept slot is copied aside before anything overwrites it\nPASS a restore keeps the restored game listed until it has been saved, then removes only that copy\nPASS reviewer's sequence: 5 archived, restore index 2, the third and every later write fails\nPASS unchanged archive report covers archive/previous slots, not unrelated autosave writes\nPASS production autosave rejects stale sessions and older saves superseded by pagehide\n15 save-recovery checks passed; autosave=production; delay=100ms\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/feedbackcopy.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/complaints.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/climateavailability.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "tests/headless/tfeedback35.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "tests/headless/tfeedback35_equivalence.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/sim.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/economics.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/ui.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/reporting.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "js/version.js"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "tests/headless/treporting34.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "tests/headless/treporting34_equivalence.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--check",
+        "tests/headless/tclimate33.mjs"
+      ],
+      "environment": {},
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

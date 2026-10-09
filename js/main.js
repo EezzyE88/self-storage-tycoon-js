@@ -491,10 +491,12 @@ document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: fals
 // iOS only unlocks WebAudio from touchend/click, and suspends ("interrupted") it when the app is backgrounded
 for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, () => game.audio.unlock(), { capture: true, passive: true });
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* Safari 17+ only */ }
+window.addEventListener('blur', () => game.audio.setBackground(true));
+window.addEventListener('focus', () => { if (!document.hidden) game.audio.setBackground(false); });
 document.addEventListener('visibilitychange', () => {
   cancelMapTap(); cancelBuildHold(); ptrs.clear(); drag = null; pinch = null; game.ui.pointerBusy = false;
-  if (document.hidden) { game.wasSpeed = game.sim.s.speed; game.sim.s.speed = 0; if (game.audio.ctx) game.audio.ctx.suspend(); game.autosave(true); }
-  else { if (game.wasSpeed != null && game.sim.s.speed === 0) game.sim.s.speed = game.wasSpeed; game.wasSpeed = null; last = performance.now(); game.lastDraw = last; diagnostics.reset(); diagnosticMode = null; if (game.ui) game.ui.update && game.ui.update(true); }
+  if (document.hidden) { game.wasSpeed = game.sim.s.speed; game.sim.s.speed = 0; game.audio.setBackground(true); game.autosave(true); }
+  else { game.audio.setBackground(false); if (game.wasSpeed != null && game.sim.s.speed === 0) game.sim.s.speed = game.wasSpeed; game.wasSpeed = null; last = performance.now(); game.lastDraw = last; diagnostics.reset(); diagnosticMode = null; if (game.ui) game.ui.update && game.ui.update(true); }
 });
 // iOS can drop the WebGL context under memory pressure; rebuild the scene when it comes back
 canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); });
