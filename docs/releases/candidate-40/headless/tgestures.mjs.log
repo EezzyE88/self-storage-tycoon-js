@@ -1,0 +1,13 @@
+PASS single tap selects once after double-tap interval
+PASS double tap zooms once without selecting
+PASS pan cancels pending selection and zoom
+PASS pinch preserves zoom and cancels double tap/selection
+PASS cancel and lost capture never select or zoom
+PASS building short taps never select, zoom or place
+PASS building hold previews; cancellation abandons placement
+PASS UI interaction cancels pending map gesture
+PASS shift/right pan does not become a tap
+PASS actual camera zoom preserves tapped ground point at exterior and upper floor
+PASS four double taps give three strictly closer levels then return to overview
+PASS new property resets the double-tap sequence
+12 executed checks passed; physical Safari acceptance pending

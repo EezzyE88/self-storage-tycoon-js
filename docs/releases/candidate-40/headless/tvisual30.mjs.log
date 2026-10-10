@@ -1,0 +1,10 @@
+PASS scene construction and presentation never mutate saved simulation
+PASS all unit states retain original status materials and object picking tags
+PASS carrying and cart poses are readable without extra shadow casters or materials
+PASS walking swings opposite arms and gently lifts the body
+PASS staff work gesture follows actual work state; idle has neutral arms
+PASS manual pause freezes presentation clock and active arm oscillation
+PASS customer reuse resets arm pose, box and body height
+PASS private shirt material disposed once; shared skin survives
+PASS light curves and rain remain finite throughout day/night
+9 visual presentation checks passed

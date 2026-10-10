@@ -1,0 +1,14 @@
+PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)
+PASS nested and interleaved pauses restore the speed from before the first one
+PASS manual Pause during a temporary pause is preserved by button and keyboard
+PASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored
+PASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice
+PASS panel closure: Details → Back to map and close restore the previous speed, including Pause
+PASS actions: commissioning, owner make-ready and build placement never start a paused clock
+PASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed
+PASS requests: answering the last request, and navigating from Requests, keep the player speed
+PASS property switch never applies another property’s saved speed; loads stay paused
+PASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause
+PASS tutorial wording no longer promises a 1x resume
+PASS the policy is UI-only: no simulation or save field is added
+13 pause-policy checks passed

@@ -1,0 +1,17 @@
+PASS monthly shopper counts include first and last completed days, excluding outside/today/future
+PASS all recorded loss categories use the same completed monthly endpoints
+PASS size recommendation includes earliest completed-day losses
+PASS partial first report uses the actual retained financial-day range
+PASS current rolling period includes today but excludes expired and future losses
+PASS saved monthly 14 and rolling 20 stay independent and display their dates
+PASS standard and climate availability counts are labeled separately
+PASS historical service losses with empty queue do not diagnose current shortage or advise hiring
+PASS resolved staffing does not turn old losses into an automatic Clerk recommendation
+PASS active service is counted separately from waiting, without claiming Owner use
+PASS empty office with no recent service losses produces no office warning
+PASS legacy monthly report labels original window and preserves original values
+PASS unknown legacy dates are disclosed instead of fabricated
+PASS whole-dollar display discrepancy remains independently rounded cents, not altered finances
+PASS production SST0/SST1 save/load retains new monthly report
+PASS production SST0/SST1 save/load retains legacy monthly report
+16 reporting-period and office-guidance checks passed (Node/DOM fixtures, not Safari acceptance)

@@ -1,0 +1,5 @@
+idle    cash 45517 occ 11/23 roll 1788 rep 0.71 rating 2.8 grades BCCDCDDDFFDF occ by month 100,87,100,87,87,78,74,61,52,57,57,48
+absent  cash 22911 occ 0/23 roll 0 rep 0.57 rating 2.9 grades CDDFFFFFFFFF occ by month 91,70,57,30,17,9,9,4,4,4,0,0
+good    cash 50207 occ 22/23 roll 2873 rep 0.84 rating 4.2 grades BCBBBBBBBBBB occ by month 100,91,100,96,96,100,100,100,96,100,100,96
+{"ok":true,"order":575,"msg":"7 x Climate Interior 5x5 committed"}
+strat   cash 52403 occ 34/34 roll 4455 rep 0.84 rating 4.1 grades CBCBCCCCCCCC occ by month 82,94,100,100,97,97,97,91,97,97,97,100

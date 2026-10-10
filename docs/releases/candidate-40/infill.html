@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Candidate 40 · My yard</title>
+<style>body{margin:0;background:#f8f6ed;color:#253b44;font:18px/1.5 system-ui}main{max-width:680px;margin:auto;padding:24px 18px 60px}h1{line-height:1.15}section,.safe{padding:18px;border:1px solid #ccd2ce;border-radius:16px;margin:20px 0;background:white}.safe{background:#fff1cb}button,.button{font:inherit;font-weight:700;display:inline-block;background:#253b44;color:white;border:0;border-radius:12px;padding:14px 18px;min-height:48px;box-sizing:border-box}summary{padding:14px 0;cursor:pointer}textarea{width:100%;height:110px;box-sizing:border-box}small{display:block;overflow-wrap:anywhere}#status{min-height:52px}a{color:inherit}</style></head>
+<body><main><h1>Your yard. Your next move.</h1><p>Candidate 40 · optional row-extension experiment</p><small id="build">Expected build: bplus-yard-infill-candidate-40</small>
+<p class="safe"><b>Protect your real company.</b> Export its save to Notes first. Use a <b>Private Safari tab</b> for these disposable test companies. Loading a test company into your normal game can replace its autosave.</p>
+<p>Copy the first test save, open the game, then use <b>Load a save</b> to paste it. This page only copies codes; it never reads or writes game storage.</p>
+<p><a class="button" href="../">Open game</a></p>
+<section><h2>Investment-ready yard</h2><p>Organic seed 4401, Day 15, $2,600.93. No supplied money, loans or changed economy. This skips earlier play to test a real investment decision.</p><button data-code="06-investment">Preparing…</button><details><summary>Show code / manual copy</summary><textarea readonly aria-label="Investment-ready save code"></textarea></details></section>
+<p>In the game, open <b>Growth → choose section → My yard</b>. Compare one unit, two or keeping your cash. Preview shows the exact spot beside Space 101; Confirm is still your decision.</p>
+<p>Play naturally for a few minutes. Stop when you feel finished. Tell me: <b>“I wanted to ___ next”</b> or <b>“I felt done because ___.”</b> There is no requirement to build both units.</p>
+<section><h2>Optional: fresh rescue</h2><p>Organic Day 2, $1,150. Answer any Owner request and tap Keep operating. This yard still has vacancies and limited reserves. Compare whether the same optional opportunity interests you at this earlier stage.</p><button data-code="01-completed">Preparing…</button><details><summary>Show code / manual copy</summary><textarea readonly aria-label="Fresh rescue save code"></textarea></details></section>
+<p id="status" role="status">Preparing test saves…</p><p><a href="candidate-40-SAFARI-PLAYTEST.md">Detailed playtest and limits</a></p>
+<script type="module">
+const status=document.querySelector('#status');
+try {
+ for(const button of document.querySelectorAll('[data-code]')) {
+  button.disabled=true;
+  const response=await fetch(`fixtures/${button.dataset.code}.sst`);if(!response.ok)throw Error('Save code unavailable');
+  const code=(await response.text()).trim(), section=button.closest('section'), details=section.querySelector('details'), field=section.querySelector('textarea');field.value=code;
+  button.disabled=false;button.textContent='Copy test save';
+  button.onclick=async()=>{try{await navigator.clipboard.writeText(code);status.textContent='Copied. Open the game in Private Safari, tap Load a save, and paste.';}catch{details.open=true;field.focus();field.select();field.setSelectionRange(0,code.length);status.textContent='Copy the selected code, then paste it into Load a save.';}};
+ }
+ status.textContent='Both codes ready. Your game storage is untouched.';
+}catch(e){status.textContent=e.message+' — refresh this page.';}
+fetch('../source-proof.json').then(r=>r.json()).then(p=>{document.querySelector('#build').textContent=`Served build: ${p.build} · ${p.candidate_commit}`;if(p.build!=='bplus-yard-infill-candidate-40')status.textContent='The preview is serving another build. Reload before testing.';}).catch(()=>{});
+</script></main></body></html>

@@ -1,0 +1,17 @@
+PASS bubble+map multitouch rejects click even after other finger releases
+PASS map-first then bubble-second gesture does not open feedback
+PASS lost pointer capture rejects delayed click and next clean tap works
+PASS focused report keeps latest grouped repeat count
+PASS opening request guidance resets previous feedback scroll position
+PASS actual upstairs elevator fault records the waiting floor
+PASS zero-detail delayed click cannot bypass pointer cancellation
+PASS background reset rejects pending click and permits a fresh solo touch
+PASS post-release interruption invalidates a delayed pointer click
+PASS normal capture release after valid pointerup keeps click eligible
+PASS standalone assistive click and explicit keyboard remain usable
+PASS global pointer bookkeeping clears after many mixed-target gestures
+PASS focused repeat count remains current after JSON resume
+PASS upper-floor elevator snapshot survives save without depending on customer
+PASS UI constructor wires document-wide capture and lifecycle reset once
+PASS all three-touch press/release orders reject help and recover cleanly
+16 feedback checks passed; 0 failed

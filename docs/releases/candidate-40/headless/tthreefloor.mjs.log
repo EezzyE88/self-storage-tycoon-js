@@ -1,0 +1,13 @@
+PASS legacy elevator at F2, priced F3 package, no mandatory stairs
+PASS complete package charged exactly once; stale quote and duplicate refused
+PASS occupied legacy IDs/leases survive staged expansion; commissioning explicit
+PASS deterministic construction reload with no second charge
+PASS cart/person slot capacity, mixed directions, eventual pickup and save midflight
+PASS freight failure blocks F3 rental; cart cannot substitute stairs; repair retains riders
+PASS actual outbound/return cart path uses F3 elevator and ground wide door
+PASS cancellation does not strand a completed floor
+PASS migration waits for an occupied legacy cab, retaining passenger and queue identities
+PASS actual customer claims a cart, visits F3, returns cart and departs
+PASS multiple working shafts choose congestion then ID and rebalance waiting freight after failure
+PASS duplicate join preserves original waiting tick; stale callers do not survive
+ALL PASS: 12 three-floor gameplay checks

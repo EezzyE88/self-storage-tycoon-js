@@ -1,4 +1,5 @@
 import { careerEligibility } from './career.js';
+import { yardInfill } from './yardinfill.js';
 import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
 import { climateSuggestionText } from './climateavailability.js';
 import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget, reviewRemedy } from './complaints.js';
@@ -284,6 +285,10 @@ export class UI {
       case 'comebackWork': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('operate'); this.jumpSection('Work queue'); break;
       case 'comebackReadiness': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Growth Readiness'); break;
       case 'comebackCareer': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Operator career'); break;
+      case 'yardExplore': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Your next improvement'); break;
+      case 'yardPreview': this.previewYardInfill(v); break;
+      case 'yardLater': this.setTab(null); break;
+      case 'yardDemand': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('business'); this.jumpSection('Your market'); break;
       case 'comebackHire': this.scMin = true; this.renderTut(true); this.hireRoleFocus = 'porter'; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); break;
       case 'comebackUnit': {
         const t = this.sim.s.scenario?.targets?.find(t => t.id === +v);
@@ -342,7 +347,7 @@ export class UI {
     this.sectionMenuKey = null; this.sectionChoice = null;
     if (t === 'growth' && this.plan && this.plan.args) {
       this.growthPlanArgs = structuredClone(this.plan.args);
-      this.growthProposal = { sim: this.sim, args: this.growthPlanArgs, view: this.rend.view };
+      this.growthProposal = { sim: this.sim, args: this.growthPlanArgs, view: this.rend.view, yardGuide: this.yardGuide?.sim === this.sim ? this.yardGuide : null };
     }
     if(t!=='feedback') { this.feedbackFocus=null; this.feedbackRequest=null; }
     this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
@@ -371,6 +376,7 @@ export class UI {
     for (const toast of this.toasts || []) toast.el.remove();
     this.toasts = [];
     this.growthProposal = null; this.growthPlanArgs = null;
+    this.yardGuide = null;
     this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
     this.cashSub = null; this.goalT = -Infinity; this.lastCoach = -Infinity;
     this.sectionMenuKey = null; this.sectionChoice = null;
@@ -416,7 +422,9 @@ export class UI {
     const body = box.querySelector('.body'); const st = body && this.sheetKey === key ? body.scrollTop : 0; this.sheetKey = key;
     const cats = box.querySelector('.cats'); const cs = cats ? cats.scrollLeft : 0;
     if (!force && this.sheetHtml === html) return;
+    const yardDetails = sameSheet && box.querySelectorAll ? [...box.querySelectorAll('[data-yard-detail][open]')].map(d=>d.dataset.yardDetail) : [];
     const wasOpen = !!box.firstChild; this.sheetHtml = html; box.innerHTML = html;
+    if (box.querySelectorAll) for (const d of box.querySelectorAll('[data-yard-detail]')) d.open = yardDetails.includes(d.dataset.yardDetail);
     if (!wasOpen && box.firstChild) box.firstChild.classList.add('enter');
     const statusKey=box.querySelector('.status-key'); if(statusKey) statusKey.open=statusOpen; const sections=box.querySelector('.section-shortcuts'); if(sections) sections.scrollLeft=sectionScroll;
     const nb = box.querySelector('.body'); if (nb) nb.scrollTop = st;
@@ -437,7 +445,7 @@ export class UI {
   }
   sheet(title, sub, body, extra = '') {
     if (title === 'Operate') extra += '<button class="btn" data-a="feedback">Customer feedback</button>';
-    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Overlays', 'Overlays'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
+    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Overlays', 'Overlays'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Your next improvement', 'My yard'], ['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
     if (sections) {
       const jumps = [];
       body = body.replace(/<h3>(.*?)<\/h3>/g, (html, text) => {
@@ -501,9 +509,36 @@ export class UI {
     this.flip = !!a.flip; this.climate = !!a.climate; this.rush = !!a.rush;
     this.planArgs = { a: { ...a.a }, b: { ...a.b }, axis: a.axis, dir: a.dir };
     this.replan(); // Requote current conditions; never spend or auto-confirm.
+    this.yardGuide = saved.yardGuide || null;
+    if (this.yardGuide) { this.rend.lookAt(11, 3); this.frameOutline(); }
     return true;
   }
+  previewYardInfill(key) {
+    // Requote at the tap, including changes since this card was rendered.
+    const choice = yardInfill(this.sim)?.choices.find(c => c.key === key);
+    if (!choice || !toolUnlocked(this.sim, choice.args.tool)) { this.toast('That spot has changed. Review the yard again.', 'bad'); return false; }
+    this.pauseForPopup('review');
+    this.scMin = true; this.renderTut(true); this.setTab(null); this.select(null);
+    this.setView('ext'); this.pickTool(choice.args.tool);
+    this.flip = false; this.climate = false; this.rush = false;
+    this.planArgs = structuredClone({ a: choice.args.a, b: choice.args.b, axis: choice.args.axis });
+    this.replan();
+    this.yardGuide = { sim: this.sim, args: structuredClone(this.plan.args) };
+    this.rend.lookAt(11, 3); this.frameOutline();
+    return true; // Ordinary Confirm remains the only way to buy.
+  }
+  yardInfillHtml() {
+    const yard = yardInfill(this.sim); if (!yard) return '';
+    const progress = yard.added ? `<p class="note"><b>Your extension: ${yard.added} of 2 units placed.</b> ${yard.constructing} under construction · ${yard.commissionable} ready to commission · ${yard.ready} ready to offer · ${yard.occupied} occupied${yard.reserved ? ` · ${yard.reserved} reserved` : ''}${yard.blocked ? ` · ${yard.blocked} blocked` : ''}.</p>` : '';
+    const cards = yard.choices.map(c => {
+      const unmet = c.readiness.checks.find(check => !check.ok);
+      return `<div class="item yard-choice"><div class="grow"><b>${c.count === 1 ? 'One 5×10 — keep more cash' : 'Two 5×10s — add more capacity'}</b><small>${money(c.plan.cost)} build · ${money(c.position.available,true)} after bills &amp; reserve</small><small>${c.readiness.justified ? 'Current evidence supports this scoped expansion.' : esc(unmet.detail)}${!c.affordable ? ' Not enough cash to build yet.' : ''}</small><button class="btn" data-a="yardPreview" data-v="${c.key}">Preview ${c.count === 1 ? 'one unit' : 'two units'}</button><details data-yard-detail="${c.key}"><summary>Costs &amp; evidence</summary><p class="note">After construction: ${money(c.position.cash,true)} cash · ${money(c.position.committed,true)} committed bills · ${money(c.position.reserve,true)} recommended reserve.</p><p class="note">${c.readiness.checks.map(check=>`${check.ok ? '✓' : '!'} ${esc(check.label)}: ${esc(check.detail)}`).join('<br>')}</p></details></div></div>`;
+    }).join('');
+    const ambition = yard.added === 2 ? yard.constructing || yard.commissionable ? 'The two new units are placed. Finish construction and commission them, then see whether customers use them.' : 'Your extension is now part of the yard. Review actual leasing and demand before choosing your next improvement.' : yard.added === 1 ? 'One new unit changes your yard. Add its neighbour if demand and cash support it, or keep your buffer.' : 'Picture two small units at the far end of the drive aisle, beside Space 101. Add one, add both, or keep your cash.';
+    return `<h3>Your next improvement</h3><div class="yard-infill"><b>${yard.added === 2 ? 'Your row extension' : 'Extend the restored row'}</b><p class="note">${ambition} This is optional; leases are not guaranteed.</p>${progress}${cards ? `<div class="list">${cards}</div>` : yard.added === 2 ? '' : '<p class="note">No clear extension spot remains here. Review your layout or choose your own next project.</p>'}<div class="row wrap"><button class="btn" data-a="yardLater">Back to my yard${yard.added ? '' : ' — not now'}</button><button class="btn" data-a="yardDemand">Review demand</button>${yard.added ? '<button class="btn" data-a="comebackWork">Review operations</button>' : ''}</div></div>`;
+  }
   pickTool(k) {
+    this.yardGuide = null;
     if (k) { this.growthProposal = null; this.growthPlanArgs = null; }
     if(k) {this.sheetTall=false;this.tutMin=true;this.resumePopup('tutorial');}
     if (k && !toolUnlocked(this.sim, k)) { this.toast(this.sim.s.tut.on && (k === 'office' || k === 'gate') ? 'Maple Street already has this' : 'Unlocks when you finish the tutorial', 'bad'); this.sfx('refuse'); return; }
@@ -1150,6 +1185,7 @@ export class UI {
       h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)} ${fix(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
     }
     if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>${isComeback(s)?'Pacing':'Deadline'}</span><span>${isComeback(s)?`No deadline (${s.scenario.status})`:`Day ${s.scenario.deadline} (${s.scenario.status})`}</span></div>`; }
+    h += this.yardInfillHtml();
     const growthPlan = this.growthPlanArgs ? sim.plan(this.growthPlanArgs) : null;
     if (growthPlan && this.growthPlanArgs.rush && (s.coTier || 1) >= 2 && !sim.instantOn() && growthPlan.dur) {
       growthPlan.cost = Math.round(growthPlan.cost * 1.25); growthPlan.dur *= 0.5;
@@ -1525,8 +1561,9 @@ export class UI {
   }
   updateBlueprint() {
     const box=this.$('blueprint'); if(!box) return;
-    if(this.title||this.modalOpen()||!curBeat(this.sim)||this.menuTouch) {box.innerHTML='';this.capPrev=null;return;}
-    const sim=this.sim,l=sim.s.lesson?.id==='up'?verticalLayout(sim):null,a=this.currentBlueprintPlan(),pre=l?.plans?this.lessonPrereq():null; if(!a&&!l?.plans) {box.innerHTML='';return;}
+    const yard = this.yardGuide?.sim === this.sim && this.tool === this.yardGuide.args.tool && this.plan ? this.plan.args : null;
+    if(this.title||this.modalOpen()||(!curBeat(this.sim)&&!yard)||this.menuTouch) {box.innerHTML='';this.capPrev=null;return;}
+    const sim=this.sim,l=sim.s.lesson?.id==='up'?verticalLayout(sim):null,a=yard || this.currentBlueprintPlan(),pre=l?.plans?this.lessonPrereq():null; if(!a&&!l?.plans) {box.innerHTML='';return;}
     const project=(x,y,f=0)=>this.rend.project(x,y,f*FLOOR_H);
     const caps=[]; let shapes='';
     // Outline only; its caption (if any) joins the shared layout with its priority.
@@ -1542,7 +1579,7 @@ export class UI {
     if(a) { const planned=this.sim.plan(a),items=planned.items||[], cells=items.filter(c=>c.x!=null&&c.y!=null); const start=cells.length?{x:Math.min(...cells.map(c=>c.x)),y:Math.min(...cells.map(c=>c.y))}:a.a,end=cells.length?{x:Math.max(...cells.map(c=>c.x)),y:Math.max(...cells.map(c=>c.y))}:a.b; const mm=this.placementMismatch(curBeat(sim)?.steps[stepState(sim,this).cur]); // wrong tool/floor armed: describe, never invite
       polygon(start,end,a.f,mm?'#9fb3c8':'#ffd23a',mm?`${TOOLS[a.tool].name} goes here · F${(a.f||0)+1}`:TOOLS[a.tool].name,CP.target); const uc=mm?'#9fb3c8':'#ffd23a'; for(const u of planned.units||[]) {polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,uc,'');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)shapes+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="${uc}" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="${uc}"/>`; }
       const single=a.a.x===a.b.x&&a.a.y===a.b.y;
-      if(!mm) for(const [c,label] of [[a.a,single?'Place here':'Start here'],[a.b,single?'':'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(!p.vis)continue;shapes+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/>`;if(label)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.target,dy:label==='End here'?23:-15});}}
+      if(!mm&&!yard) for(const [c,label] of [[a.a,single?'Place here':'Start here'],[a.b,single?'':'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(!p.vis)continue;shapes+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/>`;if(label)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.target,dy:label==='End here'?23:-15});}}
     if(l?.plans) { // secondary route context, only while that part is still to be placed
       for(const [c,label,k] of [[l.door,'Entrance','doorWide'],[l.outer,'Loading','loading'],[l.plans.elevator.a,'Elevator','elevator']]) {if(!c||done(k)||(k==='elevator'&&(pre||a?.tool==='elevator')))continue;const p=project(c.x+.5,c.y+.5,a?.f||0);if(p.vis)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.secondary,cls:'secondary',dy:-9});} }
     const L=layoutCaptions(caps,{width:innerWidth,height:innerHeight,obstacles:this.captionObstacles(),measure:(t,c)=>this.measureCaption(t,c),prev:this.capPrev});
@@ -1555,6 +1592,9 @@ export class UI {
   // pan it there (zooming out only if it cannot fit). Never during a drag or pinch; a step that changes mid-gesture is
   // left alone, and after framing the player's own camera movement is never undone.
   stepOutline() {
+    if (this.yardGuide?.sim === this.sim && this.tool === this.yardGuide.args.tool && this.plan?.units?.length) {
+      return this.plan.units.flatMap(u => [u.x,u.x+u.w].flatMap(x => [u.y,u.y+u.h].flatMap(y => [[x,y,0],[x,y,FLOOR_H]])));
+    }
     const l=this.sim.s.lesson?.id==='up'?verticalLayout(this.sim):null; if(!l?.plans) return null;
     const rects=[[l.plans.shell2.a,l.plans.shell2.b,0,2]], a=this.currentBlueprintPlan(), pre=this.lessonPrereq();
     if(a) rects.push([a.a,a.b,a.f||0,1]);
@@ -1704,7 +1744,7 @@ export class UI {
       <h4>${won ? 'You brought the yard back.' : esc(next?.label || 'Keep improving the yard')}</h4>
       <p>${won ? 'Yard rescued. Keep it working and lease ready vacancies. Review demand and cash before investing.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>
       <div class="comeback-current">${p.restored}/6 spaces usable now · ${p.ready} vacant ready · ${p.occupied} occupied${p.reserved ? ` · ${p.reserved} reserved` : ''}</div>
-      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won && c.acknowledged ? '<button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
+      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won && c.acknowledged ? '<button class="btn" data-a="yardExplore">Explore a row extension</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
       <details class="comeback-details" ${detailOpen?'open':''}><summary>${won && c.acknowledged ? 'Rescue history' : 'Goals and recovery choices'}</summary>
         <ul class="goals">${p.goals.map(g => `<li class="${g.met?'met':''}"><span class="ck">${g.met?'&#10003;':''}</span><span>${esc(g.label)}</span><b>${g.k==='comebackWing'?`${p.restored}/6`:g.met?'Done':'Pending'}</b></li>`).join('')}</ul>
         <p>Plan goal: complete two distinct restoration spaces through Owner work, or one target make-ready job through employed staff. Hiring alone does not complete it.</p>

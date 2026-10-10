@@ -1,0 +1,3 @@
+cancellation ledger [[-17810,"Building 12 → F2"],[17810,"Cancelled: Building 12 → F2"],[-17810,"Building 12 → F2"],[10371,"Cancelled: Building 12 → F2"],[-17414,"Building 12 → F2"]]
+steps [["commit",17810],["undo",17810],["recommit",17810],["partial cancel",10371,"retained",396,"penalty",6913.39,"in-progress consumed",129.61],["second quote commit",17414]]
+PASS F2 cancellation arithmetic: $17,810 commit, full undo $17,810, partial refund $10371 after reinforcement (retained $396), second quote $17,414 with no duplicated reinforcement, production reload without a second charge; net spent $24853

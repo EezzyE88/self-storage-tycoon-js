@@ -1,0 +1,33 @@
+maple-tutorial         seed 1: day 121 cash 4148 units 71 leases 23 objects 109 save 120KB
+maple-tutorial         seed 2: day 121 cash -380 units 85 leases 23 objects 135 save 129KB
+maple-tutorial         seed 3: day 121 cash -142 units 75 leases 20 objects 112 save 121KB
+maple-career           seed 1: day 121 cash 439 units 76 leases 23 objects 122 save 123KB
+maple-career           seed 2: day 121 cash 809 units 83 leases 19 objects 130 save 127KB
+maple-career           seed 3: day 121 cash 1179 units 83 leases 22 objects 120 save 127KB
+sc:comeback            seed 1: day 121 cash 4008 units 55 leases 23 objects 85 save 120KB
+sc:comeback            seed 2: day 121 cash 2457 units 57 leases 23 objects 97 save 125KB
+sc:comeback            seed 3: day 121 cash 4706 units 69 leases 23 objects 104 save 134KB
+sc:turnaround          seed 1: day 121 cash 51 units 81 leases 24 objects 131 save 133KB
+sc:turnaround          seed 2: day 121 cash 163 units 59 leases 21 objects 99 save 120KB
+sc:turnaround          seed 3: day 121 cash 222 units 70 leases 23 objects 108 save 128KB
+sc:vertical            seed 1: day 121 cash -279 units 53 leases 0 objects 95 save 83KB
+sc:vertical            seed 2: day 121 cash 4857 units 66 leases 0 objects 108 save 84KB
+sc:vertical            seed 3: day 121 cash 191 units 61 leases 1 objects 101 save 106KB
+sc:climate             seed 1: day 121 cash -125 units 76 leases 2 objects 108 save 120KB
+sc:climate             seed 2: day 121 cash -1102 units 73 leases 0 objects 108 save 89KB
+sc:climate             seed 3: day 121 cash 520 units 77 leases 3 objects 111 save 112KB
+sb-business-empty      seed 1: day 121 cash 1 units 98 leases 0 objects 160 save 122KB
+sb-business-empty      seed 2: day 121 cash 0 units 85 leases 0 objects 135 save 111KB
+sb-business-empty      seed 3: day 121 cash 0 units 92 leases 0 objects 161 save 121KB
+sb-business-starter    seed 1: day 121 cash 1372 units 79 leases 21 objects 150 save 143KB
+sb-business-starter    seed 2: day 121 cash 1448 units 101 leases 24 objects 165 save 151KB
+sb-business-starter    seed 3: day 121 cash 1001 units 84 leases 23 objects 135 save 132KB
+sb-free                seed 1: day 121 cash 0 units 94 leases 0 objects 154 save 117KB
+sb-free                seed 2: day 121 cash 1 units 77 leases 0 objects 117 save 99KB
+sb-free                seed 3: day 121 cash 1 units 73 leases 0 objects 122 save 101KB
+sb-challenging-urban   seed 1: day 121 cash 0 units 89 leases 0 objects 133 save 109KB
+sb-challenging-urban   seed 2: day 121 cash 0 units 82 leases 0 objects 152 save 122KB
+sb-challenging-urban   seed 3: day 121 cash 0 units 86 leases 0 objects 135 save 116KB
+
+64878 actions (13196 accepted), 24.7s in sim steps, 29s total
+NO ISSUES

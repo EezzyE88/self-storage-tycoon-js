@@ -1,0 +1,24 @@
+parcel {"x0":2,"y0":2,"x1":41,"y1":29}
+aisle {"x":21,"y":15} ok
+walk {"x":22,"y":13} ok
+loading {"x":23,"y":15} ok
+shell1 {"x":22,"y":4} ok
+hall {"x":25,"y":5} ok
+hall {"x":31,"y":5} ok
+doorWide {"x":25,"y":12} ok
+doorWide {"x":31,"y":12} ok
+light {"x":25,"y":8} ok
+light {"x":31,"y":8} ok
+hvac {"x":21,"y":6} ok
+hvac {"x":37,"y":6} ok
+iu5x5 {"x":24,"y":5} ok
+iu5x5 {"x":26,"y":5} ok
+iu5x5 {"x":30,"y":5} ok
+iu5x5 {"x":32,"y":5} ok
+corral {"x":28,"y":13} ok
+light {"x":29,"y":16} ok
+cash after orders 89686
+open? No commissioned rent-ready units
+opened day 3
+day 31 climateLeased 15 score 1.00 cash 89470 comps 
+RESULT won day 57  climateLeased 24 units 28

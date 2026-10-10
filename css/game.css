@@ -1030,3 +1030,8 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .tut.comeback .btn { min-height:44px; }
 #ui .tut.comeback.min > :not(.ch) { display:none; }
 #ui.has-sheet .tut.comeback.min { display:none; }
+
+#ui .yard-choice .grow { min-width:0; }
+#ui .yard-choice .btn { min-height:44px; margin-top:8px; }
+#ui .yard-choice summary { min-height:44px; display:flex; align-items:center; cursor:pointer; }
+#ui .yard-infill .row { margin-top:10px; }

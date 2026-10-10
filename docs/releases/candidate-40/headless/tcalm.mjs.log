@@ -1,0 +1,6 @@
+PASS break-ins still happen at low security 14 in 3 seeds x 2 years; 8 security notices
+PASS every break-in at low security came 3+ days after a security notice 14/14, closest gap 19 days
+PASS break-ins hit dark, unwatched units when any are leased 14/14
+PASS story events are never shown as critical 
+ALL PASS
+PASS notices stop after two acknowledgements unless security worsens notices on days 2, 48 at security 0.6, 0.51

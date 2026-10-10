@@ -1,0 +1,17 @@
+PASS every registered complaint receives concise what/why/next without mutating state
+PASS absent climate stock is distinguished from unavailable matching stock
+PASS historical occupied stock stays historical when current stock becomes ready
+PASS make-ready, blocked, unfinished and mixed blockers remain distinct
+PASS matching totals are unique units while condition counts can overlap and lists stay bounded
+PASS snapshot eligibility is not a new power or commissioning validation
+PASS legacy and malformed snapshots never fabricate report-time inventory
+PASS standard availability retains full, make-ready, access, construction and size-specific causes
+PASS overflow available, absent and unknown remain different observations
+PASS both historical office losses avoid diagnosing present shortage or automatic hiring
+PASS visible cards are concise while context, inspection actions and original repeated text stay expandable
+PASS all supported request families have short guidance and retain detailed costs and choices
+PASS staff-handled request does not tell the Owner a decision is needed now
+PASS customer strings and recorded sizes remain escaped in cards and context
+PASS SST0/SST1 production save/load preserves snapshot report
+PASS SST0/SST1 production save/load preserves legacy report
+16 concise feedback checks passed; fixtures do not establish physical-iPhone acceptance

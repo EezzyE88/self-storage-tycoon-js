@@ -1,2 +1,2 @@
-// Ambient lifecycle correction; physical iPhone acceptance pending.
-export const BUILD = { name: 'bplus-ambient-lifecycle-candidate-39', date: '2026-10-10' };
+// Optional Comeback row-extension prototype; physical iPhone enjoyment untested.
+export const BUILD = { name: 'bplus-yard-infill-candidate-40', date: '2026-10-10' };

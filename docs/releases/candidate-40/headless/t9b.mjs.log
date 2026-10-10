@@ -1,0 +1,35 @@
+d5 lien_eligible
+d5 lien_eligible
+d5 lien_eligible
+d5 lien_eligible
+d5 lien_eligible
+d5 lien_eligible
+d5 player: Offer a payment plan -> Sam Torres paid $188 now; the rest is due in 14 days. Fees waived, overlock removed.
+d5 plan_ok
+d5 player: Send lien notice -> Lien notice sent for Unit 102. Auction in about 2 weeks if unpaid.
+d5 lien_notice
+d5 player: Offer a payment plan -> Wes Torres didn't respond to the payment-plan offer.
+d5 player: Send lien notice -> Lien notice sent for Unit 104. Auction in about 2 weeks if unpaid.
+d5 lien_notice
+d5 player: Offer a payment plan -> Elena Torres paid $188 now; the rest is due in 14 days. Fees waived, overlock removed.
+d5 plan_ok
+d5 player: Send lien notice -> Lien notice sent for Unit 106. Auction in about 2 weeks if unpaid.
+d5 lien_notice
+d10 paid_up
+d19 paid_up
+d19 lien_notice
+d19 auction_scheduled
+d19 paid_up
+d19 auction_scheduled
+d21 paid_up
+d27 auction_start
+d27 auction_sold $1105
+d27 auction_sold $130
+d27 auction_end total $1235
+d31 paid_up
+{"current":4,"auction":2} {"day":27,"done":true,"live":null,"result":{"total":1235,"sold":[{"unit":6,"num":104,"price":1105,"war":true,"what":"a classic guitar and amp","tier":"treasure","owed":547,"credit":547},{"unit":8,"num":106,"price":130,"war":false,"what":"household furniture","tier":"normal","owed":604,"credit":130}],"mode":"auction"}} tasks 0 ms [
+  'first_makeready',
+  'first_cart_trip',
+  'first_lease_after_turnover',
+  'first_auction'
+]

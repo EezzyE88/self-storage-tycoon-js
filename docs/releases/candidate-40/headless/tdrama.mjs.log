@@ -1,0 +1,11 @@
+idle  2 seeds x 2 years: {"breakin":9,"pricewar":5,"treasure":0,"junk":0,"normal":0,"quick":0}
+good  2 seeds x 2 years: {"breakin":11,"pricewar":6,"treasure":0,"junk":0,"normal":0,"quick":237}
+PASS price war convo appears Test Storage just dropped its rents to about 16% under market. Price shoppers will notice this week.
+PASS match cuts asking 6% 75 -> 71
+PASS price-war ad starts local campaign for $500 
+PASS cover deductible: -$250, tenant happier 
+ALL PASS
+  lot: sports gear and bikes $325 normal
+  lot: mystery bags of clothes $75 junk
+  lot: holiday decorations $70 normal
+PASS auction lots have contents {"normal":2,"junk":1}

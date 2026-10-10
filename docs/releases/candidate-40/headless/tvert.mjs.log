@@ -1,0 +1,63 @@
+parcel {"x0":2,"y0":2,"x1":33,"y1":23}
+aisle {"x":8,"y":13} ok
+walk {"x":8,"y":12} ok
+shell2 {"x":8,"y":3} ok
+hall {"x":11,"y":4} ok
+hall {"x":17,"y":4} ok
+hall {"x":23,"y":4} ok
+hall {"x":29,"y":4} ok
+hall {"x":9,"y":11} ok
+hall {"x":11,"y":4} ok
+hall {"x":17,"y":4} ok
+hall {"x":23,"y":4} ok
+hall {"x":29,"y":4} ok
+hall {"x":9,"y":11} ok
+elevator {"x":14,"y":10} ok
+stairs {"x":20,"y":10} ok
+doorWide {"x":17,"y":11} ok
+light {"x":11,"y":6} ok
+light {"x":17,"y":6} ok
+light {"x":23,"y":6} ok
+light {"x":29,"y":6} ok
+light {"x":13,"y":11} ok
+light {"x":20,"y":11} ok
+light {"x":26,"y":11} ok
+light {"x":11,"y":9} ok
+light {"x":17,"y":9} ok
+light {"x":23,"y":9} ok
+light {"x":29,"y":9} ok
+light {"x":11,"y":6} ok
+light {"x":17,"y":6} ok
+light {"x":23,"y":6} ok
+light {"x":29,"y":6} ok
+light {"x":13,"y":11} ok
+light {"x":20,"y":11} ok
+light {"x":26,"y":11} ok
+light {"x":11,"y":9} ok
+light {"x":17,"y":9} ok
+light {"x":23,"y":9} ok
+light {"x":29,"y":9} ok
+iu5x10 {"x":10,"y":4} ok
+iu5x10 {"x":12,"y":4} ok
+iu5x10 {"x":16,"y":4} ok
+iu5x10 {"x":18,"y":4} ok
+iu5x10 {"x":22,"y":4} ok
+iu5x10 {"x":24,"y":4} ok
+iu5x10 {"x":28,"y":4} ok
+iu5x5 {"x":10,"y":4} ok
+iu5x5 {"x":12,"y":4} ok
+iu5x5 {"x":16,"y":4} ok
+iu5x5 {"x":18,"y":4} ok
+iu5x5 {"x":22,"y":4} ok
+iu5x5 {"x":24,"y":4} ok
+iu5x5 {"x":28,"y":4} ok
+corral {"x":16,"y":12} ok
+power {"x":32,"y":6} ok
+cash after orders 67730
+open? No commissioned rent-ready units
+opened day 6
+day 31 upper 9 wait 9.1 contrib 638.06 cash 67577 comps 
+day 61 upper 20 wait 5.7 contrib 2582.310000000001 cash 68680 comps 
+day 91 upper 30 wait 4.5 contrib 4944.430000000001 cash 71727 comps StorQuik Self Storage@93
+day 121 upper 35 wait 8.1 contrib 7125.240000000002 cash 76263 comps StorQuik Self Storage@93
+RESULT won day 145  upper 40 units 98
