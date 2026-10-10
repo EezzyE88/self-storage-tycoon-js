@@ -1,0 +1,1 @@
+REPRODUCED 38: three ambient sources survive suspension; master gain cuts immediately

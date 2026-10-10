@@ -29,7 +29,7 @@ class Context {
 globalThis.window={AudioContext:Context};globalThis.document={hidden:false};
 const a=new Audio();a.unlock();const c=a.ctx;
 a.tone(440,.3,{delay:2,rev:.2});a.noise(.3,{delay:3});const pending=[...a.sources];assert.equal(pending.length,2);
-a.setBackground(true);assert.equal(c.state,'suspended');assert.equal(a.master.gain.value,0);assert.equal(a.sources.size,0);assert.ok(pending.every(s=>s.stopped===c.currentTime));
+a.setBackground(true);await new Promise(r=>setTimeout(r,100));assert.equal(c.state,'suspended');assert.equal(a.master.gain.value,0);assert.equal(a.sources.size,0);assert.ok(pending.every(s=>s.stopped===c.currentTime));
 const count=c.nodes.length;a.play('attention');a.tone(440,.2);a.noise(.2);a.update({});a.unlock();assert.equal(c.nodes.length,count);
 a.setBackground(false);assert.equal(c.state,'suspended');a.unlock();await Promise.resolve();assert.equal(c.state,'running');assert.equal(a.master.gain._tgt,a.vol.master);assert.equal(a.sources.size,0);
 a.tone(440,.2);const source=[...a.sources][0];source.onended();assert.equal(a.sources.size,0);

@@ -1,0 +1,18 @@
+PASS ambient-only suspension fades then stops and disconnects every loop
+PASS hidden/direct paths do not create ambient or one-shot sources
+PASS resume creates one fresh graph starting from zero, then smooths world gains
+PASS Safari interruption without visibility event disposes loops
+PASS rapid return cancels delayed suspension and stale scheduled mute
+PASS repeated hidden notifications do not extend release or duplicate cleanup
+PASS volume preferences survive resume and Ambience off remains off
+PASS twenty cycles retain only one connected ambient graph
+PASS resume/background promise race stays silent
+9 ambient lifecycle groups passed
+PASS lifecycle: delayed cues cancelled, background silent, gesture resume, cleanup, resume race, hidden unlock
+PASS load/switch reset removes old messages and stale proposal without mutating save
+PASS Growth review restores exact proposal options without buying or unpausing
+PASS review cannot restore another property proposal
+PASS choosing a different tool discards reviewed proposal
+PASS production fixture 06 returns to valid $620 plan then normal debit
+PASS return requotes a proposal against changed map conditions
+6 UI regression groups passed

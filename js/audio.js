@@ -6,6 +6,10 @@ export class Audio {
     if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().then(() => { if (!this.background && !document.hidden) { this.nextNote = this.ctx.currentTime + 0.1; this.applyVol(); } else this.ctx.suspend().catch(() => {}); }).catch(() => {}); else this.applyVol(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     const c = (this.ctx = new AC());
+    c.onstatechange = () => {
+      if (c.state !== 'running') this.stopAmbience();
+      else if (this.background || document.hidden) this.finishBackground();
+    };
     // Smooth the entire mix, with headroom for several events in one simulation frame.
     this.master = c.createGain(); this.master.gain.value = 0;
     const soft = c.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = 3400; soft.Q.value = 0.45;
@@ -37,16 +41,29 @@ export class Audio {
     this.ramp(this.amb.gain, this.vol.amb * 0.4, t, 0.08);
   }
   setBackground(hidden) {
+    if (hidden === this.background) return;
     this.background = hidden;
-    const c = this.ctx; if (!c || !hidden) return;
+    clearTimeout(this.backgroundTimer);
+    const c = this.ctx; if (!c) return;
+    if (!hidden) { this.stopAmbience(); return; }
     // Cancel both playing and delayed cues before Safari freezes audio time.
-    this.master.gain.cancelScheduledValues(c.currentTime);
-    this.master.gain.setValueAtTime(0, c.currentTime); this.master.gain._tgt = 0;
+    // A short release avoids cutting the continuous ambient waveform mid-sample.
+    this.ramp(this.master.gain, 0, c.currentTime, 0.01);
+    this.master.gain.setValueAtTime(0, c.currentTime + 0.08);
     for (const source of this.sources) { try { source.stop(c.currentTime); } catch (_) {} }
     this.sources.clear();
     for (const {rv,buf} of this.reverbs) { rv.buffer = null; rv.buffer = buf; }
     this.nextNote = c.currentTime + 0.1; this.lift = 0;
-    c.suspend().catch(() => {});
+    if (c.state !== 'running') this.finishBackground();
+    else this.backgroundTimer = setTimeout(() => { if (this.background) this.finishBackground(); }, 80);
+  }
+  finishBackground() {
+    clearTimeout(this.backgroundTimer);
+    const c = this.ctx; if (!c) return;
+    this.master.gain.cancelScheduledValues(c.currentTime);
+    this.master.gain.setValueAtTime(0, c.currentTime); this.master.gain._tgt = 0;
+    this.stopAmbience();
+    if (c.state === 'running') c.suspend().catch(() => {});
   }
   setVol(k, v) { if (!(k in this.vol) || !Number.isFinite(v)) return; this.vol[k] = Math.max(0, Math.min(1, v)); this.applyVol(); }
   envelope(gain, dur, attack) {
@@ -123,17 +140,28 @@ export class Audio {
     this.noise(1.2, { gain: 0.018, freq: 520, q: 0.5, type: 'bandpass', delay: d + 0.12, dest: this.amb });
   }
   startAmbience() {
-    const c = this.ctx; const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+    const c = this.ctx;
+    if (!c || this.background || document.hidden || c.state !== 'running' || this.ambientNodes?.length) return;
+    const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420;
-    this.ambG = c.createGain(); this.ambG.gain.value = 0.18; src.connect(f); f.connect(this.ambG); this.ambG.connect(this.amb); src.start();
+    this.ambG = c.createGain(); this.ambG.gain.value = 0; src.connect(f); f.connect(this.ambG); this.ambG.connect(this.amb); src.start();
     const hum = c.createOscillator(); hum.type = 'sine'; hum.frequency.value = 58; const hf = c.createBiquadFilter(); hf.type = 'lowpass'; hf.frequency.value = 160;
     this.humG = c.createGain(); this.humG.gain.value = 0; hum.connect(hf); hf.connect(this.humG); this.humG.connect(this.amb); hum.start();
     const rs = c.createBufferSource(); rs.buffer = this.noiseBuf; rs.loop = true; const rf = c.createBiquadFilter(); rf.type = 'bandpass'; rf.frequency.value = 1100; rf.Q.value = 0.4;
     this.rainG = c.createGain(); this.rainG.gain.value = 0; rs.connect(rf); rf.connect(this.rainG); this.rainG.connect(this.amb); rs.start();
+    this.ambientSources = [src, hum, rs];
+    this.ambientNodes = [src, f, this.ambG, hum, hf, this.humG, rs, rf, this.rainG];
+  }
+  stopAmbience() {
+    for (const source of this.ambientSources || []) { try { source.stop(this.ctx.currentTime); } catch (_) {} }
+    for (const node of this.ambientNodes || []) node.disconnect();
+    this.ambientSources = []; this.ambientNodes = [];
+    this.ambG = this.humG = this.rainG = null;
   }
   // called each frame with coarse world state
   update({ night = 0, rain = false, hvac = 0, speed = 1, mode = 'day' }) {
     const c = this.ctx; if (!c || this.background || document.hidden || c.state !== 'running') return; const t = c.currentTime;
+    this.startAmbience();
     // automation events pile up if re-issued every frame: only touch a param when its target moves
     this.ramp(this.ambG.gain, 0.08 + (1 - night) * 0.06, t, 0.5);
     this.ramp(this.humG.gain, Math.min(0.05, hvac * 0.02), t, 0.5);
