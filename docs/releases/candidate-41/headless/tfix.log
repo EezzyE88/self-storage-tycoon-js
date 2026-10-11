@@ -1,0 +1,10 @@
+PASS old save part 9 -> new part beat 7 grad
+PASS Round 11+ save untouched 
+PASS hvac built HVAC Plant committed
+PASS climate option offered [["climate",true,"HVAC is at capacity; add another plant",600]]
+PASS renovate ok Convert to climate: done. Make-ready queued.
+PASS unit is climate 
+PASS cost charged 600 vs 600
+PASS make-ready queued 
+PASS converted unit re-leased within 20 days commercial occupied rent 160 market 161
+ALL PASS

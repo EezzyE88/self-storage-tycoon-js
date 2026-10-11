@@ -1,0 +1,9 @@
+PASS full inventory shows capacity remedy with original lost-demand accounting
+PASS makeReady report has distinct cause and remedy
+PASS access report has distinct cause and remedy
+PASS construction report has distinct cause and remedy
+PASS historical availability diagnosis survives reload and later vacancy
+PASS identical visible availability bubbles collapse across different requested sizes
+PASS legacy identical availability text also collapses without losing history keys
+PASS distinct local faults remain distinct visual reports
+8 availability checks passed

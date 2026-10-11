@@ -1,0 +1,11 @@
+[
+  { kind: 'split', label: 'Split into two 5x10', cost: 450, ok: true }
+] {"ok":true,"msg":"Split into two 5x10: done. Make-ready queued."}
+[
+  'Unit 107,8,16,2,1,ready,false',
+  'Unit 108,8,17,2,1,occupied,false',
+  'Unit 101,8,4,2,1,ready,false',
+  'Unit 110,8,5,2,1,ready,false'
+]
+[] {"ok":true} { ok: true, order: 153, msg: '2 x Drive-Up 10x10 committed' }
+2450 276

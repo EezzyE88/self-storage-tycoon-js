@@ -320,6 +320,11 @@ export class Renderer {
     }
   }
   rotate(dir) { this.rot = (this.rot + dir + 4) % 4; this.targetAz = this.targetAz + dir * Math.PI / 2; }
+  faceYardExtension() {
+    // One-time proposal framing from the east/south: show both row and extension doors.
+    const az = Math.PI / 4 + Math.round((this.targetAz - Math.PI / 4) / (2 * Math.PI)) * 2 * Math.PI;
+    this.rot = 0; this.azimuth = this.targetAz = az; this.updateCamera();
+  }
   lookAt(x, y) { this.center.set(x + 0.5, 0, y + 0.5); this.updateCamera(); }
   floorY() { return Number.isInteger(this.view) ? this.view*FLOOR_H : 0; }
   cellAt(cx, cy) {

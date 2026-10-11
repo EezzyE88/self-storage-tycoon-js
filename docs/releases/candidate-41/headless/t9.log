@@ -1,0 +1,11 @@
+limit 70000
+Borrowed $10,000 · $200/mo for 60 months
+review 3 tenants notified: +$32/mo from next bill. Expect a few more move-outs.
+ms 3729 day 201 cash 49614 occ {"n":23,"occ":23,"pct":1}
+events {"milestone":6,"convo":36,"retained":8,"pastdue":5,"paid_up":5,"loan":1}
+convos {"secrisk":2,"mo":13,"bi":1,"gate":12,"rate":1,"pw":1,"light":5,"carts":1} open 0
+stages {"current":23} debt [{"bal":9301.93,"paid":5,"pmt":200.38}]
+90d: rent 10391 anc 20 service 0 debt 421 int 180 fin 0
+auction null
+mgr []
+milestones first_makeready,first_cart_trip,first_lease_after_turnover,first_retention,first_loan,first_repair

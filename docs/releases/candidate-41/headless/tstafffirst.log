@@ -1,0 +1,33 @@
+PASS Porter hire succeeds
+PASS Eligible work delegates to Porter before Owner · Porter Iris assigned · Owner stays free
+PASS Delegation preserves Owner daily capacity · 8
+PASS Delegated work reserves Porter capacity · 5.5
+PASS Busy Porter queues another eligible job · Porter Iris assigned · Owner stays free
+PASS Queued delegation still leaves Owner free · 8
+PASS Queued delegation reserves remaining Porter capacity · 3
+PASS Second job begins in Owner queue before hire
+PASS Unstarted Owner queue rebalances to Porter · 85
+PASS Rebalance refunds queued Owner capacity · 5.5
+PASS Rebalanced work consumes Porter capacity · 5.5
+PASS Owner still handles work when no qualified staff can cover · Owner started this work (2.5h) · 5.5h left today
+PASS Owner fallback still charges daily capacity · 5.5
+PASS Porter capacity is exhausted below another 1h job · 0.5
+PASS Owner becomes fallback when Porter lacks capacity · Owner started this work (1h) · 7h left today
+PASS Porter can be fired while work is queued
+PASS Fired staff queued task is released
+PASS Queued Porter work waits outside staff shift
+PASS Save/resume preserves Porter active/queued assignment
+PASS Save/resume preserves Owner capacity
+PASS Save/resume preserves Porter reserved capacity
+PASS Save/resume preserves Owner fallback assignee
+PASS Save/resume preserves Owner fallback reservation · 5.5
+PASS Save/resume preserves migrated staff assignee
+PASS Save/resume does not double-refund Owner migration · 5.5
+PASS Save/resume does not double-reserve Porter migration · 5.5
+PASS Tech receives simple repair before Owner · Tech Victor assigned · Owner stays free
+PASS Simple repair delegation preserves Owner capacity · 8
+PASS Vendor can take over assigned repair
+PASS Vendor takeover refunds staff reservation once · 8
+PASS Cart policy off prevents Porter assignment · Owner started this work (0.5h) · 7.5h left today
+PASS Two eligible jobs can split across two Porters
+ALL PASS

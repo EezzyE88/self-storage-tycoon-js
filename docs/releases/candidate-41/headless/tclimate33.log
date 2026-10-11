@@ -1,0 +1,21 @@
+PASS absent records stock and provides cause-specific guidance
+PASS occupied records stock and provides cause-specific guidance
+PASS reserved records stock and provides cause-specific guidance
+PASS make-ready records stock and provides cause-specific guidance
+PASS blocked records stock and provides cause-specific guidance
+PASS unfinished records stock and provides cause-specific guidance
+PASS mixed/overlapping states retain every applicable count and remedy
+PASS wrong-size stock and climate noSize keep original outcome category
+PASS report stays historical after current stock and prerequisites change; save/reload retains snapshot
+PASS legacy and malformed reports acknowledge unknown history; standard ready stock excluded
+PASS diagnostics read stored readiness and never revalidate or consume RNG
+PASS snapshot list is bounded while counts and omitted totals stay complete
+PASS 4x burst groups identical causes across sizes and separates other causes without extending expiry
+PASS feedback exposes historical and current unit inspection through existing guarded navigation
+PASS monthly climate suggestion describes recorded losses, no promised leases or automatic HVAC purchase
+PASS legacy monthly advice is corrected at display time without rewriting saved history
+  standard fallback: 26 accepted, 102 rejected
+PASS 2048 directed offers across 128 seeds equal exact Candidate 32 outcomes and non-report state
+PASS 8 seeded one-day simulations (11520 ticks) preserve RNG, economic state and non-thought events
+PASS actual SST0/SST1 save/export/validation/load preserve climate snapshot and pause
+19 climate diagnostics checks passed (Node/DOM fixtures, not Safari acceptance)

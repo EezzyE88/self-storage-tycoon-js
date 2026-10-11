@@ -1035,3 +1035,5 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .yard-choice .btn { min-height:44px; margin-top:8px; }
 #ui .yard-choice summary { min-height:44px; display:flex; align-items:center; cursor:pointer; }
 #ui .yard-infill .row { margin-top:10px; }
+
+#ui .yard-choice .grow > small { display:block; margin-top:6px; }

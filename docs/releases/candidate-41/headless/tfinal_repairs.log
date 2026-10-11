@@ -1,0 +1,15 @@
+PASS 1. layout: crowded captions at one spot never overlap; priority order decides who keeps the best spot
+PASS 1. layout: captions avoid interface obstacles; a displaced caption keeps a leader line to its map spot
+PASS 1. layout: essential captions are never hidden; only context/secondary captions may be left out
+PASS 1. layout: placement is stable across frames (no flicker) and follows the map during pan and zoom
+PASS 2. waiting after early commitment: no placement plan, no "Place here", the unfinished hallways are shown
+PASS 2. normal order: hallways finished, then the elevator step shows its target and nothing for completed work
+PASS 2. a missing hallway beside a committed elevator: the hallway step returns first with its own placement; the held elevator step asks for none
+PASS 3. the step outline (building + unfinished hallways), not one anchor cell, is framed inside the usable area once
+PASS 3. after framing, the player's own pan and zoom are never undone; a new step frames again
+PASS 3. a step that changes during a drag or pinch leaves the camera alone; framing never zooms in
+PASS 3. desktop: the side view-control column narrows the usable width instead of pushing the top down
+PASS 4. F1, F2 and F3 reports: Cause & remedy offers View reported location, which opens that floor at that unit
+PASS 4. unsupported floors (F4/F5, beyond the property, non-integer) and invalid coordinates are rejected
+PASS 4. stale reports: a removed unit keeps its spot without selecting anything; a floor no building reaches opens F1
+14 final-repair checks passed

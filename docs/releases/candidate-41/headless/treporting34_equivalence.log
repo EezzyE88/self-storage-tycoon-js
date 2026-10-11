@@ -1,0 +1,3 @@
+PASS seed 34: 35 days preserve RNG, full non-report state, grade, financial report totals and events
+PASS seed 271: 35 days preserve RNG, full non-report state, grade, financial report totals and events
+100800 paired ticks against immutable Candidate 33; exclusions are only report period, shopper counts and advice

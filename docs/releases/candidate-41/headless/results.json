@@ -1,0 +1,359 @@
+[
+  {
+    "script": "tests/headless/dbg.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/t9.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/t9b.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/t9c.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/t9d.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/t9e.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/t9f.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tads.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tambient39.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tart_design.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/taudio38.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tbal.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tblueprint.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tbplus.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tbplus_payback.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tbplus_scenarios.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tbugs.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tc23_crash_repairs.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tc24_requests.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tc27_availability.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tc29_climate_bubbles.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcalm.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcancellation.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcandidate22.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcapacity.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcareer37.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcareer37_economy.mjs",
+    "exit_code": 0,
+    "initial_exit_code": 1,
+    "retry_environment": {
+      "SST_BASELINE_36": "immutable git archive of 0c8ffcacc8ceb974c890d97d2a9c611b89f6ea24"
+    }
+  },
+  {
+    "script": "tests/headless/tclim.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tclimate33.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tclock24.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcomeback36.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcomeback36_save.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcomplaint_capacity.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcomplaint_hardening.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tcomplaints.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tdelegation.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tdrama.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfeedback35.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfeedback35_equivalence.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfeedback_interactions.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfin.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfinal_repairs.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfinancial_trust.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfix.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfollowup_repairs.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tfuzz.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tgestures.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tguidance_banner.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tlayout_hierarchy.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tmanagement.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tmenu_touch.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tp.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tp2.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tpause_policy.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tperformance.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tproperty_ui.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tr.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/treporting34.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/treporting34_equivalence.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/treview_repairs.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tsandbox.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tsandbox_build_pause.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tsave_recovery.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tsc.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tsection32.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tsoft_audio.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tstafffirst.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tstaffing_compare.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tstatus_hierarchy.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tsystems.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tthreefloor.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tthreefloor_hardening.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tthreefloor_journeys.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tthreefloor_parity.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tthreefloor_save.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tui38.mjs",
+    "exit_code": 0,
+    "initial_exit_code": 1,
+    "retry_command": [
+      "node",
+      "tests/headless/tui38.mjs"
+    ]
+  },
+  {
+    "script": "tests/headless/tv.mjs",
+    "exit_code": 0,
+    "initial_exit_code": 1,
+    "retry_command": [
+      "node",
+      "tests/headless/tv.mjs",
+      "[{\"tool\": \"du5x10\", \"a\": {\"x\": 10, \"y\": 3}, \"b\": {\"x\": 10, \"y\": 3}, \"f\": 0}]"
+    ]
+  },
+  {
+    "script": "tests/headless/tvert.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tvisual30.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tvisual31.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tw.mjs",
+    "exit_code": 0,
+    "initial_exit_code": 1,
+    "retry_command": [
+      "node",
+      "tests/headless/tw.mjs",
+      "[{\"tool\": \"du5x10\", \"a\": {\"x\": 10, \"y\": 3}, \"b\": {\"x\": 10, \"y\": 3}, \"f\": 0}]"
+    ]
+  },
+  {
+    "script": "tests/headless/twalk.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tyard40.mjs",
+    "exit_code": 0
+  },
+  {
+    "script": "tests/headless/tyard41.mjs",
+    "exit_code": 0
+  }
+]

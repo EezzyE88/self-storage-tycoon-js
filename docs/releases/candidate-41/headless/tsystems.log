@@ -1,0 +1,18 @@
+PASS legacy raw and gzip saves round-trip actual game factories
+PASS invalid portfolio index/feed/layers leaves current company untouched
+PASS portfolio saves preserve active property and all cash
+PASS autosave metadata describes the captured property despite switching
+PASS replaced company cannot be overwritten by a delayed autosave
+PASS leaving saves synchronously and supersedes pending compression
+PASS failed local leave save does not claim confirmed persistence
+PASS invalid transfers never alter cash or ledgers; valid transfer conserves cash
+PASS shared skin materials survive instance disposal
+Dependency benchmark: cached 1.8ms, original 32.9ms / 30000 queries
+PASS dependency cache matches original scan across mutations and save restore
+PASS door-first vertical lesson returns to missing connected aisle and recovers
+PASS storage-full message explicitly advises saving a code or file
+PASS corrupt main does not replace a valid backup
+PASS removed corral releases returned cart into recoverable stranded state
+PASS blocked corral outbound and return paths both escape their waiting states
+PASS cached construction dependencies preserve complete simulation state
+ALL PASS: 16 systems regression checks

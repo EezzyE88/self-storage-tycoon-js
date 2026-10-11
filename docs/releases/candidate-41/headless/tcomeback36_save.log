@@ -1,0 +1,5 @@
+PASS before work: raw, compressed, autosave and Continue loader preserve state
+PASS active staff job: raw, compressed, autosave and Continue loader preserve state
+PASS completed rescue: raw, compressed, autosave and Continue loader preserve state
+PASS acknowledged rescue: raw, compressed, autosave and Continue loader preserve state
+4 production save checkpoints passed; malformed progress retains property with notice

@@ -1,0 +1,3 @@
+PASS seed 35: 35 days, full state and events unchanged after daily feedback rendering
+PASS seed 271: 35 days, full state and events unchanged after daily feedback rendering
+100800 paired ticks against immutable Candidate 34; no state exclusions

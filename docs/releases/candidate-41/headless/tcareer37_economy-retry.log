@@ -1,0 +1,9 @@
+Corrected invocation: SST_BASELINE_36=/tmp/sst-baseline36-view41 node tests/headless/tcareer37_economy.mjs
+Exit code: 0
+PASS Candidate36 exact state/event/RNG parity: maple 10080 ticks
+PASS Candidate36 exact state/event/RNG parity: business 10080 ticks
+PASS Candidate36 exact state/event/RNG parity: turnaround 10080 ticks
+PASS Candidate36 exact state/event/RNG parity: vertical 10080 ticks
+PASS Candidate36 exact state/event/RNG parity: climate 10080 ticks
+PASS organic rescue → justified investment → commissioning; no loans, cash injection or coefficients changed: {"day":15,"cash":2600.9300000000003,"cost":620,"range":[6.715043864399437,7.651487103541898]}
+PASS 70491 paired ticks; full state hourly and every event compared, no field exclusions. Comeback core run deliberately omits tutorial callbacks; generic lessons tested separately.

@@ -1,0 +1,13 @@
+PASS Owner serves office shopper when no Clerk is present
+PASS Office shopper consumes 0.5h of Owner capacity · 7.5
+PASS Office usage is visible in Owner accounting · 0.5
+PASS Clerk can be hired for office coverage
+PASS Clerk takes office shopper before Owner
+PASS Clerk preserves all 8h of Owner capacity · 8
+STAFFING_COMPARISON [{"name":"Owner only","roles":"owner","payrollPerDay":0,"cashDelta":5959,"taskStarts":38,"avgBacklog":0.08,"avgOwnerUsed":0.71,"avgOwnerOffice":0.24,"lostService":3,"occupancy":1,"rentRoll":3227,"estDailyNet":65},{"name":"Owner + Porter","roles":"porter","payrollPerDay":12.5,"cashDelta":4612,"taskStarts":37,"avgBacklog":0.07,"avgOwnerUsed":0.53,"avgOwnerOffice":0.23,"lostService":0,"occupancy":1,"rentRoll":3203,"estDailyNet":51},{"name":"Owner + Tech","roles":"tech","payrollPerDay":20,"cashDelta":4061,"taskStarts":36,"avgBacklog":0.07,"avgOwnerUsed":0.56,"avgOwnerOffice":0.16,"lostService":0,"occupancy":0.957,"rentRoll":3097,"estDailyNet":44},{"name":"Fully staffed","roles":"porter+tech+clerk+manager","payrollPerDay":72.5,"cashDelta":-320,"taskStarts":37,"avgBacklog":0.07,"avgOwnerUsed":0.24,"avgOwnerOffice":0.03,"lostService":0,"occupancy":0.913,"rentRoll":3001,"estDailyNet":-11}]
+PASS 90-day comparison produced all four staffing mixes
+PASS Payroll matches provisional wages · Owner only $0/d, Owner + Porter $12.5/d, Owner + Tech $20/d, Fully staffed $72.5/d
+PASS All comparison outputs are finite
+PASS Clerk-containing full staff does not consume more Owner office time than Owner-only · 0.24h vs 0.03h
+PASS Porter and Tech runs exercise real task throughput · 37 / 36
+ALL PASS

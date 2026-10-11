@@ -1,0 +1,8 @@
+PASS Elevator Confirm -> "Light both hallways" with Elevator still armed: guided to switch, no actionable map cue (reproduced first)
+PASS Light F1 -> Light F2: the floor mismatch is guided too; tool+floor match gives the normal cue; then F2 units
+PASS repeated placement with the same tool and floor is unchanged; ordinary building outside lessons is unchanged
+PASS no recursion: the placement helpers never call resolveStep
+PASS manual Pause survives the whole chain; prior 2x is restored after each review; Space during a review hold records Pause
+PASS banner placement: below the measured phone control rows, clear of the panel; no room means wait
+PASS a lesson offer hidden behind an open panel waits without holding time, then shows and holds; Later restores the prior speed
+7 guidance/banner checks passed

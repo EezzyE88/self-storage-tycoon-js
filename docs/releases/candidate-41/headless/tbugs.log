@@ -1,0 +1,10 @@
+PASS B1 ownerClean on a floor that does not exist is refused and the game keeps running Nothing to clean there
+PASS B1 ownerClean off the map is refused 
+PASS B1 a save already carrying the bad task loads and runs 
+PASS B2 buying carts for a non-corral object is refused Corral not ready
+PASS B3 undoing an earlier order within 30 min refunds it in full Undone - refunded $900
+PASS B3 after 30 min a cancel is a partial refund 420 of 900
+PASS B4 worn-out carts sitting in a corral get repair jobs and are fixed 0 of 3 still worn
+PASS B5 routine access visits are not re-queued forever when the lot is crowded 3007 -> 7
+PASS B6 commissioning a whole order works after its record was pruned record kept: false; 13 units commissioned - now rent-ready
+ALL PASS

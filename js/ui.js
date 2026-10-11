@@ -524,6 +524,7 @@ export class UI {
     this.planArgs = structuredClone({ a: choice.args.a, b: choice.args.b, axis: choice.args.axis });
     this.replan();
     this.yardGuide = { sim: this.sim, args: structuredClone(this.plan.args) };
+    this.rend.faceYardExtension?.();
     this.rend.lookAt(11, 3); this.frameOutline();
     return true; // Ordinary Confirm remains the only way to buy.
   }

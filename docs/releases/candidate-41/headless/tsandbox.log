@@ -1,0 +1,22 @@
+PASS Business: the starter layout is valid on the empty lot
+PASS Business: building charged cash and is still under construction  [cash 35000 -> 4300]
+PASS Business: unaffordable construction is refused with a reason  [Not enough cash (24,128 needed) / Not enough cash (19,800 needed)]
+PASS Business: unmodified, one log entry (start)
+PASS Free Build: instant construction completes valid builds at once
+  extra builds: ok | ok | ok | Blocked: would sit on a drive aisle | ok
+PASS Free Build: spending beyond starting cash is allowed  [capex day 1 $68440, start $60000]
+PASS Free Build: cash never goes negative (funds cover the gap)  [min $0]
+PASS Free Build: start cash + operating flows + unpaid commitments = cash (incl. Free Build funds)  [1 vs 1]
+PASS Free Build: operating result excludes construction and Free Build funds  [op $-684, funds $9079]
+PASS Free Build: no credit-line or cash-shortage prompts
+PASS Add funds: recorded as sandbox funds, marks save modified, not counted as operating income
+PASS Instant construction can be turned on in play and is logged
+PASS Switch to Free Build is one-way; adding funds is then not needed
+PASS Operating costs setting scales daily operating cost  [37.25 vs 46.57]
+PASS Relaxed preset applies its four values
+PASS Maintenance off: no object lost condition in 60 days  [0 worse]
+PASS Starter facility: sandbox mode, no tutorial, porter hired, rent collected  [rent 60d $6163]
+PASS Units goal (target lowered to 8 for this test): met, logged, time keeps running  [met day 2, now day 41, 8 open, 8 units built and open for rent]
+PASS Save/resume: settings, goal and funds survive; continuation is identical
+PASS Mode labels  [Business sandbox · Funds added / Free Build · Instant]
+ALL PASS
