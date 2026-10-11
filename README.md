@@ -10,10 +10,10 @@ Updated 2026-10-10, America/Los_Angeles.
 
 | Item | Verified state |
 |---|---|
-| Accepted game source | `b2faa4baa8da8d470e142480ef9229485a73b46b` |
-| Acceptance | User-approved fast-forward into master, preserving 19 reviewed commits |
-| Retained candidate branch | `candidate/yard-view-20261010` |
-| Served build | `bplus-yard-view-candidate-41` |
+| Accepted game source | `8cd99b3313afe05ec9785d07db8f7f2717cf515d` |
+| Acceptance | User-approved fast-forward into master; scoped art/floor-view iPhone acceptance |
+| Retained candidate branch | `candidate/whole-game-art-20261010` |
+| Served build | `bplus-floor-view-20261010` |
 | Safari preview | https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site |
 | Runtime scope | Three playable floors; up to five company properties |
 
@@ -39,6 +39,8 @@ Pause, 1x, 2x and 4x are supported. At 1x a game day is 24 real seconds. A build
 Eddie's reported iPhone evidence covers rescue acknowledgement, career access, expandable history, tested save/reload/Continue, Ambience-only interruption silence, deliberate further building and extension persistence. A separate later run reached 25/25 leased from the 23-unit fixture and continued through Day 45 with repairs, cart demand, overdue rent and completed rescue history visible. Separate runs are not one continuous trace; screenshots without build labels do not establish deployment identity.
 
 Candidate 41 records 84 successful final script executions after four corrected harness invocations, including two placement diagnostic helpers. The merge review independently verified 60/60 served hashes and 38/38 runtime Git matches, and reran 15 production-autosave recovery groups with delayed compression. These are automated/source checks, not blanket device acceptance.
+
+The accepted art/floor-view update adds office and façade depth, stable product finishes, readable progress, easier floor selection and corrected floor-scoped glows. Eddie reported the art preview felt great until F2, then gave a physical iPhone PASS for the focused floor-navigation follow-up. Current review verified 62/62 served files and 38 runtime files against Git. No new save/reload or dense-property physical acceptance is claimed. See [accepted art/floor-view assessment](docs/releases/floor-view-20261010/ACCEPTANCE.md).
 
 No blocking defect was identified in the merge review. Dense Safari GPU/thermal performance, full organic company progression, physical card-spacing acceptance and physical Return to placement camera preservation remain unconfirmed. The accepted baseline is not a claim of complete commercial-release readiness.
 

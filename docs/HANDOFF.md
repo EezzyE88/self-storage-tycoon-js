@@ -4,19 +4,19 @@ Updated 2026-10-10, America/Los_Angeles. Use ONLY `EezzyE88/self-storage-tycoon-
 
 ## Current state takes precedence
 
-The user approved a fast-forward-only merge of accepted game-source commit `b2faa4baa8da8d470e142480ef9229485a73b46b` into master. This documentation-only follow-up advances master without changing that runtime. Branch `candidate/yard-view-20261010` and the unchanged Safari preview retain that game source.
+Accepted runtime: `8cd99b3313afe05ec9785d07db8f7f2717cf515d`; build `bplus-floor-view-20261010`; retained branch `candidate/whole-game-art-20261010`. Eddie approved the fast-forward-only merge from former master `f70b81a0298a438577db1ee35934655e7858353f`. This documentation follow-up changes no runtime bytes.
 
 Preview: https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site
 
-Build: `bplus-yard-view-candidate-41`. No republication or user-save access/modification accompanies this update. The preview manifest's old accepted-master field is historical publication provenance.
+Hosting version 47 remains unchanged after merge. Publication identity and 62/62 served hashes were independently verified; screenshots without a build identifier do not identify deployment. The preview manifest's accepted-master value is historical publication provenance.
 
-Read [CURRENT-STATUS.md](CURRENT-STATUS.md) first for the complete current acceptance assessment, evidence boundaries and next milestone. The game's accepted source supports three playable floors and a five-property portfolio. JavaScript is authoritative; do not import legacy C++ project instructions.
+Read [CURRENT-STATUS.md](CURRENT-STATUS.md) and [art/floor-view acceptance](releases/floor-view-20261010/ACCEPTANCE.md). Eddie reported the art preview felt great until F2 and subsequently gave PASS for the focused floor chooser, F1 → F2 → F1 and nighttime-light follow-up. The F2 hold is resolved. Earlier rescue/history/career/save continuity, Ambience silence and deliberately built/persisted extension acceptance are retained with their original scope.
 
-Physical user-reported evidence now includes Candidate 37 rescue acknowledgement/career/history/persistence PASS; Candidate 39 Ambience-only app switching with "No noise"; deliberate Candidate 40 building and extension save continuity; a preferred two-unit door-and-aisle preview; a separate later 25/25 leased run from the 23-unit fixture; and operation through Day 45 with repairs, cart demand, overdue rent and completed rescue history visible. Do not conflate separate loaded runs or infer exact commissioning actions, enjoyment, card-spacing acceptance or physical Return to placement preservation. Latest screenshots have no build identifier.
+Whole-game visual changes preserve architecture differences, status cues, authoritative layouts, six-unit restoration and two-unit extension. Simulation, economy, save handling and scenario restrictions are unchanged from former master. Three playable floors and five company properties remain the supported slice; JavaScript is authoritative.
 
-Candidate 41's broad pre-review HOLD is superseded by the focused merge-readiness assessment and the user's explicit merge approval. Automated/source success is not blanket physical acceptance. Dense Safari performance and organic long-term company progression remain open; the minor presentation details are not automatic merge blockers.
+No confirmed blocking defect remains. Dense 550-unit physical performance, every status glyph's phone readability and a fresh physical six-unit restoration transition remain verification limits, not automatic blockers. Do not infer FPS, continuous loaded runs, exact commissioning actions, new save/reload acceptance or broad enjoyment from screenshots.
 
-Next proposed gameplay milestone: **run the expanded yard with staff and fund its next justified improvement**, using existing mechanics first. No new implementation or economy tuning is authorized by this handoff. The targeted dense-Safari performance check is separate.
+Next gameplay milestone remains **run the expanded yard with staff and fund its next justified improvement**, using existing mechanics first. No gameplay implementation or tuning is authorized by this handoff. Master advances with documentation only; preview and user saves are untouched.
 
 ## Historical handoff retained below
 
