@@ -1,4 +1,4 @@
-import { isComeback, targetInService } from './comeback.js';
+import { isComeback, targetInService, targetUnits } from './comeback.js';
 // Three.js presentation layer. Reads sim.s / sim.D; never mutates simulation state.
 import * as THREE from 'three';
 import { unitStatus, UNIT_STATUS, loadingStatus } from './status.js';
@@ -7,10 +7,10 @@ import { G, FLOOR_H, TOOLS } from './data.js';
 const CELL = 32; // px per cell on ground textures
 const WALL_H = 1.25; // drive-up unit height
 const COL = {
-  grass: '#91a779', grass2: '#879e71', asphalt: '#626970', concrete: '#ded5c4', street: '#46525b', sidewalk: '#e6decd',
+  grass: '#849969', grass2: '#7a9063', asphalt: '#454d54', concrete: '#ded5c4', street: '#3c4750', sidewalk: '#e6decd',
   loading: '#4f5257', parking: '#4c4f54', stripe: '#f1efe6', yellow: '#e8b923', hall: '#e4e0d6', shellFloor: '#bdb8ad',
-  unitWall: '#e7dfcf', unitWall2: '#d9cfbb', roof: '#8b9da6', roofTrim: '#435c68', door: '#d9772b', doorInt: '#2f5e8e',
-  shellWall: '#ded5c3', shellRoof: '#7e929e', office: '#f0ebe0', officeTrim: '#1f3a5f', glass: '#8fb3c8',
+  unitWall: '#e7dcc8', unitWall2: '#ded0b9', roof: '#70818c', roofTrim: '#334d5c', door: '#c8723f', doorInt: '#3c6b8b',
+  shellWall: '#ded5c3', shellRoof: '#70818c', office: '#f0e5d2', officeTrim: '#203d53', glass: '#7398ac',
 };
 function tex(canvas, repeat = false) {
   const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
@@ -21,7 +21,7 @@ function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = 
 function hash(n) { n = (n ^ 61) ^ (n >>> 16); n = n + (n << 3); n ^= n >>> 4; n = Math.imul(n, 0x27d4eb2d); n ^= n >>> 15; return (n >>> 0) / 4294967296; }
 
 // ---------------------------------------------------------------- shared textures
-function rollupTexture() {
+function rollupTexture(turnover = false) {
   const c = mkCanvas(64, 64), g = c.getContext('2d');
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 64);
   for (let y = 0; y < 64; y += 5) { g.fillStyle = 'rgba(0,0,0,0.16)'; g.fillRect(0, y, 64, 1.4); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, y + 1.5, 64, 1); }
@@ -30,6 +30,11 @@ function rollupTexture() {
   g.fillStyle = 'rgba(255,255,255,.42)'; g.fillRect(3, 0, 1, 60);
   g.fillStyle = 'rgba(0,0,0,.30)'; g.fillRect(0, 60, 64, 4); g.fillRect(26, 50, 12, 4);
   g.fillStyle = '#b7c0bf'; g.fillRect(28, 50, 8, 2);
+  // Turnover scuffs are a finish cue, not mechanical damage or simulation dirt.
+  if (turnover) for (let k = 0; k < 18; k++) {
+    g.fillStyle = k % 2 ? 'rgba(53,44,33,.22)' : 'rgba(255,249,223,.28)';
+    g.fillRect(5 + hash(k * 7) * 48, 29 + hash(k * 11) * 30, 3 + hash(k + 3) * 13, 1.5);
+  }
   return tex(c);
 }
 // Shared architecture textures add legible detail without a mesh per seam or frame.
@@ -38,9 +43,9 @@ function architectureTexture(kind) {
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 128, 128);
   if (kind === 'roof') {
     for (let x = 0; x < 128; x += 16) {
-      g.fillStyle = 'rgba(25,43,56,.25)'; g.fillRect(x, 0, 2, 128);
-      g.fillStyle = 'rgba(255,255,255,.38)'; g.fillRect(x + 2, 0, 1, 128);
-      g.fillStyle = 'rgba(20,35,45,.20)';
+      g.fillStyle = 'rgba(25,43,56,.16)'; g.fillRect(x, 0, 2, 128);
+      g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(x + 2, 0, 1, 128);
+      g.fillStyle = 'rgba(20,35,45,.12)';
       for (let y = 12; y < 128; y += 32) g.fillRect(x + 5, y, 2, 2);
     }
   } else {
@@ -56,6 +61,15 @@ function architectureTexture(kind) {
       g.fillStyle = '#d8e5e7';
       for (let x = 36; x < 116; x += 24) g.fillRect(x, 42, 3, 36);
       g.fillStyle = 'rgba(255,255,255,.20)'; g.fillRect(12, 42, 104, 6);
+    }
+    if (kind === 'office') {
+      // A grounded masonry base distinguishes the office from rental rows.
+      g.fillStyle = '#b4a58c'; g.fillRect(0, 88, 128, 40);
+      g.strokeStyle = 'rgba(63,53,41,.25)'; g.lineWidth = 1;
+      for (let y = 88; y < 128; y += 10) {
+        g.beginPath(); g.moveTo(0, y); g.lineTo(128, y); g.stroke();
+        for (let x = (y % 20 ? 0 : 16); x < 128; x += 32) { g.beginPath(); g.moveTo(x,y); g.lineTo(x,y+10); g.stroke(); }
+      }
     }
   }
   return tex(c);
@@ -102,8 +116,20 @@ function plaqueTexture(text) {
 function signTexture(text, bg = COL.officeTrim) {
   const c = mkCanvas(256, 64), g = c.getContext('2d');
   g.fillStyle = bg; g.fillRect(0, 0, 256, 64); g.fillStyle = '#f5c542'; g.fillRect(0, 56, 256, 8);
-  g.fillStyle = '#fff'; g.font = '800 34px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 30);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (text === 'OFFICE') {
+    g.font = '800 19px system-ui, sans-serif'; g.fillText('SELF STORAGE',128,17);
+    g.font = '800 25px system-ui, sans-serif'; g.fillText('OFFICE',128,41);
+  } else { g.font = '800 34px system-ui, sans-serif'; g.fillText(text, 128, 30); }
   return tex(c);
+}
+function statusTexture(state) {
+  const c = mkCanvas(64,64), g = c.getContext('2d'), d = UNIT_STATUS[state];
+  g.fillStyle = '#f6efe1'; g.fillRect(0,0,64,64);
+  g.fillStyle = d.color; g.fillRect(4,4,56,56);
+  g.strokeStyle = '#20303e'; g.lineWidth = 3; g.strokeRect(2,2,60,60);
+  g.fillStyle = '#fff'; g.font = '900 46px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(d.mark,32,33); return tex(c);
 }
 function glowTexture(inner = 'rgba(255,226,160,0.85)') {
   const c = mkCanvas(128, 128), g = c.getContext('2d');
@@ -136,11 +162,13 @@ export class Renderer {
     this.zoom = 1; this.center = new THREE.Vector3(sim.s.W / 2, 0, sim.s.H / 2 + 1);
     this.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -200, 400);
     this.frustum = 30;
-    this.tx = { rollup: rollupTexture(), glow: glowTexture(), glowCool: glowTexture('rgba(210,230,255,0.8)'), ring: ringTexture(), roof: architectureTexture('roof'), wall: architectureTexture('wall'), facade: architectureTexture('facade'), badges: {}, plaques: {} };
+    this.tx = { rollup: rollupTexture(), turnover: rollupTexture(true), office: architectureTexture('office'), glow: glowTexture(), glowCool: glowTexture('rgba(210,230,255,0.8)'), ring: ringTexture(), roof: architectureTexture('roof'), wall: architectureTexture('wall'), facade: architectureTexture('facade'), badges: {}, plaques: {} };
     for (const k of ['rent', 'turn', 'fault', 'commission', 'missing', 'unready', 'reserved', 'lien', 'task']) this.tx.badges[k] = badgeTexture(k);
     this.mat = this.makeMaterials();
     this.statusMaterials = Object.fromEntries(Object.entries(UNIT_STATUS).map(([k,v])=>[k,new THREE.MeshStandardMaterial({color:v.color,map:this.tx.rollup,roughness:.65})]));
+    this.statusMarks = Object.fromEntries(Object.keys(UNIT_STATUS).map(k=>[k,new THREE.MeshBasicMaterial({map:statusTexture(k)})]));
     Object.assign(this.mat, this.statusMaterials);
+    Object.assign(this.mat, Object.fromEntries(Object.entries(this.statusMarks).map(([k,v])=>['mark'+k,v])));
     this.geo = { box: new THREE.BoxGeometry(1, 1, 1), plane: new THREE.PlaneGeometry(1, 1), cyl: new THREE.CylinderGeometry(0.5, 0.5, 1, 10), sph: new THREE.SphereGeometry(0.5, 12, 8), cone: new THREE.ConeGeometry(0.5, 1, 8) };
     this.geo.edges = new THREE.EdgesGeometry(this.geo.box); this.mat.edgeDark = new THREE.LineBasicMaterial({ color: 0x3c4046 }); this.ringGeo = {};
     this.setupLights();
@@ -178,11 +206,13 @@ export class Renderer {
   makeMaterials() {
     const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o });
     return {
-      comebackWorn: std('#938574', {map:this.tx.wall}), comebackRestored: std('#eee8d7', {map:this.tx.wall}),
+      comebackWorn: std('#baa98e', {map:this.tx.wall}), comebackRestored: std('#eee3cf', {map:this.tx.wall}),
       unitWall: std(COL.unitWall, {map:this.tx.wall}), unitWall2: std(COL.unitWall2, {map:this.tx.wall}), roof: std(COL.roof, { map:this.tx.roof, roughness: 0.75, metalness: 0.15 }), roofTrim: std(COL.roofTrim),
       door: std(COL.door, { map: this.tx.rollup, roughness: 0.55, metalness: 0.2 }), doorInt: std(COL.doorInt, { map: this.tx.rollup, roughness: 0.55, metalness: 0.2 }),
+      doorClimate: std('#3c8586', {map:this.tx.rollup,roughness:.55,metalness:.2}),
+      doorTurn: std('#ad7953', {map:this.tx.turnover,roughness:.85}), doorIntTurn: std('#647c86', {map:this.tx.turnover,roughness:.85}), doorClimateTurn: std('#658780', {map:this.tx.turnover,roughness:.85}),
       doorDark: std('#2a2c30'), shellWall: std(COL.shellWall, {map:this.tx.wall}), shellWallCut: std('#b8ae9b'), shellRoof: std(COL.shellRoof, { map:this.tx.roof, roughness: 0.75, metalness: 0.15 }),
-      office: std(COL.office, {map:this.tx.wall}), officeTrim: std(COL.officeTrim), glass: std(COL.glass, { roughness: 0.15, metalness: 0.4, transparent: true, opacity: 0.75 }),
+      office: std(COL.office, {map:this.tx.office}), officeTrim: std(COL.officeTrim), glass: std(COL.glass, { roughness: 0.15, metalness: 0.4, transparent: true, opacity: 0.75 }),
       metal: std('#9aa1a8', { metalness: 0.6, roughness: 0.4 }), darkMetal: std('#3c4046', { metalness: 0.5, roughness: 0.5 }), yellow: std('#e8b923'),
       lamp: new THREE.MeshStandardMaterial({ color: 0xfff4d6, emissive: 0xffd88a, emissiveIntensity: 0 }), lampOff: std('#555'),
       trunk: std('#6b4f35'), leaf: std('#4f7a3a'), leaf2: std('#5e8a41'), fence: std('#8b9096', { metalness: 0.5, roughness: 0.5 }),
@@ -363,14 +393,22 @@ export class Renderer {
         if(y>0&&paved(s.ground[i-W]))g.fillRect(px,py,C,3);
         for (let k = 0; k < 6; k++) { g.fillStyle = hash(i * 31 + k) < .5 ? 'rgba(43,66,32,.07)' : 'rgba(220,224,175,.08)'; g.fillRect(px + hash(i * 7 + k) * C, py + hash(i * 13 + k) * C, 1, 2); }
       }
-      else if (gv === G.ASPHALT || gv === G.STREET || gv === G.PARKING || gv === G.LOADING) { for (let k = 0; k < 5; k++) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(px + hash(i * 5 + k) * C, py + hash(i * 3 + k) * C, 1.5, 1.5); } }
+      else if (gv === G.ASPHALT || gv === G.STREET || gv === G.PARKING || gv === G.LOADING) {
+        for (let k = 0; k < 12; k++) { g.fillStyle = k % 2 ? 'rgba(255,255,255,.06)' : 'rgba(15,24,30,.09)'; g.fillRect(px + hash(i * 5 + k) * C, py + hash(i * 3 + k) * C, 1, 1); }
+        // Broad, quiet resurfacing variation rather than a conspicuous tile grid.
+        g.fillStyle = `rgba(17,28,36,${hash(Math.floor(x/4)+Math.floor(y/4)*17)*.04})`; g.fillRect(px,py,C,C);
+      }
       // Pale edge paint makes paved boundaries legible; it is decoration, not a route or curb object.
       if ([G.ASPHALT,G.PARKING,G.LOADING].includes(gv)) {
         g.fillStyle='rgba(226,217,190,.32)';
         if(x>0 && s.ground[i-1]===G.GRASS) g.fillRect(px,py,1.5,C);
         if(y>0 && s.ground[i-W]===G.GRASS) g.fillRect(px,py,C,1.5);
       }
-      if (gv === G.CONCRETE || gv === G.SIDEWALK) { g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1); }
+      if (gv === G.CONCRETE || gv === G.SIDEWALK) {
+        g.fillStyle = `rgba(255,250,231,${h*.055})`; g.fillRect(px,py,C,C);
+        g.strokeStyle = 'rgba(58,49,39,.18)'; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1);
+        g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(px+1,py+1,C-2,1);
+      }
       if (gv === G.LOADING) {
         const state=bays.get(i); g.strokeStyle = state==='inaccessible' ? '#ef9d91' : state==='occupied' ? '#aabac6' : '#9ed9c0'; g.lineWidth = 3; g.strokeRect(px + 2, py + 2, C - 4, C - 4);
         g.fillStyle=g.strokeStyle; g.font='bold 23px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(state==='inaccessible'?'×':state==='occupied'?'—':'+',px+C/2,py+C/2); g.textAlign='start'; g.textBaseline='alphabetic';
@@ -436,7 +474,7 @@ export class Renderer {
     });
   }
   clearGroup(g) { while (g.children.length) { const c = g.children[0]; g.remove(c); this.disposeTree(c); } }
-  clearStatic() { this.clearGroup(this.staticG); this.anim = []; this.badges = []; }
+  clearStatic() { this.clearGroup(this.staticG); this.anim = []; this.badges = []; this.statusSlots = []; this.statusBatches = new Map(); }
   add(mesh, f = 0, tag = {}) { mesh.userData = { f, ...tag }; mesh.castShadow = mesh.castShadow ?? true;
     // Tiny box props retain appearance/selection, but phones skip their shadow-map draw.
     if (this.mobile && mesh.geometry === this.geo.box && Math.max(mesh.scale.x, mesh.scale.y, mesh.scale.z) <= 0.85) mesh.castShadow = false; this.staticG.add(mesh); return mesh; }
@@ -444,6 +482,17 @@ export class Renderer {
     const m = new THREE.Mesh(this.geo.box, mat); m.scale.set(w, h, d); m.position.set(x, y + f * FLOOR_H, z); m.castShadow = true; m.receiveShadow = true; return this.add(m, f, tag);
   }
   plaque(text) { if (!this.tx.plaques[text]) this.tx.plaques[text] = new THREE.MeshBasicMaterial({ map: plaqueTexture(text) }); return this.tx.plaques[text]; }
+  doorFinish(o) {
+    const turnover = o.cstate === 'operating' && o.commercial === 'unready';
+    return o.env === 'climate' ? this.mat[turnover ? 'doorClimateTurn' : 'doorClimate']
+      : o.access === 'drive' ? this.mat[turnover ? 'doorTurn' : 'door'] : this.mat[turnover ? 'doorIntTurn' : 'doorInt'];
+  }
+  comebackFinish(o, target) {
+    if (!targetUnits(this.sim.s,target).some(u=>u.id===o.id)) return o.num % 2 ? this.mat.unitWall : this.mat.unitWall2;
+    // Access/commissioning issues must not masquerade as fresh cleaning dirt.
+    if (o.cstate === 'operating' && o.commercial === 'unready') return this.mat.comebackWorn;
+    return targetInService(this.sim.s,target) ? this.mat.comebackRestored : this.mat.unitWall;
+  }
   faceMesh(w, h, mat, cx, cy, cz, dir, f = 0, tag = {}) { // a vertical plane facing dir [dx,dy]
     const m = new THREE.Mesh(this.geo.plane, mat); m.scale.set(w, h, 1); m.position.set(cx, cy + f * FLOOR_H, cz);
     m.rotation.y = Math.atan2(dir[0], dir[1]); m.castShadow = false; m.receiveShadow = true; return this.add(m, f, tag);
@@ -455,9 +504,26 @@ export class Renderer {
       try { this.buildObj(o); } catch (e) { console.warn('render obj', o.type, e); }
     }
     for(const ord of s.orders.filter(o=>o.st==='construction'&&o.vertical)){const v=ord.vertical,sh=s.objects[v.shell];if(sh&&v.phase<2){const edge=new THREE.LineSegments(this.geo.edges,this.mat.scaffold);edge.scale.set(sh.w,FLOOR_H,sh.h);edge.position.set(sh.x+sh.w/2,v.f*FLOOR_H+FLOOR_H/2,sh.y+sh.h/2);this.add(edge,v.f,{obj:sh.id,pendingFloor:true});}}
+    this.buildStatusMarks();
     this.buildArchitectureDetail();
     this.buildFence();
     this.applyView();
+  }
+  buildStatusMarks() {
+    const capacity=new Map();for(const slot of this.statusSlots)capacity.set(slot.f,(capacity.get(slot.f)||0)+1);
+    for(const [f,n]of capacity)for(const state of Object.keys(UNIT_STATUS)){
+      const mesh=new THREE.InstancedMesh(this.geo.plane,this.statusMarks[state],n);mesh.count=0;mesh.castShadow=false;mesh.receiveShadow=false;mesh.frustumCulled=false;
+      this.statusBatches.set(f+':'+state,mesh);this.add(mesh,f,{statusMark:true,decoration:'statusMarks',state});
+    }
+    this.updateStatusMarks(true);
+  }
+  updateStatusMarks(force=false) {
+    let changed=force;
+    for(const slot of this.statusSlots){const state=unitStatus(slot.o);if(slot.state!==state){slot.state=state;changed=true;}}
+    if(!changed)return;
+    for(const mesh of this.statusBatches.values())mesh.count=0;
+    for(const slot of this.statusSlots){const mesh=this.statusBatches.get(slot.f+':'+slot.state);slot.batch=mesh;slot.index=mesh.count;mesh.setMatrixAt(mesh.count++,slot.matrix);}
+    for(const mesh of this.statusBatches.values())mesh.instanceMatrix.needsUpdate=true;
   }
   // Decorative batches are floor-scoped and non-shadowing; simulation footprints stay authoritative.
   buildArchitectureDetail() {
@@ -479,8 +545,16 @@ export class Renderer {
         if(!edgeY(o.x+o.w))add(f,'eave',o.x+o.w+.035,H+.01,cz,.065,.10,o.h+.13);
       }
     }
+    for (const o of this.sim.objs('office')) {
+      if (o.cstate === 'construction') continue;
+      const d=o.door.dir,side=[-d[1],d[0]],len=d[0]?o.h:o.w;
+      const x=o.x+o.w/2+d[0]*(o.w/2+.012),z=o.y+o.h/2+d[1]*(o.h/2+.012);
+      // Batched window mullions give the existing glass real façade depth.
+      for (const k of [-.24,0,.24]) add(0,'frame',x+side[0]*len*k,.95,z+side[1]*len*k,d[0]?.055:.065,.82,d[0]?.065:.055);
+      for (const y of [.54,1.36]) add(0,'frame',x,y,z,d[0]?.055:len*.81,.06,d[0]?len*.81:.055);
+    }
     for(const {f,kind,parts} of batches.values()) {
-      const mesh=new THREE.InstancedMesh(this.geo.box,kind==='frame'?this.mat.metal:this.mat.roofTrim,parts.length);
+      const mesh=new THREE.InstancedMesh(this.geo.box,kind==='frame'?this.mat.darkMetal:this.mat.roofTrim,parts.length);
       const m=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),sc=new THREE.Vector3();
       parts.forEach((p,i)=>{m.compose(v.set(p.x,p.y+f*FLOOR_H,p.z),q,sc.set(p.w,p.h,p.d));mesh.setMatrixAt(i,m);});
       mesh.castShadow=false;mesh.receiveShadow=true;this.add(mesh,f,{decoration:kind});
@@ -510,17 +584,20 @@ export class Renderer {
         if (inConst) { this.scaffold(o, cx, cz, o.w, o.h, H, f); break; }
         const body = this.box(o.w - 0.06, H, o.h - 0.06, (o.num % 2) ? this.mat.unitWall : this.mat.unitWall2, cx, H / 2, cz, f, { obj: o.id });
         const rescueTarget = isComeback(S) && S.scenario.targets?.find(t => t.ids.includes(o.id));
-        if (rescueTarget) { body.material = targetInService(S,rescueTarget) ? this.mat.comebackRestored : this.mat.comebackWorn; this.anim.push({k:'comeback',mesh:body,target:rescueTarget}); }
+        if (rescueTarget) { body.material = this.comebackFinish(o,rescueTarget); this.anim.push({k:'comeback',mesh:body,target:rescueTarget,o}); }
         if (o.access === 'drive') { this.box(o.w + 0.1, 0.08, o.h + 0.1, this.mat.roof, cx, H + 0.04, cz, f, { obj: o.id }); }
         else this.box(o.w - 0.02, 0.05, o.h - 0.02, this.mat.roofTrim, cx, H + 0.02, cz, f, { obj: o.id });
         const along = o.dir[0] !== 0 ? o.h : o.w;
         const fx = cx + o.dir[0] * (o.w / 2 + 0.005), fz = cz + o.dir[1] * (o.h / 2 + 0.005);
         this.faceMesh(along * 0.78, H * 0.74, this.mat.doorDark, fx, H * 0.37, fz, o.dir, f);
-        const door = this.faceMesh(along * 0.78, H * 0.74, o.access === 'drive' ? this.mat.door : this.mat.doorInt, fx + o.dir[0] * 0.01, H * 0.37, fz + o.dir[1] * 0.01, o.dir, f, { obj: o.id });
+        const door = this.faceMesh(along * 0.78, H * 0.74, this.doorFinish(o), fx + o.dir[0] * 0.01, H * 0.37, fz + o.dir[1] * 0.01, o.dir, f, { obj: o.id });
         this.anim.push({ k: 'rollup', mesh: door, o, H });
-        const band=this.box(o.dir[0] ? .16 : along*.78, .035, o.dir[0] ? along*.78 : .16, this.statusMaterials[unitStatus(o)], fx-o.dir[0]*.12, H+.09, fz-o.dir[1]*.12, f, {obj:o.id});
+        const band=this.box(o.dir[0] ? .16 : along*.78, .08, o.dir[0] ? along*.78 : .16, this.statusMaterials[unitStatus(o)], fx-o.dir[0]*.12, H+.09, fz-o.dir[1]*.12, f, {obj:o.id});
         band.castShadow=false; this.anim.push({k:'unitStatus',mesh:band,o});
         this.faceMesh(0.42, 0.17, this.plaque(String(o.num)), fx + o.dir[0] * 0.012, H * 0.87, fz + o.dir[1] * 0.012, o.dir, f);
+        const side=[-o.dir[1],o.dir[0]],mark=this.faceMesh(.27,.27,this.statusMarks[unitStatus(o)],fx+o.dir[0]*.02-side[0]*along*.33,H*.83,fz+o.dir[1]*.02-side[1]*along*.33,o.dir,f,{obj:o.id,statusMark:true});
+        // Reuse this transform in shared state batches, not a draw per unit.
+        mark.updateMatrix();this.statusSlots.push({o,f,matrix:mark.matrix.clone()});this.staticG.remove(mark);
         const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tx.badges.rent, depthTest: false, transparent: true }));
         sp.scale.set(0.75, 0.75, 1); sp.position.set(cx, H + 0.7 + f * FLOOR_H, cz); sp.renderOrder = 10; this.add(sp, f, { obj: o.id, badge: true });
         this.badges.push({ sp, o });
@@ -547,9 +624,10 @@ export class Renderer {
         const cx = o.x + o.w / 2, cz = o.y + o.h / 2;
         if (inConst) { this.scaffold(o, cx, cz, o.w, o.h, 1.7, 0); break; }
         this.box(o.w - 0.1, 1.7, o.h - 0.1, this.mat.office, cx, 0.85, cz, 0, { obj: o.id });
-        this.box(o.w + 0.1, 0.16, o.h + 0.1, this.mat.officeTrim, cx, 1.78, cz, 0, { obj: o.id });
+        this.box(o.w + 0.1, 0.20, o.h + 0.1, this.mat.officeTrim, cx, 1.80, cz, 0, { obj: o.id });
         const d = o.door.dir; const fx = cx + d[0] * (o.w / 2 - 0.04), fz = cz + d[1] * (o.h / 2 - 0.04);
         const len = d[0] ? o.h : o.w;
+        this.box(d[0]?.16:len+.1,.30,d[0]?len+.1:.16,this.mat.officeTrim,fx+d[0]*.045,1.80,fz+d[1]*.045,0,{obj:o.id,officeFascia:true});
         this.faceMesh(len * 0.8, 0.8, this.mat.glass, fx + d[0] * 0.02, 0.95, fz + d[1] * 0.02, d, 0);
         const dxw = o.door.x + 0.5 - d[0] * 0.5, dzw = o.door.y + 0.5 - d[1] * 0.5;
         this.faceMesh(0.6, 1.1, this.mat.officeTrim, dxw + d[0] * 0.03, 0.55, dzw + d[1] * 0.03, d, 0);
@@ -558,8 +636,7 @@ export class Renderer {
         for(const side of [-1,1])this.box(.06,1.35,.06,this.mat.metal,dxw+d[0]*.7-d[1]*side*.78,.675,dzw+d[1]*.7+d[0]*side*.78,0,{obj:o.id});
         this.box(o.w+.18,.12,.10,this.mat.roofTrim,cx,1.89,o.y-.04,0,{obj:o.id});
         this.box(o.w+.18,.12,.10,this.mat.roofTrim,cx,1.89,o.y+o.h+.04,0,{obj:o.id});
-        const sg = this.faceMesh(2.2, 0.55, new THREE.MeshBasicMaterial({ map: this.signTex('OFFICE') }), fx + d[0] * 0.03, 2.15, fz + d[1] * 0.03, d, 0);
-        this.box(0.05, 0.5, 0.05, this.mat.darkMetal, fx, 1.95, fz, 0);
+        this.faceMesh(Math.min(2.8,len-.3),.48,new THREE.MeshBasicMaterial({map:this.signTex('OFFICE')}),fx+d[0]*.13,1.84,fz+d[1]*.13,d,0,{obj:o.id,officeSign:true});
         break;
       }
       case 'gate': {
@@ -906,13 +983,14 @@ export class Renderer {
   }
   updateAnim(dt, night) {
     const sim = this.sim, s = sim.s;
+    this.updateStatusMarks();
     for (const A of this.anim) {
       const o = A.o;
       switch (A.k) {
         case 'build': { if (!A.ord) break; const p = Math.max(0.02, A.ord.prog); A.mesh.scale.y = A.h * p; A.mesh.position.y = A.f * FLOOR_H + A.h * p / 2; A.mesh.material.opacity = A.ord.waiting ? 0.35 : 0.8; break; }
-        case 'comeback': { A.mesh.material = targetInService(s,A.target) ? this.mat.comebackRestored : this.mat.comebackWorn; break; }
+        case 'comeback': { A.mesh.material = this.comebackFinish(o,A.target); break; }
         case 'unitStatus': { A.mesh.material=this.statusMaterials[unitStatus(o)]; break; }
-        case 'rollup': { A.mesh.material = this.statusMaterials[unitStatus(o)]; const tgt = o.doorOpen ? 0.12 : 1; const cur = A.mesh.scale.y / (A.H * 0.74); const n = cur + (tgt - cur) * Math.min(1, dt * 5); A.mesh.scale.y = A.H * 0.74 * n; A.mesh.position.y = (o.f || 0) * FLOOR_H + A.H * 0.74 - A.H * 0.74 * n / 2; break; }
+        case 'rollup': { A.mesh.material = this.doorFinish(o); const tgt = o.doorOpen ? 0.12 : 1; const cur = A.mesh.scale.y / (A.H * 0.74); const n = cur + (tgt - cur) * Math.min(1, dt * 5); A.mesh.scale.y = A.H * 0.74 * n; A.mesh.position.y = (o.f || 0) * FLOOR_H + A.H * 0.74 - A.H * 0.74 * n / 2; break; }
         case 'gate': { A.mesh.position.x = A.x0 - (o.open || 0) * 2.8; break; }
         case 'keypadLed': { A.mesh.material = o.cond < 0.2 ? this.mat.cartDmg : this.mat.yellow; break; }
         case 'door': { const open = o.openT != null && s.t - o.openT < 3; A.cur = (A.cur || 0) + ((open ? 1 : 0) - (A.cur || 0)) * Math.min(1, dt * 8); const side = o.dir[1] ? [1, 0] : [0, 1]; A.mesh.position.x = A.cx + o.dir[0] * 0.09 + side[0] * A.cur * A.w * 0.8; A.mesh.position.z = A.cz + o.dir[1] * 0.09 + side[1] * A.cur * A.w * 0.8; break; }
