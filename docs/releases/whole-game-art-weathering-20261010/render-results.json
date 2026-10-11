@@ -1,0 +1,73 @@
+{
+  "environment": "Chromium software ANGLE/SwiftShader WebGL; 390x844 viewport, DPR2, touch emulation. Actual production index/HUD/renderer. Not physical iPhone, Safari, enjoyment or GPU-performance acceptance.",
+  "baseline": "bf7704b485f07f34d4c0f3c7b4c9952c63894275",
+  "setup": "Comeback restored uses production finishTask directly as a disclosed visual fixture, not elapsed owner-work evidence. Expanded uses retained candidate40 investment fixture, production build/completeOrder/commission. Interior product states and mirror are disclosed test fixtures. No user save loaded.",
+  "scenes": {
+    "comeback-unready": {
+      "before": {
+        "camera": {
+          "center": [
+            10.512294791298473,
+            0,
+            11.012294791298473
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "e2d1cd32b6bc3325e1daecc237aeb37758449e97f5d88bf1d631cfe61d800290"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            10.512294791298473,
+            0,
+            11.012294791298473
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "e2d1cd32b6bc3325e1daecc237aeb37758449e97f5d88bf1d631cfe61d800290"
+      }
+    },
+    "comeback-restored": {
+      "before": {
+        "camera": {
+          "center": [
+            13.015175396409129,
+            0,
+            13.515175396409129
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "2d13e175926cfc53af7f29811d694cfbe17586934c4fe2b02b12ccc2a3e25828"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            13.015175396409129,
+            0,
+            13.515175396409129
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "2d13e175926cfc53af7f29811d694cfbe17586934c4fe2b02b12ccc2a3e25828"
+      }
+    }
+  },
+  "beforePageErrors": [],
+  "afterPageErrors": []
+}

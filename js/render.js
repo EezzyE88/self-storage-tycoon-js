@@ -49,8 +49,18 @@ function architectureTexture(kind) {
       for (let y = 12; y < 128; y += 32) g.fillRect(x + 5, y, 2, 2);
     }
     if(kind==='weatheredRoof'){
-      // Broad surface grime is readable at play zoom; no holes, structural damage or roof task.
-      for(let k=0;k<12;k++){g.fillStyle='rgba(49,40,27,.23)';g.fillRect(hash(k*13)*96,hash(k*19)*96,24+hash(k)*24,14+hash(k+2)*25);}
+      // Soft runoff follows the panel ribs; broad staining remains visible at play zoom.
+      // This depicts surface grime, not structural damage or a new roof task.
+      for(let k=0;k<7;k++){
+        g.save();g.translate(10+k*16+hash(k+31)*5,48+hash(k+17)*42);
+        g.scale(.25+hash(k+9)*.16,1.4+hash(k+5)*.6);
+        const stain=g.createRadialGradient(0,0,0,0,0,25);
+        stain.addColorStop(0,'rgba(49,40,27,.28)');stain.addColorStop(.45,'rgba(58,47,31,.16)');stain.addColorStop(1,'rgba(58,47,31,0)');
+        g.fillStyle=stain;g.beginPath();g.arc(0,0,25,0,Math.PI*2);g.fill();g.restore();
+      }
+      const eave=g.createLinearGradient(0,83,0,128);
+      eave.addColorStop(0,'rgba(62,48,29,0)');eave.addColorStop(1,'rgba(62,48,29,.18)');
+      g.fillStyle=eave;g.fillRect(0,83,128,45);
     }
   } else {
     for (let i = 0; i < 360; i++) { g.fillStyle = 'rgba(72,62,43,.035)'; g.fillRect(hash(i * 3) * 128, hash(i * 7) * 128, 2, 2); }
