@@ -1,3 +1,34 @@
+# Candidate 41 current acceptance assessment
+
+Updated 2026-10-10, America/Los_Angeles. This assessment supersedes the pre-review HOLD in the historical implementation report below; captured test results and original observations are unchanged.
+
+## Approved development baseline
+
+The focused review recommended merge-ready for development master, with no blocking defect identified. The user explicitly approved and completed a fast-forward-only merge from `055d2a871945c565c3affbda89ecd46be7a4cfac` to `b2faa4baa8da8d470e142480ef9229485a73b46b`; all 19 reviewed commits were preserved. This documentation-only update does not create a new runtime or republish the preview.
+
+## Updated physical evidence
+
+- Candidate 37: rescue acknowledgement, career access, expandable rescue history and Save -> reload -> Continue PASS.
+- Candidate 39: Ambience-only app switching reported "No noise".
+- Candidate 40: Eddie voluntarily and deliberately built more; expanded-yard units and progress survived Save -> reload Safari -> Continue.
+- Latest screenshots show the two-unit preview at the preferred door-and-aisle angle. They have no build identifier; observed presentation and independently verified deployment identity remain separate.
+- A separate later loaded run reaches 25/25 leased from the 23-unit fixture, supporting added capacity becoming operational and rented. Exact commissioning actions are unreported.
+- Continued operation reached Day 45 with repairs, cart demand and overdue rent appearing; rescue history remained completed and visible.
+
+Do not conflate loaded runs or infer sustained enjoyment, exact commissioning actions, card-spacing acceptance or physical Return to placement camera preservation. The former statement that leasing was wholly unobserved is superseded within the later run's scope.
+
+## Validation and release limits
+
+Recorded validation remains 84/84 successful final script executions after four corrected missing-input invocations; two are placement diagnostic helpers. Initial failure and retry logs remain intact. The merge review independently verified 60/60 served hashes and 38/38 runtime files against exact Git source. It also executed the production-autosave recovery harness with 100 ms compression delay: 15 groups passed, including stale-session and pagehide sequencing. This additional review result is not a physical Safari test or a newly captured historical suite log.
+
+Current decision: **accepted development master after explicit user approval**, not unconditional whole-game physical acceptance or commercial-release readiness. Dense-property Safari performance and organic extended company pacing remain material uncertainties. Physical card spacing and Return to placement preservation remain minor unconfirmed details. No full fixture replay is required without a specific demonstrated risk.
+
+Full current state and the single proposed next gameplay milestone are recorded in [CURRENT-STATUS.md](../../CURRENT-STATUS.md). Preview and user saves are unchanged.
+
+## Historical implementation report at publication
+
+The report below records Candidate 41 before the later evidence, focused review and merge approval. Its original master/HOLD/publication instructions are historical and superseded by the current assessment above.
+
 # Candidate 41 — readable choices and door-side extension view
 
 Base: Candidate 40 25b7cfbb496c3799e3bbcf77b52a7b901de4c02d.

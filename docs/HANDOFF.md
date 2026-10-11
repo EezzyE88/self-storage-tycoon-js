@@ -1,3 +1,27 @@
+# Self Storage Tycoon current project handoff
+
+Updated 2026-10-10, America/Los_Angeles. Use ONLY `EezzyE88/self-storage-tycoon-js`.
+
+## Current state takes precedence
+
+The user approved a fast-forward-only merge of accepted game-source commit `b2faa4baa8da8d470e142480ef9229485a73b46b` into master. This documentation-only follow-up advances master without changing that runtime. Branch `candidate/yard-view-20261010` and the unchanged Safari preview retain that game source.
+
+Preview: https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site
+
+Build: `bplus-yard-view-candidate-41`. No republication or user-save access/modification accompanies this update. The preview manifest's old accepted-master field is historical publication provenance.
+
+Read [CURRENT-STATUS.md](CURRENT-STATUS.md) first for the complete current acceptance assessment, evidence boundaries and next milestone. The game's accepted source supports three playable floors and a five-property portfolio. JavaScript is authoritative; do not import legacy C++ project instructions.
+
+Physical user-reported evidence now includes Candidate 37 rescue acknowledgement/career/history/persistence PASS; Candidate 39 Ambience-only app switching with "No noise"; deliberate Candidate 40 building and extension save continuity; a preferred two-unit door-and-aisle preview; a separate later 25/25 leased run from the 23-unit fixture; and operation through Day 45 with repairs, cart demand, overdue rent and completed rescue history visible. Do not conflate separate loaded runs or infer exact commissioning actions, enjoyment, card-spacing acceptance or physical Return to placement preservation. Latest screenshots have no build identifier.
+
+Candidate 41's broad pre-review HOLD is superseded by the focused merge-readiness assessment and the user's explicit merge approval. Automated/source success is not blanket physical acceptance. Dense Safari performance and organic long-term company progression remain open; the minor presentation details are not automatic merge blockers.
+
+Next proposed gameplay milestone: **run the expanded yard with staff and fund its next justified improvement**, using existing mechanics first. No new implementation or economy tuning is authorized by this handoff. The targeted dense-Safari performance check is separate.
+
+## Historical handoff retained below
+
+The following September record is preserved for provenance. Its source refs, deployment state, prices, testing status, next steps and statements such as "single source of project state" are historical, not current instructions. Where they conflict, the current notice and CURRENT-STATUS.md take precedence. Do not resurrect an old unresolved item without checking present source/evidence.
+
 # Self Storage Tycoon: Complete Project Handoff
 
 > **Errata added during GitHub packaging (2026-09-30, 7:00 PM PDT).** I re-checked the source while packaging. These corrections take precedence over the text below; the rest of this handoff is unchanged.
