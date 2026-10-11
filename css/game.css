@@ -1037,3 +1037,13 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .yard-infill .row { margin-top:10px; }
 
 #ui .yard-choice .grow > small { display:block; margin-top:6px; }
+
+/* Phone-readable building and floor navigation. */
+#ui .floors .floor-choice { display:flex; flex-direction:column; align-items:flex-start; gap:4px; width:100%; min-height:60px; margin-top:8px; text-align:left; }
+#ui .floors .floor-choice small { font-weight:400; }
+#ui .floors .floor-choice.selected { border:2px solid #d6aa49; background:#f6e8bf; color:#203d46; }
+#ui .floors .floor-building { margin-top:16px; padding-top:14px; border-top:1px solid #b8bdb5; }
+#ui .floors .floor-building > small { display:block; margin-top:4px; }
+#ui .floors .floor-growth { margin-top:12px; }
+#ui .floors .floor-growth summary { min-height:44px; display:list-item; padding:12px 0; cursor:pointer; }
+#ui .modal.floors { background:#f4f1e7; }

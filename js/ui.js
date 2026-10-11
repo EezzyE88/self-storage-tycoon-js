@@ -377,6 +377,7 @@ export class UI {
     this.toasts = [];
     this.growthProposal = null; this.growthPlanArgs = null;
     this.yardGuide = null;
+    this.floorBuilding = null;
     this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
     this.cashSub = null; this.goalT = -Infinity; this.lastCoach = -Infinity;
     this.sectionMenuKey = null; this.sectionChoice = null;
@@ -2128,10 +2129,20 @@ export class UI {
     return { done: Math.min(sh.floors, V.f), ord, f: V.f, pct: Math.floor((ord.prog || 0) * 100), stage: ord.waiting ? 'waiting for the elevator to clear' : names[stage && stage.kind] || 'handover', viewable: sh.floors > V.f };
   }
   floorsHtml() {
-    const shells = this.sim.objs('shell');
-    return `<div class="modal-bg"><div class="modal floors"><div class="row"><h2>Choose building and floor</h2><button class="x" data-a="modalClose" data-qa="floors-close" aria-label="Close floor chooser">${I.x}</button></div><button class="btn" data-a="floorPick" data-v="ext">Exterior</button>${shells.map((o) => { const F = this.floorState(o);
-      const prog = F.ord ? `F${F.f + 1} · ${F.pct}% · ${F.stage}` : '';
-      return `<div class="item"><div class="grow"><b>Building ${o.id} · ${F.done} completed floor${F.done === 1 ? '' : 's'}</b><div class="row wrap">${Array.from({ length: F.done }, (_, f) => `<button class="btn" data-a="floorPick" data-building="${o.id}" data-v="${f}">F${f + 1}</button>`).join('')}${F.ord ? (F.viewable ? `<button class="btn inprog" data-a="floorPick" data-building="${o.id}" data-v="${F.f}" aria-label="View F${F.f + 1}, under construction">${prog} <small>under construction</small></button>` : `<span class="pill a inprog" role="status">${prog}</span>`) : o.floors === 1 ? '<span class="note">F2 not built yet</span>' : ''}${F.ord ? `<button class="btn" disabled>Plan next floor · after F${F.f + 1} handover</button>` : `<button class="btn" data-a="verticalReview" data-v="${o.id}">Plan next floor</button>`}</div></div></div>`; }).join('') || '<p>No interior building yet. Build a one- or two-floor shell.</p>'}</div></div>`;
+    const shells = this.sim.objs('shell'), units = this.sim.objs('unit'), view = this.rend.view;
+    const pick = (o, f, detail, pending = false) => {
+      const selected = view === f && (this.floorBuilding === o.id || (!this.floorBuilding && shells.length === 1));
+      return `<button class="btn floor-choice${selected ? ' selected' : ''}${pending ? ' inprog' : ''}" data-a="floorPick" data-building="${o.id}" data-v="${f}" aria-pressed="${selected}"><b>Floor ${f + 1}${selected ? ' · Viewing' : ''}</b><small>${detail}</small></button>`;
+    };
+    return `<div class="modal-bg"><div class="modal floors"><div class="row"><h2>View a floor</h2><button class="x" data-a="modalClose" data-qa="floors-close" aria-label="Close floor chooser">${I.x}</button></div><p class="note">Upper floors show that level only. Choose Exterior to see the whole property.</p><button class="btn floor-choice${view === 'ext' ? ' selected' : ''}" data-a="floorPick" data-v="ext" aria-pressed="${view === 'ext'}"><b>Exterior${view === 'ext' ? ' · Viewing' : ''}</b><small>Whole property · roofs and yard</small></button>${shells.map((o, index) => {
+      const F = this.floorState(o);
+      const choices = Array.from({length:F.done}, (_, f) => {
+        const count = units.filter(u => u.access === 'interior' && (u.f || 0) === f && u.x >= o.x && u.x < o.x + o.w && u.y >= o.y && u.y < o.y + o.h).length;
+        return pick(o, f, count ? `${count} unit${count === 1 ? '' : 's'}` : 'Structure built · No units fitted out');
+      }).join('');
+      const progress = F.ord ? `Under construction · ${F.pct}% · ${F.stage}` : '';
+      return `<section class="floor-building"><b>Building ${index + 1}</b><small class="note">${o.w} × ${o.h} · ${F.done} completed floor${F.done === 1 ? '' : 's'}</small>${choices}${F.ord ? (F.viewable ? pick(o, F.f, progress, true) : `<p class="note" role="status">Floor ${F.f + 1} · ${progress}</p>`) : o.floors === 1 ? '<p class="note">Floor 2 not built yet</p>' : ''}<details class="floor-growth"><summary>Expand this building</summary>${F.ord ? '<p class="note">Plan the next floor after this floor is handed over.</p>' : `<button class="btn" data-a="verticalReview" data-v="${o.id}">Plan next floor</button>`}</details></section>`;
+    }).join('') || '<p>No interior building yet. Build a one- or two-floor shell.</p>'}</div></div>`;
   }
   showFloors() {
     this.pauseForPopup('modal'); this.floorsOpen = true;

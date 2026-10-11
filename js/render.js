@@ -1052,7 +1052,7 @@ export class Renderer {
           A.mesh.material.emissiveIntensity = on ? (A.inside ? 1.2 : 0.3 + night * 1.8) * flick : 0;
           A.mesh.material.color.set(on ? 0xfff4d6 : 0x444444);
           A.glow.material.opacity = lvl * (A.inside ? (this.view === 'ext' ? 0 : 0.55) : 0.75);
-          A.glow.visible = A.glow.material.opacity > 0.01 && (A.glow.userData.f === 0 || this.view !== 0);
+          A.glow.visible = A.glow.material.opacity > 0.01 && A.mesh.visible && this.floorVisible(A.glow.userData.f || 0);
           break;
         }
         case 'rest': { A.mesh.material = !sim.amenityWorks(o) ? this.mat.cartDmg : (o.dirt || 0) > 0.6 ? this.mat.yellow : this.mat.water; const busy = o.busyUntil != null && s.t < o.busyUntil; const k = busy ? 1.35 + Math.sin(this.time * 6) * 0.2 : 1; A.mesh.scale.set(k, k, k); break; }
