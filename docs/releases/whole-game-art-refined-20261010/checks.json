@@ -1,0 +1,38 @@
+[
+  {
+    "script": "tart_refinement",
+    "exit": 0
+  },
+  {
+    "script": "twhole_game_art",
+    "exit": 0
+  },
+  {
+    "script": "tstatus_hierarchy",
+    "exit": 0
+  },
+  {
+    "script": "tvisual30",
+    "exit": 0
+  },
+  {
+    "script": "tvisual31",
+    "exit": 0
+  },
+  {
+    "script": "tart_design",
+    "exit": 0
+  },
+  {
+    "script": "tcomeback36",
+    "exit": 0
+  },
+  {
+    "script": "tyard40",
+    "exit": 0
+  },
+  {
+    "script": "tyard41",
+    "exit": 0
+  }
+]

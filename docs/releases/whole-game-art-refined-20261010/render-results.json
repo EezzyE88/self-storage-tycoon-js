@@ -1,0 +1,329 @@
+{
+  "environment": "Chromium software ANGLE/SwiftShader WebGL; 390x844 viewport, DPR2, touch emulation. Actual production index/HUD/renderer. Not physical iPhone, Safari, enjoyment or GPU-performance acceptance.",
+  "baseline": "994ba614f8e8b495f026e5405407cc04fec1cf15",
+  "setup": "Comeback restored uses production finishTask directly as a disclosed visual fixture, not elapsed owner-work evidence. Expanded uses retained candidate40 investment fixture, production build/completeOrder/commission. Interior product states and mirror are disclosed test fixtures. No user save loaded.",
+  "scenes": {
+    "drive-bays": {
+      "before": {
+        "camera": {
+          "center": [
+            10,
+            0,
+            15
+          ],
+          "zoom": 1.8,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "01c987535e61972c049795de41185942e250f637dd28f4f5acc8d036624b44b4"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            10,
+            0,
+            15
+          ],
+          "zoom": 1.8,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "01c987535e61972c049795de41185942e250f637dd28f4f5acc8d036624b44b4"
+      }
+    },
+    "active-loading": {
+      "before": {
+        "camera": {
+          "center": [
+            7.03002177465188,
+            0,
+            7.530021774651878
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "ffb6a7455eb533561ee68757c04286aa777371090bb2c65d86f61c4e257ebbbb"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            7.03002177465188,
+            0,
+            7.530021774651878
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "ffb6a7455eb533561ee68757c04286aa777371090bb2c65d86f61c4e257ebbbb"
+      }
+    },
+    "comeback-unready": {
+      "before": {
+        "camera": {
+          "center": [
+            10.721882173115775,
+            0,
+            11.221882173115773
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "e2d1cd32b6bc3325e1daecc237aeb37758449e97f5d88bf1d631cfe61d800290"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            10.721882173115775,
+            0,
+            11.221882173115773
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "e2d1cd32b6bc3325e1daecc237aeb37758449e97f5d88bf1d631cfe61d800290"
+      }
+    },
+    "comeback-restored": {
+      "before": {
+        "camera": {
+          "center": [
+            13.015119135535627,
+            0,
+            13.515119135535627
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "2d13e175926cfc53af7f29811d694cfbe17586934c4fe2b02b12ccc2a3e25828"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            13.015119135535627,
+            0,
+            13.515119135535627
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "2d13e175926cfc53af7f29811d694cfbe17586934c4fe2b02b12ccc2a3e25828"
+      }
+    },
+    "comeback-expanded": {
+      "before": {
+        "camera": {
+          "center": [
+            11.017886256632945,
+            0,
+            11.517886256632941
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 25,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "9c015fd26dfd68fdb15a1af66194078c867f3b04576de2a79441993cb8c1a54f"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            11.017886256632945,
+            0,
+            11.517886256632941
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 25,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "9c015fd26dfd68fdb15a1af66194078c867f3b04576de2a79441993cb8c1a54f"
+      }
+    },
+    "maple-office": {
+      "before": {
+        "camera": {
+          "center": [
+            8,
+            0,
+            23
+          ],
+          "zoom": 2,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "01c987535e61972c049795de41185942e250f637dd28f4f5acc8d036624b44b4"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            8,
+            0,
+            23
+          ],
+          "zoom": 2,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "01c987535e61972c049795de41185942e250f637dd28f4f5acc8d036624b44b4"
+      }
+    },
+    "interior-products": {
+      "before": {
+        "camera": {
+          "center": [
+            20.5,
+            0,
+            9
+          ],
+          "zoom": 2,
+          "azimuth": 0.7853981633974483,
+          "view": 0
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "0be8fb433554ee0b7cd27f3947d02e4838df2ce1de69a38b1a74337e5231a437"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            20.5,
+            0,
+            9
+          ],
+          "zoom": 2,
+          "azimuth": 0.7853981633974483,
+          "view": 0
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "0be8fb433554ee0b7cd27f3947d02e4838df2ce1de69a38b1a74337e5231a437"
+      }
+    },
+    "rain": {
+      "before": {
+        "camera": {
+          "center": [
+            7.03002177465188,
+            0,
+            7.530021774651878
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "01c987535e61972c049795de41185942e250f637dd28f4f5acc8d036624b44b4"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            7.03002177465188,
+            0,
+            7.530021774651878
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "01c987535e61972c049795de41185942e250f637dd28f4f5acc8d036624b44b4"
+      }
+    },
+    "night": {
+      "before": {
+        "camera": {
+          "center": [
+            7.03002177465188,
+            0,
+            7.530021774651878
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "01c987535e61972c049795de41185942e250f637dd28f4f5acc8d036624b44b4"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            7.03002177465188,
+            0,
+            7.530021774651878
+          ],
+          "zoom": 0.37216974283613846,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "01c987535e61972c049795de41185942e250f637dd28f4f5acc8d036624b44b4"
+      }
+    },
+    "mirrored": {
+      "before": {
+        "camera": {
+          "center": [
+            26.12559545626455,
+            0,
+            9.125595456264547
+          ],
+          "zoom": 0.5363622764403171,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "b0204d6d5c9114758a9ac34cb8c362022dbbb289c1cb8f91cd5b81f933d74a6b"
+      },
+      "after": {
+        "camera": {
+          "center": [
+            26.12559545626455,
+            0,
+            9.125595456264547
+          ],
+          "zoom": 0.5363622764403171,
+          "azimuth": 0.7853981633974483,
+          "view": "ext"
+        },
+        "units": 23,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "stateSha256": "b0204d6d5c9114758a9ac34cb8c362022dbbb289c1cb8f91cd5b81f933d74a6b"
+      }
+    }
+  },
+  "beforePageErrors": [],
+  "afterPageErrors": []
+}

@@ -1,14 +1,14 @@
 // Actual production-game WebGL captures; disposable request-intercepted origins.
 // Usage: SST_ART_BROWSER=/path/to/chrome-headless-shell node tests/browser-qa/whole-game-art.cjs BASE_DIR OUT_DIR
-// Baseline is a git archive of f70b81a; candidate is cwd. No live preview/storage/network is used.
+// Baseline is an immutable git archive; candidate is cwd. No live preview/storage/network is used.
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const base=path.resolve(process.argv[2]),out=path.resolve(process.argv[3]),candidate=process.cwd();
 fs.mkdirSync(out,{recursive:true});
 const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
-const scenes=['comeback-unready','comeback-restored','comeback-expanded','maple-office','interior-products','rain','night','mirrored'];
+const scenes=process.env.SST_ART_SCENES?.split(',')||['drive-bays','active-loading','comeback-unready','comeback-restored','comeback-expanded','maple-office','interior-products','rain','night','mirrored'];
 (async()=>{
- const result={environment:'Chromium software ANGLE/SwiftShader WebGL; 390x844 viewport, DPR2, touch emulation. Actual production index/HUD/renderer. Not physical iPhone, Safari, enjoyment or GPU-performance acceptance.',baseline:'f70b81a0298a438577db1ee35934655e7858353f',setup:'Comeback restored uses production finishTask directly as a disclosed visual fixture, not elapsed owner-work evidence. Expanded uses retained candidate40 investment fixture, production build/completeOrder/commission. Interior product states and mirror are disclosed test fixtures. No user save loaded.',scenes:{}};
+ const result={environment:'Chromium software ANGLE/SwiftShader WebGL; 390x844 viewport, DPR2, touch emulation. Actual production index/HUD/renderer. Not physical iPhone, Safari, enjoyment or GPU-performance acceptance.',baseline:process.env.SST_ART_BASE_SHA||'f70b81a0298a438577db1ee35934655e7858353f',setup:'Comeback restored uses production finishTask directly as a disclosed visual fixture, not elapsed owner-work evidence. Expanded uses retained candidate40 investment fixture, production build/completeOrder/commission. Interior product states and mirror are disclosed test fixtures. No user save loaded.',scenes:{}};
  for(const which of ['before','after']){
   // Single-process software GL needs a fresh browser after context teardown.
   const browser=await chromium.launch({executablePath:process.env.SST_ART_BROWSER,args:['--single-process','--no-zygote','--in-process-gpu','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
@@ -43,21 +43,22 @@ const scenes=['comeback-unready','comeback-restored','comeback-expanded','maple-
      const proposal=yardInfill(sm).choices.find(c=>c.count===2);if(!sm.dispatch({type:'build',...proposal.args}).ok)throw Error('extension build failed');
      const ord=sm.s.orders.at(-1);sm.completeOrder(ord);if(!sm.dispatch({type:'commission',order:ord.id}).ok)throw Error('extension commission failed');
     }
+    if(scene==='active-loading'){let ticks=0;while(ticks++<10000){sm.step();sm.ensure();if(sm.s.vehicles.length>=2&&sm.s.agents.some(a=>a.kind==='cust'&&!a.hidden))break;}if(ticks>=10000)throw Error('natural activity fixture did not develop');}
     sm.s.speed=0;sm.s.tut={on:false,done:true,beat:99,flags:{}};sm.s.lesson=null;
     if(scene==='interior-products'){
      const us=sm.objs('unit').filter(u=>u.access==='interior');us.forEach((u,i)=>{u.env=i%2?'climate':'std';});sm.markDirty();sm.ensure();
     }
     g.company={props:[{name:scene.startsWith('comeback')?'The Comeback Yard':'Maple Street Storage',sim:sm}],active:0,feed:[]};g.attach(sm,'art-test');g.ui.closeModal();g.ui.scMin=true;g.ui.tutMin=true;g.ui.setTab(null);g.ui.renderTut(true);g.ui.renderFeed(true);
     const r=g.rend;r.setQuality(2);r.view=scene==='interior-products'?0:'ext';r.applyView();r.todOverride=scene==='night'?23:12;r.weatherOverride=scene==='rain'?'rain':'clear';
-    r.azimuth=r.targetAz=Math.PI/4;r.camElev=.72;r.center.set(scene==='interior-products'?20.5:scene==='maple-office'?8:17,0,scene==='interior-products'?9:scene==='maple-office'?23:16);
-    r.zoom=scene==='interior-products'?2:scene==='maple-office'?2:1.05;r.updateCamera();
+    r.azimuth=r.targetAz=Math.PI/4;r.camElev=.72;r.center.set(scene==='drive-bays'?10:scene==='interior-products'?20.5:scene==='maple-office'?8:17,0,scene==='drive-bays'?15:scene==='interior-products'?9:scene==='maple-office'?23:16);
+    r.zoom=scene==='drive-bays'?1.8:scene==='interior-products'?2:scene==='maple-office'?2:1.05;r.updateCamera();
     g.ui.update(.016);r.frame(.016);window.__artScene=scene;
    },scene);
    // attach schedules the existing phone fit; let it settle, then restore identical test framing.
    await page.waitForTimeout(100);
    const metadata=await page.evaluate(({scene,camera})=>{
-    const g=__game,r=g.rend;r.center.set(scene==='interior-products'?20.5:scene==='maple-office'?8:17,0,scene==='interior-products'?9:scene==='maple-office'?23:16);r.zoom=scene==='interior-products'||scene==='maple-office'?2:1.05;r.updateCamera();
-    if(scene!=='interior-products'&&scene!=='maple-office')r.fitProperty(g.ui.safeRect());
+    const g=__game,r=g.rend;r.center.set(scene==='drive-bays'?10:scene==='interior-products'?20.5:scene==='maple-office'?8:17,0,scene==='drive-bays'?15:scene==='interior-products'?9:scene==='maple-office'?23:16);r.zoom=scene==='drive-bays'?1.8:scene==='interior-products'||scene==='maple-office'?2:1.05;r.updateCamera();
+    if(scene!=='drive-bays'&&scene!=='interior-products'&&scene!=='maple-office')r.fitProperty(g.ui.safeRect());
     if(camera){r.center.fromArray(camera.center);r.zoom=camera.zoom;r.azimuth=r.targetAz=camera.azimuth;r.updateCamera();}
     g.ui.lastCoach=-Infinity;g.ui.lastSheet=-Infinity;g.ui.lastTutR=-Infinity;g.ui.update(.2);
     const before=JSON.stringify(g.sim.s);r.frame(.016);const after=JSON.stringify(g.sim.s);if(before!==after)throw Error('renderer wrote save state');

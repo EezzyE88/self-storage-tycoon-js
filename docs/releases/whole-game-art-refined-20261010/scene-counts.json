@@ -1,0 +1,44 @@
+{
+  "environment": "Node scene construction with Canvas/WebGL stubs. Actual WebGL captures are recorded separately. No GPU/performance acceptance.",
+  "baseline": "994ba614f8e8b495f026e5405407cc04fec1cf15",
+  "scenes": {
+    "maple": {
+      "units": 23,
+      "baseline": {
+        "meshes": 312,
+        "triangles": 20770,
+        "shadowCasters": 172,
+        "materials": 74,
+        "mappedTextures": 44
+      },
+      "candidate": {
+        "meshes": 325,
+        "triangles": 22846,
+        "shadowCasters": 172,
+        "materials": 76,
+        "mappedTextures": 44
+      },
+      "meshIncrease": 13,
+      "triangleIncrease": 2076
+    },
+    "dense": {
+      "units": 550,
+      "baseline": {
+        "meshes": 3621,
+        "triangles": 71812,
+        "shadowCasters": 1250,
+        "materials": 687,
+        "mappedTextures": 569
+      },
+      "candidate": {
+        "meshes": 3623,
+        "triangles": 100900,
+        "shadowCasters": 1250,
+        "materials": 689,
+        "mappedTextures": 569
+      },
+      "meshIncrease": 2,
+      "triangleIncrease": 29088
+    }
+  }
+}

@@ -1,0 +1,24 @@
+PASS ready has its own cue
+PASS occupied has its own cue
+PASS reserved has its own cue
+PASS unready has its own cue
+PASS blocked supersedes leased and ready status
+PASS uncommissioned stock never appears available
+PASS construction retains its state
+PASS all states have unique text and complementary colors
+PASS connected empty bay is free
+PASS arriving vehicle claims bay before parking
+PASS parked vehicle keeps its destination occupied
+PASS departure frees bay
+PASS vehicle-disconnected bay is inaccessible even with a vehicle
+PASS pedestrian-disconnected bay is inaccessible
+PASS status reads never mutate save state
+PASS property state does not leak between calls
+PASS save resume derives same live bay and unit states
+PASS stable door finish retains five live band and shape cues without rebuilding
+PASS selection differs from tutorial gold
+PASS badges retain shapes and hide upper units on ground view
+PASS healthy occupied unit does not gain a floating badge
+PASS bay guidance names coordinates and distinguishes causes
+PASS shared status materials survive scene rebuild and property cleanup
+23 status/hierarchy checks passed

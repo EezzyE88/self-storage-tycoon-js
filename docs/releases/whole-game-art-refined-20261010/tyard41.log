@@ -1,0 +1,2 @@
+PASS door-side orientation, manual rotation, unchanged zoom/center, initial-only framing and separate card lines
+PASS actual UI preview sets door-side view once; Growth return preserves manual angle, plan, guide and simulation

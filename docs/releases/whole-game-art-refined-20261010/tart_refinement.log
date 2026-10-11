@@ -1,0 +1,7 @@
+PASS drive-up piers and plinths use shared non-shadowing floor batches
+PASS shell piers cut down and hide with the actual selected floor
+PASS status bands clear the projecting bay headers
+PASS shell entry portals preserve door positions and exact save state
+PASS six weathered target roofs restore one by one, without affecting unrelated units
+PASS roof grime cannot be invented by access failure or malformed target mapping
+6 refinement regression groups passed; device readability and FPS remain separate

@@ -41,12 +41,16 @@ function rollupTexture(turnover = false) {
 function architectureTexture(kind) {
   const c = mkCanvas(128, 128), g = c.getContext('2d');
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 128, 128);
-  if (kind === 'roof') {
+  if (kind === 'roof' || kind === 'weatheredRoof') {
     for (let x = 0; x < 128; x += 16) {
       g.fillStyle = 'rgba(25,43,56,.16)'; g.fillRect(x, 0, 2, 128);
       g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(x + 2, 0, 1, 128);
       g.fillStyle = 'rgba(20,35,45,.12)';
       for (let y = 12; y < 128; y += 32) g.fillRect(x + 5, y, 2, 2);
+    }
+    if(kind==='weatheredRoof'){
+      // Broad surface grime is readable at play zoom; no holes, structural damage or roof task.
+      for(let k=0;k<12;k++){g.fillStyle='rgba(49,40,27,.23)';g.fillRect(hash(k*13)*96,hash(k*19)*96,24+hash(k)*24,14+hash(k+2)*25);}
     }
   } else {
     for (let i = 0; i < 360; i++) { g.fillStyle = 'rgba(72,62,43,.035)'; g.fillRect(hash(i * 3) * 128, hash(i * 7) * 128, 2, 2); }
@@ -206,7 +210,10 @@ export class Renderer {
   makeMaterials() {
     const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o });
     return {
-      comebackWorn: std('#baa98e', {map:this.tx.wall}), comebackRestored: std('#eee3cf', {map:this.tx.wall}),
+      comebackWorn: std('#817561', {map:this.tx.wall}), comebackRestored: std('#eee3cf', {map:this.tx.wall}),
+      foundation: std('#a3937a', {map:this.tx.office,roughness:.94}), pier: std('#d7c7aa',{map:this.tx.wall}),
+      rescueDoorTurn: std('#766752',{map:this.tx.turnover,roughness:.95}),
+      rescueRoofTurn: std('#8a785a',{map:architectureTexture('weatheredRoof'),roughness:.98}),
       unitWall: std(COL.unitWall, {map:this.tx.wall}), unitWall2: std(COL.unitWall2, {map:this.tx.wall}), roof: std(COL.roof, { map:this.tx.roof, roughness: 0.75, metalness: 0.15 }), roofTrim: std(COL.roofTrim),
       door: std(COL.door, { map: this.tx.rollup, roughness: 0.55, metalness: 0.2 }), doorInt: std(COL.doorInt, { map: this.tx.rollup, roughness: 0.55, metalness: 0.2 }),
       doorClimate: std('#3c8586', {map:this.tx.rollup,roughness:.55,metalness:.2}),
@@ -375,6 +382,7 @@ export class Renderer {
   drawGround() {
     const sim = this.sim, s = sim.s, D = sim.D, g = this.groundCanvas.getContext('2d'), W = s.W, H = s.H, C = CELL;
     const p = s.parcel; const bays=new Map(loadingStatus(sim).map(b=>[b.i,b.state]));
+    const offices=sim.objs('office').filter(o=>o.cstate!=='construction');
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const i = y * W + x, gv = s.ground[i], px = x * C, py = y * C, h = hash(i * 17 + 3);
       let base;
@@ -392,6 +400,10 @@ export class Renderer {
         if(x>0&&paved(s.ground[i-1]))g.fillRect(px,py,3,C);
         if(y>0&&paved(s.ground[i-W]))g.fillRect(px,py,C,3);
         for (let k = 0; k < 6; k++) { g.fillStyle = hash(i * 31 + k) < .5 ? 'rgba(43,66,32,.07)' : 'rgba(220,224,175,.08)'; g.fillRect(px + hash(i * 7 + k) * C, py + hash(i * 13 + k) * C, 1, 2); }
+        if(!D.solid[i]&&!D.shellAt[i]&&offices.some(o=>(x===o.x-1||x===o.x+o.w)&&y>=o.y&&y<o.y+o.h)){
+          g.fillStyle='#827252';g.fillRect(px+4,py+3,C-8,C-6);
+          g.fillStyle='rgba(228,210,163,.24)';g.fillRect(px+4,py+3,2,C-6);
+        }
       }
       else if (gv === G.ASPHALT || gv === G.STREET || gv === G.PARKING || gv === G.LOADING) {
         for (let k = 0; k < 12; k++) { g.fillStyle = k % 2 ? 'rgba(255,255,255,.06)' : 'rgba(15,24,30,.09)'; g.fillRect(px + hash(i * 5 + k) * C, py + hash(i * 3 + k) * C, 1, 1); }
@@ -405,11 +417,16 @@ export class Renderer {
         if(y>0 && s.ground[i-W]===G.GRASS) g.fillRect(px,py,C,1.5);
       }
       if (gv === G.CONCRETE || gv === G.SIDEWALK) {
+        // Warm the existing office forecourt; no new pavement or walkable cells.
+        if(offices.some(o=>Math.abs(x-o.door.x)<=2&&Math.abs(y-o.door.y)<=2)){
+          g.fillStyle='#cbb99b';g.fillRect(px,py,C,C);
+        }
         g.fillStyle = `rgba(255,250,231,${h*.055})`; g.fillRect(px,py,C,C);
         g.strokeStyle = 'rgba(58,49,39,.18)'; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1);
         g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(px+1,py+1,C-2,1);
       }
       if (gv === G.LOADING) {
+        g.fillStyle='#e8b923';g.fillRect(px+2,py+C-4,C-4,2);
         const state=bays.get(i); g.strokeStyle = state==='inaccessible' ? '#ef9d91' : state==='occupied' ? '#aabac6' : '#9ed9c0'; g.lineWidth = 3; g.strokeRect(px + 2, py + 2, C - 4, C - 4);
         g.fillStyle=g.strokeStyle; g.font='bold 23px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(state==='inaccessible'?'×':state==='occupied'?'—':'+',px+C/2,py+C/2); g.textAlign='start'; g.textBaseline='alphabetic';
         g.save(); g.beginPath(); g.rect(px + 2, py + 2, C - 4, C - 4); g.clip(); g.strokeStyle = 'rgba(232,185,35,0.45)'; g.lineWidth = 2;
@@ -484,6 +501,8 @@ export class Renderer {
   plaque(text) { if (!this.tx.plaques[text]) this.tx.plaques[text] = new THREE.MeshBasicMaterial({ map: plaqueTexture(text) }); return this.tx.plaques[text]; }
   doorFinish(o) {
     const turnover = o.cstate === 'operating' && o.commercial === 'unready';
+    const rescue = turnover && isComeback(this.sim.s) && this.sim.s.scenario.targets?.some(t=>targetUnits(this.sim.s,t).some(u=>u.id===o.id));
+    if(rescue)return this.mat.rescueDoorTurn;
     return o.env === 'climate' ? this.mat[turnover ? 'doorClimateTurn' : 'doorClimate']
       : o.access === 'drive' ? this.mat[turnover ? 'doorTurn' : 'door'] : this.mat[turnover ? 'doorIntTurn' : 'doorInt'];
   }
@@ -533,9 +552,13 @@ export class Renderer {
       if(o.cstate==='construction')continue;
       const f=o.f||0,H=o.access==='drive'?WALL_H:1.05,cx=o.x+o.w/2,cz=o.y+o.h/2,along=o.dir[0]?o.h:o.w;
       const x=cx+o.dir[0]*(o.w/2+.025),z=cz+o.dir[1]*(o.h/2+.025),side=[-o.dir[1],o.dir[0]];
+      // Plinths and projecting jambs make doors read as recessed bays, not painted rectangles.
+      add(f,'foundation',cx,.075,cz,o.w,.15,o.h);
+      if(o.access==='drive')for(const k of [-1,1])add(f,'pier',x+side[0]*along*.46,H*.5,z+side[1]*along*.46,o.dir[0]?.18:.16,H,o.dir[0]?.16:.18);
       for(const k of [-1,1])add(f,'frame',x+side[0]*along*.405,H*.40,z+side[1]*along*.405,o.dir[0]?.055:.075,H*.80,o.dir[0]?.075:.055);
       add(f,'frame',x,H*.81,z,o.dir[0]?.06:along*.86,.065,o.dir[0]?along*.86:.06);
       if(o.access==='drive') {
+        add(f,'pier',x,H+.04,z,o.dir[0]?.20:along,.17,o.dir[0]?along:.20);
         const adjoining=(x,y)=>{if(x<0||y<0||x>=this.sim.s.W||y>=this.sim.s.H)return false;const id=this.sim.D.unitAt[f]?.[y*this.sim.s.W+x],u=this.sim.s.objects[id];return u&&u.id!==o.id&&u.access==='drive'&&u.cstate!=='construction';};
         const edgeX=y=>Array.from({length:o.w},(_,i)=>adjoining(o.x+i,y)).every(Boolean);
         const edgeY=x=>Array.from({length:o.h},(_,i)=>adjoining(x,o.y+i)).every(Boolean);
@@ -554,7 +577,8 @@ export class Renderer {
       for (const y of [.54,1.36]) add(0,'frame',x,y,z,d[0]?.055:len*.81,.06,d[0]?len*.81:.055);
     }
     for(const {f,kind,parts} of batches.values()) {
-      const mesh=new THREE.InstancedMesh(this.geo.box,kind==='frame'?this.mat.darkMetal:this.mat.roofTrim,parts.length);
+      const material={frame:this.mat.darkMetal,eave:this.mat.roofTrim,foundation:this.mat.foundation,pier:this.mat.pier}[kind];
+      const mesh=new THREE.InstancedMesh(this.geo.box,material,parts.length);
       const m=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),sc=new THREE.Vector3();
       parts.forEach((p,i)=>{m.compose(v.set(p.x,p.y+f*FLOOR_H,p.z),q,sc.set(p.w,p.h,p.d));mesh.setMatrixAt(i,m);});
       mesh.castShadow=false;mesh.receiveShadow=true;this.add(mesh,f,{decoration:kind});
@@ -563,9 +587,10 @@ export class Renderer {
     const shrubs=[];const S=this.sim.s;
     for(const o of this.sim.objs('office'))if(o.cstate!=='construction')for(let k=0;k<o.h;k++)for(const x of [o.x-1,o.x+o.w]){
       const y=o.y+k,i=y*S.W+x;
-      if(x>=0&&x<S.W&&y>=0&&y<S.H&&S.ground[i]===G.GRASS&&!this.sim.D.solid[i]&&!this.sim.D.shellAt[i])shrubs.push({x:x+.5,z:y+.5});
+      if(x>=0&&x<S.W&&y>=0&&y<S.H&&S.ground[i]===G.GRASS&&!this.sim.D.solid[i]&&!this.sim.D.shellAt[i])
+        for(const [dx,dz,size]of [[.27,.32,.38],[.66,.66,.47],[.69,.23,.28]])shrubs.push({x:x+dx,z:y+dz,size});
     }
-    if(shrubs.length){const mesh=new THREE.InstancedMesh(this.geo.sph,this.mat.leaf2,shrubs.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),sc=new THREE.Vector3();shrubs.forEach((p,i)=>{m.compose(v.set(p.x,.20,p.z),q,sc.set(.72,.55,.64));mesh.setMatrixAt(i,m);});mesh.castShadow=false;this.add(mesh,0,{decoration:'shrubs'});}
+    if(shrubs.length){const mesh=new THREE.InstancedMesh(this.geo.sph,this.mat.leaf2,shrubs.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),sc=new THREE.Vector3();shrubs.forEach((p,i)=>{m.compose(v.set(p.x,p.size*.24,p.z),q,sc.set(p.size,p.size*.65,p.size));mesh.setMatrixAt(i,m);});mesh.castShadow=false;this.add(mesh,0,{decoration:'shrubs'});}
   }
   scaffold(o, x, z, w, d, h, f) {
     const ord = this.sim.s.orders.find((q) => q.id === o.order);
@@ -585,14 +610,17 @@ export class Renderer {
         const body = this.box(o.w - 0.06, H, o.h - 0.06, (o.num % 2) ? this.mat.unitWall : this.mat.unitWall2, cx, H / 2, cz, f, { obj: o.id });
         const rescueTarget = isComeback(S) && S.scenario.targets?.find(t => t.ids.includes(o.id));
         if (rescueTarget) { body.material = this.comebackFinish(o,rescueTarget); this.anim.push({k:'comeback',mesh:body,target:rescueTarget,o}); }
-        if (o.access === 'drive') { this.box(o.w + 0.1, 0.08, o.h + 0.1, this.mat.roof, cx, H + 0.04, cz, f, { obj: o.id }); }
+        if (o.access === 'drive') {
+          const roof=this.box(o.w + 0.1, 0.08, o.h + 0.1, this.mat.roof, cx, H + 0.04, cz, f, { obj: o.id });
+          if(rescueTarget){this.anim.push({k:'rescueRoof',mesh:roof,o,target:rescueTarget});roof.material=this.comebackFinish(o,rescueTarget)===this.mat.comebackWorn?this.mat.rescueRoofTurn:this.mat.roof;}
+        }
         else this.box(o.w - 0.02, 0.05, o.h - 0.02, this.mat.roofTrim, cx, H + 0.02, cz, f, { obj: o.id });
         const along = o.dir[0] !== 0 ? o.h : o.w;
         const fx = cx + o.dir[0] * (o.w / 2 + 0.005), fz = cz + o.dir[1] * (o.h / 2 + 0.005);
         this.faceMesh(along * 0.78, H * 0.74, this.mat.doorDark, fx, H * 0.37, fz, o.dir, f);
         const door = this.faceMesh(along * 0.78, H * 0.74, this.doorFinish(o), fx + o.dir[0] * 0.01, H * 0.37, fz + o.dir[1] * 0.01, o.dir, f, { obj: o.id });
         this.anim.push({ k: 'rollup', mesh: door, o, H });
-        const band=this.box(o.dir[0] ? .16 : along*.78, .08, o.dir[0] ? along*.78 : .16, this.statusMaterials[unitStatus(o)], fx-o.dir[0]*.12, H+.09, fz-o.dir[1]*.12, f, {obj:o.id});
+        const band=this.box(o.dir[0] ? .16 : along*.78, .08, o.dir[0] ? along*.78 : .16, this.statusMaterials[unitStatus(o)], fx+o.dir[0]*.055, H+.18, fz+o.dir[1]*.055, f, {obj:o.id});
         band.castShadow=false; this.anim.push({k:'unitStatus',mesh:band,o});
         this.faceMesh(0.42, 0.17, this.plaque(String(o.num)), fx + o.dir[0] * 0.012, H * 0.87, fz + o.dir[1] * 0.012, o.dir, f);
         const side=[-o.dir[1],o.dir[0]],mark=this.faceMesh(.27,.27,this.statusMarks[unitStatus(o)],fx+o.dir[0]*.02-side[0]*along*.33,H*.83,fz+o.dir[1]*.02-side[1]*along*.33,o.dir,f,{obj:o.id,statusMark:true});
@@ -612,10 +640,16 @@ export class Renderer {
           const walls = [
             [o.w, t, cx, o.y + t / 2], [o.w, t, cx, o.y + o.h - t / 2], [t, o.h, o.x + t / 2, cz], [t, o.h, o.x + o.w - t / 2, cz]];
           for (const [w, d, x, z] of walls) { const m = this.box(w, FLOOR_H, d, this.mat.shellWall, x, y0 + FLOOR_H / 2, z, 0, tag); m.userData.y0 = y0; }
+          // Corner piers inherit the existing cutaway/floor behavior exactly.
+          for(const x of [o.x+.08,o.x+o.w-.08])for(const z of [o.y+.08,o.y+o.h-.08]){
+            const m=this.box(.30,FLOOR_H,.30,this.mat.pier,x,y0+FLOOR_H/2,z,0,{...tag,shellPier:true});m.userData.y0=y0;m.castShadow=false;
+          }
           // window band
           if (k === o.floors - 1) this.box(o.w + 0.02, 0.12, o.h + 0.02, this.mat.roofTrim, cx, y0 + FLOOR_H - 0.3, cz, 0, { roof: true });
         }
         const roof = this.box(o.w + 0.2, 0.14, o.h + 0.2, this.mat.shellRoof, cx, H + 0.07, cz, 0, { roof: true, shell: o.id });
+        for(const [w,d,x,z] of [[o.w,.18,cx,o.y],[o.w,.18,cx,o.y+o.h],[.18,o.h,o.x,cz],[.18,o.h,o.x+o.w,cz]])
+          this.box(w,.25,d,this.mat.foundation,x,.125,z,0,{roof:true,shell:o.id,shellBase:true}).castShadow=false;
         for (let k = 1; k < 4; k++) this.box(0.08, 0.1, o.h + 0.2, this.mat.roofTrim, o.x + o.w * k / 4, H + 0.17, cz, 0, { roof: true });
         const sign = this.faceMesh(Math.min(4, o.w * 0.5), 0.55, new THREE.MeshBasicMaterial({ map: this.signTex('STORAGE') }), cx, H - 0.45, o.y + o.h + 0.02, [0, 1], 0, { roof: true });
         break;
@@ -660,6 +694,12 @@ export class Renderer {
         if (inConst) { this.scaffold(o, cx, cz, o.dir[0] ? 0.3 : 1, o.dir[0] ? 1 : 0.3, 1.4, 0); break; }
         const wide = o.kind !== 'std';
         const w = wide ? 0.95 : 0.55;
+        // A substantial portal identifies the shell entrance without moving its door.
+        if(wide){
+          const side=[-o.dir[1],o.dir[0]];
+          for(const k of [-1,1])this.box(o.dir[0]?.23:.18,1.5,o.dir[0]?.18:.23,this.mat.pier,cx+o.dir[0]*.06+side[0]*k*.62,.75,cz+o.dir[1]*.06+side[1]*k*.62,0,{obj:o.id,entryPier:true}).castShadow=false;
+          this.box(o.dir[0]?.25:1.42,.20,o.dir[0]?1.42:.25,this.mat.pier,cx+o.dir[0]*.06,1.55,cz+o.dir[1]*.06,0,{obj:o.id,entryLintel:true}).castShadow=false;
+        }
         this.faceMesh(w + 0.12, 1.45, this.mat.officeTrim, cx + o.dir[0] * 0.08, 0.72, cz + o.dir[1] * 0.08, o.dir, 0, { obj: o.id, doorFrame: true });
         const panel = this.faceMesh(w, 1.3, o.kind === 'std' ? this.mat.doorInt : this.mat.glass, cx + o.dir[0] * 0.09, 0.65, cz + o.dir[1] * 0.09, o.dir, 0, { obj: o.id });
         this.anim.push({ k: 'door', mesh: panel, o, cx, cz, w });
@@ -989,6 +1029,7 @@ export class Renderer {
       switch (A.k) {
         case 'build': { if (!A.ord) break; const p = Math.max(0.02, A.ord.prog); A.mesh.scale.y = A.h * p; A.mesh.position.y = A.f * FLOOR_H + A.h * p / 2; A.mesh.material.opacity = A.ord.waiting ? 0.35 : 0.8; break; }
         case 'comeback': { A.mesh.material = this.comebackFinish(o,A.target); break; }
+        case 'rescueRoof': { A.mesh.material=this.comebackFinish(o,A.target)===this.mat.comebackWorn?this.mat.rescueRoofTurn:this.mat.roof;break; }
         case 'unitStatus': { A.mesh.material=this.statusMaterials[unitStatus(o)]; break; }
         case 'rollup': { A.mesh.material = this.doorFinish(o); const tgt = o.doorOpen ? 0.12 : 1; const cur = A.mesh.scale.y / (A.H * 0.74); const n = cur + (tgt - cur) * Math.min(1, dt * 5); A.mesh.scale.y = A.H * 0.74 * n; A.mesh.position.y = (o.f || 0) * FLOOR_H + A.H * 0.74 - A.H * 0.74 * n / 2; break; }
         case 'gate': { A.mesh.position.x = A.x0 - (o.open || 0) * 2.8; break; }
