@@ -17,6 +17,7 @@ import { localsave } from './localsave.js';
 import { savearchive } from './savearchive.js';
 import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
+import { createStartupRenderer } from './startup.js';
 
 Renderer.prototype.setSim = function (sim) {
   if (this.projectMark) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); this.projectMark = null; }
@@ -290,7 +291,9 @@ function sanitizeSave(v, depth = 0) {
   return v;
 }
 function makeMapleSeedPrice(day) { return 95000 + (day % 7) * 1500; }
-game.rend = new Renderer(canvas, game.sim);
+game.rend = createStartupRenderer(() => new Renderer(canvas, game.sim));
+// Failed graphics startup stops before UI, autosave, animation, or input setup.
+if (game.rend) {
 game.ui = new UI(game);
 game.attach(game.sim, 'maple');
 installShowcase(game);
@@ -533,3 +536,4 @@ window.advanceTime = (ms) => {
   const s = game.sim.s; const n = Math.round((ms / 1000) * TICKS_PER_SEC_1X * Math.max(1, s.speed));
   stepTicks(n); game.rend.frame(ms / 1000); game.ui.update(ms / 1000);
 };
+} // successful renderer startup

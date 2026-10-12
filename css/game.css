@@ -1070,3 +1070,12 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .rescue-bridge small { font-size:12px; line-height:1.35; }
 
 #ui .tut.comeback.min > .rescue-bridge { display:flex; }
+
+/* Startup failure remains readable without WebGL, including phone landscape. */
+#startup-error { position: fixed; inset: 0; z-index: 10000; overflow-y: auto; padding: max(24px, var(--safe-t)) max(20px, var(--safe-r)) max(24px, var(--safe-b)) max(20px, var(--safe-l)); background: var(--ink); color: var(--paper); display: grid; place-items: center; touch-action: pan-y; user-select: text; -webkit-user-select: text; }
+#startup-error .startup-card { width: 100%; max-width: 560px; padding: 28px; border: 1px solid var(--yellow); border-radius: var(--r); background: var(--ink2); }
+#startup-error .startup-brand { color: var(--yellow); font-weight: 700; }
+#startup-error h1 { font-size: clamp(24px, 5vw, 32px); line-height: 1.15; }
+#startup-error p { line-height: 1.5; }
+#startup-error button { min-height: 48px; padding: 12px 20px; border-radius: var(--r-sm); background: var(--yellow); color: var(--ink); font-weight: 700; }
+#startup-error button:focus-visible { outline: 3px solid var(--paper); outline-offset: 4px; }
