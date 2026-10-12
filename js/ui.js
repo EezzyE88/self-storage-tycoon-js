@@ -1,3 +1,4 @@
+import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
 import { yardInfill } from './yardinfill.js';
 import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
@@ -199,6 +200,7 @@ export class UI {
       case 'speed': this.requestSpeed(v); this.sfx('click'); break;
       case 'finances': this.showFinances(); this.sfx('click'); break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
+      case 'workingNext': this.setTab(v, true); this.jumpSection(v === 'growth' ? 'Growth Readiness' : v === 'business' ? 'Your market' : 'Work queue'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
       case 'staffHelp': this.hireRoleFocus = ROLES[v] ? v : null; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); this.sfx('click'); break;
       case 'sectionMenu': this.sectionMenuKey = this.tab; this.sheetTall = true; this.renderSheet(true); this.sfx('click'); break;
@@ -896,12 +898,17 @@ export class UI {
     const bays=loadingStatus(this.sim), counts=k=>bays.filter(b=>b.state===k).length;
     return '<details class="status-key"><summary>Map status · '+counts('free')+' free loading bays</summary><p class="note">Doors: '+Object.values(UNIT_STATUS).map(v=>v.mark+' '+v.label).join(' · ')+'</p><p class="note">Cyan outline: selection. Gold ring: tutorial target. Red pins: urgent problems. Occupied units show compact numbers; select one for its full status. Exceptions retain status labels.</p><p class="note">Loading: + free · — occupied or vehicle arriving · × inaccessible. '+counts('occupied')+' occupied · '+counts('inaccessible')+' inaccessible. Free means vehicle and pedestrian access at the bay; the route to a particular unit must also connect.</p>'+bays.map(b=>'<p class="note"><b>Bay ('+b.x+', '+b.y+'): '+b.state+'</b> · '+(b.state==='inaccessible'?'Reconnect this pavement to the gate and keep its pedestrian exit clear. Check the destination door, hall and floor access.':b.state==='occupied'?'Let this vehicle finish its visit. Repeated queues here may justify another connected bay near this building; hiring and canopies do not add bays.':'Available for an arriving vehicle. Preserve the route to the destination building.')+'</p>').join('')+'</details>';
   }
+  workingYardHtml() {
+    const R = workingYard(this.sim), P = R.position;
+    const work = Object.entries(R.totals).map(([role,x]) => `<span>${esc(ROLES[role]?.name || (role === 'vendor' ? 'Vendors' : 'Other completions'))}</span><span>${x.jobs} job${x.jobs === 1 ? '' : 's'}${role !== 'vendor' && role !== 'unattributed' ? ` · ${x.hours}h` : ''}</span>`).join('');
+    return `<section class="working-yard"><h3>Your working yard</h3><p class="note">Day ${R.first}–${R.today} · today so far${R.partialFirst ? ' · first day partial' : ''}</p><div class="kv">${work || '<span>Completed property work</span><span>None recorded yet</span>'}<span>Payroll accrued · this period</span><span>${money(R.payroll,true)}</span><span>Cash now</span><span>${money(P.cash,true)}</span><span>Committed bills</span><span>${money(P.committed,true)}</span><span>Recommended reserve</span><span>${money(P.reserve,true)}</span><span>Available after bills &amp; reserve</span><span class="${P.available < 0 ? 'neg' : ''}">${money(P.available,true)}</span></div><details><summary>About this summary</summary><p class="note">Reporting began Day ${dayOf(R.fromT)} at ${fmtTime(R.fromT)}. Rolling 30 calendar days. No earlier completions or payroll are backfilled. Jobs are credited to the role that finished them. Hours show each completed job’s standard work requirement, not measured time saved. Office service and travel are excluded. Vendor completions carry no employee hours. Payroll accrues at 7:00 AM and is paid with weekly bills; it is not an extra cash charge. Staffing does not guarantee profit.</p></details><div class="yard-next"><small>${esc(R.next.detail)}</small><button class="btn" data-a="workingNext" data-v="${esc(R.next.tab)}">${esc(R.next.text)}</button></div></section>`;
+  }
   operateSheet() {
     const sim = this.sim, s = sim.s;
     const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
     const tasks = [...s.tasks].sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
     const owner = s.staff.find((x) => x.role === 'owner'), ownerLeft = owner ? sim.workRemaining(owner) : 0;
-    let h = this.statusLegendHtml() + this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
+    let h = this.workingYardHtml() + this.statusLegendHtml() + this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
     if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
     for (const t of tasks.slice(0, 14)) {
       const ownerCan = ROLES.owner.can.includes(t.need), hrs = sim.taskHours(t);

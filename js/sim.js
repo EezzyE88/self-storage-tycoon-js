@@ -1,3 +1,4 @@
+import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';
 import { lessonAllowed, lessonById } from './tutorial.js';
 import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';
 import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
@@ -102,6 +103,7 @@ export class Sim {
     }
     ensureFloors(state,floorCount(state));
     normalizeComeback(state);
+    ensureWorkReport(state);
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -1305,6 +1307,7 @@ export class Sim {
     F.lastDay = day; // persisted before all effects; repeat calls/reloads cannot repeat the batch
     for (const L of Object.values(s.leases)) this.billLease(L, day);
     const ox = cents(this.dailyOpex().total), pay = cents(s.staff.reduce((a, st) => a + (st.wage || 0), 0));
+    recordPayroll(s, pay);
     const values = { opex: ox, payroll: pay, interest: cents(s.loan.bal * 0.0004) };
     for (const [cat, amt] of Object.entries(values)) {
       F.accrued[cat] = cents(F.accrued[cat] + amt);
@@ -2811,6 +2814,8 @@ export class Sim {
   }
   finishTask(t, ag, aborted = false) {
     const s = this.s;
+    const pending = s.tasks.includes(t);
+    let completed = false;
     s.tasks = s.tasks.filter((x) => x !== t);
     if (ag) {
       ag.task = null;
@@ -2818,16 +2823,18 @@ export class Sim {
     }
     if (aborted) return;
     const o = t.obj != null && s.objects[t.obj];
-    if (t.type === 'makeready' && o) { o.commercial = 'ready'; this.milestone('first_makeready'); this.emit('rentready', { unit: o.id, x: o.x, y: o.y, f: o.f || 0 }); }
+    if (t.type === 'makeready' && o) { completed = true; o.commercial = 'ready'; this.milestone('first_makeready'); this.emit('rentready', { unit: o.id, x: o.x, y: o.y, f: o.f || 0 }); }
     else if ((t.type === 'repair' || t.type === 'pm') && o) {
+      completed = true;
       // choice, not chore: the Owner's quick fix is free but wears out sooner; a Tech or vendor restores it fully
       const quick = t.type === 'repair' && ag && ag.role === 'owner' && this.pressureOn();
       o.cond = quick ? Math.max(o.cond, 0.72) : 1; o.quickFix = quick; if (o.type === 'door' && o.keypad) o.kcond = quick ? 0.72 : 1; this.markDirty();
       this.milestone('first_repair'); this.emit('repaired', { obj: o.id, x: o.x, y: o.y, f: o.f || 0 });
       s.convos = s.convos.filter((c) => c.obj !== o.id);
     } else if (t.type === 'cleanroom' && o) {
-      o.dirt = 0; this.emit('cleaned', { x: o.x, y: o.y, f: o.f || 0 });
+      completed = true; o.dirt = 0; this.emit('cleaned', { x: o.x, y: o.y, f: o.f || 0 });
     } else if (t.type === 'clean') {
+      completed = true;
       const r = 2.6;
       for (let y = Math.floor(t.y - r); y <= t.y + r; y++) for (let x = Math.floor(t.x - r); x <= t.x + r; x++) if (this.inb(x, y) && Math.hypot(x - t.x, y - t.y) <= r) s.dirt[t.f][this.idx(x, y)] = 0;
       this.emit('cleaned', { x: t.x, y: t.y, f: t.f });
@@ -2836,10 +2843,11 @@ export class Sim {
       if (c) {
         if (c.st === 'damaged' || c.cond < 0.2) c.cond = 1;
         const home = s.objects[c.home] && s.objects[c.home].cstate === 'operating' ? s.objects[c.home] : this.objs('corral')[0];
-        if (home) { c.st = 'corral'; c.corral = home.id; c.f = home.f || 0; c.x = home.x; c.y = home.y; this.emit('cart_return', { x: home.x, y: home.y, f: home.f || 0 }); }
+        if (home) { completed = true; c.st = 'corral'; c.corral = home.id; c.f = home.f || 0; c.x = home.x; c.y = home.y; this.emit('cart_return', { x: home.x, y: home.y, f: home.f || 0 }); }
       }
       if (ag) ag.cart = null;
     }
+    if (pending && completed) recordWork(this, t, ag);
     recordComebackWork(this, t, ag);
     if (ag && ag.role !== 'owner') this.milestone('first_delegated');
     this.emit('task_done', { type: t.type });

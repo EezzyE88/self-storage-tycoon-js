@@ -1047,3 +1047,11 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .floors .floor-growth { margin-top:12px; }
 #ui .floors .floor-growth summary { min-height:44px; display:list-item; padding:12px 0; cursor:pointer; }
 #ui .modal.floors { background:#f4f1e7; }
+
+.working-yard { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #f1f5ef; margin-bottom: 12px; }
+.working-yard h3 { margin-top: 0; }
+.working-yard .kv { font-size: 12px; }
+.working-yard .kv > span:nth-child(2n) { white-space: nowrap; }
+.working-yard details { font-size: 12px; margin: 8px 0; }
+.working-yard .yard-next { display: grid; gap: 6px; }
+.working-yard .yard-next .btn { min-height: 44px; white-space: normal; }

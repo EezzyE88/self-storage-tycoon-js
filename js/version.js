@@ -1,2 +1,2 @@
-// Isolated floor-view follow-up; physical iPhone acceptance pending.
-export const BUILD = { name: 'bplus-floor-view-20261010', date: '2026-10-10' };
+// Isolated reporting candidate; not published or physically accepted.
+export const BUILD = { name: 'bplus-working-yard-20261011', date: '2026-10-11' };
