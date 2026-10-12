@@ -1,3 +1,4 @@
+import { normalizeProjects, projectOffers, matchesProject, startProject, reconcileProject, projectLease } from './propertyprojects.js';
 import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';
 import { lessonAllowed, lessonById } from './tutorial.js';
 import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';
@@ -104,6 +105,7 @@ export class Sim {
     ensureFloors(state,floorCount(state));
     normalizeComeback(state);
     ensureWorkReport(state);
+    normalizeProjects(state);
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -814,12 +816,14 @@ export class Sim {
     this.ensure();
     if (track && r.ok) mapComebackReplacements(this, Object.keys(this.s.objects).filter(id => !before.has(id)).map(Number));
     checkComeback(this);
+    reconcileProject(this);
     return r;
   }
   verticalPlan(id,options) { return verticalPlan(this,id,options); }
   act_verticalUpgrade(a) { return beginVertical(this,a); }
   act_speed(a) { this.s.speed = a.v; this.emit('speed', { v: a.v }); return { ok: true }; }
   act_build(a) {
+    if (a.projectKey && (!matchesProject(a, a.projectKey) || !projectOffers(this).some(p => p.key === a.projectKey))) return { ok: false, msg: 'That project has changed. Review the yard again.' };
     const s = this.s, R = this.plan(a);
     if (R.status === 'invalid') { this.emit('refuse'); return { ok: false, msg: R.reasons[0] }; }
     if (a.tool === 'demolish') return this.demolish(R);
@@ -843,6 +847,7 @@ export class Sim {
     }
     for (const tl of R.tiles) if (tl.k === 'hall') s.hall[tl.f][tl.i] = 2;
     s.orders.push(ord);
+    if (a.projectKey) startProject(this, a.projectKey, ord);
     if (s.lesson) s.lesson.built.push({ tool: a.tool, f: a.f || 0, id: ord.id }); else if (s.tut && s.tut.on) (s.tut.built || (s.tut.built = [])).push({ tool: a.tool, f: a.f || 0, id: ord.id });
     s.lastCommit = { order: ord.id, t: s.t };
     this.markDirty();
@@ -928,6 +933,7 @@ export class Sim {
     if (ord.tool === 'office') for (const st of s.staff) if (!s.agents.some((a) => a.sid === st.id)) this.spawnStaffAgent(st);
     const units = ord.objs.map((id) => s.objects[id]).filter((o) => o && o.type === 'unit');
     this.emit('complete', { order: ord.id, label: ord.label, cells: ord.cells, ready: units.filter((u) => u.cstate === 'ready').length, units: units.length });
+    reconcileProject(this);
     if (ord.tool === 'hall' || ord.tool === 'aisle') { /* infra */ }
     s.orders = s.orders.filter((o) => o.st === 'construction' || s.t - o.t0 < 3 * MIN_PER_DAY);
   }
@@ -941,6 +947,7 @@ export class Sim {
     if (!targets.length) { this.emit('refuse'); return { ok: false, msg: 'Nothing is ready to commission' }; }
     for (const u of targets) { u.cstate = 'operating'; u.commercial = 'ready'; }
     this.markDirty(); this.rebuild();
+    reconcileProject(this);
     this.emit('commissioned', { n: targets.length, x: targets[0].x, y: targets[0].y, f: targets[0].f || 0 });
     this.milestone('first_expansion');
     if (targets.some((u) => u.env === 'climate')) this.milestone('first_climate');
@@ -1206,7 +1213,7 @@ export class Sim {
     if (a.op === 'dismiss') { s.lessonsSeen = s.lessonsSeen || {}; s.lessonsSeen[a.id] = this.day; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
     return { ok: false };
   }
-  poll() { this.ensure(); if (this.onTick) this.onTick(this); if (this.dirty) this.rebuild(); checkComeback(this); }
+  poll() { this.ensure(); if (this.onTick) this.onTick(this); if (this.dirty) this.rebuild(); checkComeback(this); reconcileProject(this); }
   act_comebackAck() {
     const c = this.s.scenario;
     if (!isComeback(this.s) || c.status !== 'won') return { ok: false };
@@ -1252,6 +1259,7 @@ export class Sim {
     if (this.onTick) this.onTick(this);
     if (this.dirty) this.rebuild();
     checkComeback(this);
+    reconcileProject(this);
   }
   newDay() {
     const s = this.s, day = this.day;
@@ -1930,6 +1938,7 @@ export class Sim {
     s.today.leases++;
     if (u.vacatedAt != null) this.milestone('first_lease_after_turnover');
     this.emit('lease', { unit: u.id, x: u.x, y: u.y, f: u.f || 0, rent: L.rent });
+    projectLease(this, u.id, L.rent);
     let t = s.t + 60 + Math.floor(this.rnd() * 180);
     const m = t % MIN_PER_DAY; if (m > (ACCESS_HOURS[1] - 1.5) * 60) t += MIN_PER_DAY - m + ACCESS_HOURS[0] * 60 + 60;
     this.schedule({ kind: 'movein', tenant: tn.id, unit: u.id }, t);

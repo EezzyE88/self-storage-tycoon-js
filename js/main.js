@@ -19,6 +19,7 @@ import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
 
 Renderer.prototype.setSim = function (sim) {
+  if (this.projectMark) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); this.projectMark = null; }
   this.sim = sim; this.resizeWorld();
   this.clearDynamic();
   this.lastStruct = -1; this.setPreview(null); this.setSelection(null); this.setFocus(null);

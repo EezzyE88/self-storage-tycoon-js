@@ -1,3 +1,4 @@
+import { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';
 import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
 import { yardInfill } from './yardinfill.js';
@@ -288,6 +289,9 @@ export class UI {
       case 'comebackReadiness': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Growth Readiness'); break;
       case 'comebackCareer': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Operator career'); break;
       case 'yardExplore': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Your next improvement'); break;
+      case 'projectPreview': this.previewProject(v); break;
+      case 'projectView': this.viewProject(v); break;
+      case 'projectExplore': this.setTab('growth', true); this.jumpSection('Your next improvement'); break;
       case 'yardPreview': this.previewYardInfill(v); break;
       case 'yardLater': this.setTab(null); break;
       case 'yardDemand': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('business'); this.jumpSection('Your market'); break;
@@ -349,7 +353,7 @@ export class UI {
     this.sectionMenuKey = null; this.sectionChoice = null;
     if (t === 'growth' && this.plan && this.plan.args) {
       this.growthPlanArgs = structuredClone(this.plan.args);
-      this.growthProposal = { sim: this.sim, args: this.growthPlanArgs, view: this.rend.view, yardGuide: this.yardGuide?.sim === this.sim ? this.yardGuide : null };
+      this.growthProposal = { sim: this.sim, args: this.growthPlanArgs, view: this.rend.view, yardGuide: this.yardGuide?.sim === this.sim ? this.yardGuide : null, projectKey: this.projectProposal?.sim === this.sim ? this.projectProposal.key : null };
     }
     if(t!=='feedback') { this.feedbackFocus=null; this.feedbackRequest=null; }
     this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
@@ -378,6 +382,7 @@ export class UI {
     for (const toast of this.toasts || []) toast.el.remove();
     this.toasts = [];
     this.growthProposal = null; this.growthPlanArgs = null;
+    this.projectProposal = null;
     this.yardGuide = null;
     this.floorBuilding = null;
     this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
@@ -511,6 +516,7 @@ export class UI {
     this.pickTool(a.tool);
     this.flip = !!a.flip; this.climate = !!a.climate; this.rush = !!a.rush;
     this.planArgs = { a: { ...a.a }, b: { ...a.b }, axis: a.axis, dir: a.dir };
+    this.projectProposal = saved.projectKey ? { sim: this.sim, key: saved.projectKey } : null;
     this.replan(); // Requote current conditions; never spend or auto-confirm.
     this.yardGuide = saved.yardGuide || null;
     if (this.yardGuide) { this.rend.lookAt(11, 3); this.frameOutline(); }
@@ -531,17 +537,48 @@ export class UI {
     this.rend.lookAt(11, 3); this.frameOutline();
     return true; // Ordinary Confirm remains the only way to buy.
   }
+  previewProject(key) {
+    const c = projectOffers(this.sim).find(p => p.key === key);
+    if (!c || !toolUnlocked(this.sim, c.args.tool)) { this.toast('That project has changed. Review the yard again.', 'bad'); return false; }
+    this.pauseForPopup('review'); this.scMin = true; this.renderTut(true);
+    this.setTab(null); this.select(null); this.setView('ext'); this.pickTool(c.args.tool);
+    this.flip = false; this.climate = false; this.rush = false;
+    this.planArgs = structuredClone({ a: c.args.a, b: c.args.b, axis: c.args.axis });
+    this.projectProposal = { sim: this.sim, key }; this.replan();
+    if (key !== 'cover') this.rend.faceYardExtension?.();
+    this.rend.lookAt(c.bounds.x + c.bounds.w/2, c.bounds.y + c.bounds.h/2); this.frameOutline();
+    return true;
+  }
+  viewProject(key) {
+    const r = this.sim.s.propertyProjects;
+    const p = [r?.active, ...(r?.history || [])].find(p => p?.key === key);
+    if (!p) return;
+    const d = PROJECTS[key], o = p.ids.map(id => this.sim.s.objects[id]).find(Boolean);
+    this.setTab(null); this.select(null); this.setView('ext');
+    this.rend.lookAt(d.bounds.x + d.bounds.w/2, d.bounds.y + d.bounds.h/2);
+    this.rend.highlightProject?.(d.bounds);
+    if (o) this.select(o.id);
+  }
+  projectProgressHtml() {
+    const p = this.sim.s.propertyProjects?.active, st = projectStatus(this.sim);
+    if (!p || !st) return '';
+    return `<section class="property-project"><b>${esc(st.label)}</b><small>${esc(st.text)}${p.key === 'cover' ? ' · service improvement, no new units' : ` · ${st.leased}/${st.total} leased`}</small><div class="row wrap"><button class="btn sm" data-a="projectView" data-v="${p.key}">View project</button>${st.commissionable ? this.cmdBtn('Commission project', {type:'commission',order:p.order}, 'pri') : ''}</div></section>`;
+  }
   yardInfillHtml() {
-    const yard = yardInfill(this.sim); if (!yard) return '';
-    const progress = yard.added ? `<p class="note"><b>Your extension: ${yard.added} of 2 units placed.</b> ${yard.constructing} under construction · ${yard.commissionable} ready to commission · ${yard.ready} ready to offer · ${yard.occupied} occupied${yard.reserved ? ` · ${yard.reserved} reserved` : ''}${yard.blocked ? ` · ${yard.blocked} blocked` : ''}.</p>` : '';
-    const cards = yard.choices.map(c => {
-      const unmet = c.readiness.checks.find(check => !check.ok);
-      return `<div class="item yard-choice"><div class="grow"><b>${c.count === 1 ? 'One 5×10 — keep more cash' : 'Two 5×10s — add more capacity'}</b><small>${money(c.plan.cost)} build · ${money(c.position.available,true)} after bills &amp; reserve</small><small>${c.readiness.justified ? 'Current evidence supports this scoped expansion.' : esc(unmet.detail)}${!c.affordable ? ' Not enough cash to build yet.' : ''}</small><button class="btn" data-a="yardPreview" data-v="${c.key}">Preview ${c.count === 1 ? 'one unit' : 'two units'}</button><details data-yard-detail="${c.key}"><summary>Costs &amp; evidence</summary><p class="note">After construction: ${money(c.position.cash,true)} cash · ${money(c.position.committed,true)} committed bills · ${money(c.position.reserve,true)} recommended reserve.</p><p class="note">${c.readiness.checks.map(check=>`${check.ok ? '✓' : '!'} ${esc(check.label)}: ${esc(check.detail)}`).join('<br>')}</p></details></div></div>`;
+    const c = this.sim.s.scenario;
+    if (c?.id !== 'comeback' || c.status !== 'won' || !c.acknowledged) return '';
+    const offers = projectOffers(this.sim), r = this.sim.s.propertyProjects;
+    const cards = offers.map(p => {
+      const explanation = p.key === 'small' ? 'Serve two smaller renters; higher cost and ongoing burden.' : p.key === 'large' ? 'Serve a larger-unit shopper; lower cost, one rental opportunity.' : 'Shelter existing loading bays. Helps affected customers in rain; adds no rental capacity.';
+      const evidence = p.key === 'cover' ? 'Weather protection is optional. Customer use and financial return are separate.' : `${p.losses} matching standard-unit availability losses in the current rolling shopper window · ${p.vacancies} suitable ready vacancies now. Historical requests are not promised leases.`;
+      const inv = p.investment;
+      return `<div class="item yard-choice"><div class="grow"><b>${esc(p.label)}</b><small>${explanation}</small><small>${money(p.plan.cost)} build · +${money(p.daily,true)}/day modeled costs · ~${Math.ceil(p.plan.dur/60)}h</small><small class="${p.position.available < 0 ? 'neg' : ''}">${money(p.position.available,true)} remaining after bills &amp; recommended reserve${p.position.available < 0 ? ' — below recommended buffer' : ''}</small><small>${evidence}</small><button class="btn" data-a="projectPreview" data-v="${p.key}">Preview ${esc(p.label.toLowerCase())}</button><details data-yard-detail="project-${p.key}"><summary>Costs &amp; evidence</summary><p class="note">After build: ${money(p.position.cash,true)} cash · ${money(p.position.committed,true)} committed bills · ${money(p.position.reserve,true)} reserve. ${this.sim.s.cash < p.plan.cost && !this.sim.unlimited() ? 'Not enough cash to confirm yet.' : ''}</p>${inv ? `<p class="note">${inv.range ? `Estimated steady-state payback ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months; assumptions, not guaranteed profit.` : 'Payback: insufficient comparable evidence.'} New leases and payment collection are not guaranteed.</p>` : ''}</details></div></div>`;
     }).join('');
-    const ambition = yard.added === 2 ? yard.constructing || yard.commissionable ? 'The two new units are placed. Finish construction and commission them, then see whether customers use them.' : 'Your extension is now part of the yard. Review actual leasing and demand before choosing your next improvement.' : yard.added === 1 ? 'One new unit changes your yard. Add its neighbour if demand and cash support it, or keep your buffer.' : 'Picture two small units at the far end of the drive aisle, beside Space 101. Add one, add both, or keep your cash.';
-    return `<h3>Your next improvement</h3><div class="yard-infill"><b>${yard.added === 2 ? 'Your row extension' : 'Extend the restored row'}</b><p class="note">${ambition} This is optional; leases are not guaranteed.</p>${progress}${cards ? `<div class="list">${cards}</div>` : yard.added === 2 ? '' : '<p class="note">No clear extension spot remains here. Review your layout or choose your own next project.</p>'}<div class="row wrap"><button class="btn" data-a="yardLater">Back to my yard${yard.added ? '' : ' — not now'}</button><button class="btn" data-a="yardDemand">Review demand</button>${yard.added ? '<button class="btn" data-a="comebackWork">Review operations</button>' : ''}</div></div>`;
+    const history = (r?.history || []).map(p => `<div class="project-result"><b>${esc(PROJECTS[p.key].label)} · opened Day ${dayOf(p.completed)}</b><small>${p.key === 'cover' ? 'Loading shelter completed. Rainy-day customer use is separate from profitability.' : p.firstLease ? `First project lease: ${money(p.firstLease.rent,true)}/mo contracted. Customer use demonstrated; investment payback is not established.` : 'In service. No project lease recorded yet; customer use and profitability are separate.'}</small><button class="btn sm" data-a="projectView" data-v="${p.key}">View improvement</button></div>`).join('');
+    return `<h3>Your next improvement</h3><div class="yard-infill"><p class="note">Choose your next property project. No deadline; keep your cash if the evidence or buffer is weak.</p>${this.projectProgressHtml()}${cards ? `<div class="list">${cards}</div>` : r?.active ? '' : '<p class="note">No authored project is available at this footprint. Existing developments are preserved; ordinary building remains available.</p>'}${history ? `<details data-yard-detail="project-history"><summary>Your completed projects</summary>${history}</details>` : ''}<div class="row wrap"><button class="btn" data-a="yardLater">Keep operating</button><button class="btn" data-a="yardDemand">Review demand</button></div></div>`;
   }
   pickTool(k) {
+    this.projectProposal = null;
     this.yardGuide = null;
     if (k) { this.growthProposal = null; this.growthPlanArgs = null; }
     if(k) {this.sheetTall=false;this.tutMin=true;this.resumePopup('tutorial');}
@@ -586,8 +623,9 @@ export class UI {
       this.toast('For this lesson, face the unit doors toward the connected drive aisle until the preview turns green.', 'bad');
       return;
     }
-    const r = this.sim.dispatch({ type: 'build', ...this.plan.args });
-    if (r.ok) { this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
+    const projectKey = this.projectProposal?.sim === this.sim && matchesProject(this.plan.args, this.projectProposal.key) ? this.projectProposal.key : null;
+    const r = this.sim.dispatch({ type: 'build', ...this.plan.args, ...(projectKey ? { projectKey } : {}) });
+    if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); }
     this.renderActionBar();
   }
@@ -604,9 +642,11 @@ export class UI {
     if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
+      const projectMarker = this.projectProposal?.sim === this.sim ? `<p class="project-review">${matchesProject(R.args, this.projectProposal.key) ? esc(PROJECTS[this.projectProposal.key].label) + ' · project preview' : 'Placement changed · ordinary build, not a tracked project'}</p>` : '';
+      const compareProjects = this.projectProposal?.sim === this.sim && this.projectProposal.key !== 'cover' ? '<div class="row wrap project-switch"><button class="btn sm" data-a="projectPreview" data-v="small">Two 5×10s</button><button class="btn sm" data-a="projectPreview" data-v="large">One 10×10</button></div>' : '';
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
       const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
-      status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
+      status = projectMarker + compareProjects + `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
@@ -908,7 +948,7 @@ export class UI {
     const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
     const tasks = [...s.tasks].sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
     const owner = s.staff.find((x) => x.role === 'owner'), ownerLeft = owner ? sim.workRemaining(owner) : 0;
-    let h = this.workingYardHtml() + this.statusLegendHtml() + this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
+    let h = this.projectProgressHtml() + this.workingYardHtml() + this.statusLegendHtml() + this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
     if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
     for (const t of tasks.slice(0, 14)) {
       const ownerCan = ROLES.owner.can.includes(t.need), hrs = sim.taskHours(t);
@@ -1352,6 +1392,9 @@ export class UI {
   onEvent(e) {
     const s = this.sim.s;
     switch (e.type) {
+      case 'project_complete': this.toast(e.key === 'cover' ? 'Your loading area is covered.' : `Your new row is open: ${e.label.toLowerCase()}.`, 'good'); this.rend.highlightProject?.(e.bounds); this.sfx('complete'); break;
+      case 'project_first_lease': this.toast(`${e.label}: first lease at ${money(e.rent,true)}/mo. Customer use, not proven payback.`, 'good'); break;
+      case 'project_stopped': this.toast(`${e.label}: targets changed; tracking stopped. Existing refund rules apply.`, 'warn'); break;
       case 'thought': this.addBubble(e); break;
       case 'complete': this.toast(completeText(e), 'good'); this.sfx('complete'); break;
       case 'commissioned': this.sfx('confirm'); break;
@@ -1601,6 +1644,7 @@ export class UI {
   // pan it there (zooming out only if it cannot fit). Never during a drag or pinch; a step that changes mid-gesture is
   // left alone, and after framing the player's own camera movement is never undone.
   stepOutline() {
+    if (this.projectProposal?.sim === this.sim && this.plan && matchesProject(this.plan.args, this.projectProposal.key)) { const b=PROJECTS[this.projectProposal.key].bounds; return [b.x,b.x+b.w].flatMap(x=>[b.y,b.y+b.h].flatMap(y=>[[x,y,0],[x,y,FLOOR_H]])); }
     if (this.yardGuide?.sim === this.sim && this.tool === this.yardGuide.args.tool && this.plan?.units?.length) {
       return this.plan.units.flatMap(u => [u.x,u.x+u.w].flatMap(x => [u.y,u.y+u.h].flatMap(y => [[x,y,0],[x,y,FLOOR_H]])));
     }
@@ -1926,6 +1970,8 @@ export class UI {
     const cl = open.find((t) => t.type === 'clean'); if (cl) return T(`The ${cl.label.replace(/^Clean /, '').toLowerCase()} needs cleaning.`, { dirt: { kind: 'dirt', f: cl.f || 0, x: cl.x, y: cl.y } });
     const cart = open.find((t) => t.type === 'carts'); if (cart) return T('A cart was left away from its corral.', { sel: { kind: 'cart', id: cart.cart } });
     if (s.cash < 0 && !s.creative) return T('Cash is negative. Check Business for the credit line and costs.', { tab: 'business' }, 'bad');
+    const project = projectStatus(sim);
+    if (project?.intact) return T(`${project.label}: ${project.text}. View your project.`, { project: sim.s.propertyProjects.active.key }, 'ok');
     const oc = sim.occupancy();
     const vacancies = sim.operations().ready.length;
     if (oc.n >= 4 && oc.pct >= 0.95) {
@@ -1956,6 +2002,7 @@ export class UI {
   issueBtn(label, tool) { return `<button class="btn sm" data-a="goTool" data-v="${tool}">${label}</button>`; }
   runCoach() {
     const a = this.coachAct; if (!a) return; this.sfx('click');
+    if (a.project) { this.viewProject(a.project); return; }
     if (a.tab) { if (a.cat) this.cat = a.cat; this.select(null); this.setTab(a.tab); if (a.section) this.jumpSection(a.section); return; }
     const sel = a.sel ?? a.dirt; this.select(sel);
     const o = typeof sel === 'number' ? this.sim.s.objects[sel] : sel.kind === 'cart' ? this.sim.s.carts.find((c) => c.id === sel.id) : sel;

@@ -1055,3 +1055,10 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .working-yard details { font-size: 12px; margin: 8px 0; }
 .working-yard .yard-next { display: grid; gap: 6px; }
 .working-yard .yard-next .btn { min-height: 44px; white-space: normal; }
+
+/* Authored project progress uses existing panels and coach; no new map overlay. */
+.property-project { border:1px solid #7caa8b; border-radius:10px; background:#eef5ed; padding:10px; margin-bottom:10px; }
+.property-project small, .project-result small { display:block; margin:5px 0; line-height:1.4; }
+.property-project .btn, .yard-choice .btn, .project-result .btn { min-height:44px; white-space:normal; }
+.project-result { padding:8px 0; border-bottom:1px solid var(--line); }
+.project-review { margin:0 0 6px; font-weight:700; }
