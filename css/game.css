@@ -1062,3 +1062,11 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .property-project .btn, .yard-choice .btn, .project-result .btn { min-height:44px; white-space:normal; }
 .project-result { padding:8px 0; border-bottom:1px solid var(--line); }
 .project-review { margin:0 0 6px; font-weight:700; }
+
+.rescue-operation { border:1px solid #88ad94; padding:10px; border-radius:10px; margin-bottom:12px; background:#edf4ec; }
+.rescue-operation .btn, .rescue-bridge .btn { min-height:44px; white-space:normal; }
+#ui .tut.comeback.min:has(.rescue-bridge) { max-height:120px; }
+.rescue-bridge { display:flex; align-items:center; gap:8px; padding:4px 0; }
+.rescue-bridge small { font-size:12px; line-height:1.35; }
+
+#ui .tut.comeback.min > .rescue-bridge { display:flex; }

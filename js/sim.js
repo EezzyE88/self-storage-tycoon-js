@@ -1,3 +1,4 @@
+import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';
 import { normalizeProjects, projectOffers, matchesProject, startProject, reconcileProject, projectLease } from './propertyprojects.js';
 import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';
 import { lessonAllowed, lessonById } from './tutorial.js';
@@ -106,6 +107,8 @@ export class Sim {
     normalizeComeback(state);
     ensureWorkReport(state);
     normalizeProjects(state);
+    normalizeRescueOperation(state);
+    if (state.lessonOffer === 'financing') state.lessonOffer = null;
     this.rebuild();
   }
   // deterministic rng (mulberry32) stored in state
@@ -968,6 +971,7 @@ export class Sim {
     if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No commissioned rent-ready units');
     return out;
   }
+  act_rescuePricing(a) { return chooseRescuePricing(this,a); }
   act_setRent(a) { const k = a.key; if (!(k in this.s.market.ask) || !Number.isFinite(Number(a.v))) return { ok: false }; this.s.market.ask[k] = clamp(Math.round(a.v), 10, 2000); return { ok: true }; }
   // ---------------------------------------------------------------- existing-tenant rent reviews (GDD §34)
   rentReviewCands(key) {
@@ -1939,6 +1943,7 @@ export class Sim {
     if (u.vacatedAt != null) this.milestone('first_lease_after_turnover');
     this.emit('lease', { unit: u.id, x: u.x, y: u.y, f: u.f || 0, rent: L.rent });
     projectLease(this, u.id, L.rent);
+    recordRescueLease(this,u,L);
     let t = s.t + 60 + Math.floor(this.rnd() * 180);
     const m = t % MIN_PER_DAY; if (m > (ACCESS_HOURS[1] - 1.5) * 60) t += MIN_PER_DAY - m + ACCESS_HOURS[0] * 60 + 60;
     this.schedule({ kind: 'movein', tenant: tn.id, unit: u.id }, t);

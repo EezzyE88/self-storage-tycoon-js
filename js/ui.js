@@ -1,3 +1,5 @@
+import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
+import { creditProjection, creditNeeded } from './finance.js';
 import { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';
 import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
@@ -289,6 +291,13 @@ export class UI {
       case 'comebackReadiness': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Growth Readiness'); break;
       case 'comebackCareer': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Operator career'); break;
       case 'yardExplore': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Your next improvement'); break;
+      case 'rescueLeasing': if (this.sim.s.scenario?.status === 'won') this.do({type:'comebackAck'}); this.scMin=true; this.renderTut(true); this.setTab('growth',true); this.jumpSection('Your next improvement'); break;
+      case 'rescuePricingReview': this.showRescuePricing(v); break;
+      case 'rescuePricingConfirm': { const p=this.pricingReview; if(p?.sim!==this.sim)break; const r=this.do({type:'rescuePricing',approach:p.approach,expectedAsk:p.ask},true); if(r.ok){this.pricingReview=null;this.closeModal();this.renderSheet(true);}else this.showRescuePricing(p.approach); break; }
+      case 'creditReview': this.showCreditReview(+v); break;
+      case 'creditConfirm': { const r=this.creditReview; if(r?.sim!==this.sim)break; const q=creditProjection(this.sim,r.amount,this.creditContext()||{}); if(!q.ok){this.toast('Credit availability changed. Review funding again.','bad');this.showCreditReview(r.amount);break;} if(this.do({type:'loan',amt:r.amount},true).ok){if(this.sim.s.lesson?.id==='financing'){this.do({type:'tutFlag',flag:'finAck'});this.sim.poll();}this.creditReview=null;this.closeModal();this.renderSheet(true);this.renderActionBar();} break; }
+      case 'fundingReview': this.fundingContext=this.plan?.args?{sim:this.sim,args:structuredClone(this.plan.args)}:null; this.showCreditReview(0); break;
+      case 'financingHelp': this.closeModal(); this.do({type:'lesson',op:'start',id:'financing'},true); this.renderTut(true); break;
       case 'projectPreview': this.previewProject(v); break;
       case 'projectView': this.viewProject(v); break;
       case 'projectExplore': this.setTab('growth', true); this.jumpSection('Your next improvement'); break;
@@ -383,6 +392,7 @@ export class UI {
     this.toasts = [];
     this.growthProposal = null; this.growthPlanArgs = null;
     this.projectProposal = null;
+    this.pricingReview = null; this.creditReview = null; this.fundingContext = null;
     this.yardGuide = null;
     this.floorBuilding = null;
     this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
@@ -537,6 +547,35 @@ export class UI {
     this.rend.lookAt(11, 3); this.frameOutline();
     return true; // Ordinary Confirm remains the only way to buy.
   }
+  rescueOperationHtml() {
+    const q=rescuePricing(this.sim),result=rescueResults(this.sim);
+    if(!q&&!result)return '';
+    const r=result?.record;
+    return `<section class="rescue-operation"><b>Put your restored spaces to work</b>${q ? `<p class="note">${q.restored} restored 10×10 standard units ready to offer · asking ${money(q.ask,true)}/mo · current market ${money(q.market,true)}/mo.</p><div class="row wrap"><button class="btn" data-a="rescuePricingReview" data-v="hold">Keep current asking rent</button><button class="btn" data-a="rescuePricingReview" data-v="lower" ${q.lower>=q.ask?'disabled':''}>Review lower asking rent</button></div><p class="note">Keep rent per new lease, or accept less rent to potentially improve conversion. Neither guarantees leases.</p><button class="btn sm" data-a="yardLater">Decide later</button>` : `<p class="note">${result.leased} new lease${result.leased===1?'':'s'} in tracked restored units since Day ${dayOf(r.started)} · ${result.reserved} reserved · ${result.occupied} occupied now.</p><p class="note">${r.approach==='lower'?'Lower asking rent chosen':'Current asking rent kept'}: ${money(r.selectedAsk,true)}/mo. ${result.priceChanged?'Pricing changed during this period. ':''}${result.changed?'Tracked targets changed; replacements are not silently adopted. ':''}Actual use is observed; the choice is not proven to have caused it. Profitability is separate.</p>`}<div class="row wrap"><button class="btn sm" data-a="yardDemand">Review demand, pricing &amp; advertising</button><button class="btn sm" data-a="comebackWork">Inspect operations</button></div></section>`;
+  }
+  showRescuePricing(approach) {
+    const q=rescuePricing(this.sim);if(!q){this.toast('No eligible restored vacancies remain for this decision.','bad');return;}
+    this.pricingReview={sim:this.sim,approach,ask:q.ask};this.pauseForPopup('modal');
+    const lower=approach==='lower',selected=lower?q.lower:q.ask;
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>${lower?'Review lower asking rent':'Keep current asking rent'}</h2><p>10×10 standard · ${money(q.ask,true)} → ${money(selected,true)}/month.</p><p>${q.restored} restored vacancies are being tracked. ${lower?`This asking-price group affects all ${q.matching} matching ready vacancies on this property. Existing signed lease rents stay unchanged. ${money(q.difference,true)} less monthly rent per new lease; ${q.restored} new leases would carry ${money(q.difference*q.restored,true)} less monthly rent than at the previous ask. Neither occupancy outcome is guaranteed.`:'No asking price changes. Measurement starts now; earlier leases are not counted.'}</p><div class="row wrap"><button class="btn" data-a="modalClose">Decide later</button><button class="btn pri" data-a="rescuePricingConfirm">${lower?'Apply '+money(selected,true)+' asking rent':'Keep rent &amp; watch leasing'}</button></div></div></div>`;
+  }
+  creditContext() {
+    if(this.fundingContext?.sim!==this.sim)return null;
+    const args=this.fundingContext.args,p=this.sim.plan(args);
+    if(p.status==='invalid'||!p.cost)return null;
+    if(args.rush&&(this.sim.s.coTier||1)>=2&&!this.sim.instantOn())p.cost=Math.round(p.cost*1.25);
+    return {spend:p.cost,extraDaily:this.sim.planDailyCost(p)};
+  }
+  creditChoicesHtml() {
+    const room=Math.floor(this.sim.creditLimit()-this.sim.s.loan.bal),context=this.creditContext(),needed=creditNeeded(this.sim,context);
+    const amounts=[...new Set([500,1000,1500,Math.min(room,5000),...(needed>0?[needed]:[])])].filter(n=>n>0&&n<=room);
+    return `<div class="row wrap">${amounts.map(n=>`<button class="btn sm" data-a="creditReview" data-v="${n}">Review ${money(n)}${context&&n===needed?' · cover quote &amp; reserve':''}</button>`).join('')}</div>${context?`<p class="note">Current construction quote ${money(context.spend)}. ${needed===0?'Current funds already cover this quote and reserve.':needed==null?'Available credit cannot cover this quote with the recommended reserve.':'The indicated draw includes incremental credit interest in the reserve estimate.'} Borrowing and purchasing are separate decisions.</p>`:''}`;
+  }
+  showCreditReview(amount) {
+    const context=this.creditContext(),q=amount>0?creditProjection(this.sim,amount,context||{}):null;
+    this.creditReview=q?.ok?{sim:this.sim,amount:q.amount}:null;this.pauseForPopup('modal');
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review credit line</h2>${this.creditChoicesHtml()}${q?.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Credit debt after draw</span><b>${money(q.debt,true)}</b><span>Added interest</span><b>${money(q.dailyInterest,true)}/day · ~${money(q.dailyInterest*30,true)}/30 days</b><span>Cash after draw</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b>${context?`<span>Cash after separate purchase</span><b>${money(q.purchase.cash,true)}</b><span>Available after purchase &amp; reserve</span><b>${money(q.purchase.available,true)}</b>`:''}</div><p class="note">Debt must be repaid. Borrowing creates no profit and does not purchase construction. Quotes hold current obligations constant; future rent is not guaranteed.</p>`:amount>0?'<p class="note">That amount is no longer available. Select a current credit quote.</p>':''}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q?.ok?`<button class="btn pri" data-a="creditConfirm">Confirm ${money(q.amount)} draw</button>`:''}${lessonAllowed(this.sim,lessonById('financing'))?'<button class="btn sm" data-a="financingHelp">Learn about financing</button>':''}</div></div></div>`;
+  }
   previewProject(key) {
     const c = projectOffers(this.sim).find(p => p.key === key);
     if (!c || !toolUnlocked(this.sim, c.args.tool)) { this.toast('That project has changed. Review the yard again.', 'bad'); return false; }
@@ -570,14 +609,15 @@ export class UI {
     const offers = projectOffers(this.sim), r = this.sim.s.propertyProjects;
     const cards = offers.map(p => {
       const explanation = p.key === 'small' ? 'Serve two smaller renters; higher cost and ongoing burden.' : p.key === 'large' ? 'Serve a larger-unit shopper; lower cost, one rental opportunity.' : 'Shelter existing loading bays. Helps affected customers in rain; adds no rental capacity.';
-      const evidence = p.key === 'cover' ? 'Weather protection is optional. Customer use and financial return are separate.' : `${p.losses} matching standard-unit availability losses in the current rolling shopper window · ${p.vacancies} suitable ready vacancies now. Historical requests are not promised leases.`;
+      const evidence = p.key === 'cover' ? 'Weather protection is optional. Customer use and financial return are separate.' : `${p.vacancies} suitable ready vacancies now · ${p.losses} matching standard-unit availability losses in the current rolling shopper window. ${p.vacancies?'Consider leasing existing matching stock first.':p.investment?.enough?'Observed unmet requests support reviewing expansion; check the observation period and operations.':'Insufficient evidence to recommend this investment yet.'} Historical requests are not promised leases.`;
       const inv = p.investment;
       return `<div class="item yard-choice"><div class="grow"><b>${esc(p.label)}</b><small>${explanation}</small><small>${money(p.plan.cost)} build · +${money(p.daily,true)}/day modeled costs · ~${Math.ceil(p.plan.dur/60)}h</small><small class="${p.position.available < 0 ? 'neg' : ''}">${money(p.position.available,true)} remaining after bills &amp; recommended reserve${p.position.available < 0 ? ' — below recommended buffer' : ''}</small><small>${evidence}</small><button class="btn" data-a="projectPreview" data-v="${p.key}">Preview ${esc(p.label.toLowerCase())}</button><details data-yard-detail="project-${p.key}"><summary>Costs &amp; evidence</summary><p class="note">After build: ${money(p.position.cash,true)} cash · ${money(p.position.committed,true)} committed bills · ${money(p.position.reserve,true)} reserve. ${this.sim.s.cash < p.plan.cost && !this.sim.unlimited() ? 'Not enough cash to confirm yet.' : ''}</p>${inv ? `<p class="note">${inv.range ? `Estimated steady-state payback ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months; assumptions, not guaranteed profit.` : 'Payback: insufficient comparable evidence.'} New leases and payment collection are not guaranteed.</p>` : ''}</details></div></div>`;
     }).join('');
     const history = (r?.history || []).map(p => `<div class="project-result"><b>${esc(PROJECTS[p.key].label)} · opened Day ${dayOf(p.completed)}</b><small>${p.key === 'cover' ? 'Loading shelter completed. Rainy-day customer use is separate from profitability.' : p.firstLease ? `First project lease: ${money(p.firstLease.rent,true)}/mo contracted. Customer use demonstrated; investment payback is not established.` : 'In service. No project lease recorded yet; customer use and profitability are separate.'}</small><button class="btn sm" data-a="projectView" data-v="${p.key}">View improvement</button></div>`).join('');
-    return `<h3>Your next improvement</h3><div class="yard-infill"><p class="note">Choose your next property project. No deadline; keep your cash if the evidence or buffer is weak.</p>${this.projectProgressHtml()}${cards ? `<div class="list">${cards}</div>` : r?.active ? '' : '<p class="note">No authored project is available at this footprint. Existing developments are preserved; ordinary building remains available.</p>'}${history ? `<details data-yard-detail="project-history"><summary>Your completed projects</summary>${history}</details>` : ''}<div class="row wrap"><button class="btn" data-a="yardLater">Keep operating</button><button class="btn" data-a="yardDemand">Review demand</button></div></div>`;
+    return `<h3>Your next improvement</h3><div class="yard-infill">${this.rescueOperationHtml()}<p class="note">Choose your next property project. No deadline; keep your cash if the evidence or buffer is weak.</p>${this.projectProgressHtml()}${cards ? `<div class="list">${cards}</div>` : r?.active ? '' : '<p class="note">No authored project is available at this footprint. Existing developments are preserved; ordinary building remains available.</p>'}${history ? `<details data-yard-detail="project-history"><summary>Your completed projects</summary>${history}</details>` : ''}<div class="row wrap"><button class="btn" data-a="yardLater">Keep operating</button><button class="btn" data-a="yardDemand">Review demand</button></div></div>`;
   }
   pickTool(k) {
+    this.fundingContext = null;
     this.projectProposal = null;
     this.yardGuide = null;
     if (k) { this.growthProposal = null; this.growthPlanArgs = null; }
@@ -652,6 +692,7 @@ export class UI {
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
         status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
+        if(this.sim.financialPosition({spend:R.cost,extraDaily:this.sim.planDailyCost(R)}).available<0)status += '<button class="btn sm" data-a="fundingReview">Review funding · optional</button>';
         const inv = this.sim.investment(R);
         if (inv) status += `<details class="build-details"><summary>Payback &amp; build terms</summary><div class="refund-note">${inv.range ? `Steady-state payback ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months at ${pct(inv.lowOccupancy)}–${pct(inv.highOccupancy)} occupancy` : 'Payback: not enough comparable demand/rent evidence yet'}. Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class="note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;
       }
@@ -1109,7 +1150,7 @@ export class UI {
     if (opts.length) h += `<div class="loanopts">${opts.map((v) => { const pm = sim.loanPmt(v, rate, months); return `<button class="loanopt" data-a="cmd" data-cmd='${JSON.stringify({ type: 'borrow', amt: v })}'><b>${money(v)}</b><small>${money(pm)}/mo · cash after ${money(s.cash + v)}</small></button>`; }).join('')}</div>`;
     const room = sim.creditLimit() - s.loan.bal;
     h += `<div class="item"><div class="grow"><b>Credit line · ${s.loan.bal > 0 ? money(s.loan.bal) + ' owed' : 'not in use'}</b><small>${money(room)} available · ~1.2%/month · for short cash gaps${burn > 0 ? ` · cash covers ~${Math.max(0, Math.floor(s.cash / burn))} days of costs` : ''}</small></div>
-      ${room >= 1000 ? this.cmdBtn(`Borrow ${money(Math.min(room, 5000))}`, { type: 'loan', amt: Math.min(room, 5000) }) : ''}
+      ${this.creditChoicesHtml()}
       ${s.loan.bal > 0 ? this.cmdBtn(`Repay ${money(Math.min(s.loan.bal, 5000))}`, { type: 'repay', amt: Math.min(s.loan.bal, 5000) }, '', s.cash < Math.min(s.loan.bal, 5000)) : ''}</div></div>`;
     h += `<p class="note">Loans show exactly what you commit to each month. Nothing here forecasts future rent: build previews show cash before and after.</p>`;
     return h;
@@ -1392,6 +1433,7 @@ export class UI {
   onEvent(e) {
     const s = this.sim.s;
     switch (e.type) {
+      case 'rescue_operation_lease': this.toast(`${e.name} leased at ${money(e.rent,true)}/mo. Customer use; payback not established.`, 'good'); this.rend.highlightProject?.(e.bounds); break;
       case 'project_complete': this.toast(e.key === 'cover' ? 'Your loading area is covered.' : `Your new row is open: ${e.label.toLowerCase()}.`, 'good'); this.rend.highlightProject?.(e.bounds); this.sfx('complete'); break;
       case 'project_first_lease': this.toast(`${e.label}: first lease at ${money(e.rent,true)}/mo. Customer use, not proven payback.`, 'good'); break;
       case 'project_stopped': this.toast(`${e.label}: targets changed; tracking stopped. Existing refund rules apply.`, 'warn'); break;
@@ -1790,14 +1832,14 @@ export class UI {
     const owner = s.staff.find(st => st.role === 'owner'), left = owner ? sim.workRemaining(owner) : 0;
     const porter = s.staff.find(st => st.role === 'porter'), pay = ROLES.porter.wage;
     const next = p.goals.find(g => !g.met);
-    const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p, left, !!porter, sim.financialPosition(), s.tasks.map(t=>[t.obj,t.assigned,t.queued])]);
+    const key = JSON.stringify([c.status, c.acknowledged, s.rescueOperation, this.scMin, p, left, !!porter, sim.financialPosition(), s.tasks.map(t=>[t.obj,t.assigned,t.queued])]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
     const won = c.status === 'won', unavailable = c.status === 'unavailable';
     const detail = unavailable ? `<p>${esc(c.notice)}</p>` : `
       <h4>${won ? 'You brought the yard back.' : esc(next?.label || 'Keep improving the yard')}</h4>
       <p>${won ? 'Yard rescued. Keep it working and lease ready vacancies. Review demand and cash before investing.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>
       <div class="comeback-current">${p.restored}/6 spaces usable now · ${p.ready} vacant ready · ${p.occupied} occupied${p.reserved ? ` · ${p.reserved} reserved` : ''}</div>
-      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won && c.acknowledged ? '<button class="btn" data-a="yardExplore">Explore a row extension</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
+      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won?'<button class="btn pri" data-a="rescueLeasing">Review leasing</button>':''}${won && c.acknowledged ? '<button class="btn" data-a="yardExplore">Explore a row extension</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : won?'':'<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
       <details class="comeback-details" ${detailOpen?'open':''}><summary>${won && c.acknowledged ? 'Rescue history' : 'Goals and recovery choices'}</summary>
         <ul class="goals">${p.goals.map(g => `<li class="${g.met?'met':''}"><span class="ck">${g.met?'&#10003;':''}</span><span>${esc(g.label)}</span><b>${g.k==='comebackWing'?`${p.restored}/6`:g.met?'Done':'Pending'}</b></li>`).join('')}</ul>
         <p>Plan goal: complete two distinct restoration spaces through Owner work, or one target make-ready job through employed staff. Hiring alone does not complete it.</p>
@@ -1808,7 +1850,7 @@ export class UI {
         <div class="row wrap">${c.targets.map(t => `<button class="btn sm" data-a="comebackUnit" data-v="${t.id}" ${targetUnits(s,t).length?'':'disabled'}>${targetInService(s,t)?'✓ ':''}Space ${t.num}</button>`).join('')}</div>
         ${p.missing.length?`<p class="note">Missing original spaces: ${p.missing.join(', ')}. Rebuild the original footprint and door direction to reconnect a target; splitting a target maps both replacement units. Deletion never counts as restoration.</p>`:''}
       </details>`;
-    box.innerHTML = `<div class="tut scen comeback ${this.scMin?'min':''}"><div class="ch"><span>Comeback · ${unavailable?'progress unavailable':won?'rescued':`${p.restored}/6 restored`}</span><button class="mini" data-a="${this.scMin?'scenMin':'comebackClose'}" aria-label="${this.scMin?'Show Comeback goals':'Close Comeback panel'}">${this.scMin?'Show':'Close'}</button></div>${detail}${won&&!this.scMin?'<button class="btn pri" data-a="comebackClose">Keep operating this property</button>':''}</div>`;
+    box.innerHTML = `<div class="tut scen comeback ${this.scMin?'min':''}"><div class="ch"><span>Comeback · ${unavailable?'progress unavailable':won?`rescued · ${p.ready} ready vacancies`: `${p.restored}/6 restored`}</span><button class="mini" data-a="${this.scMin?'scenMin':'comebackClose'}" aria-label="${this.scMin?'Show Comeback goals':'Close Comeback panel'}">${this.scMin?'Show':'Close'}</button></div>${won&&c.acknowledged&&this.scMin?'<div class="rescue-bridge"><button class="btn sm" data-a="rescueLeasing">Review leasing</button>'+(rescueResults(sim)?'<small>'+rescueResults(sim).leased+' new restored-unit leases since decision</small>':'<small>Put your restored spaces to work</small>')+'</div>':''}${detail}${won&&!this.scMin?'<button class="btn pri" data-a="comebackClose">Keep operating this property</button>':''}</div>`;
     if (box.firstElementChild) box.firstElementChild.scrollTop = scroll;
   }
   showScenarios() {

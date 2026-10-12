@@ -207,10 +207,11 @@ export const LESSONS = [
   { id: 'financing', chapter: 'Lesson', title: 'Paying for growth', generic: true,
     body: 'Expansion costs more than a month of rent. A term loan spreads it over 60 months; the credit line covers short gaps.',
     why: 'The bank approves loans whose payments stay under 45% of your rent roll. Loan buttons show the monthly payment and your cash after, before you commit. Borrow when new units will earn more than the payment.',
-    offer: (sim) => sim.day >= (ctx(sim).gradDay || 0) + 12 || sim.s.cash < 3000,
+    // Financing is opened explicitly from Lessons or a purchase review, never from a cash/day timer.
+    offer: () => false,
     steps: [
       { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || ctx(sim).flags.finAck },
-      { t: 'Find <b>Financing</b>', d: 'Tap the <b>Financing</b> shortcut. Each option shows the payment and cash after. Take an optional loan, or tap <b>Continue without borrowing</b> on this lesson.', sel: '.loanopts button', lbl: 'Optional loan', done: (sim) => ctx(sim).flags.finAck },
+      { t: 'Find <b>Financing</b>', d: 'Choose <b>Financing</b> in the Business section selector. Review a small credit draw or a term loan; quotes show the debt and cash after. Borrowing is optional. You can tap <b>Continue without borrowing</b> on this lesson.', sel: '[data-a="creditReview"]', lbl: 'Optional credit review', done: (sim) => ctx(sim).flags.finAck },
       { t: 'Continue without borrowing', d: 'Borrowing is optional. Use the button on this lesson.', sel: '.tut [data-a="tutNext"]', lbl: 'Continue', done: (sim) => ctx(sim).flags.finAck },
     ],
     button: 'Continue without borrowing', flag: 'finAck', check: (sim) => ctx(sim).flags.finAck },

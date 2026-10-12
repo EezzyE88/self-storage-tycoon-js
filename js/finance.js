@@ -75,3 +75,20 @@ export function cashWindow(sim, days) {
   for (const d of ds) for (const [cat, amt] of Object.entries(d.categories)) categories[cat] = cents((categories[cat] || 0) + amt);
   return { incoming, outgoing, net: cents(incoming - outgoing), categories, complete: ds.every((d) => d.complete) && from >= (sim.s.finance.cashCompleteFrom || 1) };
 }
+
+// Explicit credit review only. Draws do not create wealth or buy the proposed construction.
+export function creditProjection(sim, amount, {spend=0,extraDaily=0}={}) {
+  amount=Math.floor(Number(amount));const room=Math.max(0,sim.creditLimit()-sim.s.loan.bal);
+  if(!Number.isFinite(amount)||amount<=0||amount>room)return {ok:false,room};
+  const dailyInterest=cents((sim.s.loan.bal+amount)*.0004)-cents(sim.s.loan.bal*.0004);
+  const draw=position(sim,{spend:-amount,extraDaily:dailyInterest}),purchase=position(sim,{spend:spend-amount,extraDaily:extraDaily+dailyInterest});
+  draw.netLiquid=cents(draw.netLiquid-amount); purchase.netLiquid=cents(purchase.netLiquid-amount);
+  return {ok:true,amount,room,debt:cents(sim.s.loan.bal+amount),dailyInterest:cents(dailyInterest),draw,purchase,spend};
+}
+export function creditNeeded(sim, context) {
+  if(!context||position(sim,context).available>=0)return 0;
+  const room=Math.floor(sim.creditLimit()-sim.s.loan.bal);
+  for(let amount=250;amount<=room;amount+=250)if(creditProjection(sim,amount,context).purchase.available>=0)return amount;
+  if(room>0&&creditProjection(sim,room,context).purchase.available>=0)return room;
+  return null;
+}
