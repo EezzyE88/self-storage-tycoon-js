@@ -1,7 +1,7 @@
 // Small derived views of existing simulation state. Recommendations never mutate gameplay.
 import { ROLES, OPEX, SIZES, MIN_PER_DAY } from './data.js';
 import { cents } from './finance.js';
-import { rollingShopperPeriod } from './reporting.js';
+import { rollingShopperPeriod, periodText } from './reporting.js';
 const key = (u) => `${u.size}|${u.env || 'std'}`;
 const sum = (a, f) => a.reduce((n, x) => n + f(x), 0);
 
@@ -15,6 +15,7 @@ export function operations(sim) {
   const workDays = s.days.filter((d) => d.workMeasured).slice(-7);
   const owner = s.staff.find((st) => st.role === 'owner');
   const tasks = s.tasks.filter((t) => !t.vendor), unassigned = tasks.filter((t) => !t.assigned);
+  const officeServing = s.officeQ.filter((id) => s.agents.some((a) => a.id === id && a.serveT > 0)).length;
   return {
     units, open, ready, unavailable, vacantOffline, leasedBlocked, tasks, workDays,
     contractedAffected: cents(sum(leasedBlocked, (u) => s.leases[u.lease].rent)),
@@ -27,7 +28,7 @@ export function operations(sim) {
     critical: ['gate', 'elevator', 'hvac'].flatMap((type) => sim.objs(type).filter((o) => o.cstate === 'operating' && !sim.works(o))),
     equipmentRisk: ['gate', 'elevator', 'hvac'].flatMap((type) => sim.objs(type).filter((o) => o.cstate === 'operating' && ((o.cond ?? 1) < 0.45 || o.unpowered))),
     officeQueue: s.officeQ.length,
-    officeServing: s.officeQ.filter((id) => s.agents.some((a) => a.id === id && a.serveT > 0)).length,
+    officeServing, officeWaiting: Math.max(0, s.officeQ.length - officeServing),
     cartsAvailable: s.carts.filter((c) => c.st === 'corral').length,
     cartsTotal: s.carts.filter((c) => c.st !== 'damaged').length,
     lost: sim.lostRecent(30),
@@ -49,8 +50,8 @@ export function diagnostics(sim) {
   for (const [size, n] of Object.entries(bySize).sort((a, b) => b[1] - a[1]).slice(0, 2)) add(`${n} shoppers wanted ${size} and found none`, 'Suitable rentable inventory missing', 'Observed demand opportunity; shoppers are not promised leases', 'Turn over suitable units first, then assess an expansion', 'growth');
   if (o.exhausted >= 3) add(`Owner capacity exhausted on ${o.exhausted} of ${o.workDays.length} measured days`, 'Office service and property work compete for time', 'Backlogs can keep inventory unavailable', 'Hire for the measured workload or schedule work before expanding');
   if (o.officeQueue || o.lost.service) {
-    const waiting = o.officeQueue - o.officeServing;
-    const history = o.lost.service ? `${o.lost.service} service-related shopper losses in the rolling window` : 'No service-related shopper losses in the rolling window';
+    const waiting = o.officeWaiting;
+    const history = o.lost.service ? `${o.lost.service} service-related shopper losses in ${periodText(rollingShopperPeriod(sim.day))}` : `No service-related shopper losses in ${periodText(rollingShopperPeriod(sim.day))}`;
     add(`${waiting} waiting now; ${o.officeServing} being served · ${history}`,
       o.officeQueue ? 'Current office queue; historical losses are separate' : 'Historical office losses; no shoppers at the office now',
       waiting ? 'A current wait does not by itself establish a staffing shortage' : 'Historical losses do not establish a current staffing shortage',
@@ -63,14 +64,17 @@ export function diagnostics(sim) {
 }
 export function staffingEvidence(sim, role) {
   const o = operations(sim), tasks = o.tasks.filter((t) => ROLES[role].can.includes(t.need));
-  const hours = sum(tasks, (t) => sim.taskHours(t));
+  const pending = tasks.filter(t => !t.assigned && !t.queued), covered = tasks.filter(t => t.assigned || t.queued);
+  const hours = sum(tasks, t => sim.taskHours(t)), unassignedHours = sum(pending, t => sim.taskHours(t));
+  const assignedHours = sum(covered, t => sim.taskHours(t));
+  const workload = `${unassignedHours}h unassigned; ${assignedHours}h assigned/queued or in progress (nominal task requirements, not hours saved). ${pending.length ? 'Matching backlog may warrant review.' : 'No matching unassigned task backlog evidenced.'}`;
   const evidence = {
-    porter: `${o.makeReady} units await make-ready; ${hours}h of cleaning, cart and turnover work queued. $${Math.round(o.askingOffline)}/mo asking-rent capacity offline, not promised income.`,
-    tech: `${hours}h of repair work queued; ${o.equipmentRisk.length} access/climate assets failed or unreliable.`,
-    clerk: `${o.officeHours}h of Owner office service over ${o.workDays.length} measured days; ${o.officeQueue} shoppers waiting now.`,
-    manager: `${sim.s.tasks.filter((t) => t.type === 'repair' && !t.assigned).length} repairs await assignment; ${sim.objs('unit').filter((u) => u.cstate === 'ready').length} units await commissioning. Automates existing policies; does not add task-hours.`,
+    porter: `${o.makeReady} units await make-ready. Cleaning, cart and turnover work: ${workload} $${Math.round(o.askingOffline)}/mo asking-rent capacity offline, not promised income.`,
+    tech: `Repair work: ${workload} ${o.equipmentRisk.length} access/climate assets failed or unreliable.`,
+    clerk: `${o.officeWaiting} waiting now; ${o.officeServing} being served. Owner office service: ${o.officeHours}h over ${o.workDays.length} measured days. Current waits and historical work do not prove a shortage.`,
+    manager: `${o.tasks.filter(t => t.type === 'repair' && !t.assigned && !t.queued).length} repairs await assignment; ${sim.objs('unit').filter(u => u.cstate === 'ready').length} units await commissioning. Automates existing policies; does not add task-hours or prove Owner capacity relief.`,
   }[role];
-  return { evidence, hours, monthlyWages: cents(ROLES[role].wage * 30) };
+  return { evidence, hours, unassignedHours, assignedHours, monthlyWages: cents(ROLES[role].wage * 30) };
 }
 export function planDailyCost(sim, plan) {
   // Full commissioned burden, including per-unit tax omitted by the older build preview.
@@ -81,45 +85,97 @@ export function planDailyCost(sim, plan) {
   value *= (sim.pressureOn() ? sim.costIdx() * ((sim.s.coTier || 1) >= 4 ? 0.92 : 1) : 1) * (sim.s.opts && sim.s.opts.costs || 1);
   return cents(value);
 }
-export function investment(sim, plan, { extraStaff = null, completePackage = false, leaseUpMonths = 0, repairAllowance = 0 } = {}) {
-  const units = (plan && plan.creates || []).filter((x) => x.type === 'unit');
-  if (!plan || !units.length) return null;
-  const products = [...new Set(units.map(key))];
+// Ephemeral evidence contract (never stored):
+// scope: aggregate | selected | nonUnit; window: capped day difference, NOT inclusive date count;
+// period: inclusive game-day labels; matchingLosses: sum within that interval and scope.
+// products[]: key/size/env, proposedCount, losses, operatingStock, contractedStock,
+// readyVacancies, unavailableStock, occupancy (contracted, not physically occupied), observedRent,
+// supported/reasons (payback evidence), demandSupported/demandReasons (expansion advice).
+// Aggregate/nonUnit never claim support. Empty selected products cannot pass by vacuous truth.
+// Reason codes are stable; presentation consumers must not invent their own evidence rules.
+export function investmentEvidence(sim, plan = null) {
   const window = Math.min(30, Math.max(0, sim.day - sim.s.finance.observedFrom));
-  const missing = sim.s.mkt.lostLog.filter((x) => x.d >= sim.s.finance.observedFrom && x.d > sim.day - 30 && ['noSize', 'noReady', 'noClimate'].includes(x.r) && products.includes(`${x.sz}|${x.climate || x.r === 'noClimate' ? 'climate' : 'std'}`)).length;
-  const existing = sim.objs('unit').filter((u) => u.cstate === 'operating' && products.includes(key(u)));
-  const leased = existing.filter((u) => u.lease), rents = leased.map((u) => sim.s.leases[u.lease].rent);
+  const period = { start: Math.max(1, sim.s.finance.observedFrom, sim.day - 29), end: sim.day };
+  const losses = sim.s.mkt.lostLog.filter(x => x.d >= period.start && x.d <= period.end && ['noSize', 'noReady', 'noClimate'].includes(x.r));
+  const units = sim.objs('unit'), proposed = (plan?.creates || []).filter(u => u.type === 'unit');
+  const lossKey = x => `${x.sz}|${x.climate || x.r === 'noClimate' ? 'climate' : 'std'}`;
+  const scope = plan == null ? 'aggregate' : proposed.length ? 'selected' : 'nonUnit';
+  const keys = scope === 'selected' ? [...new Set(proposed.map(key))] : scope === 'aggregate' ? [...new Set([...units.map(key), ...losses.map(lossKey)])] : [];
+  const products = keys.map(k => {
+    const stock = units.filter(u => key(u) === k), operating = stock.filter(u => u.cstate === 'operating');
+    const contracted = operating.filter(u => u.lease && sim.s.leases[u.lease]);
+    const readyVacancies = operating.filter(u => !u.lease && !u.blocked && !u.missing?.length && u.commercial === 'ready').length;
+    const unavailableStock = stock.filter(u => u.cstate !== 'operating' || u.blocked || u.missing?.length || !u.lease && u.commercial !== 'ready').length;
+    const n = losses.filter(x => lossKey(x) === k).length, occupancy = operating.length ? contracted.length / operating.length : null;
+    const reasons = [...(window < 14 ? ['insufficient_window'] : []), ...(contracted.length < 3 ? ['insufficient_comparables'] : []), ...(n < 5 ? ['insufficient_losses'] : [])];
+    const demandReasons = [...(window < 14 ? ['insufficient_window'] : []), ...(n < 5 ? ['insufficient_losses'] : []), ...(!operating.length ? ['no_operating_stock'] : occupancy < 0.9 ? ['low_contractual_occupancy'] : []), ...(readyVacancies ? ['ready_vacancies'] : [])];
+    const [size, env] = k.split('|');
+    return { key: k, size, env, proposedCount: proposed.filter(u => key(u) === k).length, losses: n,
+      operatingStock: operating.length, contractedStock: contracted.length, readyVacancies, unavailableStock, occupancy,
+      observedRent: contracted.length ? sum(contracted, u => sim.s.leases[u.lease].rent) / contracted.length : null,
+      supported: !reasons.length, reasons, demandSupported: !demandReasons.length, demandReasons };
+  });
+  return { scope, window, period, matchingLosses: sum(products, p => p.losses), products,
+    supported: scope === 'selected' && products.length > 0 && products.every(p => p.supported),
+    reasons: scope === 'aggregate' ? ['select_product'] : scope === 'nonUnit' ? ['no_unit_proposal'] : [...new Set(products.flatMap(p => p.reasons))],
+    demandSupported: scope === 'selected' && products.length > 0 && products.every(p => p.demandSupported) };
+}
+const productLabel = p => `${p.size} ${p.env === 'climate' ? 'climate' : 'standard'}`;
+export function demandEvidenceText(e) {
+  const period = periodText(e.period);
+  if (e.scope !== 'selected') return `${e.matchingLosses} availability losses across sizes and standard/climate products in ${period}. Select a unit product to assess matching demand.`;
+  return e.products.map(p => `${productLabel(p)}: ${p.losses} matching availability losses in ${period}; ${p.operatingStock ? Math.round(p.occupancy * 100) + '% contracted' : 'no operating comparables'}; ${p.readyVacancies} suitable ready vacancies. ${p.readyVacancies ? 'Rent suitable existing stock first.' : p.unavailableStock ? `${p.unavailableStock} matching units unavailable; review restoration before expansion.` : p.demandSupported ? 'Observed requests support reviewing this product.' : 'Gather more matching demand and stock evidence.'}`).join(' ') + ' Requests are not guaranteed leases.';
+}
+export function investment(sim, plan, { extraStaff = null, completePackage = false, leaseUpMonths = 0, repairAllowance = 0 } = {}) {
+  const units = (plan?.creates || []).filter(x => x.type === 'unit');
+  if (!units.length) return null; // preserves existing no-unit caller contract
+  const evidence = investmentEvidence(sim, plan), products = evidence.products.map(p => p.key);
+  const existing = sim.objs('unit').filter(u => u.cstate === 'operating' && products.includes(key(u)));
+  const leased = existing.filter(u => u.lease && sim.s.leases[u.lease]), rents = leased.map(u => sim.s.leases[u.lease].rent);
   const occupancy = existing.length ? leased.length / existing.length : null;
-  const observedRent = rents.length ? sum(rents, (v) => v) / rents.length : null;
-  const rentCapacity = cents(sum(units, (u) => {
-    const comparable = leased.filter((v) => key(v) === key(u));
-    // Existing contractual evidence caps the asking-price estimate. No speculative rent premium.
-    const rent = comparable.length ? sum(comparable, (v) => sim.s.leases[v.lease].rent) / comparable.length : sim.askFor(u);
-    return Math.min(sim.askFor(u), rent);
-  }));
-  const lowOccupancy = occupancy == null ? null : Math.max(0, occupancy - 0.15), highOccupancy = occupancy == null ? null : Math.min(0.95, occupancy);
+  const observedRent = rents.length ? sum(rents, v => v) / rents.length : null;
+  const productEstimates = evidence.products.map(p => {
+    const comparable = leased.filter(u => key(u) === p.key);
+    const rentCapacity = cents(sum(units.filter(u => key(u) === p.key), u => Math.min(sim.askFor(u), comparable.length ? sum(comparable, v => sim.s.leases[v.lease].rent) / comparable.length : sim.askFor(u))));
+    return { ...p, rentCapacity, lowOccupancy: p.occupancy == null ? null : Math.max(0, p.occupancy - 0.15), highOccupancy: p.occupancy == null ? null : Math.min(0.95, p.occupancy) };
+  });
+  const rentCapacity = cents(sum(productEstimates, p => p.rentCapacity));
+  const lowOccupancy = productEstimates.length === 1 ? productEstimates[0].lowOccupancy : null;
+  const highOccupancy = productEstimates.length === 1 ? productEstimates[0].highOccupancy : null;
   const staffDaily = extraStaff ? ROLES[extraStaff].wage : 0;
-  const daily = planDailyCost(sim, plan) + staffDaily;
-  const burden = daily * 30 + repairAllowance;
-  const lowNet = lowOccupancy == null ? null : cents(rentCapacity * lowOccupancy - burden), highNet = highOccupancy == null ? null : cents(rentCapacity * highOccupancy - burden);
-  const enough = window >= 14 && leased.length >= 3 && missing >= 5;
-  const range = enough && highNet > 0 && lowNet > 0 ? [plan.cost / highNet + leaseUpMonths, plan.cost / lowNet + leaseUpMonths] : null;
-  return { products, window, missing, occupancy, observedRent, rentCapacity, lowOccupancy, highOccupancy, daily, staffDaily, lowNet, highNet, range, enough, completePackage, leaseUpMonths, repairAllowance, cost: plan.cost, position: sim.financialPosition({ spend: plan.cost, extraDaily: daily }), layoutReady: plan.status === 'valid' && !(plan.missing || []).length && !(plan.warn || []).length };
+  const daily = planDailyCost(sim, plan) + staffDaily, burden = daily * 30 + repairAllowance;
+  const measurable = productEstimates.every(p => p.lowOccupancy != null);
+  const lowNet = measurable ? cents(sum(productEstimates, p => p.rentCapacity * p.lowOccupancy) - burden) : null;
+  const highNet = measurable ? cents(sum(productEstimates, p => p.rentCapacity * p.highOccupancy) - burden) : null;
+  const enough = evidence.supported;
+  const layoutReady = plan.status === 'valid' && !(plan.missing || []).length && !(plan.warn || []).length;
+  // Concurrent blockers: missing evidence must not erase known margin/layout problems.
+  const unavailableReasons = [
+    ...evidence.products.filter(p => !p.supported).map(p => ({ code: 'insufficient_evidence', product: p.key, reasons: p.reasons })),
+    ...(measurable && (lowNet <= 0 || highNet <= 0) ? [{ code: 'non_positive_margin' }] : []),
+    ...(!layoutReady ? [{ code: 'layout_unresolved' }] : []),
+  ];
+  const range = enough && layoutReady && lowNet > 0 && highNet > 0 ? [plan.cost / highNet + leaseUpMonths, plan.cost / lowNet + leaseUpMonths] : null;
+  return { products, evidence, productEstimates, window: evidence.window, missing: evidence.matchingLosses, occupancy, observedRent, rentCapacity, lowOccupancy, highOccupancy,
+    daily, staffDaily, lowNet, highNet, range, enough, unavailableReasons, completePackage, leaseUpMonths, repairAllowance, cost: plan.cost,
+    position: sim.financialPosition({ spend: plan.cost, extraDaily: daily }), layoutReady };
+}
+export function paybackText(I) {
+  if (!I) return 'Payback unavailable: select a unit proposal.';
+  if (!I.range) return 'Payback unavailable: ' + I.unavailableReasons.map(r => r.code === 'insufficient_evidence' ? `insufficient comparable evidence for ${productLabel(I.evidence.products.find(p => p.key === r.product))}` : r.code === 'non_positive_margin' ? 'modeled incremental margin is non-positive under the stated assumptions' : 'layout or access prerequisites remain unresolved').join('; ') + '.';
+  const assumptions = I.productEstimates.map(p => `${productLabel(p)} ${Math.round(p.lowOccupancy * 100)}–${Math.round(p.highOccupancy * 100)}% contracted-stock occupancy`).join('; ');
+  return `Steady-state payback ${Math.floor(I.range[0])}–${Math.ceil(I.range[1])} months; ${assumptions}${I.leaseUpMonths ? `; includes ${I.leaseUpMonths}-month lease-up allowance` : ''}. Assumptions, not guaranteed profit.`;
 }
 export function growthReadiness(sim, plan = null, options = {}) {
-  const o = operations(sim), I = investment(sim, plan, options), P = I ? I.position : sim.financialPosition();
-  const matching = I ? o.open.filter((u) => I.products.includes(key(u))) : o.open;
-  const occ = matching.length ? matching.filter((u) => u.lease).length / matching.length : 0;
-  const vacancies = matching.filter((u) => !u.lease).length;
-  const lost = I ? I.missing : sum(Object.entries(o.lost).filter(([r]) => ['noReady', 'noSize', 'noClimate'].includes(r)), ([, n]) => n);
-  const observation = Math.min(30, Math.max(0, sim.day - sim.s.finance.observedFrom));
+  const o = operations(sim), I = investment(sim, plan, options), E = I?.evidence || investmentEvidence(sim, plan), P = I ? I.position : sim.financialPosition();
   const capacityKnown = o.workDays.length >= 7;
+  const roleAdvice = options.extraStaff ? ` Proposed ${ROLES[options.extraStaff].name} ($${ROLES[options.extraStaff].wage}/day): ${staffingEvidence(sim, options.extraStaff).evidence} ${I ? 'Wages included in the selected quote.' : 'No construction quote selected; review payroll separately.'} Capacity relief is not proven.` : '';
   const checks = [
-    { label: 'Proven demand', ok: observation >= 14 && lost >= 5 && occ >= 0.9 && !vacancies, detail: `${lost} matching availability losses in ${observation} observed days; ${Math.round(occ * 100)}% occupancy; ${vacancies} existing vacancies. ${!matching.length?'No operating units match this plan.':vacancies?'Rent suitable vacant units first.':observation >=14&&lost>=5&&occ>=.9?'Existing suitable stock is full. Assess a scoped expansion.':'Gather more matching demand evidence before expanding.'}` },
+    { label: E.scope === 'selected' ? 'Product demand evidence' : 'Demand observations', ok: E.demandSupported, detail: demandEvidenceText(E) },
     { label: 'Operational stability', ok: !o.equipmentRisk.length && o.makeReady <= 2 && o.oldestUnassigned <= 2, detail: `${o.makeReady} make-readies; ${o.equipmentRisk.length} failed/unreliable access or climate assets; oldest unassigned work ${Math.floor(o.oldestUnassigned)} days.` },
-    { label: 'Financial readiness', ok: !!I && P.available >= 0, detail: `${I ? 'After selected construction: ' : 'Before selecting a build: '}$${Math.round(P.available).toLocaleString()} available after bills & reserve.` },
-    { label: 'Capacity headroom', ok: capacityKnown && (o.exhausted < 3 || !!options.extraStaff), detail: `${o.exhausted} of ${o.workDays.length} measured days exhausted Owner capacity${options.extraStaff ? `; ${options.extraStaff} wages included` : ''}. ${capacityKnown ? 'Check the work mix before hiring.' : 'Measure seven days first.'}` },
-    { label: 'Investment payback', ok: !!I && I.layoutReady && !!I.range && (!options.completePackage || I.range[1] <= 18), detail: !I ? 'Select construction on the property for a scoped estimate.' : !I.layoutReady ? 'Layout prerequisites or access warnings remain.' : !I.range ? 'Not enough demand/rent evidence, or incremental margin is non-positive.' : `${Math.floor(I.range[0])}–${Math.ceil(I.range[1])} months${options.completePackage ? '; complete-package benchmark 12–18 months' : '; selected construction only, faster infill allowed'}. Occupancy sensitivity, not guaranteed ROI.` },
+    { label: 'Financial readiness', ok: !!I && P.available >= 0, detail: `${I ? 'After selected construction: ' : 'Before selecting a build: '}$${Math.round(P.available).toLocaleString()} available after bills & reserve. Affordability does not establish demand or payback.` },
+    { label: 'Capacity headroom', ok: capacityKnown && o.exhausted < 3, detail: `${o.exhausted} of ${o.workDays.length} measured days exhausted Owner capacity. ${capacityKnown ? 'Check the work mix before hiring.' : 'Measure seven days first.'}${roleAdvice}` },
+    { label: 'Investment payback', ok: !!I?.range && (!options.completePackage || I.range[1] <= 18), detail: paybackText(I) + (I?.range && options.completePackage ? ' Complete-package benchmark: 12–18 months.' : '') },
   ];
-  return { checks, investment: I, justified: checks.every((c) => c.ok), title: checks.every((c) => c.ok) ? 'Expansion looks justified' : 'Expansion needs attention' };
+  return { checks, investment: I, justified: checks.every(c => c.ok), title: checks.every(c => c.ok) ? 'Expansion looks justified' : 'Expansion needs attention' };
 }

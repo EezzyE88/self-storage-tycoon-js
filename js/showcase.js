@@ -7,12 +7,17 @@ import { PostFX, LOOK_NAMES } from './post.js';
 import { WorldFX } from './fx.js';
 import { MILESTONES } from './ui.js';
 import { bannerTop } from './bannerplace.js';
+import { yardInventory } from './yardloop.js';
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const money = (v) => (v < 0 ? '-' : '') + '$' + Math.abs(Math.round(v)).toLocaleString();
 const h32 = (n) => { n = (n ^ 61) ^ (n >>> 16); n = n + (n << 3); n ^= n >>> 4; n = Math.imul(n, 0x27d4eb2d); n ^= n >>> 15; return (n >>> 0); };
 const lerp = (a, b, k) => a + (b - a) * k;
 const QUARTER = Math.PI / 2, BASE_AZ = Math.PI / 4;
+function fullyOccupied(sim) {
+  const o = yardInventory(sim);
+  return o.total > 0 && o.occupied === o.total;
+}
 
 const STORIES = {
   '5x5': ['Holiday decorations and a few boxes of books', 'Files and samples from a home business', 'Camping gear between trips', "A college student's winter clothes"],
@@ -235,7 +240,7 @@ export function installShowcase(game) {
   };
   function reticle(x, y) { const r = $('reticle'); r.style.left = x + 'px'; r.style.top = y + 'px'; r.classList.remove('on'); void r.offsetWidth; r.classList.add('on'); }
   const origAttach = game.attach.bind(game);
-  game.attach = (sim, kind, opts) => { if (sc.photo) exitPhoto(); clearCrowd(); if (sc.mode === 'attract') stopAttract(); stopFollow(true); if (sc.mode === 'tour') stopTour(); sc.pops.length = 0; $('pops').innerHTML = ''; const r = origAttach(sim, kind, opts); const o = sim.occupancy(); sc.seenFull.set(sim, o.n > 0 && o.occ >= o.n); return r; };
+  game.attach = (sim, kind, opts) => { if (sc.photo) exitPhoto(); clearCrowd(); if (sc.mode === 'attract') stopAttract(); stopFollow(true); if (sc.mode === 'tour') stopTour(); sc.pops.length = 0; $('pops').innerHTML = ''; const r = origAttach(sim, kind, opts); sc.seenFull.set(sim, fullyOccupied(sim)); return r; };
   const origEvent = ui.onEvent.bind(ui);
   ui.onEvent = (e) => { origEvent(e); onEvent(e); };
 
@@ -307,7 +312,7 @@ export function installShowcase(game) {
       case 'commissioned': if (e.n >= 2) celebrate('Grand opening', `${e.n} new units open`, 'Now visible to shoppers. Leasing starts today.', { x: e.x + 0.5, z: e.y + 0.5, f: e.f }); break;
       case 'scenario_end': if (e.won) celebrate('Scenario complete', s.scenario ? s.scenario.name || 'Goals met' : 'Goals met', `Finished on day ${game.sim.day}`, officeAt()); break;
       case 'tut_done': if (s.tut.done) celebrate('Graduated', 'Maple Street is yours', 'The full game is unlocked. Build whatever you like.', officeAt()); else if (BEATS[e.beat] && BEATS[e.beat + 1] && e.beat > 0) celebrate(`Part ${e.beat + 1} of ${BEATS.length} complete`, BEATS[e.beat].title.replace(/\.$/, ''), `Next: ${BEATS[e.beat + 1].title.replace(/\.$/, '')}`, officeAt()); break;
-      case 'moveout': checkFull(); break;
+      case 'movedin': case 'moveout': checkFull(); break;
       case 'auction_start': auctionCrowd(e.units); { const u = s.objects[e.units[0]]; celebrate('Auction day', `${e.units.length} unit${e.units.length > 1 ? 's' : ''} up for bid`, 'Bidders are gathering at the doors. Sales close in about an hour.', u ? { x: u.x + 0.5, z: u.y + 0.5, f: u.f || 0 } : officeAt()); } break;
       case 'auction_sold': if (e.tier === 'treasure') celebrate('Auction surprise', `Unit ${(game.sim.s.objects[e.unit] || {}).num || ''}: ${e.what}`, `Bidding war - sold for ${money(e.price)}`, { x: e.x + 0.5, z: e.y + 0.5, f: e.f });
         pop(e.x + 0.5, e.y + 0.5, e.f, `Sold ${money(e.price)}`, 'lease'); fx.burst(e.x + 0.5, e.y + 0.5, e.f || 0); cheer(e.unit); break;
@@ -350,9 +355,9 @@ export function installShowcase(game) {
     return { first_retention: 'A tenant who was leaving decided to stay.', first_auction: 'A delinquent account resolved through a lien sale.', first_loan: 'Borrowed capital is working for the property.', first_makeready: 'A vacant unit is clean and back on the market.', first_lease_after_turnover: 'Turnover to new lease: the core loop works.', first_expansion: 'More doors, more rent.', first_cart_trip: 'Carts are moving goods indoors.', first_repair: 'Broken equipment is back in service.', first_delegated: 'Your staff finished a job without you.', first_climate: 'Climate-controlled storage is open.', first_upper: 'Your first upper floor is open.' }[k] || '';
   }
   function checkFull() {
-    const sim = game.sim, o = sim.occupancy(); const full = o.n > 0 && o.occ >= o.n;
+    const sim = game.sim, o = yardInventory(sim), full = fullyOccupied(sim);
     const was = sc.seenFull.get(sim);
-    if (full && was === false) celebrate('Fully leased', `${o.n}/${o.n} units occupied`, `${game.metaName ? game.metaName() : 'Your property'} has no vacancies.`, officeAt());
+    if (full && was === false) celebrate('Fully occupied', `${o.occupied}/${o.total} units occupied`, `${game.metaName ? game.metaName() : 'Your property'}: every operating unit has moved in.`, officeAt());
     sc.seenFull.set(sim, full);
   }
   function updatePops(dt) {
@@ -460,7 +465,7 @@ export function installShowcase(game) {
     updatePops(dt); updateCrowd(dt);
   };
   // initial state
-  { const o = game.sim.occupancy(); sc.seenFull.set(game.sim, o.n > 0 && o.occ >= o.n); }
+  sc.seenFull.set(game.sim, fullyOccupied(game.sim));
   applyLens();
   return sc;
 }

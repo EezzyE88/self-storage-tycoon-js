@@ -1,3 +1,21 @@
+# Current handoff — October 19, 2026
+
+Use only EezzyE88/self-storage-tycoon-js.
+
+Accepted live game: 7346fb686c86801556fb918d27b62a427cd293fe, Safari version 60. Eddie supplied the focused Safari PASS at about 22:10 Pacific, repeated PASS, and said the game is in a good state. The title tap blocker is closed for that acceptance scope.
+
+Protected solid-build baseline: 2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d, retained version 57. Keep this checkpoint separate and immutable. Live GitHub master remains e04a808dd1cac558b9e97e8cd5f021f874ac7cfe; newer preview work is not merged into it.
+
+Read [CURRENT-STATUS.md](CURRENT-STATUS.md), [RECOVERY-INDEX.md](RECOVERY-INDEX.md) and [version 60 acceptance](releases/title-taps-hotfix-20261019-ACCEPTANCE.md) first. They supersede every older current-state notice below. This housekeeping commit changes documentation only; runtime bytes, deployment and saves are unchanged.
+
+Next: ordinary management from the existing test company, starting paused. Inspect cash, vacancies, workload and matching demand before recommending action. Preserve earned goals and pricing. Do not repeat rescue, force hiring/construction, retune the economy or expand scope. Desktop full-game WebGL QA stays NOT TESTED and parked.
+
+No game-repository push, merge, deployment or save operation accompanies this handoff. A source checkpoint does not contain the user's playable company.
+
+## Historical handoff archive — superseded current-state notices
+
+Everything below is retained history, including the October 10 current notice and the September handoff. Its commit refs, preview versions, instructions and unresolved findings must not be treated as current without reconciliation. Do not follow old hosting/storage advice over current source.
+
 # Self Storage Tycoon current project handoff
 
 Updated 2026-10-10, America/Los_Angeles. Use ONLY `EezzyE88/self-storage-tycoon-js`.

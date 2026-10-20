@@ -17,8 +17,10 @@ import { localsave } from './localsave.js';
 import { savearchive } from './savearchive.js';
 import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
+import { createStartupRenderer } from './startup.js';
 
 Renderer.prototype.setSim = function (sim) {
+  if (this.projectMark) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); this.projectMark = null; }
   this.sim = sim; this.resizeWorld();
   this.clearDynamic();
   this.lastStruct = -1; this.setPreview(null); this.setSelection(null); this.setFocus(null);
@@ -43,6 +45,7 @@ const game = {
   metaName() { const C = this.company; if (!C) return null; const p = C.props[C.active]; return p.name + (C.props.length > 1 ? ` (${C.active + 1}/${C.props.length})` : ''); },
   switchProperty(k) {
     const C = this.company; if (!C || !C.props[k] || k === C.active) return;
+    this.ui?.reserveWait?.stop('Property changed.');
     const speed = this.sim.s.speed; C.active = k; const sim = C.props[k].sim; sim.s.speed = speed;
     this.attach(sim, 'switch');
   },
@@ -99,6 +102,7 @@ const game = {
   },
   note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },
   attach(sim, kind, opts = {}) {
+    this.ui?.reserveWait?.stop('Session changed.');
     this.sim = sim; this.acc = 0; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)
     if (this.rend) this.rend.setSim(sim);
     if (this.ui) {
@@ -289,7 +293,9 @@ function sanitizeSave(v, depth = 0) {
   return v;
 }
 function makeMapleSeedPrice(day) { return 95000 + (day % 7) * 1500; }
-game.rend = new Renderer(canvas, game.sim);
+game.rend = createStartupRenderer(() => new Renderer(canvas, game.sim));
+// Failed graphics startup stops before UI, autosave, animation, or input setup.
+if (game.rend) {
 game.ui = new UI(game);
 game.attach(game.sim, 'maple');
 installShowcase(game);
@@ -305,14 +311,18 @@ function stepTicks(n) {
     // Review between minutes, not just between frames: 4x can batch many ticks.
     if (!game.ui.title && sim.s.convos.length) game.ui.renderFeed();
     if (!game.ui.title && sim.s.speed === 0) break;
-    sim.step(); if (sim.events.length > 400) game.drain();
+    const eventStart=sim.events.length;
+    sim.step(); const minuteEvents=sim.events.slice(eventStart);
+    if (sim.events.length > 400) game.drain();
     for (const { p, k } of others) {
       p.sim.step();
+      if(game.ui.reserveWait?.active&&p.sim.events.some(e=>['access_lost','power_shed'].includes(e.type)||e.type==='fault'&&e.sev==='critical'))game.ui.reserveWait.interrupt('Another property needs attention.');
       for (const e of p.sim.events) { const f = BG_EVENTS[e.type]; const msg = f && f(e, p.sim); if (msg) { game.note(k, msg); if (e.type !== 'lease' && e.type !== 'moveout') game.ui.toast(`${p.name}: ${msg}`, 'bad'); } }
       p.sim.events.length = 0;
     }
     if (sim.s.t % 60 === 0) game.syncTier();
     if (!game.ui.title && sim.s.convos.length) game.ui.renderFeed();
+    game.ui.reserveWait?.check(sim,minuteEvents);
     if (!game.ui.title && sim.s.speed === 0) break;
   }
   game.drain();
@@ -397,7 +407,7 @@ function tick(now) {
 }
 requestAnimationFrame(loop);
 window.addEventListener('resize', () => game.rend.resize());
-window.addEventListener('pagehide', () => { if (!document.hidden) game.autosave(true); });
+window.addEventListener('pagehide', () => { game.ui.reserveWait?.interrupt('Page left active play.'); if (!document.hidden) game.autosave(true); });
 // offer "Continue" on the title screen: newest of the browser autosave and the save server, with the browser backup as fallback
 game.localsave = localsave; game.BUILD = BUILD;
 { const L = localsave.get(); const pick = (d, src) => d ? { ...d, src } : null;
@@ -491,11 +501,11 @@ document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: fals
 // iOS only unlocks WebAudio from touchend/click, and suspends ("interrupted") it when the app is backgrounded
 for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, () => game.audio.unlock(), { capture: true, passive: true });
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* Safari 17+ only */ }
-window.addEventListener('blur', () => game.audio.setBackground(true));
+window.addEventListener('blur', () => { game.ui.reserveWait?.interrupt('App lost focus.'); game.audio.setBackground(true); });
 window.addEventListener('focus', () => { if (!document.hidden) game.audio.setBackground(false); });
 document.addEventListener('visibilitychange', () => {
   cancelMapTap(); cancelBuildHold(); ptrs.clear(); drag = null; pinch = null; game.ui.pointerBusy = false;
-  if (document.hidden) { game.wasSpeed = game.sim.s.speed; game.sim.s.speed = 0; game.audio.setBackground(true); game.autosave(true); }
+  if (document.hidden) { game.ui.reserveWait?.interrupt('App backgrounded.'); game.wasSpeed = game.sim.s.speed; game.sim.s.speed = 0; game.audio.setBackground(true); game.autosave(true); }
   else { game.audio.setBackground(false); if (game.wasSpeed != null && game.sim.s.speed === 0) game.sim.s.speed = game.wasSpeed; game.wasSpeed = null; last = performance.now(); game.lastDraw = last; diagnostics.reset(); diagnosticMode = null; if (game.ui) game.ui.update && game.ui.update(true); }
 });
 // iOS can drop the WebGL context under memory pressure; rebuild the scene when it comes back
@@ -532,3 +542,4 @@ window.advanceTime = (ms) => {
   const s = game.sim.s; const n = Math.round((ms / 1000) * TICKS_PER_SEC_1X * Math.max(1, s.speed));
   stepTicks(n); game.rend.frame(ms / 1000); game.ui.update(ms / 1000);
 };
+} // successful renderer startup

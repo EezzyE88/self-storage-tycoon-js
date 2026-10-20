@@ -1,0 +1,14 @@
+PASS legacy history starts now, with no invented completion/payroll
+PASS Owner/Porter completion attribution; same completion cannot count twice
+PASS aborted and absent target work are excluded
+PASS vendor repair counts separately without employee hours
+PASS firing cancels queued work without recording completion
+PASS payroll accrual is exact once, not settlement cash; survives repeated load
+PASS report retention bounded to 30 days; malformed reporting resets safely
+PASS summary read-only, honest labels and actionable navigation
+PASS Tech attribution and next-action handler preserve selected tab and game state
+PASS exact state/events/RNG parity excluding only additive report: maple
+PASS exact state/events/RNG parity excluding only additive report: comeback
+PASS exact state/events/RNG parity excluding only additive report: vertical
+PASS working action reaches visible tagged sections and retains Jobs shortcut through production UI methods
+ALL PASS 13 groups

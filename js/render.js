@@ -323,6 +323,12 @@ export class Renderer {
     const s = this.sim.s; this.center.x = Math.max(-4, Math.min(s.W + 4, this.center.x)); this.center.z = Math.max(-4, Math.min(s.H + 4, this.center.z));
     this.updateCamera();
   }
+  highlightProject(b) {
+    if (this.projectMark) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); }
+    const line = new THREE.LineSegments(this.geo.edges, new THREE.LineBasicMaterial({color:0x6ebd83,transparent:true,opacity:.9,depthTest:false}));
+    line.scale.set(b.w+.12,.12,b.h+.12); line.position.set(b.x+b.w/2,.16,b.y+b.h/2);
+    line.renderOrder = 34; this.scene.add(line); this.projectMark = line; this.projectMarkUntil = performance.now()+6000;
+  }
   fitProperty(rect) { // frame the whole parcel inside the uncovered screen area
     const s = this.sim.s, w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     rect = rect || { top: 60, bottom: h - 80, left: 8, right: w - 8 };
@@ -1157,6 +1163,10 @@ export class Renderer {
       dot.rotation.x = -Math.PI / 2; dot.position.copy(ring.position); dot.position.y += 0.01; dot.renderOrder = 36; this.previewG.add(dot);
     }
     for (const c of R.creates || []) {
+      if (c.type === 'canopy') {
+        const roof = new THREE.Mesh(this.geo.box, ghost); roof.scale.set(c.w,.06,c.h); roof.position.set(c.x+c.w/2,1.55,c.y+c.h/2); this.previewG.add(roof);
+        for (const x of [c.x+.1,c.x+c.w-.1]) for (const y of [c.y+.1,c.y+c.h-.1]) { const post=new THREE.Mesh(this.geo.box,ghost); post.scale.set(.07,1.55,.07); post.position.set(x,.78,y); this.previewG.add(post); }
+      }
       if (c.type === 'light' || c.type === 'camera') {
         const r = TOOLS[c.type].radius; const ring = new THREE.Mesh((this.ringGeo[r] ||= new THREE.RingGeometry(r - 0.08, r, 48)), new THREE.MeshBasicMaterial({ color: c.type === 'light' ? 0xffe08a : 0x7fb7ff, transparent: true, opacity: 0.8, depthTest: false }));
         ring.rotation.x = -Math.PI / 2; ring.position.set(c.x + 0.5, (c.f || 0) * FLOOR_H + 0.07, c.y + 0.5); ring.renderOrder = 32; this.previewG.add(ring);
@@ -1221,6 +1231,8 @@ export class Renderer {
 
   // ================================================================ FRAME
   frame(dt) {
+    if (this.projectMark && performance.now() > this.projectMarkUntil) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); this.projectMark = null; }
+
     const sim = this.sim, s = sim.s; this.time += dt;
     if (this.onFrame) this.onFrame(dt);
     if (Math.abs(this.targetAz - this.azimuth) > 1e-3) { this.azimuth += (this.targetAz - this.azimuth) * Math.min(1, dt * 8); this.updateCamera(); }

@@ -1,77 +1,72 @@
 # Self Storage Tycoon JavaScript
 
-A touch-first 3D self-storage construction and management game for iPhone Safari and desktop browsers. Design the property, operate the business and grow the company. The core relationship is **layout -> operations -> economics -> growth**.
+A touch-first 3D self-storage construction and management game. Design the property, operate the business and grow the company: layout → operations → economics → growth.
 
-This is the standalone JavaScript/Three.js project `EezzyE88/self-storage-tycoon-js`. Do not mix it with C++/WASM or other builds. The authoritative simulation is `js/sim.js`.
+Use only EezzyE88/self-storage-tycoon-js. JavaScript/Three.js is this project's authority; do not combine it with the C++/WASM or Grok projects.
 
-## Current accepted state
+## Current accepted preview
 
-Updated 2026-10-10, America/Los_Angeles.
+Updated October 19, 2026, America/Los_Angeles.
 
-| Item | Verified state |
+| Item | State |
 |---|---|
-| Accepted game source | `8cd99b3313afe05ec9785d07db8f7f2717cf515d` |
-| Acceptance | User-approved fast-forward into master; scoped art/floor-view iPhone acceptance |
-| Retained candidate branch | `candidate/whole-game-art-20261010` |
-| Served build | `bplus-floor-view-20261010` |
-| Safari preview | https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site |
+| Accepted game commit | 7346fb686c86801556fb918d27b62a427cd293fe |
+| Safari preview | Version 60; user-reported focused physical Safari PASS |
+| Protected solid-build recovery | 2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d; version 57 retained |
+| Live GitHub master | e04a808dd1cac558b9e97e8cd5f021f874ac7cfe; unchanged |
 | Runtime scope | Three playable floors; up to five company properties |
 
-The current documentation commit advances master without changing game source. The runtime and preview remain at the accepted game-source commit above. No new Candidate number or publication is implied. The preview source proof retains the former accepted master as historical publication metadata.
+Preview: https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site
 
-See [current status and next milestone](docs/CURRENT-STATUS.md) for the authoritative acceptance assessment and remaining limits. [Project handoff](docs/HANDOFF.md) retains the historical development record with a current-state notice. Older release reports describe their original scope; they do not override later explicit acceptance.
+Version 60 restores title-screen taps and retains the financing layout and investment-guidance work. Eddie reported PASS, repeated it, then said the game is in a good state. This is scoped acceptance of the development preview, not blanket device or commercial-release acceptance.
+
+This maintenance branch updates documentation only. Its runtime is byte-identical to accepted 7346fb6; it does not advance master or change the deployed version. The reused on-screen build label is historical; source-proof.json identifies the exact served game commit.
+
+Start with [CURRENT-STATUS.md](docs/CURRENT-STATUS.md), [RECOVERY-INDEX.md](docs/RECOVERY-INDEX.md) and [the version 60 acceptance record](docs/releases/title-taps-hotfix-20261019-ACCEPTANCE.md). [HANDOFF.md](docs/HANDOFF.md) carries a current notice above the preserved historical material.
 
 ## Implemented game
 
-- Maple Street tutorial, Comeback Yard recovery, other authored scenarios, Business sandbox and Free Build.
-- Placement, preview, confirmation, construction, commissioning, access validation and renovation.
+- Maple Street tutorial, Comeback Yard recovery, other scenarios, Business sandbox and Free Build.
+- Placement, preview, construction, commissioning, access checks and renovation.
 - Drive-up/interior units, climate products, loading, carts, halls, stairs and elevators.
-- Owner capacity, staff work/delegation, office coverage, request handling and explicit pause controls.
-- Leasing, billing, collections, financial commitments/reserves/outlook and scoped Growth Readiness.
-- Career tiers, acquisitions, transfers and portfolio operation.
-- Historical diagnostics, feedback, property status cues, stylized 3D presentation and procedural audio.
+- Owner capacity, eligible automatic simple repairs, staff priority/delegation, office coverage and requests.
+- Leasing, billing, collections, costs, payroll, credit, financial commitments, reserves and outlook.
+- Separate investment opportunity, affordability and evidence-supported payback; role-relevant capacity advice.
+- Optional reserve waiting with review/resume/stop, interruptions and no automatic purchase.
+- Career tiers, acquisitions, company transfers and portfolio operation.
+- Historical diagnostics, feedback, stylized 3D presentation and procedural audio.
 - Save codes/files, local persistence, Continue and previous-game/archive recovery.
 
-Pause, 1x, 2x and 4x are supported. At 1x a game day is 24 real seconds. A build confirmation must preserve an existing paused state.
+Pause, 1x, 2x and 4x are supported. A 1x game day is 24 real seconds. Reviews and build confirmations preserve an existing manual Pause.
 
-## Acceptance and validation
+## Acceptance and remaining work
 
-Eddie's reported iPhone evidence covers rescue acknowledgement, career access, expandable history, tested save/reload/Continue, Ambience-only interruption silence, deliberate further building and extension persistence. A separate later run reached 25/25 leased from the 23-unit fixture and continued through Day 45 with repairs, cart demand, overdue rent and completed rescue history visible. Separate runs are not one continuous trace; screenshots without build labels do not establish deployment identity.
+Protected 2096ef6 retains the earlier scoped Owner repair/capacity/Pause acceptance. Earlier rescue/history/career/save continuity, Ambience silence and floor navigation retain their original physical acceptance. Version 60 closes the title-screen tap blocker through the reported focused Safari check.
 
-Candidate 41 records 84 successful final script executions after four corrected harness invocations, including two placement diagnostic helpers. The merge review independently verified 60/60 served hashes and 38/38 runtime Git matches, and reran 15 production-autosave recovery groups with delayed compression. These are automated/source checks, not blanket device acceptance.
+Publication verified 44/44 runtime files against exact version 60 source. Actual browser UI clicks and focused Node checks are retained separately from physical Safari acceptance. The hotfix browser fixture uses real UI DOM/listeners with disposable state and renderer/persistence boundary doubles; it is not full-game WebGL or real-save integration testing.
 
-The accepted art/floor-view update adds office and façade depth, stable product finishes, readable progress, easier floor selection and corrected floor-scoped glows. Eddie reported the art preview felt great until F2, then gave a physical iPhone PASS for the focused floor-navigation follow-up. Current review verified 62/62 served files and 38 runtime files against Git. No new save/reload or dense-property physical acceptance is claimed. See [accepted art/floor-view assessment](docs/releases/floor-view-20261010/ACCEPTANCE.md).
+Desktop full-game WebGL QA remains NOT TESTED and its blocker is parked. Dense-device performance, broad layout coverage and sustained natural career/portfolio pacing remain incomplete. Do not reopen passed rescue checks or call historical test counts a new blanket pass.
 
-No blocking defect was identified in the merge review. Dense Safari GPU/thermal performance, full organic company progression, physical card-spacing acceptance and physical Return to placement camera preservation remain unconfirmed. The accepted baseline is not a claim of complete commercial-release readiness.
+The next gameplay milestone is ordinary management of the existing rescued/expanded test company: understand cash, vacancies, workload and demand, obtain useful operational relief where appropriate, then choose a justified next improvement or defer spending. No forced hiring, construction, new mode or economy tuning is required.
 
-## Next gameplay milestone
+## Development and source map
 
-**Run the expanded yard with staff and fund its next justified improvement.** Use existing delegation, office coverage, requests, payroll, financial guidance and construction first. Establish whether routine work leaves the Owner room to manage and invest. Do not add a mode, force hiring, tune the economy or require another rescue session merely to demonstrate this. Detailed proposed success criteria and the separate dense-Safari check are in [current status](docs/CURRENT-STATUS.md).
+The game uses browser ES modules and static runtime assets; there is no game compilation step. Serve over HTTP through the environment's supported preview workflow. In managed Sites environments use the supported Sites preview path, not a separate ad hoc server. External fonts have system fallbacks; Three.js is bundled in vendor/.
 
-## Local development
+Focused Node scripts are under tests/headless/. Read each script's invocation contract; some require exact parent source, fixtures or environment variables. The title interaction fixture is tests/browser/title-taps.html; its setup and limits are in the hotfix release record. Do not equate a zero exit, a DOM fixture or a viewport frame with physical device acceptance.
 
-There is no application build step. Serve this directory over HTTP:
-
-```sh
-python3 -m http.server 5173
-```
-
-Open `http://localhost:5173/`. Opening `index.html` through `file://` is unsuitable for ES modules. Three.js is bundled in `vendor/`; external fonts have system-font fallbacks. Use production save flows and inspect the current code for optional server behavior rather than relying on older hosting notes.
-
-Headless scripts are under `tests/headless/` and require Node. Some require fixtures, environment variables or placement JSON; inspect their invocation contracts and retained retry logs. Do not call every zero exit an assertion-suite pass. Browser emulation and stubbed rendering are separate from real Safari evidence.
-
-## Main source and design references
-
-| Path | Purpose |
+| Source | Purpose |
 |---|---|
-| `js/sim.js`, `js/data.js` | Simulation authority and centralized tuning |
-| `js/main.js`, `js/ui.js` | Company/lifecycle handling and player interface |
-| `js/render.js`, `js/audio.js` | Presentation |
-| `js/finance.js`, `js/economics.js` | Financial authority and derived operational/investment views |
-| `js/comeback.js`, `js/career.js`, `js/yardinfill.js` | Rescue progress, career eligibility and optional infill |
-| `js/localsave.js`, `js/savearchive.js` | Local save and recovery support |
-| `docs/CURRENT-STATUS.md` | Current source/acceptance state and proposed next milestone |
-| `docs/releases/`, `docs/validation/` | Historical reports and captured evidence |
-| `docs/design/SST_Master_GDD_v1_1_Art_Audio_Complete.pdf` | Target product specification; not proof of implementation |
+| js/sim.js, js/data.js | Simulation and centralized tuning |
+| js/main.js, js/ui.js | Company/lifecycle handling and player interface |
+| js/render.js, js/audio.js | Presentation |
+| js/finance.js, js/economics.js | Finance authority and derived investment guidance |
+| js/comeback.js, js/career.js, js/yardloop.js, js/yardinfill.js | Rescue, career and yard opportunities |
+| js/reservewait.js | Opt-in waiting and its safeguards |
+| js/localsave.js, js/savearchive.js | Local save and recovery |
+| docs/CURRENT-STATUS.md | Current identities, acceptance and next milestone |
+| docs/RECOVERY-INDEX.md | Protected and current recovery targets |
+| docs/releases/, docs/validation/ | Dated evidence with original scope |
+| docs/design/SST_Master_GDD_v1_1_Art_Audio_Complete.pdf | Target design, not proof of implementation |
 
-The GDD's legacy C++ authority language is superseded for this standalone project. Documentation, source completion, user acceptance and publication are distinct states.
+Source checkpoints contain code/history, not Eddie's playable company save. A restored source package must never be assumed to restore Safari storage.

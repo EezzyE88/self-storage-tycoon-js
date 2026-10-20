@@ -775,7 +775,12 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .feed .toast { font-size:14px; max-height:66px; overflow:hidden; }
 #ui:has(.inbox-chip) #coach, #ui.has-sheet .feed .toast, #ui:has(.modal-bg) .feed { display:none; }
 #ui .modal-bg { background:#08152270; }
-#ui .modal { border-radius:14px; width:min(560px,calc(100vw - 16px)); max-height:calc(100dvh - 32px - var(--safe-t) - var(--safe-b)); }
+/* Empty modal hosts pass through taps; open dialogs own a layer above the build dock. */
+#ui > #modal { position:absolute; inset:0; z-index:80; pointer-events:none; }
+#ui > #modal > .modal-bg, #ui > #modal > .title { pointer-events:auto; }
+#ui .modal { border-radius:14px; width:min(560px,100%); min-width:0; max-height:calc(100dvh - 32px - var(--safe-t) - var(--safe-b)); }
+#ui .credit-line { flex-direction:column; align-items:stretch; }
+#ui .credit-line > .grow { flex:0 0 auto; width:100%; }
 #ui .modal .btn, #ui .sheet .btn { min-height:44px; height:auto; padding:8px 12px; font-size:14px; }
 #ui .modal h3, #ui .sheet h3, #ui .item small, #ui .note { font-size:14px; }
 #ui .actionbar { left:8px; right:8px; width:auto; transform:none; bottom:calc(64px + var(--safe-b)); border-radius:12px; }
@@ -1047,3 +1052,48 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .floors .floor-growth { margin-top:12px; }
 #ui .floors .floor-growth summary { min-height:44px; display:list-item; padding:12px 0; cursor:pointer; }
 #ui .modal.floors { background:#f4f1e7; }
+
+.working-yard { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #f1f5ef; margin-bottom: 12px; }
+.working-yard h3 { margin-top: 0; }
+.working-yard .kv { font-size: 12px; }
+.working-yard .kv > span:nth-child(2n) { white-space: nowrap; }
+.working-yard details { font-size: 12px; margin: 8px 0; }
+.working-yard .yard-next { display: grid; gap: 6px; }
+.working-yard .yard-next .btn { min-height: 44px; white-space: normal; }
+
+/* Authored project progress uses existing panels and coach; no new map overlay. */
+.property-project { border:1px solid #7caa8b; border-radius:10px; background:#eef5ed; padding:10px; margin-bottom:10px; }
+.property-project small, .project-result small { display:block; margin:5px 0; line-height:1.4; }
+.property-project .btn, .yard-choice .btn, .project-result .btn { min-height:44px; white-space:normal; }
+.project-result { padding:8px 0; border-bottom:1px solid var(--line); }
+.project-review { margin:0 0 6px; font-weight:700; }
+
+.rescue-operation { border:1px solid #88ad94; padding:10px; border-radius:10px; margin-bottom:12px; background:#edf4ec; }
+.rescue-operation .btn, .rescue-bridge .btn { min-height:44px; white-space:normal; }
+#ui .tut.comeback.min:has(.rescue-bridge) { max-height:120px; }
+.rescue-bridge { display:flex; align-items:center; gap:8px; padding:4px 0; }
+.rescue-bridge small { font-size:12px; line-height:1.35; }
+#ui .tut.comeback.min:has(.reserve-wait-bridge) { max-height:none; }
+.rescue-bridge.reserve-wait-bridge { flex-direction:column; align-items:stretch; }
+.reserve-wait-bridge .row { flex-wrap:wrap; }
+#ui .tut.comeback.min .reserve-wait-bridge > .row { display:flex; }
+
+#ui .tut.comeback.min > .rescue-bridge { display:flex; }
+.yard-loop { padding:16px 0; }
+.yard-loop > b { font-size:20px; }
+.yard-loop-progress { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; }
+.yard-loop-progress > b { font-size:24px; color:var(--green); }
+.yard-loop-progress > span { font-size:14px; }
+.yard-loop .btn { min-height:44px; }
+.yard-opportunity .grow { display:flex; flex-direction:column; gap:8px; }
+.yard-opportunity .grow > small { display:block; line-height:1.45; overflow-wrap:anywhere; }
+.yard-opportunity .btn { align-self:flex-start; max-width:100%; white-space:normal; text-align:left; }
+
+/* Startup failure remains readable without WebGL, including phone landscape. */
+#startup-error { position: fixed; inset: 0; z-index: 10000; overflow-y: auto; padding: max(24px, var(--safe-t)) max(20px, var(--safe-r)) max(24px, var(--safe-b)) max(20px, var(--safe-l)); background: var(--ink); color: var(--paper); display: grid; place-items: center; touch-action: pan-y; user-select: text; -webkit-user-select: text; }
+#startup-error .startup-card { width: 100%; max-width: 560px; padding: 28px; border: 1px solid var(--yellow); border-radius: var(--r); background: var(--ink2); }
+#startup-error .startup-brand { color: var(--yellow); font-weight: 700; }
+#startup-error h1 { font-size: clamp(24px, 5vw, 32px); line-height: 1.15; }
+#startup-error p { line-height: 1.5; }
+#startup-error button { min-height: 48px; padding: 12px 20px; border-radius: var(--r-sm); background: var(--yellow); color: var(--ink); font-weight: 700; }
+#startup-error button:focus-visible { outline: 3px solid var(--paper); outline-offset: 4px; }

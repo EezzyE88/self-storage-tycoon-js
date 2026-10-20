@@ -1,3 +1,10 @@
+import { demandEvidenceText, paybackText } from './economics.js';
+import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
+import { ReserveWait } from './reservewait.js';
+import { yardProgress, yardChoices, yardInventory, yardQuote } from './yardloop.js';
+import { creditProjection, creditNeeded } from './finance.js';
+import { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';
+import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
 import { yardInfill } from './yardinfill.js';
 import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
@@ -151,6 +158,7 @@ export class UI {
   // Temporary UI pauses (panels, dialogs, reviews, requests, banners, rotation) remember the speed in force when the
   // first one opened and restore exactly that when the last one closes. A manual Pause is never overridden.
   pauseForPopup(kind) {
+    this.reserveWait?.interrupt('Paused for '+kind+'.');
     this.syncPopupProperty();
     if (this.title) return;
     this.popupBlocks ||= new Set();
@@ -172,6 +180,7 @@ export class UI {
   // One path for every explicit speed request (buttons and number keys). Run speeds stay inert while a blocking
   // pause holds time; with only the tutorial/scenario card open, a run speed closes the card and is applied.
   requestSpeed(v) {
+    this.reserveWait?.stop('You changed the clock.');
     v = +v;
     // An explicit run choice ends the Sandbox building pause; Confirm never does.
     if (v > 0) this.resumePopup('sandboxBuild');
@@ -184,6 +193,7 @@ export class UI {
   // Space: during any temporary pause it always records a manual Pause (never a scheduled resume);
   // otherwise it is the ordinary Pause/1x toggle.
   spaceKey() {
+    if(this.reserveWait?.stop('You paused waiting.'))return 'pause';
     if (this.popupBlocks?.size && !this.title) { this.popupResume = 0; return 'pause'; }
     this.do({ type: 'speed', v: this.sim.s.speed ? 0 : 1 }); return 'toggle';
   }
@@ -193,12 +203,14 @@ export class UI {
     const el = e.target.closest('[data-a]'); if (!el) return;
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
+    if(!['reserveStart','reserveResume','reserveStop','speed'].includes(a))this.reserveWait?.interrupt('You opened another control.');
     // Navigating out of the Requests dialog: close it first so the destination is never opened underneath it.
     if (this.requestPanel && ['focus', 'overlay', 'requestHelp', 'feedback'].includes(a) && el.closest('.modal')) this.leaveRequests(a === 'requestHelp' || a === 'feedback');
     switch (a) {
       case 'speed': this.requestSpeed(v); this.sfx('click'); break;
       case 'finances': this.showFinances(); this.sfx('click'); break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
+      case 'workingNext': this.setTab(v, true); this.jumpSection(v === 'growth' ? 'Growth Readiness' : v === 'business' ? 'Your market' : 'Work queue'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
       case 'staffHelp': this.hireRoleFocus = ROLES[v] ? v : null; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); this.sfx('click'); break;
       case 'sectionMenu': this.sectionMenuKey = this.tab; this.sheetTall = true; this.renderSheet(true); this.sfx('click'); break;
@@ -286,6 +298,25 @@ export class UI {
       case 'comebackReadiness': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Growth Readiness'); break;
       case 'comebackCareer': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Operator career'); break;
       case 'yardExplore': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Your next improvement'); break;
+      case 'rescueLeasing': if (this.sim.s.scenario?.status === 'won') this.do({type:'comebackAck'}); this.scMin=true; this.renderTut(true); this.setTab('growth',true); this.jumpSection('Your next improvement'); break;
+      case 'yardWatch': { const ids=this.sim.objs('unit').filter(u=>unitInService(this.sim.s,u)&&u.commercial==='ready').map(u=>u.id); this.do({type:'yardFocus',ids},true); this.renderSheet(true); this.renderTut(true); break; }
+      case 'reserveStart': this.startReserveWait(v); break;
+      case 'reserveResume': this.resumeReserveWait(); break;
+      case 'reserveReview': this.reviewReserveWait(); break;
+      case 'reservePreview': if(this.reserveResult)this.previewYardOpportunity(null,this.reserveResult); break;
+      case 'reserveStop': this.reserveWait?.stop('You stopped waiting.'); break;
+      case 'yardOpportunity': this.previewYardOpportunity(v); break;
+      case 'yardUnit': { const u=this.sim.s.objects[+v]; if(u?.type==='unit'){this.setTab(null);this.select(null);this.setView(u.access==='drive'?'ext':u.f||0);this.rend.lookAt(u.x+u.w/2,u.y+u.h/2);this.select(u.id);}break; }
+      case 'yardPrices': this.setTab('business',true); this.jumpSection('Asking rents'); break;
+      case 'rescuePricingReview': this.showRescuePricing(v); break;
+      case 'rescuePricingConfirm': { const p=this.pricingReview; if(p?.sim!==this.sim)break; const r=this.do({type:'rescuePricing',approach:p.approach,expectedAsk:p.ask},true); if(r.ok){this.pricingReview=null;this.closeModal();this.renderSheet(true);}else this.showRescuePricing(p.approach); break; }
+      case 'creditReview': this.showCreditReview(+v); break;
+      case 'creditConfirm': { const r=this.creditReview; if(r?.sim!==this.sim)break; const q=creditProjection(this.sim,r.amount,this.creditContext()||{}); if(!q.ok){this.toast('Credit availability changed. Review funding again.','bad');this.showCreditReview(r.amount);break;} if(this.do({type:'loan',amt:r.amount},true).ok){if(this.sim.s.lesson?.id==='financing'){this.do({type:'tutFlag',flag:'finAck'});this.sim.poll();}this.creditReview=null;this.closeModal();this.renderSheet(true);this.renderActionBar();} break; }
+      case 'fundingReview': this.fundingContext=this.plan?.args?{sim:this.sim,args:structuredClone(this.plan.args)}:null; this.showCreditReview(0); break;
+      case 'financingHelp': this.closeModal(); this.do({type:'lesson',op:'start',id:'financing'},true); this.renderTut(true); break;
+      case 'projectPreview': this.previewProject(v); break;
+      case 'projectView': this.viewProject(v); break;
+      case 'projectExplore': this.setTab('growth', true); this.jumpSection('Your next improvement'); break;
       case 'yardPreview': this.previewYardInfill(v); break;
       case 'yardLater': this.setTab(null); break;
       case 'yardDemand': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('business'); this.jumpSection('Your market'); break;
@@ -344,10 +375,11 @@ export class UI {
 
   // ------------------------------------------------------------ tabs / sheets
   setTab(t, expanded = false) {
+    this.reserveWait?.interrupt('Navigation paused waiting.');
     this.sectionMenuKey = null; this.sectionChoice = null;
     if (t === 'growth' && this.plan && this.plan.args) {
       this.growthPlanArgs = structuredClone(this.plan.args);
-      this.growthProposal = { sim: this.sim, args: this.growthPlanArgs, view: this.rend.view, yardGuide: this.yardGuide?.sim === this.sim ? this.yardGuide : null };
+      this.growthProposal = { sim: this.sim, args: this.growthPlanArgs, view: this.rend.view, yardGuide: this.yardGuide?.sim === this.sim ? this.yardGuide : null, projectKey: this.projectProposal?.sim === this.sim ? this.projectProposal.key : null };
     }
     if(t!=='feedback') { this.feedbackFocus=null; this.feedbackRequest=null; }
     this.tab = t; if (t !== 'build' && this.tool) this.pickTool(null); if (!t && this.sel == null) this.sheetTall = false;
@@ -373,9 +405,12 @@ export class UI {
   }
   // A different game/property starts from clean transient UI. Only the save-owned view is carried over (validated).
   resetSession(view) {
+    this.reserveWait?.stop('Session changed.');this.reserveNotice=null;this.reserveResult=null;this.reserveOffers=null;
     for (const toast of this.toasts || []) toast.el.remove();
     this.toasts = [];
     this.growthProposal = null; this.growthPlanArgs = null;
+    this.projectProposal = null;
+    this.pricingReview = null; this.creditReview = null; this.fundingContext = null;
     this.yardGuide = null;
     this.floorBuilding = null;
     this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
@@ -392,6 +427,7 @@ export class UI {
   // Selected view to restore from a save: 'ext' or an existing completed floor, otherwise a safe fallback.
   validView(v) { if (v === 'ext') return 'ext'; const max = Math.max(1, ...this.sim.objs('shell').map((o) => o.floors || 1)); return Number.isInteger(v) && v >= 0 && v < max ? v : 'ext'; }
   select(id, keepTab = false) {
+    this.reserveWait?.interrupt('Inspection paused waiting.');
     if (id != null) this.sectionMenuKey = null;
     this.sel = id; this.rend.setSelection(typeof id === 'number' ? id : null);
     if (id == null && !this.tab) this.sheetTall = false;
@@ -509,6 +545,7 @@ export class UI {
     this.pickTool(a.tool);
     this.flip = !!a.flip; this.climate = !!a.climate; this.rush = !!a.rush;
     this.planArgs = { a: { ...a.a }, b: { ...a.b }, axis: a.axis, dir: a.dir };
+    this.projectProposal = saved.projectKey ? { sim: this.sim, key: saved.projectKey } : null;
     this.replan(); // Requote current conditions; never spend or auto-confirm.
     this.yardGuide = saved.yardGuide || null;
     if (this.yardGuide) { this.rend.lookAt(11, 3); this.frameOutline(); }
@@ -529,17 +566,143 @@ export class UI {
     this.rend.lookAt(11, 3); this.frameOutline();
     return true; // Ordinary Confirm remains the only way to buy.
   }
+  startReserveWait(key) {
+    const offer=this.reserveOffers?.get(key);
+    if(!offer||this.title||this.tool||this.sim.s.convos.some(c=>!c.staffHandling)){
+      this.toast('Review the proposal and outstanding decisions first.','bad');return false;
+    }
+    // Close our own proposal panel before arming; never dismiss another blocking pause.
+    this.notePause(0);this.setTab(null);this.select(null);
+    if(this.popupBlocks?.size){this.toast('Close the current review before waiting.','bad');return false;}
+    this.reserveWait ||= new ReserveWait((reason,a)=>{
+      this.notePause(0);this.g.acc=0;this.reserveResult=a.ready?structuredClone(a.args):null;
+      this.reserveNotice=`Last wait · ${a.size}: ${reason}`;
+      this.toast(this.reserveNotice);this.renderTut(true);
+    });
+    const result=this.reserveWait.start(this.sim,offer);
+    if(result.ready){this.previewYardOpportunity(offer.size,offer.args);return false;}
+    if(!result.ok){this.toast(result.msg,'bad');return false;}
+    this.g.acc=0;this.reserveNotice=null;this.reserveResult=null;this.renderTut(true);return true;
+  }
+  resumeReserveWait() {
+    if(!this.reserveWait?.pending||this.title||this.tool)return false;
+    this.notePause(0);this.setTab(null);this.select(null);
+    if(this.popupBlocks?.size){this.toast('Finish the current review before resuming waiting.','bad');return false;}
+    const result=this.reserveWait.resume(this.sim);
+    if(result.ready){this.previewYardOpportunity(null,result.args);return false;}
+    if(!result.ok)this.toast(result.msg,'bad');
+    this.g.acc=0;this.renderTut(true);return !!result.ok;
+  }
+  reviewReserveWait() {
+    const r=this.reserveWait?.review(this.sim);if(!r)return;
+    if(r.kind==='decision'){this.showRequests();return;}
+    if(r.kind==='financial'){this.showFinances();return;}
+    this.setTab(r.kind==='work'?'operate':'growth',true);
+    this.jumpSection(r.kind==='work'?'Work queue':'Your next improvement');
+  }
+  previewYardOpportunity(size, args=null) {
+    const c=args?yardQuote(this.sim,args):yardChoices(this.sim).find(c=>c.size===size);
+    if(!c||!toolUnlocked(this.sim,c.args.tool)){this.toast('That opportunity changed. Review the yard again.','bad');return false;}
+    this.pauseForPopup('review');this.scMin=true;this.renderTut(true);this.setTab(null);this.select(null);
+    this.setView('ext');this.pickTool(c.args.tool);this.flip=false;this.climate=false;this.rush=false;
+    this.planArgs=structuredClone({a:c.args.a,b:c.args.b,axis:c.args.axis});this.replan();
+    const u=this.plan?.creates?.[0];if(u){this.rend.lookAt(u.x+u.w/2,u.y+u.h/2);this.frameOutline();}
+    return true;
+  }
+  yardLoopHtml() {
+    const sim=this.sim,s=sim.s,p=yardProgress(sim),ready=sim.objs('unit').filter(u=>unitInService(s,u)&&u.commercial==='ready');
+    const groups=new Map();for(const u of ready){const key=productKey(u.size,u.env),g=groups.get(key)||{size:u.size,env:u.env,n:0,ask:s.market.ask[key]};g.n++;groups.set(key,g);}
+    const active=p?.groups.some(g=>!g.changed&&g.completed==null);
+    let h='<section class="yard-loop"><b>Your next win</b>';
+    if(p){
+      h+=`<p>${p.changed?'Some tracked spaces changed. Earlier leases remain recorded.':p.completed!=null?'Your spaces found tenants.':p.building?'Bring your new spaces into service.':p.commissioning?'Your new spaces are ready to commission.':'Put these spaces to work.'}</p><div class="yard-loop-progress"><b>${p.occupied}/${p.total} occupied</b><span>${p.reserved} reserved · ${p.ready} ready to rent</span></div><p class="note">${p.signed} signed since Day ${dayOf(s.yardLoop.started)} · ${money(p.activeRent,true)}/month in current contracts. ${p.completed!=null?'Current occupancy can change. ':''}Contracted rent, not profit.</p><div class="row wrap">${p.units.map(u=>`<button class="btn sm" data-a="yardUnit" data-v="${u.id}">${esc(u.name)} · ${u.cstate==='construction'?'building':u.cstate==='ready'?'commission':esc(u.commercial)}</button>`).join('')}</div>`;
+      if(p.groups.length>1)h+=`<div class="list">${p.groups.map(g=>`<p class="note"><b>${esc(g.label)}</b> · ${g.occupied}/${g.total} occupied · ${g.reserved} reserved${g.changed?' · tracked layout changed':g.completed!=null?' · lease-up achieved':''}</p>`).join('')}</div>`;
+      const orders=[...new Set(p.units.filter(u=>u.cstate==='ready').map(u=>u.order))];
+      for(const order of orders)h+=this.cmdBtn('Commission ready spaces',{type:'commission',order},'pri');
+    }
+    if(ready.length){h+=`<p><b>${ready.length} existing spaces can earn next.</b></p><p class="note">${[...groups.values()].map(g=>`${g.n} × ${g.size} ${g.env==='climate'?'climate':'standard'} at ${money(g.ask,true)}/month`).join(' · ')}. Keep offering them at these rents, or review asking rents.</p><div class="row wrap">${!active?'<button class="btn pri" data-a="yardWatch">Keep rents &amp; watch leasing</button>':''}<button class="btn" data-a="yardPrices">Review asking rents</button></div>`;}
+    if(!active&&!ready.length){
+      const choices=yardChoices(sim);
+      const inventory=yardInventory(sim);
+      h+=`<p><b>${inventory.occupied}/${inventory.total} occupied · ${inventory.reserved} reserved. ${choices.length?'Inspect an opportunity.':'Keep the business working.'}</b></p>`;
+      this.reserveOffers=new Map(choices.map(c=>[JSON.stringify(c.args),structuredClone(c)]));
+      for(const c of choices)h+=`<article class="item yard-opportunity"><div class="grow"><b>Opportunity to inspect · one ${c.size} on existing frontage</b><small>${c.losses} matching unmet standard requests · observed Days ${c.period.start}–${c.period.end}</small><small>Build: ${money(c.plan.cost)}</small><small>Added operating costs: +${money(c.daily,true)}/day</small><small>Asking rent: ${money(c.ask,true)}/month</small><small class="${c.position.available<0?'neg':''}">After build, bills &amp; reserve: ${money(c.position.available,true)}</small>${c.position.available<0?'<small class="neg">Keeping cash is sensible.</small>':''}<button class="btn" data-a="yardOpportunity" data-v="${c.size}">Show ${c.size} on property</button>${c.position.available<0?`<button class="btn" data-a="reserveStart" data-v="${esc(JSON.stringify(c.args))}">Wait until reserve is covered</button><small>Runs at 4× for up to 7 game days total. Reviews pause waiting; resume when ready. Stop or Pause ends the wait. No purchase is made.</small>`:''}</div></article>`;
+      h+=`<p class="note">${choices.length?'Requests do not establish supported payback or guarantee leases. These are missed requests, not waiting customers. Existing construction and leasing rules apply.':'No suitable rental-space proposal has enough recent evidence on the existing frontage. Ordinary building stays available.'}</p>`;
+    }
+    return h+'<div class="row wrap"><button class="btn" data-a="yardLater">Keep operating</button><button class="btn sm" data-a="yardDemand">Review demand</button></div></section>';
+  }
+  rescueOperationHtml() {
+    const q=rescuePricing(this.sim),result=rescueResults(this.sim);
+    if(!q&&!result)return '';
+    const r=result?.record;
+    return `<section class="rescue-operation"><b>Put your restored spaces to work</b>${q ? `<p class="note">${q.restored} restored 10×10 standard units ready to offer · asking ${money(q.ask,true)}/mo · current market ${money(q.market,true)}/mo.</p><div class="row wrap"><button class="btn" data-a="rescuePricingReview" data-v="hold">Keep current asking rent</button><button class="btn" data-a="rescuePricingReview" data-v="lower" ${q.lower>=q.ask?'disabled':''}>Review lower asking rent</button></div><p class="note">Keep rent per new lease, or accept less rent to potentially improve conversion. Neither guarantees leases.</p><button class="btn sm" data-a="yardLater">Decide later</button>` : `<p class="note">${result.leased} new lease${result.leased===1?'':'s'} in tracked restored units since Day ${dayOf(r.started)} · ${result.reserved} reserved · ${result.occupied} occupied now.</p><p class="note">${r.approach==='lower'?'Lower asking rent chosen':'Current asking rent kept'}: ${money(r.selectedAsk,true)}/mo. ${result.priceChanged?'Pricing changed during this period. ':''}${result.changed?'Tracked targets changed; replacements are not silently adopted. ':''}Actual use is observed; the choice is not proven to have caused it. Profitability is separate.</p>`}<div class="row wrap"><button class="btn sm" data-a="yardDemand">Review demand, pricing &amp; advertising</button><button class="btn sm" data-a="comebackWork">Inspect operations</button></div></section>`;
+  }
+  showRescuePricing(approach) {
+    const q=rescuePricing(this.sim);if(!q){this.toast('No eligible restored vacancies remain for this decision.','bad');return;}
+    this.pricingReview={sim:this.sim,approach,ask:q.ask};this.pauseForPopup('modal');
+    const lower=approach==='lower',selected=lower?q.lower:q.ask;
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>${lower?'Review lower asking rent':'Keep current asking rent'}</h2><p>10×10 standard · ${money(q.ask,true)} → ${money(selected,true)}/month.</p><p>${q.restored} restored vacancies are being tracked. ${lower?`This asking-price group affects all ${q.matching} matching ready vacancies on this property. Existing signed lease rents stay unchanged. ${money(q.difference,true)} less monthly rent per new lease; ${q.restored} new leases would carry ${money(q.difference*q.restored,true)} less monthly rent than at the previous ask. Neither occupancy outcome is guaranteed.`:'No asking price changes. Measurement starts now; earlier leases are not counted.'}</p><div class="row wrap"><button class="btn" data-a="modalClose">Decide later</button><button class="btn pri" data-a="rescuePricingConfirm">${lower?'Apply '+money(selected,true)+' asking rent':'Keep rent &amp; watch leasing'}</button></div></div></div>`;
+  }
+  creditContext() {
+    if(this.fundingContext?.sim!==this.sim)return null;
+    const args=this.fundingContext.args,p=this.sim.plan(args);
+    if(p.status==='invalid'||!p.cost)return null;
+    if(args.rush&&(this.sim.s.coTier||1)>=2&&!this.sim.instantOn())p.cost=Math.round(p.cost*1.25);
+    return {spend:p.cost,extraDaily:this.sim.planDailyCost(p)};
+  }
+  creditChoicesHtml() {
+    const room=Math.floor(this.sim.creditLimit()-this.sim.s.loan.bal),context=this.creditContext(),needed=creditNeeded(this.sim,context);
+    const amounts=[...new Set([500,1000,1500,Math.min(room,5000),...(needed>0?[needed]:[])])].filter(n=>n>0&&n<=room);
+    return `<div class="row wrap">${amounts.map(n=>`<button class="btn sm" data-a="creditReview" data-v="${n}">Review ${money(n)}${context&&n===needed?' · cover quote &amp; reserve':''}</button>`).join('')}</div>${context?`<p class="note">Current construction quote ${money(context.spend)}. ${needed===0?'Current funds already cover this quote and reserve.':needed==null?'Available credit cannot cover this quote with the recommended reserve.':'The indicated draw includes incremental credit interest in the reserve estimate.'} Borrowing and purchasing are separate decisions.</p>`:''}`;
+  }
+  showCreditReview(amount) {
+    const context=this.creditContext(),q=amount>0?creditProjection(this.sim,amount,context||{}):null;
+    this.creditReview=q?.ok?{sim:this.sim,amount:q.amount}:null;this.pauseForPopup('modal');
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review credit line</h2>${this.creditChoicesHtml()}${q?.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Credit debt after draw</span><b>${money(q.debt,true)}</b><span>Added interest</span><b>${money(q.dailyInterest,true)}/day · ~${money(q.dailyInterest*30,true)}/30 days</b><span>Cash after draw</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b>${context?`<span>Cash after separate purchase</span><b>${money(q.purchase.cash,true)}</b><span>Available after purchase &amp; reserve</span><b>${money(q.purchase.available,true)}</b>`:''}</div><p class="note">Debt must be repaid. Borrowing creates no profit and does not purchase construction. Quotes hold current obligations constant; future rent is not guaranteed.</p>`:amount>0?'<p class="note">That amount is no longer available. Select a current credit quote.</p>':''}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q?.ok?`<button class="btn pri" data-a="creditConfirm">Confirm ${money(q.amount)} draw</button>`:''}${lessonAllowed(this.sim,lessonById('financing'))?'<button class="btn sm" data-a="financingHelp">Learn about financing</button>':''}</div></div></div>`;
+  }
+  previewProject(key) {
+    const c = projectOffers(this.sim).find(p => p.key === key);
+    if (!c || !toolUnlocked(this.sim, c.args.tool)) { this.toast('That project has changed. Review the yard again.', 'bad'); return false; }
+    this.pauseForPopup('review'); this.scMin = true; this.renderTut(true);
+    this.setTab(null); this.select(null); this.setView('ext'); this.pickTool(c.args.tool);
+    this.flip = false; this.climate = false; this.rush = false;
+    this.planArgs = structuredClone({ a: c.args.a, b: c.args.b, axis: c.args.axis });
+    this.projectProposal = { sim: this.sim, key }; this.replan();
+    if (key !== 'cover') this.rend.faceYardExtension?.();
+    this.rend.lookAt(c.bounds.x + c.bounds.w/2, c.bounds.y + c.bounds.h/2); this.frameOutline();
+    return true;
+  }
+  viewProject(key) {
+    const r = this.sim.s.propertyProjects;
+    const p = [r?.active, ...(r?.history || [])].find(p => p?.key === key);
+    if (!p) return;
+    const d = PROJECTS[key], o = p.ids.map(id => this.sim.s.objects[id]).find(Boolean);
+    this.setTab(null); this.select(null); this.setView('ext');
+    this.rend.lookAt(d.bounds.x + d.bounds.w/2, d.bounds.y + d.bounds.h/2);
+    this.rend.highlightProject?.(d.bounds);
+    if (o) this.select(o.id);
+  }
+  projectProgressHtml() {
+    const p = this.sim.s.propertyProjects?.active, st = projectStatus(this.sim);
+    if (!p || !st) return '';
+    return `<section class="property-project"><b>${esc(st.label)}</b><small>${esc(st.text)}${p.key === 'cover' ? ' · service improvement, no new units' : ` · ${st.leased}/${st.total} leased`}</small><div class="row wrap"><button class="btn sm" data-a="projectView" data-v="${p.key}">View project</button>${st.commissionable ? this.cmdBtn('Commission project', {type:'commission',order:p.order}, 'pri') : ''}</div></section>`;
+  }
   yardInfillHtml() {
-    const yard = yardInfill(this.sim); if (!yard) return '';
-    const progress = yard.added ? `<p class="note"><b>Your extension: ${yard.added} of 2 units placed.</b> ${yard.constructing} under construction · ${yard.commissionable} ready to commission · ${yard.ready} ready to offer · ${yard.occupied} occupied${yard.reserved ? ` · ${yard.reserved} reserved` : ''}${yard.blocked ? ` · ${yard.blocked} blocked` : ''}.</p>` : '';
-    const cards = yard.choices.map(c => {
-      const unmet = c.readiness.checks.find(check => !check.ok);
-      return `<div class="item yard-choice"><div class="grow"><b>${c.count === 1 ? 'One 5×10 — keep more cash' : 'Two 5×10s — add more capacity'}</b><small>${money(c.plan.cost)} build · ${money(c.position.available,true)} after bills &amp; reserve</small><small>${c.readiness.justified ? 'Current evidence supports this scoped expansion.' : esc(unmet.detail)}${!c.affordable ? ' Not enough cash to build yet.' : ''}</small><button class="btn" data-a="yardPreview" data-v="${c.key}">Preview ${c.count === 1 ? 'one unit' : 'two units'}</button><details data-yard-detail="${c.key}"><summary>Costs &amp; evidence</summary><p class="note">After construction: ${money(c.position.cash,true)} cash · ${money(c.position.committed,true)} committed bills · ${money(c.position.reserve,true)} recommended reserve.</p><p class="note">${c.readiness.checks.map(check=>`${check.ok ? '✓' : '!'} ${esc(check.label)}: ${esc(check.detail)}`).join('<br>')}</p></details></div></div>`;
+    const c = this.sim.s.scenario;
+    if (c?.id !== 'comeback' || c.status !== 'won' || !c.acknowledged) return '';
+    const offers = projectOffers(this.sim), r = this.sim.s.propertyProjects;
+    const cards = offers.map(p => {
+      const explanation = p.key === 'small' ? 'Serve two smaller renters; higher cost and ongoing burden.' : p.key === 'large' ? 'Serve a larger-unit shopper; lower cost, one rental opportunity.' : 'Shelter existing loading bays. Helps affected customers in rain; adds no rental capacity.';
+      const evidence = p.key === 'cover' ? 'Weather protection is optional. Customer use and financial return are separate.' : demandEvidenceText(p.evidence);
+      const inv = p.investment;
+      return `<div class="item yard-choice"><div class="grow"><b>${esc(p.label)}</b><small>${explanation}</small><small>${money(p.plan.cost)} build · +${money(p.daily,true)}/day modeled costs · ~${Math.ceil(p.plan.dur/60)}h</small><small class="${p.position.available < 0 ? 'neg' : ''}">${money(p.position.available,true)} remaining after bills &amp; recommended reserve${p.position.available < 0 ? ' — below recommended buffer' : ''}</small><small>${evidence}</small><button class="btn" data-a="projectPreview" data-v="${p.key}">Preview ${esc(p.label.toLowerCase())}</button><details data-yard-detail="project-${p.key}"><summary>Costs &amp; evidence</summary><p class="note">After build: ${money(p.position.cash,true)} cash · ${money(p.position.committed,true)} committed bills · ${money(p.position.reserve,true)} reserve. ${this.sim.s.cash < p.plan.cost && !this.sim.unlimited() ? 'Not enough cash to confirm yet.' : ''}</p>${inv ? `<p class="note">${esc(paybackText(inv))} New leases and payment collection are not guaranteed.</p>` : ''}</details></div></div>`;
     }).join('');
-    const ambition = yard.added === 2 ? yard.constructing || yard.commissionable ? 'The two new units are placed. Finish construction and commission them, then see whether customers use them.' : 'Your extension is now part of the yard. Review actual leasing and demand before choosing your next improvement.' : yard.added === 1 ? 'One new unit changes your yard. Add its neighbour if demand and cash support it, or keep your buffer.' : 'Picture two small units at the far end of the drive aisle, beside Space 101. Add one, add both, or keep your cash.';
-    return `<h3>Your next improvement</h3><div class="yard-infill"><b>${yard.added === 2 ? 'Your row extension' : 'Extend the restored row'}</b><p class="note">${ambition} This is optional; leases are not guaranteed.</p>${progress}${cards ? `<div class="list">${cards}</div>` : yard.added === 2 ? '' : '<p class="note">No clear extension spot remains here. Review your layout or choose your own next project.</p>'}<div class="row wrap"><button class="btn" data-a="yardLater">Back to my yard${yard.added ? '' : ' — not now'}</button><button class="btn" data-a="yardDemand">Review demand</button>${yard.added ? '<button class="btn" data-a="comebackWork">Review operations</button>' : ''}</div></div>`;
+    const history = (r?.history || []).map(p => `<div class="project-result"><b>${esc(PROJECTS[p.key].label)} · opened Day ${dayOf(p.completed)}</b><small>${p.key === 'cover' ? 'Loading shelter completed. Rainy-day customer use is separate from profitability.' : p.firstLease ? `First project lease: ${money(p.firstLease.rent,true)}/mo contracted. Customer use demonstrated; investment payback is not established.` : 'In service. No project lease recorded yet; customer use and profitability are separate.'}</small><button class="btn sm" data-a="projectView" data-v="${p.key}">View improvement</button></div>`).join('');
+    return `<h3>Your next improvement</h3><div class="yard-infill">${this.yardLoopHtml()}${this.rescueOperationHtml()}<details data-yard-detail="optional-projects"><summary>Other property improvements</summary><p class="note">Optional projects. Keep your cash if the evidence or buffer is weak.</p>${this.projectProgressHtml()}${cards ? `<div class="list">${cards}</div>` : r?.active ? '' : '<p class="note">Ordinary building remains available.</p>'}</details>${history ? `<details data-yard-detail="project-history"><summary>Your completed projects</summary>${history}</details>` : ''}</div>`;
   }
   pickTool(k) {
+    this.fundingContext = null;
+    this.projectProposal = null;
     this.yardGuide = null;
     if (k) { this.growthProposal = null; this.growthPlanArgs = null; }
     if(k) {this.sheetTall=false;this.tutMin=true;this.resumePopup('tutorial');}
@@ -584,8 +747,11 @@ export class UI {
       this.toast('For this lesson, face the unit doors toward the connected drive aisle until the preview turns green.', 'bad');
       return;
     }
-    const r = this.sim.dispatch({ type: 'build', ...this.plan.args });
-    if (r.ok) { this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
+    const projectKey = this.projectProposal?.sim === this.sim && matchesProject(this.plan.args, this.projectProposal.key) ? this.projectProposal.key : null;
+    const finishesWait=this.reserveWait?.pending&&this.reserveWait.matches(this.plan.args);
+    const r = this.sim.dispatch({ type: 'build', ...this.plan.args, ...(projectKey ? { projectKey } : {}) });
+    if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
+    if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); }
     this.renderActionBar();
   }
@@ -602,16 +768,19 @@ export class UI {
     if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
+      const projectMarker = this.projectProposal?.sim === this.sim ? `<p class="project-review">${matchesProject(R.args, this.projectProposal.key) ? esc(PROJECTS[this.projectProposal.key].label) + ' · project preview' : 'Placement changed · ordinary build, not a tracked project'}</p>` : '';
+      const compareProjects = this.projectProposal?.sim === this.sim && this.projectProposal.key !== 'cover' ? '<div class="row wrap project-switch"><button class="btn sm" data-a="projectPreview" data-v="small">Two 5×10s</button><button class="btn sm" data-a="projectPreview" data-v="large">One 10×10</button></div>' : '';
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
       const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
-      status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
+      status = projectMarker + compareProjects + `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
         status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
+        if(this.sim.financialPosition({spend:R.cost,extraDaily:this.sim.planDailyCost(R)}).available<0)status += '<button class="btn sm" data-a="fundingReview">Review funding · optional</button>';
         const inv = this.sim.investment(R);
-        if (inv) status += `<details class="build-details"><summary>Payback &amp; build terms</summary><div class="refund-note">${inv.range ? `Steady-state payback ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months at ${pct(inv.lowOccupancy)}–${pct(inv.highOccupancy)} occupancy` : 'Payback: not enough comparable demand/rent evidence yet'}. Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class="note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;
+        if (inv) status += `<details class="build-details"><summary>Payback &amp; build terms</summary><div class="refund-note">${esc(paybackText(inv))} Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class="note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;
       }
       if (R.status !== 'invalid' && R.dur && !this.sim.instantOn() && (this.sim.s.creative || !R.cost)) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
     }
@@ -896,12 +1065,17 @@ export class UI {
     const bays=loadingStatus(this.sim), counts=k=>bays.filter(b=>b.state===k).length;
     return '<details class="status-key"><summary>Map status · '+counts('free')+' free loading bays</summary><p class="note">Doors: '+Object.values(UNIT_STATUS).map(v=>v.mark+' '+v.label).join(' · ')+'</p><p class="note">Cyan outline: selection. Gold ring: tutorial target. Red pins: urgent problems. Occupied units show compact numbers; select one for its full status. Exceptions retain status labels.</p><p class="note">Loading: + free · — occupied or vehicle arriving · × inaccessible. '+counts('occupied')+' occupied · '+counts('inaccessible')+' inaccessible. Free means vehicle and pedestrian access at the bay; the route to a particular unit must also connect.</p>'+bays.map(b=>'<p class="note"><b>Bay ('+b.x+', '+b.y+'): '+b.state+'</b> · '+(b.state==='inaccessible'?'Reconnect this pavement to the gate and keep its pedestrian exit clear. Check the destination door, hall and floor access.':b.state==='occupied'?'Let this vehicle finish its visit. Repeated queues here may justify another connected bay near this building; hiring and canopies do not add bays.':'Available for an arriving vehicle. Preserve the route to the destination building.')+'</p>').join('')+'</details>';
   }
+  workingYardHtml() {
+    const R = workingYard(this.sim), P = R.position;
+    const work = Object.entries(R.totals).map(([role,x]) => `<span>${esc(ROLES[role]?.name || (role === 'vendor' ? 'Vendors' : 'Other completions'))}</span><span>${x.jobs} job${x.jobs === 1 ? '' : 's'}${role !== 'vendor' && role !== 'unattributed' ? ` · ${x.hours}h` : ''}</span>`).join('');
+    return `<section class="working-yard"><h3>Your working yard</h3><p class="note">Day ${R.first}–${R.today} · today so far${R.partialFirst ? ' · first day partial' : ''}</p><div class="kv">${work || '<span>Completed property work</span><span>None recorded yet</span>'}<span>Payroll accrued · this period</span><span>${money(R.payroll,true)}</span><span>Cash now</span><span>${money(P.cash,true)}</span><span>Committed bills</span><span>${money(P.committed,true)}</span><span>Recommended reserve</span><span>${money(P.reserve,true)}</span><span>Available after bills &amp; reserve</span><span class="${P.available < 0 ? 'neg' : ''}">${money(P.available,true)}</span></div><details><summary>About this summary</summary><p class="note">Reporting began Day ${dayOf(R.fromT)} at ${fmtTime(R.fromT)}. Rolling 30 calendar days. No earlier completions or payroll are backfilled. Jobs are credited to the role that finished them. Hours show each completed job’s standard work requirement, not measured time saved. Office service and travel are excluded. Vendor completions carry no employee hours. Payroll accrues at 7:00 AM and is paid with weekly bills; it is not an extra cash charge. Staffing does not guarantee profit.</p></details><div class="yard-next"><small>${esc(R.next.detail)}</small><button class="btn" data-a="workingNext" data-v="${esc(R.next.tab)}">${esc(R.next.text)}</button></div></section>`;
+  }
   operateSheet() {
     const sim = this.sim, s = sim.s;
     const staffName = (id) => { const st = s.staff.find((x) => x.id === id); return st ? `${ROLES[st.role].name} ${st.role === 'owner' ? '' : esc(st.name)}` : ''; };
     const tasks = [...s.tasks].sort((a, b) => (b.pri - a.pri) || (a.created - b.created));
     const owner = s.staff.find((x) => x.role === 'owner'), ownerLeft = owner ? sim.workRemaining(owner) : 0;
-    let h = this.statusLegendHtml() + this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
+    let h = this.projectProgressHtml() + this.workingYardHtml() + this.statusLegendHtml() + this.diagnosticHtml() + this.officeCoverageHtml() + `<h3>Work queue (${tasks.length})</h3><div class="list">`;
     if (!tasks.length) h += `<p class="note">Nothing waiting. Equipment wear, move-outs, dirt and stranded carts create work here.</p>`;
     for (const t of tasks.slice(0, 14)) {
       const ownerCan = ROLES.owner.can.includes(t.need), hrs = sim.taskHours(t);
@@ -941,7 +1115,7 @@ export class UI {
     h += `</div><p class="note">${s.carts.length} carts total · ${str} stranded or damaged.</p>`;
     h += `<h3>Policies</h3><div class="list">
       <div class="item"><div class="grow"><b>Porters recover carts</b><small>Porters return stranded carts to their corral</small></div><button class="toggle ${s.policies.porterCarts ? 'on' : ''}" data-a="policy" data-v="porterCarts" aria-label="Toggle"></button></div>
-      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, hired staff get routine work first. The Owner only fills make-ready, cleaning and cart gaps that staff cannot cover. Techs automatically handle repairs; without a Tech, choose an Owner quick fix or a vendor.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
+      <div class="item"><div class="grow"><b>Owner handles chores</b><small>When the office is quiet, hired staff get routine work first. The Owner fills make-ready, cleaning, cart and simple-repair gaps using available daily hours. Owner repairs are quick fixes in normal business play; HVAC and elevator repairs still need a Tech or vendor. Jobs wait when the Owner is busy or out of hours.</small></div><button class="toggle ${s.policies.ownerChores ? 'on' : ''}" data-a="policy" data-v="ownerChores" aria-label="Toggle"></button></div>
       <div class="item"><div class="grow"><b>Preventive maintenance</b><small>Techs service equipment before it fails</small></div><button class="toggle ${s.policies.preventive ? 'on' : ''}" data-a="policy" data-v="preventive" aria-label="Toggle"></button></div></div>`;
     return this.sheet('Operate', `${s.staff.length} staff · ${tasks.length} tasks`, h);
   }
@@ -1061,8 +1235,8 @@ export class UI {
     h += `<div class="item"><div class="grow"><b>Expansion loan</b><small>${tut ? 'Opens after the tutorial: early growth is cash-funded.' : lim ? `Approved up to ${money(lim)} · ${(rate * 100).toFixed(1)}% · ${months} months. Payments are capped at 45% of your rent roll.` : 'Your rent roll is too small to support loan payments yet.'}</small></div></div>`;
     if (opts.length) h += `<div class="loanopts">${opts.map((v) => { const pm = sim.loanPmt(v, rate, months); return `<button class="loanopt" data-a="cmd" data-cmd='${JSON.stringify({ type: 'borrow', amt: v })}'><b>${money(v)}</b><small>${money(pm)}/mo · cash after ${money(s.cash + v)}</small></button>`; }).join('')}</div>`;
     const room = sim.creditLimit() - s.loan.bal;
-    h += `<div class="item"><div class="grow"><b>Credit line · ${s.loan.bal > 0 ? money(s.loan.bal) + ' owed' : 'not in use'}</b><small>${money(room)} available · ~1.2%/month · for short cash gaps${burn > 0 ? ` · cash covers ~${Math.max(0, Math.floor(s.cash / burn))} days of costs` : ''}</small></div>
-      ${room >= 1000 ? this.cmdBtn(`Borrow ${money(Math.min(room, 5000))}`, { type: 'loan', amt: Math.min(room, 5000) }) : ''}
+    h += `<div class="item credit-line"><div class="grow"><b>Credit line · ${s.loan.bal > 0 ? money(s.loan.bal) + ' owed' : 'not in use'}</b><small>${money(room)} available · ~1.2%/month · for short cash gaps${burn > 0 ? ` · cash covers ~${Math.max(0, Math.floor(s.cash / burn))} days of costs` : ''}</small></div>
+      ${this.creditChoicesHtml()}
       ${s.loan.bal > 0 ? this.cmdBtn(`Repay ${money(Math.min(s.loan.bal, 5000))}`, { type: 'repay', amt: Math.min(s.loan.bal, 5000) }, '', s.cash < Math.min(s.loan.bal, 5000)) : ''}</div></div>`;
     h += `<p class="note">Loans show exactly what you commit to each month. Nothing here forecasts future rent: build previews show cash before and after.</p>`;
     return h;
@@ -1345,10 +1519,15 @@ export class UI {
   onEvent(e) {
     const s = this.sim.s;
     switch (e.type) {
+      case 'yard_filled': {const u=s.objects[e.unit];this.toast(`${e.label}: ${e.count} ${e.count===1?'space':'spaces'} now occupied · ${money(e.rent,true)}/month in signed rent.`, 'good');if(u)this.rend.highlightProject?.({x:u.x,y:u.y,w:u.w,h:u.h});this.sfx('complete');break;}
+      case 'rescue_operation_lease': this.toast(`${e.name} leased at ${money(e.rent,true)}/mo. Customer use; payback not established.`, 'good'); this.rend.highlightProject?.(e.bounds); break;
+      case 'project_complete': this.toast(e.key === 'cover' ? 'Your loading area is covered.' : `Your new row is open: ${e.label.toLowerCase()}.`, 'good'); this.rend.highlightProject?.(e.bounds); this.sfx('complete'); break;
+      case 'project_first_lease': this.toast(`${e.label}: first lease at ${money(e.rent,true)}/mo. Customer use, not proven payback.`, 'good'); break;
+      case 'project_stopped': this.toast(`${e.label}: targets changed; tracking stopped. Existing refund rules apply.`, 'warn'); break;
       case 'thought': this.addBubble(e); break;
       case 'complete': this.toast(completeText(e), 'good'); this.sfx('complete'); break;
       case 'commissioned': this.sfx('confirm'); break;
-      case 'lease': { const u = s.objects[e.unit]; this.toast(`New lease: ${u ? u.name : 'unit'} at ${money(e.rent)}/mo`, 'good'); this.sfx('lease'); break; }
+      case 'lease': { const u = s.objects[e.unit]; this.toast(`Lease signed: ${u ? u.name : 'unit'} at ${money(e.rent,true)}/mo · reserved for move-in`, 'good'); if(u&&s.yardLoop?.targets.some(t=>t.id===u.id))this.rend.highlightProject?.({x:u.x,y:u.y,w:u.w,h:u.h});this.sfx('lease'); break; }
       case 'moveout': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A unit'} moved out - needs make-ready`); break; }
       case 'fault': { const o = s.objects[e.obj]; if (!o && s.carts.some((c) => c.id === e.obj)) { this.toast('A cart was damaged - it needs repair'); break; } this.toast(`${o ? this.sim.objName(o) : 'Equipment'} has failed`, 'bad'); this.sfx('fault'); break; }
       case 'repaired': this.sfx('repair'); break;
@@ -1594,6 +1773,7 @@ export class UI {
   // pan it there (zooming out only if it cannot fit). Never during a drag or pinch; a step that changes mid-gesture is
   // left alone, and after framing the player's own camera movement is never undone.
   stepOutline() {
+    if (this.projectProposal?.sim === this.sim && this.plan && matchesProject(this.plan.args, this.projectProposal.key)) { const b=PROJECTS[this.projectProposal.key].bounds; return [b.x,b.x+b.w].flatMap(x=>[b.y,b.y+b.h].flatMap(y=>[[x,y,0],[x,y,FLOOR_H]])); }
     if (this.yardGuide?.sim === this.sim && this.tool === this.yardGuide.args.tool && this.plan?.units?.length) {
       return this.plan.units.flatMap(u => [u.x,u.x+u.w].flatMap(x => [u.y,u.y+u.h].flatMap(y => [[x,y,0],[x,y,FLOOR_H]])));
     }
@@ -1739,14 +1919,19 @@ export class UI {
     const owner = s.staff.find(st => st.role === 'owner'), left = owner ? sim.workRemaining(owner) : 0;
     const porter = s.staff.find(st => st.role === 'porter'), pay = ROLES.porter.wage;
     const next = p.goals.find(g => !g.met);
-    const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p, left, !!porter, sim.financialPosition(), s.tasks.map(t=>[t.obj,t.assigned,t.queued])]);
+    const loop=yardProgress(sim),readyNow=sim.objs('unit').filter(u=>unitInService(s,u)&&u.commercial==='ready').length;
+    const waiting=this.reserveWait?.active;
+    const retained=this.reserveWait?.review(sim);
+    const waitText=waiting?`Waiting for ${waiting.size} · ${money(Math.max(0,-waiting.quote.position.available),true)} reserve shortfall`:retained?`Waiting paused · ${retained.a.size}. ${retained.blocked?retained.reason:retained.ready?'Reserve is covered. Preview when ready.':`${money(Math.max(0,-retained.quote.position.available),true)} reserve shortfall. Resume when ready.`}`:this.reserveNotice;
+    const nextText=waitText || (loop&&!loop.changed?`${loop.occupied}/${loop.total} occupied · ${loop.reserved} reserved`:readyNow?`${readyNow} ready spaces · keep rents or review pricing`:'Review demand before your next investment');
+    const key = JSON.stringify([c.status, c.acknowledged, s.rescueOperation, nextText, this.scMin, p, left, !!porter, sim.financialPosition(), s.tasks.map(t=>[t.obj,t.assigned,t.queued])]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
     const won = c.status === 'won', unavailable = c.status === 'unavailable';
     const detail = unavailable ? `<p>${esc(c.notice)}</p>` : `
       <h4>${won ? 'You brought the yard back.' : esc(next?.label || 'Keep improving the yard')}</h4>
       <p>${won ? 'Yard rescued. Keep it working and lease ready vacancies. Review demand and cash before investing.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>
       <div class="comeback-current">${p.restored}/6 spaces usable now · ${p.ready} vacant ready · ${p.occupied} occupied${p.reserved ? ` · ${p.reserved} reserved` : ''}</div>
-      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won && c.acknowledged ? '<button class="btn" data-a="yardExplore">Explore a row extension</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
+      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won?'<button class="btn pri" data-a="rescueLeasing">Review leasing</button>':''}${won && c.acknowledged ? '<button class="btn" data-a="yardExplore">Explore a row extension</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : won?'':'<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
       <details class="comeback-details" ${detailOpen?'open':''}><summary>${won && c.acknowledged ? 'Rescue history' : 'Goals and recovery choices'}</summary>
         <ul class="goals">${p.goals.map(g => `<li class="${g.met?'met':''}"><span class="ck">${g.met?'&#10003;':''}</span><span>${esc(g.label)}</span><b>${g.k==='comebackWing'?`${p.restored}/6`:g.met?'Done':'Pending'}</b></li>`).join('')}</ul>
         <p>Plan goal: complete two distinct restoration spaces through Owner work, or one target make-ready job through employed staff. Hiring alone does not complete it.</p>
@@ -1757,7 +1942,9 @@ export class UI {
         <div class="row wrap">${c.targets.map(t => `<button class="btn sm" data-a="comebackUnit" data-v="${t.id}" ${targetUnits(s,t).length?'':'disabled'}>${targetInService(s,t)?'✓ ':''}Space ${t.num}</button>`).join('')}</div>
         ${p.missing.length?`<p class="note">Missing original spaces: ${p.missing.join(', ')}. Rebuild the original footprint and door direction to reconnect a target; splitting a target maps both replacement units. Deletion never counts as restoration.</p>`:''}
       </details>`;
-    box.innerHTML = `<div class="tut scen comeback ${this.scMin?'min':''}"><div class="ch"><span>Comeback · ${unavailable?'progress unavailable':won?'rescued':`${p.restored}/6 restored`}</span><button class="mini" data-a="${this.scMin?'scenMin':'comebackClose'}" aria-label="${this.scMin?'Show Comeback goals':'Close Comeback panel'}">${this.scMin?'Show':'Close'}</button></div>${detail}${won&&!this.scMin?'<button class="btn pri" data-a="comebackClose">Keep operating this property</button>':''}</div>`;
+    const reviewLabel=retained&&({decision:'Review decision',financial:'Review cash',work:'Review work',vacancy:'Review leasing'}[retained.kind]||'Review investment');
+    const bridge=retained?`<div class="rescue-bridge reserve-wait-bridge"><small>${esc(nextText)}</small><small>Original limit: Day ${dayOf(retained.a.started+7*1440)} · ${fmtTime(retained.a.started+7*1440)}</small><div class="row"><button class="btn sm" data-a="${retained.blocked?'reserveReview':'reserveResume'}">${retained.blocked?reviewLabel:retained.ready?'Preview investment':'Resume waiting'}</button><button class="btn sm" data-a="reserveStop">End wait</button></div></div>`:`<div class="rescue-bridge"><button class="btn sm" data-a="${waiting?'reserveStop':this.reserveResult?'reservePreview':'rescueLeasing'}">${waiting?'Stop waiting':this.reserveResult?'Preview investment':readyNow?'Review leasing':'Your next move'}</button><small>${esc(nextText)}</small></div>`;
+    box.innerHTML = `<div class="tut scen comeback ${this.scMin?'min':''}"><div class="ch"><span>Comeback · ${unavailable?'progress unavailable':won?`rescued · ${readyNow} ready vacancies`: `${p.restored}/6 restored`}</span><button class="mini" data-a="${this.scMin?'scenMin':'comebackClose'}" aria-label="${this.scMin?'Show Comeback goals':'Close Comeback panel'}">${this.scMin?'Show':'Close'}</button></div>${won&&c.acknowledged&&this.scMin?bridge:''}${detail}${won&&!this.scMin?'<button class="btn pri" data-a="comebackClose">Keep operating this property</button>':''}</div>`;
     if (box.firstElementChild) box.firstElementChild.scrollTop = scroll;
   }
   showScenarios() {
@@ -1919,6 +2106,8 @@ export class UI {
     const cl = open.find((t) => t.type === 'clean'); if (cl) return T(`The ${cl.label.replace(/^Clean /, '').toLowerCase()} needs cleaning.`, { dirt: { kind: 'dirt', f: cl.f || 0, x: cl.x, y: cl.y } });
     const cart = open.find((t) => t.type === 'carts'); if (cart) return T('A cart was left away from its corral.', { sel: { kind: 'cart', id: cart.cart } });
     if (s.cash < 0 && !s.creative) return T('Cash is negative. Check Business for the credit line and costs.', { tab: 'business' }, 'bad');
+    const project = projectStatus(sim);
+    if (project?.intact) return T(`${project.label}: ${project.text}. View your project.`, { project: sim.s.propertyProjects.active.key }, 'ok');
     const oc = sim.occupancy();
     const vacancies = sim.operations().ready.length;
     if (oc.n >= 4 && oc.pct >= 0.95) {
@@ -1932,7 +2121,7 @@ export class UI {
   coachLabel(text) {
     const vacant = text.match(/^(\d+) rent-ready units vacant\./) || text.match(/^Nearly full:.*? · (\d+) rent-ready vacanc/);
     if (vacant) return `${vacant[1]} vacant · Review demand & rents →`;
-    if (/^All .* operating units are leased/.test(text)) return 'Fully leased · Review growth';
+    if (/^All .* operating units are leased/.test(text)) return yardInventory(this.sim).reserved ? 'Fully leased · Move-ins pending' : 'Fully leased · Review growth';
     if (/ needs repair\./.test(text)) return text.split(' needs repair.')[0] + ' · Repair';
     return text.split('. ')[0].replace(/\.$/, '');
   }
@@ -1949,6 +2138,7 @@ export class UI {
   issueBtn(label, tool) { return `<button class="btn sm" data-a="goTool" data-v="${tool}">${label}</button>`; }
   runCoach() {
     const a = this.coachAct; if (!a) return; this.sfx('click');
+    if (a.project) { this.viewProject(a.project); return; }
     if (a.tab) { if (a.cat) this.cat = a.cat; this.select(null); this.setTab(a.tab); if (a.section) this.jumpSection(a.section); return; }
     const sel = a.sel ?? a.dirt; this.select(sel);
     const o = typeof sel === 'number' ? this.sim.s.objects[sel] : sel.kind === 'cart' ? this.sim.s.carts.find((c) => c.id === sel.id) : sel;
@@ -2177,7 +2367,7 @@ export class UI {
       body+=`<h3>Unit mix &amp; demand evidence</h3>${E.n?`<div class="kv vr-ev"><span><b>Copied product</b></span><span><b>New · vacant · unmet · leased</b></span>${E.rows.map(r=>`<span>${esc(r.product)}</span><span>${r.n} · ${r.vacant} · ${r.unmet} · ${r.recentLeases}</span>`).join('')}</div>`:''}
         <p class="vr-verdict ${E.verdict}">${esc(E.why)}</p>${E.elsewhere.length?`<p class="note">Other recently unmet requests: ${E.elsewhere.slice(0,3).map(e=>`${esc(e.product)} (${e.unmet})`).join(', ')}.</p>`:''}
         <p class="note">Vacant = matching rent-ready vacancies now; unmet and leased = matching shopper outcomes in the last 30 days. This is observed evidence, not a revenue promise. Structure only lets you choose a different fit-out later.</p>`;
-      body+=`<h3>Complete package ${money(R.cost)}</h3>${this.spendingHtml(R.cost,this.sim.planDailyCost(R),'after full package')}<p>F${R.from} → F${R.f+1}. ~${Math.ceil(R.dur/1440)} financial days, plus time to clear and test the elevator: reinforce → structure → fit-out → freight extension → service test → commission. Existing leases and units stay in service; the freight elevator pauses briefly for its service test.</p><p class="note">${esc(R.warning)}</p><p class="note">${inv?.range?`Complete-package payback: ${Math.floor(inv.range[0])}–${Math.ceil(inv.range[1])} months including a two-month lease-up allowance.`:'Payback: insufficient comparable evidence.'} Prices are provisional prototype values.</p><p class="note">Cancellation: full undo within 30 minutes before any stage finishes; otherwise 60% of unbuilt work until the structure is complete. After that the package must finish.</p>`;
+      body+=`<h3>Complete package ${money(R.cost)}</h3>${this.spendingHtml(R.cost,this.sim.planDailyCost(R),'after full package')}<p>F${R.from} → F${R.f+1}. ~${Math.ceil(R.dur/1440)} financial days, plus time to clear and test the elevator: reinforce → structure → fit-out → freight extension → service test → commission. Existing leases and units stay in service; the freight elevator pauses briefly for its service test.</p><p class="note">${esc(R.warning)}</p><p class="note">${esc(paybackText(inv))} Prices are provisional prototype values.</p><p class="note">Cancellation: full undo within 30 minutes before any stage finishes; otherwise 60% of unbuilt work until the structure is complete. After that the package must finish.</p>`;
     }else body+=`<p class="vr-verdict unsupported">${esc(R.msg)}</p>`;
     const acts=R.ok?`<button class="btn" data-a="verticalPreview" data-qa="vr-preview">Preview on map</button><button class="btn pri" data-a="verticalConfirm" data-qa="vr-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button>`:'';
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal vreview" role="dialog" aria-modal="true" aria-labelledby="vr-title"><div class="row"><h2 id="vr-title">Building ${id} · ${R.ok?`F${R.f+1} expansion review`:'vertical expansion'}<small class="vr-paused">Paused while you review · nothing is charged until Confirm</small></h2><button class="x" data-a="modalClose" data-qa="vr-close" aria-label="Close review" title="Close review">${I.x}</button></div><div class="vr-body">${body}</div><div class="row wrap vr-acts">${acts}<button class="btn" data-a="modalClose" data-qa="vr-close-review">Close review</button></div></div></div>`;
