@@ -1,0 +1,8 @@
+PASS 375x667 real camera math: 12-cell footprint fits controlled review rectangle; state and Pause exact
+PASS 390x844 real camera math: 12-cell footprint fits controlled review rectangle; state and Pause exact
+PASS layout variables reserve both measured control and scenario-card extents
+PASS review framing is once per plan, explicit resize/details request, and deferred past active pointer gestures
+PASS existing and newly opened modals retain framing for dismissal, then frame once
+PASS final bounds detect zoom-floor and pan-limit obstruction, preserving state and zoom limits
+PASS visible expanded controls reserve their true extent; open/close reframes once and stable layout does not
+PASS unsuccessful bounded attempt remains false without repeated automatic camera correction

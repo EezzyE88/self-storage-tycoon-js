@@ -1,0 +1,7 @@
+PASS waiting copy refreshes at closing without forced feed render
+PASS waiting copy refreshes at opening without forced feed render
+PASS waiting copy refreshes at next morning without forced feed render
+PASS 375x667 opening terms reveals within review scroller and preserves paused state
+PASS 390x844 opening terms reveals within review scroller and preserves paused state
+PASS collapsed, replaced and unrelated elements cannot cause scrolling
+6 display repair behavior groups passed; real layout/touch visibility requires browser recheck.

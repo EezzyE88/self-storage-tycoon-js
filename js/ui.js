@@ -2365,12 +2365,12 @@ export class UI {
   keptLabel() { const k = this.g.localsave && this.g.localsave.getKept(); if (!k) return ''; const m = k.meta || {}; return `${esc(m.name || 'Saved game')} · Day ${+m.day || 1} · ${money(+m.cash || 0)}`; }
   showTitle() {
     this.title = true;
-    this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
+    this.$('modal').innerHTML = `<div class="title"><div class="title-heading">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build a better property.<br>Run a smarter business.</p></div>
       <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
       <button class="btn" data-a="sandboxSetup">Sandbox <small>Business or Free Build, on your terms</small></button>
       <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>
-      <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
+      <div class="title-caption">Build · Operate · Grow</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
   }
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
   autosaveNote() {

@@ -1127,3 +1127,110 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  #ui .actionbar .build-details .refund-note { opacity:1; color:var(--muted); }
  #ui .actionbar .access-side { margin:2px 0; }
 }
+
+/* Professional interface candidate — one shared visual vocabulary.
+   Preserve production layout, hit regions, scrolling, z-order and placement budgets. */
+:root {
+  --ink:#172b43; --ink2:#33475d; --paper:#fbfaf6; --paper2:#edece6;
+  --line:#d6d9da; --muted:#566575; --navy:#233e5e; --yellow:#edbf69;
+  --r:12px; --r-sm:8px; --shadow:0 8px 24px rgba(17,34,53,.16);
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --surface-dark:#172b43; --surface-dark-text:#f7f6f0;
+  --surface-dark-muted:#c6d1dd; --accent-text:#172b43;
+}
+#ui .hud .chip, #ui .hud > .iconbtn, #ui .viewctl .seg, #ui .viewmore,
+#ui .tabs {
+  background:var(--surface-dark); color:var(--surface-dark-text);
+  border-color:#ffffff24; box-shadow:0 4px 14px #0b1b3029;
+}
+#ui .hud .cash { color:var(--surface-dark-text); font-weight:750; }
+#ui .hud .cash.neg { color:#ffb4a6; }
+#ui .hud .cash small, #ui .hud .clock span:not(.sbflag),
+#ui .speed button, #ui .viewctl .seg button, #ui .tabs button {
+  color:var(--surface-dark-muted);
+}
+#ui .speed button.on, #ui .viewctl .seg button.on, #ui .tabs button.on {
+  background:var(--yellow); color:var(--accent-text); box-shadow:none;
+}
+#ui .viewctl .viewextra { background:var(--surface-dark); border-color:#ffffff24; }
+#ui .viewctl .viewextra .seg { background:transparent; }
+#ui .viewctl.open .viewmore { background:var(--yellow); color:var(--accent-text); }
+#ui .sheet, #ui .modal, #ui .actionbar { background:var(--paper); border-color:var(--line); }
+#ui .sheet header, #ui .modal header { background:#f0f1ed; border-color:var(--line); }
+#ui .sheet header h2, #ui .modal h2 { color:var(--ink); font-weight:750; letter-spacing:-.02em; }
+#ui .sheet h3, #ui .modal h3 { color:var(--muted); font-weight:700; letter-spacing:.035em; }
+#ui .panel-size, #ui .sheet .x, #ui .modal .x { background:var(--paper2); color:var(--ink); }
+#ui .sheet .btn, #ui .modal .btn, #ui .actionbar .btn {
+  background:var(--paper2); color:var(--ink); border-radius:8px;
+  font-weight:650; box-shadow:none;
+}
+#ui .sheet .btn.pri, #ui .modal .btn.pri, #ui .actionbar .btn.pri,
+#ui .build-rotate {
+  background:var(--navy); color:#fff; border-radius:8px;
+}
+#ui .sheet .btn.go, #ui .modal .btn.go, #ui .actionbar .btn.go {
+  background:#286848; color:#fff;
+}
+#ui .sheet .btn.warn, #ui .modal .btn.warn, #ui .actionbar .btn.warn {
+  background:#f5d391; color:#382509;
+}
+#ui .sheet .btn.danger, #ui .modal .btn.danger, #ui .actionbar .btn.danger {
+  background:#f8e6e1; color:#a22c20;
+}
+#ui .cats button, #ui .section-shortcuts button, #ui .section-menu-options button {
+  background:var(--paper2); color:var(--ink2);
+}
+#ui .cats button.on, #ui .section-shortcuts button.on,
+#ui .section-menu-options button.on { background:var(--navy); color:#fff; }
+#ui .tool, #ui .item, #ui .scen-card { background:#fff; border-color:var(--line); }
+#ui .tool.on { background:#fff5dd; border-color:#9b6e20; box-shadow:inset 0 0 0 1px #9b6e20; }
+#ui .tool b { color:var(--ink); }
+#ui .tool .c { color:var(--navy); }
+#ui .tool .d { color:var(--muted); }
+#ui .working-yard, #ui .property-project, #ui .rescue-operation {
+  background:#f0f5ee; border-color:#b8cbb9; border-radius:10px;
+}
+#ui .tut, #ui .tut.comeback .ch, #ui .coach, #ui .inbox-chip {
+  background:var(--surface-dark); color:var(--surface-dark-text);
+}
+#ui .tut p, #ui .tut small, #ui .coach .co { color:var(--surface-dark-muted); }
+#ui .tut .btn.pri { background:var(--yellow); color:var(--ink); }
+#ui .actionbar .build-details summary { background:var(--paper); color:var(--ink); }
+#ui .actionbar .access-side { color:var(--ink2); }
+#ui .modal-bg { background:#0c1e35a8; }
+#ui button:focus-visible, #ui [role=button]:focus-visible, #ui summary:focus-visible {
+  outline:3px solid #b77917; outline-offset:2px;
+}
+/* Title owns its existing modal hit layer. No generated page-sized overlays. */
+#ui:has(> #modal > .title) > :is(.hud,.viewctl,.tabs) { visibility:hidden; }
+#ui .title {
+  background:linear-gradient(180deg,#10233a50 0%,#10233ae8 38%,#10233a 100%);
+  overflow-y:auto; justify-content:flex-start; padding-top:calc(28px + var(--safe-t));
+  touch-action:pan-y; gap:0;
+}
+#ui .title .title-heading { margin:auto 0 20px; flex:none; }
+#ui .title .logo { width:48px; height:48px; color:var(--yellow); }
+#ui .title h1 { max-width:390px; margin:12px auto 10px; font-size:clamp(32px,8vw,46px); line-height:1.02; font-weight:800; letter-spacing:-.045em; color:#fbfaf6; }
+#ui .title p { color:#d0d9e3; font-size:14px; line-height:1.5; margin:0 auto; max-width:310px; }
+#ui .title .choices { flex:none; gap:8px; width:min(420px,100%); }
+#ui .title .choices .btn {
+  min-height:58px; height:auto; padding:11px 16px; border:1px solid #ffffff26;
+  border-radius:10px; background:#ffffff0d; color:#fbfaf6;
+  font-size:15px; font-weight:700; text-align:left; align-items:flex-start;
+  justify-content:center; flex-direction:column; gap:5px; white-space:normal;
+}
+#ui .title .choices .btn small { color:#c7d3e0; font-size:12px; font-weight:450; opacity:1; line-height:1.4; overflow-wrap:anywhere; }
+#ui .title .choices .btn.pri, #ui .title .choices .btn.go {
+  background:var(--yellow); color:var(--ink); border-color:var(--yellow);
+}
+#ui .title .choices .btn.pri small, #ui .title .choices .btn.go small { color:#37404a; }
+#ui .title .title-caption { font-size:11px; color:#bcc9d8; margin:18px 0 0; }
+#ui .title .title-build { font-size:10px; color:#9fb0c3; margin:8px 0 0; overflow-wrap:anywhere; }
+@media (min-width:701px) and (min-height:521px) {
+  #ui .title { padding-top:48px; padding-bottom:32px; }
+  #ui .title .title-heading { margin:auto 0 24px; }
+  #ui .title .title-build { margin-bottom:auto; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #ui .sheet.enter, #ui .actionbar.enter, #ui .toast, #ui .convo { animation:none; }
+}
