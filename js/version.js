@@ -1,2 +1,2 @@
-// Traffic and policy delegation candidate; not published or accepted.
-export const BUILD = { name: 'bplus-display-repair-20261020', date: '2026-10-20' };
+// Isolated professional interface candidate; physical iPhone acceptance pending.
+export const BUILD = { name: 'professional-interface-20261021', date: '2026-10-21' };
