@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/game.css"></head><body><div id="ui"></div><div id="bubbles"></div><pre id="qaresult" style="position:fixed;top:180px;left:8px;color:white;pointer-events:none;z-index:999"></pre><script type="module">
+import {UI} from '/js/ui.js';import {makeSandbox} from '/js/scenarios.js';
+const sim=makeSandbox({kind:'business',cash:100000,tiers:'all'});sim.s.speed=0;
+class FixtureUI extends UI {showTitle(){}}
+const ui=new FixtureUI({sim,rend:{view:'ext',setPreview(){},setSelection(){}},audio:{play(){},unlock(){}}});ui.title=false;ui.tool='du5x10';ui.planArgs={a:{x:10,y:10},b:{x:21,y:10}};ui.replan();ui.finishPlacement();
+window.addEventListener('error',e=>document.querySelector('#qaresult').textContent='ERROR '+e.message);
+function report(){const q=s=>document.querySelector(s),rect=s=>{const r=q(s).getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,bottom:r.bottom}};const data={viewport:[innerWidth,innerHeight],bar:rect('.actionbar'),body:rect('.review-body'),rotate:rect('.build-rotate'),confirm:rect('[data-a="confirm"]'),terms:rect('.build-details'),cash:sim.s.cash,time:sim.s.t,speed:sim.s.speed,count:ui.plan.count,dir:ui.plan.units[0].dir};q('#qaresult').textContent=JSON.stringify(data,null,1);}
+document.addEventListener('click',()=>requestAnimationFrame(report));document.addEventListener('toggle',()=>requestAnimationFrame(report),true);requestAnimationFrame(report);
+</script></body></html>

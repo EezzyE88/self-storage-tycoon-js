@@ -1,0 +1,3 @@
+PASS exact parent bytes preserved: css/game.css, js/render.js, js/main.js, js/economics.js, js/finance.js, js/localsave.js, js/savearchive.js, js/blueprint.js, js/propertyprojects.js
+PASS no saved-state version/schema changes; existing queued visits are not purged
+PASS every existing catalog/economy/data export equals parent; new routine-visit probability is 0.1

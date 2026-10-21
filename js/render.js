@@ -1138,7 +1138,7 @@ export class Renderer {
       const H = drivePreview ? WALL_H : 1.05;
       const m = new THREE.Mesh(this.geo.box, u.ok === false ? badMat : ghost); m.scale.set(u.w - 0.08, H, u.h - 0.08); m.position.set(u.x + u.w / 2, (u.f || 0) * FLOOR_H + H / 2, u.y + u.h / 2); this.previewG.add(m);
       // Door/frontage direction: keep the arrow and add a bright strip along the whole door edge.
-      if (drivePreview) {
+      if (u.dir) {
         const edge = new THREE.Mesh(this.geo.box, frontageMat);
         const alongX = u.dir[1] !== 0;
         edge.scale.set(alongX ? Math.max(0.35, u.w - 0.12) : 0.18, 0.08, alongX ? 0.18 : Math.max(0.35, u.h - 0.12));
@@ -1163,6 +1163,12 @@ export class Renderer {
       dot.rotation.x = -Math.PI / 2; dot.position.copy(ring.position); dot.position.y += 0.01; dot.renderOrder = 36; this.previewG.add(dot);
     }
     for (const c of R.creates || []) {
+      if (c.type === 'office' && c.door) {
+        const d=c.door.dir, edge=new THREE.Mesh(this.geo.box,frontageMat);
+        edge.scale.set(d[0]?0.18:c.w,0.08,d[1]?0.18:c.h);
+        edge.position.set(c.x+c.w/2+d[0]*(c.w/2+.12),.12,c.y+c.h/2+d[1]*(c.h/2+.12));
+        edge.renderOrder=32; this.previewG.add(edge);
+      }
       if (c.type === 'canopy') {
         const roof = new THREE.Mesh(this.geo.box, ghost); roof.scale.set(c.w,.06,c.h); roof.position.set(c.x+c.w/2,1.55,c.y+c.h/2); this.previewG.add(roof);
         for (const x of [c.x+.1,c.x+c.w-.1]) for (const y of [c.y+.1,c.y+c.h-.1]) { const post=new THREE.Mesh(this.geo.box,ghost); post.scale.set(.07,1.55,.07); post.position.set(x,.78,y); this.previewG.add(post); }

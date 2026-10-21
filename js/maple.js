@@ -1,6 +1,6 @@
 // Authored starting properties (GDD §5 Maple Street, §4 Empty Lot). Builds plain state directly.
 import { newState, Sim, productKey } from './sim.js';
-import { G, BILLING_CYCLE_DAYS, NAMES_FIRST, NAMES_LAST, MARKETS } from './data.js';
+import { G, ROUTINE_VISIT_CHANCE, BILLING_CYCLE_DAYS, NAMES_FIRST, NAMES_LAST, MARKETS } from './data.js';
 
 // MX: when set (to the map width), the authored layout is built mirrored left-to-right (acquired facilities)
 let MX = 0;
@@ -72,7 +72,7 @@ function buildMaple(s, seed) {
   // seed today's visits so the lot feels alive at once
   sim.markDirty(); sim.rebuild();
   const day = 1;
-  for (const tn of Object.values(s.tenants)) if (rnd() < 0.34) sim.schedule({ kind: rnd() < 0.15 ? 'bigaccess' : 'access', tenant: tn.id, unit: s.leases[tn.lease].unit }, sim.randomTime(day, 7.2, 20));
+  for (const tn of Object.values(s.tenants)) if (rnd() < ROUTINE_VISIT_CHANCE) sim.schedule({ kind: rnd() < 0.15 ? 'bigaccess' : 'access', tenant: tn.id, unit: s.leases[tn.lease].unit }, sim.randomTime(day, 7.2, 20));
   // prospects for day 1 are generated on day rollover; tutorial schedules its own authored prospect
   s.days = [];
   return sim;

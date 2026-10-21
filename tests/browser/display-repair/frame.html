@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/game.css"></head><body><div id="ui"></div><div id="bubbles"></div><pre id="qaresult" style="position:fixed;top:180px;left:8px;color:white;pointer-events:none;z-index:999"></pre><script type="module">
+import {UI} from '/js/ui.js';import {makeSandbox} from '/js/scenarios.js';
+const sim=makeSandbox({kind:'business',cash:100000,tiers:'all'});sim.s.speed=0;
+class FixtureUI extends UI {showTitle(){}}
+const ui=new FixtureUI({sim,rend:{view:'ext',setPreview(){},setSelection(){}},audio:{play(){},unlock(){}}});ui.title=false;ui.tool='du5x10';ui.planArgs={a:{x:10,y:10},b:{x:21,y:10}};ui.replan();ui.finishPlacement();
+window.displayRepairQA={ui,sim,check:checkTerms};
+window.addEventListener('error',e=>document.querySelector('#qaresult').textContent='ERROR '+e.message);
+function report(){const q=s=>document.querySelector(s),rect=s=>{const r=q(s).getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,bottom:r.bottom}};const data={viewport:[innerWidth,innerHeight],bar:rect('.actionbar'),body:rect('.review-body'),rotate:rect('.build-rotate'),confirm:rect('[data-a="confirm"]'),terms:rect('.build-details'),cash:sim.s.cash,time:sim.s.t,speed:sim.s.speed,count:ui.plan.count,dir:ui.plan.units[0].dir};q('#qaresult').textContent=JSON.stringify(data,null,1);}
+function checkTerms(){
+ const details=document.querySelector('.build-details'),summary=details.querySelector('summary'),note=details.querySelector('.refund-note'),body=document.querySelector('.review-body');
+ const d=details.getBoundingClientRect(),h=summary.getBoundingClientRect(),n=note.getBoundingClientRect(),b=body.getBoundingClientRect();
+ const visible=Math.max(0,Math.min(n.bottom,d.bottom,b.bottom)-Math.max(n.top,h.bottom,b.top));
+ const hit=document.elementFromPoint(h.left+h.width/2,Math.max(h.top,b.top)+Math.min(h.height,20)/2);
+ const controls=[document.querySelector('.build-rotate'),document.querySelector('[data-a="confirm"]')].map(el=>{const r=el.getBoundingClientRect();return{height:r.height,top:r.top,bottom:r.bottom}});
+ return{open:details.open,visibleTermsPixels:visible,headingOwnsHit:hit===summary||summary.contains(hit),detailsHeight:d.height,controls,paused:sim.s.speed===0,bodyScroll:body.scrollTop,detailsScroll:details.scrollTop};
+}
+document.addEventListener('click',()=>requestAnimationFrame(report));document.addEventListener('toggle',()=>requestAnimationFrame(report),true);requestAnimationFrame(report);
+</script></body></html>

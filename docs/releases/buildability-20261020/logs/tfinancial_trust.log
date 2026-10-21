@@ -1,0 +1,6 @@
+PASS cash delta reconciles to ledger movement · -76 vs -76
+PASS normalized operating estimate is finite · 7
+PASS scenario exposes authoritative deadline for calendar
+PASS leases expose billing dates for calendar
+PASS today cash movement is ledger-derived · -76
+ALL PASS

@@ -11,7 +11,7 @@ import { complaintContext, complaintKey } from './complaints.js';
 // Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.
 // All mutations go through sim.dispatch(action). Deterministic given seed + action script.
 import {
-  MIN_PER_DAY, BILLING_CYCLE_DAYS, OFFICE_HOURS, ACCESS_HOURS, G, VEH_GROUND, PED_GROUND,
+  MIN_PER_DAY, ROUTINE_VISIT_CHANCE, BILLING_CYCLE_DAYS, OFFICE_HOURS, ACCESS_HOURS, G, VEH_GROUND, PED_GROUND,
   SIZES, TOOLS, MARKETS, CART_COST, CLIMATE_COST_MULT, ROLES, OPEX, WORK, NAMES_FIRST, NAMES_LAST, POWER,
 } from './data.js';
 
@@ -571,7 +571,8 @@ export class Sim {
     switch (a.tool) {
       case 'office': {
         R.items = [];
-        const w = T.fw, h = T.fd, ox = x - 2, oy = y - 1;
+        const rotated = Number.isInteger(a.rotation), turn = rotated ? ((a.rotation % 4)+4)%4 : 0;
+        const w = turn % 2 ? T.fd : T.fw, h = turn % 2 ? T.fw : T.fd, ox = rotated ? x : x - 2, oy = rotated ? y : y - 1;
         for (let yy = oy; yy < oy + h; yy++) for (let xx = ox; xx < ox + w; xx++) {
           const it = { x: xx, y: yy, f: 0, ok: true }; R.items.push(it);
           if (!this.inParcel(xx, yy)) { it.ok = false; bad('Outside the property line'); continue; }
@@ -581,13 +582,14 @@ export class Sim {
         if (this.objs('office').length) bad('This property already has an office');
         // door: pick side facing a paved cell
         const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]]; let door = null;
-        const pref = a.dir ? [a.dir, ...sides] : sides;
+        const facing = rotated ? [[0,-1],[1,0],[0,1],[-1,0]][turn] : a.dir;
+        const pref = rotated ? [facing] : a.dir ? [a.dir, ...sides] : sides;
         for (const d of pref) {
           const cells = d[0] ? [...Array(h)].map((_, k) => ({ x: d[0] > 0 ? ox + w : ox - 1, y: oy + k })) : [...Array(w)].map((_, k) => ({ x: ox + k, y: d[1] > 0 ? oy + h : oy - 1 }));
           const c = cells.find((c) => this.inb(c.x, c.y) && PED_GROUND.has(this.groundAt(this.idx(c.x, c.y))) && this.inParcel(c.x, c.y));
           if (c) { door = { x: c.x, y: c.y, dir: d }; break; }
         }
-        if (!door) { door = { x: ox + w, y: oy + 1, dir: [1, 0] }; inc('Office door needs a paved walkway or parking in front'); }
+        if (!door) { const d = facing || [1,0]; door = { x: d[0] ? (d[0]>0?ox+w:ox-1) : ox+Math.floor(w/2), y: d[1] ? (d[1]>0?oy+h:oy-1) : oy+Math.floor(h/2), dir:d }; inc('Office door needs a paved walkway or parking in front'); }
         R.cost = T.cost; R.dur = 1440; R.count = 1;
         R.creates.push({ type: 'office', x: ox, y: oy, w, h, f: 0, door });
         return R;
@@ -739,7 +741,8 @@ export class Sim {
   planUnits(a, R, bad, inc) {
     const s = this.s, D = this.D, T = TOOLS[a.tool], f = T.access === 'drive' ? 0 : (a.f || 0);
     const sz = SIZES[T.size]; const dx = a.b.x - a.a.x, dy = a.b.y - a.a.y;
-    const axisX = a.axis ? a.axis === 'x' : Math.abs(dx) >= Math.abs(dy);
+    const turn = Number.isInteger(a.rotation) ? ((a.rotation % 4)+4)%4 : null;
+    const axisX = turn !== null ? turn % 2 === 0 : a.axis ? a.axis === 'x' : Math.abs(dx) >= Math.abs(dy);
     const len = (axisX ? Math.abs(dx) : Math.abs(dy)) + 1;
     const n = Math.max(1, Math.floor(len / sz.w));
     const step = axisX ? Math.sign(dx) || 1 : Math.sign(dy) || 1;
@@ -763,6 +766,14 @@ export class Sim {
     const A = build(-1), B = build(1);
     let units = frontScore(B) > frontScore(A) ? B : A;
     if (a.flip) units = units === A ? B : A;
+    // Explicit rotation anchors the footprint at the touched corner. Never move
+    // it to the opposite side of the finger to guess an access direction.
+    if (turn !== null) {
+      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
+      const x = Math.min(a.a.x,a.b.x), y = Math.min(a.a.y,a.b.y);
+      units = Array.from({length:n}, (_,k) => ({x:x+(axisX?k*sz.w:0), y:y+(axisX?0:k*sz.w),
+        w:axisX?sz.w:sz.d, h:axisX?sz.d:sz.w, dir:[...dir], f}));
+    }
     let anyBad = false;
     for (const u of units) {
       let ok = true;
@@ -1307,7 +1318,7 @@ export class Sim {
     for (const tn of Object.values(s.tenants)) {
       const L = s.leases[tn.lease]; if (!L || tn.leaving || !s.objects[L.unit] || s.objects[L.unit].commercial !== 'occupied') continue;
       if (s.objects[L.unit].overlock) continue; // overlocked for non-payment: no access visits until the account is current
-      if (this.rnd() < 1 / 1.8) this.schedule({ kind: this.rnd() < 0.15 ? 'bigaccess' : 'access', tenant: tn.id, unit: L.unit }, this.randomAccessTime(day));
+      if (this.rnd() < ROUTINE_VISIT_CHANCE) this.schedule({ kind: this.rnd() < 0.15 ? 'bigaccess' : 'access', tenant: tn.id, unit: L.unit }, this.randomAccessTime(day));
     }
     this.marketDay(day);
     this.dramaDay(day);
@@ -1844,30 +1855,44 @@ export class Sim {
   routineMoveout(c) {
     return String(c.key || '').startsWith('mo') && (c.actions?.[c.auto]?.action?.op === 'moveoutOk');
   }
-  // Shared by the simulation and UI: retain the existing Clerk/Manager response rules.
+  policyRetention(c) {
+    return String(c.key || '').startsWith('mo') && c.actions?.[c.auto]?.action?.op === 'retain' &&
+      this.s.policies.retention && !this.requestActionDisabled(c.actions[c.auto]);
+  }
+  // Shared by the simulation and UI: keep authorized retention work queued while
+  // employed staff are temporarily unavailable. Other exception rules stay intact.
   requestHandler(c) {
     const s = this.s;
     if (c.auto == null || !c.actions?.[c.auto] || c.sev === 'critical' || c.ownerReview || s.policies.manualRequests) return null;
     if (this.hour < OFFICE_HOURS[0] || this.hour >= OFFICE_HOURS[1]) {
       // Routine move-out instructions can wait for employed staff's next office shift.
-      if (this.routineMoveout(c) && c.waitForOffice) return s.staff.some(st => st.role === 'clerk') ? 'Clerk' : this.hasManager() ? 'Manager' : null;
+      if (this.policyRetention(c) || (this.routineMoveout(c) && c.waitForOffice)) return s.staff.some(st => st.role === 'clerk') ? 'Clerk' : this.hasManager() ? 'Manager' : null;
       return null;
     }
     if (s.agents.some((a) => a.kind === 'staff' && a.role === 'clerk' && a.st === 'office')) return 'Clerk';
-    return this.hasManager() ? 'Manager' : null;
+    if (this.hasManager()) return 'Manager';
+    return (this.policyRetention(c) || (this.routineMoveout(c) && c.waitForOffice)) && s.staff.some(st => st.role === 'clerk') ? 'Clerk' : null;
   }
   syncRequestHandling() {
     for (const c of this.s.convos) {
       const offer = c.actions?.findIndex(a => a.action?.op === 'retain');
-      if (offer >= 0 && this.requestActionDisabled(c.actions[offer])) {
+      if (offer >= 0 && (!this.s.policies.retention || this.requestActionDisabled(c.actions[offer]))) {
         const steps = c.actions.findIndex(a => a.action?.op === 'moveoutOk');
-        if (steps >= 0 && c.auto === offer) c.auto = steps;
+        if (steps >= 0 && c.auto === offer) {
+          c.auto = steps;
+          c.waitForOffice = true;
+        }
       }
+      // Recover only old coverage handoffs for still-authorized retention.
+      // Explicit owner takeover, manual mode, critical and failed responses remain held.
+      if (c.ownerReview === 'coverage' && this.policyRetention(c) && c.sev !== 'critical' &&
+          !this.s.policies.manualRequests && (this.hasManager() || this.s.staff.some(st => st.role === 'clerk'))) delete c.ownerReview;
       const handler = this.requestHandler(c);
       // Once handed back, the owner decides even if coverage subsequently returns.
       if (c.staffHandling && !handler && !c.ownerReview && !this.s.policies.manualRequests) c.ownerReview = 'coverage';
       c.staffHandling = this.requestHandler(c);
-      c.staffWaiting = !!c.staffHandling && (this.hour < OFFICE_HOURS[0] || this.hour >= OFFICE_HOURS[1]);
+      c.staffWaiting = !!c.staffHandling && (this.hour < OFFICE_HOURS[0] || this.hour >= OFFICE_HOURS[1] ||
+        ((this.policyRetention(c) || (this.routineMoveout(c) && c.waitForOffice)) && c.staffHandling === 'Clerk' && !this.s.agents.some(a => a.kind === 'staff' && a.role === 'clerk' && a.st === 'office')));
       if (c.staffHandling && !c.staffWaiting) c.waitForOffice = false;
     }
   }

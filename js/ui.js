@@ -140,7 +140,35 @@ export class UI {
     }, true);
     this.root.addEventListener('pointercancel',()=>{sw=null;},true);
     this.root.addEventListener('input', (e) => this.onInput(e));
+    window.addEventListener('resize', () => { this.syncControlLayout(); this.schedulePlacementFrame(true); });
+    if (typeof ResizeObserver !== 'undefined') {
+      this.controlLayoutObserver = new ResizeObserver(() => this.syncControlLayout());
+      for (const el of this.root.querySelectorAll('.hud, #speed, .viewctl, .viewextra')) this.controlLayoutObserver.observe(el);
+    }
+    this.root.addEventListener('toggle', e => {
+      if (e.target.closest?.('#abar')) {
+        this.revealBuildTerms(e.target);
+        this.schedulePlacementFrame(true);
+      }
+    }, true);
+    this.root.addEventListener('animationend', e => {
+      if (e.target.matches?.('.actionbar')) this.schedulePlacementFrame(true);
+    });
+    this.syncControlLayout();
     this.showTitle();
+  }
+  // Opening terms must reveal their content inside the review scroller, never scroll the page/map.
+  revealBuildTerms(details) {
+    if (!details?.matches?.('.build-details') || !details.open) return;
+    const reveal = () => {
+      if (!details.isConnected || !details.open) return;
+      const body = details.closest('.review-body');
+      if (!body) return;
+      details.scrollTop = 0;
+      body.scrollTop += details.getBoundingClientRect().top - body.getBoundingClientRect().top;
+    };
+    // The native toggle fires after open changes; measure again after layout settles.
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(reveal); else reveal();
   }
   get sim() { return this.g.sim; }
   get rend() { return this.g.rend; }
@@ -222,7 +250,8 @@ export class UI {
       case 'cancelTool': this.pickTool(null); break;
       case 'confirm': this.confirmPlan(); break;
       case 'returnGrowthProposal': this.returnGrowthProposal(); break;
-      case 'flip': this.flip = !this.flip; this.replan(); break;
+      case 'rotateBuild': this.rotateBuild(); break;
+      case 'flip': if(Number.isInteger(this.buildRotation)) { this.rotateBuild(2); } else { this.flip = !this.flip; this.replan(); } break;
       case 'climate': this.climate = !this.climate; this.replan(); break;
       case 'floorChoose': this.showFloors(); break;
       case 'verticalReview': this.showVertical(+v); break;
@@ -713,9 +742,40 @@ export class UI {
       this.pauseForPopup('sandboxBuild'); this.notePause(0);
     }
     if (!k) this.resumePopup('sandboxBuild');
-    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.rend.setPreview(null);
+    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
+  }
+  rotateBuild(step = 1) {
+    const T = TOOLS[this.tool];
+    if (!T || !(T.unit || T.shape === 'rect' || this.tool === 'office')) return;
+    const u = this.plan?.units?.[0], office = this.plan?.creates?.find(c=>c.type==='office');
+    const dir = u?.dir || office?.door?.dir;
+    const old = Number.isInteger(this.buildRotation) ? this.buildRotation : dir ? [[0,-1],[1,0],[0,1],[-1,0]].findIndex(d=>d[0]===dir[0]&&d[1]===dir[1]) : 0;
+    this.buildRotation = (old + step + 4) % 4;
+    this.flip = false;
+    if (this.planArgs) {
+      const a=this.planArgs.a,b=this.planArgs.b;
+      const shapes = T.unit ? this.plan.units : office ? [office] : [];
+      const x=shapes.length?Math.min(...shapes.map(u=>u.x)):Math.min(a.x,b.x);
+      const y=shapes.length?Math.min(...shapes.map(u=>u.y)):Math.min(a.y,b.y);
+      if(T.unit) {
+        const span=SIZES[T.size].w*this.plan.count;
+        this.planArgs={a:{x,y},b:{x:x+(this.buildRotation%2?0:span-1),y:y+(this.buildRotation%2?span-1:0)}};
+      } else if(office) this.planArgs={a:{x,y},b:{x,y}};
+      else {
+        const w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1;
+        this.planArgs={a:{x,y},b:{x:x+(step%2?h:w)-1,y:y+(step%2?w:h)-1}};
+      }
+    }
+    this.replan();
+  }
+  rotationHtml() {
+    const T=TOOLS[this.tool];
+    if(!T || !(T.unit || T.shape==='rect' || this.tool==='office'))return '';
+    const d=this.plan?.units?.[0]?.dir || this.plan?.creates?.find(c=>c.type==='office')?.door?.dir;
+    const side=d? d[0]>0?'East':d[0]<0?'West':d[1]>0?'South':'North':Number.isInteger(this.buildRotation)?['North','East','South','West'][this.buildRotation]:null;
+    return `<button class="btn sm build-rotate" data-a="rotateBuild" aria-label="Rotate placement clockwise">↻ Rotate${side?' · '+side:''}</button>`;
   }
   toolFloor() { const v = this.rend.view; return Number.isInteger(v)?v:0; }
   placeStart(cell) { if (!this.tool || !cell) return; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
@@ -732,7 +792,7 @@ export class UI {
   replan() {
     if (!this.tool || !this.planArgs) { this.renderActionBar(); return; }
     const T = TOOLS[this.tool];
-    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush };
+    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, rotation:this.buildRotation, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush };
     if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
     if (this.tool.startsWith('du')) a.f = 0;
     this.plan = this.sim.plan(a); this.plan.args = a;
@@ -756,6 +816,7 @@ export class UI {
     this.renderActionBar();
   }
   renderActionBar() {
+    if (!this.tool || !this.plan || this.buildPlacing) this.placementFrameKey = null;
     if(this.tool && this.plan && !this.buildPlacing) this.pauseForPopup('review'); else this.resumePopup('review');
     const box = this.$('abar'); if (this.verticalPreviewing && !this.tool) { const h = this.verticalBarHtml(); if (box.innerHTML !== h) box.innerHTML = h; return; } if (!this.tool) { box.innerHTML = ''; return; }
     const T = TOOLS[this.tool], R0 = this.plan; const rush = this.canRush() && this.rush && R0 && R0.dur;
@@ -765,7 +826,7 @@ export class UI {
       return;
     }
     const mm=curBeat(this.sim)?this.placementMismatch(curBeat(this.sim).steps[stepState(this.sim,this).cur]):null;
-    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
+    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
       const projectMarker = this.projectProposal?.sim === this.sim ? `<p class="project-review">${matchesProject(R.args, this.projectProposal.key) ? esc(PROJECTS[this.projectProposal.key].label) + ' · project preview' : 'Placement changed · ordinary build, not a tracked project'}</p>` : '';
@@ -787,12 +848,87 @@ export class UI {
     const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
     const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
     const wasOpen = !!box.firstChild;
-    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Flip doors or move the row beside the aisle.</p>' : ''}</div>
+    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${status}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Flip doors or move the row beside the aisle.</p>' : ''}</div>
       <div class="bot"><div class="cost">${costTxt}</div>
-      ${isUnit ? `<button class="btn sm" data-a="flip">Flip doors</button>` : ''}
+      ${this.rotationHtml()}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
       <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
+    this.schedulePlacementFrame();
+  }
+
+  // Frame review once per placement/change, never continuously against a player's pan.
+  schedulePlacementFrame(force = false) {
+    if (typeof requestAnimationFrame !== 'function' || !this.root?.querySelector ||
+        !this.tool || !this.plan || this.buildPlacing || this.title) return;
+    // A modal postpones the request; it must not consume this placement's key.
+    if (this.modalOpen()) { this.placementFrameKey = null; return; }
+    const key = JSON.stringify([this.tool, this.plan.args]);
+    if (!force && key === this.placementFrameKey) return;
+    this.placementFrameKey = key;
+    if (this.placementFramePending) return;
+    this.placementFramePending = true;
+    requestAnimationFrame(() => {
+      this.placementFramePending = false;
+      if (!this.tool || !this.plan || this.buildPlacing || this.title || this.modalOpen()) {
+        this.placementFrameKey = null;
+        return;
+      }
+      if (this.pointerBusy) { this.placementFrameKey = null; return; }
+      // Keep an unsuccessful bounded attempt distinct from a successful fit.
+      // Do not repeatedly fight the camera if its existing limits prevent a fit.
+      this.placementFrameFits = this.framePlacementReview();
+    });
+  }
+  framePlacementReview() {
+    if (!this.rend?.project || !this.rend?.pan || !this.rend?.zoomBy) return false;
+    const args = this.plan?.args;
+    if (!args?.a || !args?.b) return false;
+    const shapes = [...(this.plan.units || []), ...(this.plan.creates || []).filter(c => c.w && c.h)];
+    // Frame the access cells as well as the structure, so the highlighted side stays visible.
+    for(const u of this.plan.units || []) if(u.dir) {
+      shapes.push({x:u.dir[0]>0?u.x+u.w:u.dir[0]<0?u.x-1:u.x,
+        y:u.dir[1]>0?u.y+u.h:u.dir[1]<0?u.y-1:u.y,
+        w:u.dir[0]?1:u.w,h:u.dir[1]?1:u.h,f:u.f});
+    }
+    for(const c of this.plan.creates || []) if(c.type==='office'&&c.door)shapes.push({...c.door,w:1,h:1,f:0});
+    if (!shapes.length) shapes.push({ x: Math.min(args.a.x,args.b.x), y: Math.min(args.a.y,args.b.y),
+      w: Math.abs(args.a.x-args.b.x)+1, h: Math.abs(args.a.y-args.b.y)+1, f: args.f || 0 });
+    const points = shapes.flatMap(s => [s.x,s.x+s.w].flatMap(x => [s.y,s.y+s.h].flatMap(y =>
+      [s.f || 0,(s.f || 0)+(s.floors || 1)].map(f => [x,y,f*FLOOR_H]))));
+    const r = this.safeRect(), margin = 12;
+    if (r.right-r.left <= margin*2 || r.bottom-r.top <= margin*2) return false;
+    const bounds = () => { const p=points.map(([x,y,z])=>this.rend.project(x,y,z));
+      return { left:Math.min(...p.map(p=>p.x)),right:Math.max(...p.map(p=>p.x)),
+        top:Math.min(...p.map(p=>p.y)),bottom:Math.max(...p.map(p=>p.y)) }; };
+    let b=bounds();
+    const scale=Math.min((r.right-r.left-margin*2)/Math.max(1,b.right-b.left),
+      (r.bottom-r.top-margin*2)/Math.max(1,b.bottom-b.top));
+    if(scale<1) { this.rend.zoomBy(scale*.97); b=bounds(); }
+    const dx=b.left<r.left+margin ? r.left+margin-b.left : b.right>r.right-margin ? r.right-margin-b.right : 0;
+    const dy=b.top<r.top+margin ? r.top+margin-b.top : b.bottom>r.bottom-margin ? r.bottom-margin-b.bottom : 0;
+    if(dx||dy) this.rend.pan(dx,dy);
+    b=bounds(); // zoom and pan both have limits; requested movement is not proof of fit.
+    return Number.isFinite(b.left+b.right+b.top+b.bottom) &&
+      b.left>=r.left+margin-.01 && b.right<=r.right-margin+.01 &&
+      b.top>=r.top+margin-.01 && b.bottom<=r.bottom-margin+.01;
+  }
+  syncControlLayout() {
+    if (!this.root?.style || typeof innerWidth === 'undefined') return;
+    let bottom=0;
+    for(const el of this.root.querySelectorAll('.hud, #speed, .viewctl, .viewextra')) {
+      const r=el.getBoundingClientRect(); if(r.width&&r.height) bottom=Math.max(bottom,r.bottom);
+    }
+    const value=Math.ceil(bottom+8)+'px';
+    let changed=this.root.style.getPropertyValue('--controls-bottom')!==value;
+    if(changed) this.root.style.setProperty('--controls-bottom',value);
+    const card=this.root.querySelector('#tut > .tut');
+    const cr=card?.getBoundingClientRect();
+    const reviewTop=Math.ceil(cr?.width && cr.height && cr.top < innerHeight/2 ? Math.max(bottom+8,cr.bottom+8) : bottom+8)+'px';
+    if(this.root.style.getPropertyValue('--review-top')!==reviewTop) {
+      this.root.style.setProperty('--review-top',reviewTop); changed=true;
+    }
+    if(changed) this.schedulePlacementFrame(true);
   }
 
   // ------------------------------------------------------------ INSPECTOR
@@ -1402,7 +1538,8 @@ export class UI {
   }
   renderFeed(force = false) {
     const s = this.sim.s; this.sim.syncRequestHandling();
-    const key = s.convos.map((c) => `${c.id}:${c.staffHandling}:${c.staffWaiting}:${c.ownerReview}:${this.sim.requestOfferStatus(c)}`).join(',') + ':' + !!s.policies.manualRequests + ':' + (s.mgrLog[0]?.t ?? '') + ':' + (s.mgrLog[0]?.msg ?? '');
+    const officeOpen = this.sim.hour >= OFFICE_HOURS[0] && this.sim.hour < OFFICE_HOURS[1];
+    const key = officeOpen + ':' + s.convos.map((c) => `${c.id}:${c.staffHandling}:${c.staffWaiting}:${c.ownerReview}:${this.sim.requestOfferStatus(c)}`).join(',') + ':' + !!s.policies.manualRequests + ':' + (s.mgrLog[0]?.t ?? '') + ':' + (s.mgrLog[0]?.msg ?? '');
     if (!force && key === this.convoKey) return; this.convoKey = key;
     const feed = this.$('feed');
     for (const el of feed.querySelectorAll('.convo, .request-handling')) el.remove();
@@ -1420,13 +1557,13 @@ export class UI {
       const due = c.ttl ? c.t + c.ttl : null;
       const calm = c.staffHandling ? 'Pause or choose manual review whenever you want to intervene.' : c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. Time stays paused while you review.` : 'No rush. Time stays paused until you choose.';
       const advice=diagnoseRequest(this.sim,c);
-      const handling = c.staffHandling ? `${c.staffHandling} ${c.staffWaiting ? "will handle this when the office opens" : "handling this"} · ${c.actions[c.auto].label}` : c.ownerReview === 'coverage' ? 'Staff coverage ended. Waiting for your decision.' : c.ownerReview === 'failed' ? 'Staff could not complete this. Waiting for your decision.' : 'Waiting for your decision · no rush';
+      const handling = c.staffHandling ? `${c.staffHandling} ${c.staffWaiting ? (!officeOpen ? "will handle this when the office opens" : "will handle this when staff are available") : "handling this"} · ${c.actions[c.auto].label}` : c.ownerReview === 'coverage' ? 'Staff coverage ended. Waiting for your decision.' : c.ownerReview === 'failed' ? 'Staff could not complete this. Waiting for your decision.' : 'Waiting for your decision · no rush';
       el.innerHTML = `<p class="note request-status">${esc(handling)}</p>${c.staffHandling ? `<button class="btn sm" data-a="requestReview" data-id="${c.id}">I’ll handle this</button>` : ''}<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div>${this.sim.requestOfferStatus(c) ? `<p class="note">${esc(this.sim.requestOfferStatus(c))}</p>` : ''}<div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}" ${this.sim.requestActionDisabled(a) ? 'disabled aria-disabled="true"' : ''}>${esc(this.sim.requestActionDisabled(a) ? 'Retention unavailable' : a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
       this.requestCards.push(el.outerHTML);
       if (!c.staffHandling) this.ownerRequestCards.push(el.outerHTML);
     }
     if(ownerCount) { const b=document.createElement('button'); b.className='convo inbox-chip';b.dataset.a='requests';b.textContent=`${ownerCount} owner request${ownerCount===1?'':'s'} · paused · Review`;frag.appendChild(b); }
-    else if(staffCount) { const b=document.createElement('div'); b.className='request-handling inbox-chip';const handlers=[...new Set(order.map(c=>c.staffHandling))].join(' / ');b.textContent=`${handlers} ${order.every(c=>c.staffWaiting) ? 'awaiting office hours for' : 'handling'} ${staffCount} request${staffCount===1?'':'s'}`;frag.appendChild(b); }
+    else if(staffCount) { const b=document.createElement('div'); b.className='request-handling inbox-chip';const handlers=[...new Set(order.map(c=>c.staffHandling))].join(' / ');b.textContent=`${handlers} ${order.every(c=>c.staffWaiting) ? (!officeOpen ? 'awaiting office hours for' : 'awaiting staff availability for') : 'handling'} ${staffCount} request${staffCount===1?'':'s'}`;frag.appendChild(b); }
     feed.prepend(frag);
     if(this.requestPanel && this.modalOpen()) this.renderRequestPanel();
   }
@@ -2025,6 +2162,7 @@ export class UI {
     if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy && !this.menuTouch && now >= (this.menuScrollUntil || 0)) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
     if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.syncOrientation(); this.renderTut(); if (this.floorsOpen) this.refreshFloors(); }
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
+    this.syncControlLayout(); this.schedulePlacementFrame();
     this.updateBubbles(); this.updatePins(); this.frameStep(); this.updateGuide(); this.updateBlueprint();
   }
   setMeta(name, mode) {

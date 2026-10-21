@@ -975,6 +975,23 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 
 #ui .viewctl .floorseg button[data-a="floorChoose"] {width:58px;min-width:58px;font-size:12px;}
 
+/* Keep the four time targets and floor targets separate on narrow phones. */
+@media (max-width:700px) and (min-height:521px) {
+ #ui .viewctl .floorseg button { width:44px; min-width:44px; height:44px; }
+ #ui.has-sheet .tut, #ui.has-sheet .tut:not(.offer):not(.scen),
+ #ui:has(.actionbar) .tut:not(.offer):not(.scen) { top:var(--controls-bottom, calc(116px + var(--safe-t))); }
+ #ui .coach, #ui .feed, #ui:has(.viewctl.open) .feed { top:var(--controls-bottom, calc(116px + var(--safe-t))); }
+ #ui .actionbar:not(.placing):not(.idle-strip) {
+   max-height:min(62dvh, calc(100dvh - var(--review-top, var(--controls-bottom, 116px)) - 64px - var(--safe-b) - 120px));
+ }
+ #ui:has(.actionbar) .tut.scen:not(.min) { max-height:96px; overflow-y:auto; }
+}
+@media (max-width:410px) and (min-height:521px) {
+ #ui .viewctl { flex-direction:column; align-items:flex-end; }
+ #ui .viewctl .viewmore { height:44px; }
+ #ui .viewctl .viewextra { top:102px; }
+}
+
 /* Candidate 22: expansion review that never hides what it describes; practical iPhone touch sizes. */
 #ui .modal.vreview { display:flex; flex-direction:column; max-height:calc(100dvh - 24px - var(--safe-t) - var(--safe-b)); }
 #ui .modal.vreview .vr-body { overflow-y:auto; min-height:0; flex:1 1 auto; -webkit-overflow-scrolling:touch; }
@@ -1097,3 +1114,16 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #startup-error p { line-height: 1.5; }
 #startup-error button { min-height: 48px; padding: 12px 20px; border-radius: var(--r-sm); background: var(--yellow); color: var(--ink); font-weight: 700; }
 #startup-error button:focus-visible { outline: 3px solid var(--paper); outline-offset: 4px; }
+
+/* Keep the yard visible while terms scroll inside the fixed review budget. */
+@media (max-width:700px) and (min-height:521px) {
+ #ui .actionbar:not(.placing):not(.idle-strip) { max-height:min(42dvh, calc(100dvh - var(--review-top, 116px) - 64px - var(--safe-b) - 150px)); gap:4px; padding:6px 10px; }
+ #ui .actionbar .nm small { display:none; }
+ #ui .actionbar .bot { gap:4px; padding:2px 0; }
+ #ui .actionbar .bot .btn, #ui .build-rotate { min-height:44px; }
+ #ui .actionbar .review-body { flex:1 1 auto; }
+ #ui .actionbar .build-details[open] { max-height:120px; overflow-y:auto; overscroll-behavior:contain; }
+ #ui .actionbar .build-details summary { position:sticky; top:0; z-index:2; background:var(--paper); }
+ #ui .actionbar .build-details .refund-note { opacity:1; color:var(--muted); }
+ #ui .actionbar .access-side { margin:2px 0; }
+}

@@ -1,0 +1,7 @@
+PASS import / keep current, 0 archived: every write position, transient and persistent, reload and retry
+PASS import / keep current, 3 archived: every write position, transient and persistent, reload and retry
+PASS import / keep current, 5 archived: every write position, transient and persistent, reload and retry
+PASS Restore previous game, 0 archived: every write position, transient and persistent, reload and retry
+PASS Restore previous game, 3 archived: every write position, transient and persistent, reload and retry
+PASS Restore previous game, 5 archived: every write position, transient and persistent, reload and retry
+PASS archive restore (index 1), 3 archived: every write position, transient and persistent, reload and retry

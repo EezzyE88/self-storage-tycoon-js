@@ -1,0 +1,1 @@
+PASS production raw/compressed load preserves queued retention, policy, cash, time and manual Pause; response resumes exactly once when explicitly exercised with coverage

@@ -6,6 +6,7 @@ export const TICKS_PER_SEC_1X = 60;          // One tick = one game minute; 1x =
 export const BILLING_CYCLE_DAYS = 30;
 export const OFFICE_HOURS = [8, 18];
 export const ACCESS_HOURS = [6, 22];
+export const ROUTINE_VISIT_CHANCE = 0.10;    // Per eligible tenant per day; move-ins, move-outs and shoppers are separate.
 export const FLOOR_H = 1.9;                  // world units per floor
 
 // Ground layer codes
