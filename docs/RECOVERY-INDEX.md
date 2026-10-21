@@ -1,37 +1,48 @@
 # Recovery and retained-artifact index
 
-Updated October 19, 2026, America/Los_Angeles. Repository: EezzyE88/self-storage-tycoon-js only.
+Reconciled October 21, 2026, America/Los_Angeles. Repository: EezzyE88/self-storage-tycoon-js only. Recovery instructions are not authorization to restore or deploy.
 
-## Restore targets
+## Source restore targets
 
-| Priority and purpose | Exact game commit | Hosting record | Use |
-|---|---|---|---|
-| Protected solid build | 2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d | Version 57; hosting 9f8dacf633d665681ed715d8a27eb546dd8eb9e5 | Immutable original recovery baseline; retain separately |
-| Current accepted preview | 7346fb686c86801556fb918d27b62a427cd293fe | Version 60; hosting 71601f7ce298e019342798c738d9662aebfca898 | Current working continuation; includes financing repair and title-tap hotfix |
-| Guidance intermediate | 21e980e880439a883e0814b90cd8850bb76b6a42 | Version 58; hosting 2f1c246321373e205db140e529d873cbd7d63096 | Historical comparison, not preferred restore |
-| Financing intermediate | a721fcefc43daae06c4086e3c60823044527173b | Version 59; hosting b6dbedbde90187d773dacd5c1c1941687278c9c7 | Contains known title-tap regression; do not restore as working release |
+| Purpose | Exact identity | Use |
+|---|---|---|
+| Current accepted gameplay baseline | `0385af259c35058da69ed7d6cbb29e2ab7619abb` | Accessible GitHub source snapshot; baseline for continuation |
+| Original tested source represented above | `b2c55a6ee9033e5b52dbb253fe61689ba5f71f11` | Original exact commit/history retained separately |
+| Baseline complete source tree | `b309d23cca38b17fe02e8f79c654f2d9622b6b66` | Snapshot equivalence identity; documentation branch has a different overall tree |
+| Protected solid build | `2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d` | Earlier immutable recovery checkpoint; retained Safari V57 |
+| Earlier accepted preview | `7346fb686c86801556fb918d27b62a427cd293fe` | Historical V60 source; retain independently |
+| V60 maintenance snapshot | `cea7061be2d7b32863c895afc26f2bd8f4d58429` | GitHub snapshot of original maintenance bd070bb330b24cc9aa2982b0649e76b7cd2eb61e |
+| Current documentation | `maintenance/project-status-20261021` | This reconciliation; same runtime as 0385af2, no merge or deployment |
 
-GitHub master remains e04a808dd1cac558b9e97e8cd5f021f874ac7cfe. It is older than the intended preview stack and is not a substitute for either checkpoint. No master merge or game-repository push is implied by this index.
+V62 publication provenance maps the existing game Site to original b2c55a6. Sites hosting SHAs, original game commits and GitHub snapshot SHAs are different identities. Do not recreate an original SHA from equivalent files or claim a snapshot imports full history.
 
-## Durable packages
+## Known retained artifacts
+
+These names/roles are carried from project records. This update did not download or revalidate every package. An absent package in a checkout is not evidence it is lost.
 
 | Filename | Role |
 |---|---|
-| SST_JS_Solid_Build_Checkpoint_2096ef6_20261019.zip | Original immutable protected checkpoint: complete history, exact source and version 57 publication archive |
-| SST_JS_Accepted_V60_Checkpoint_7346fb6_20261019.zip | New self-contained current checkpoint: complete history preserving the exact accepted commit, clean source with updated records, version 60 publication archive, verification and checksums |
-| SST_Investment_Guidance_Repair_Spec_2096ef6.md | Implemented repair contract; not a current source snapshot |
-| SST_Investment_Guidance_Candidate_21e980e_20261019.zip | Guidance diff, evidence and incremental history |
-| SST_Financing_Presentation_Candidate_a721fce_20261020.zip | Historical financing candidate; known startup regression corrected in version 60 |
-| SST_Title_Tap_Hotfix_7346fb6_20261020.zip | Hotfix diff, focused validation and incremental history |
+| SST_JS_Solid_Build_Checkpoint_2096ef6_20261019.zip | Protected original source/history and V57 publication archive |
+| SST_JS_Accepted_V60_Checkpoint_7346fb6_20261019.zip | Earlier self-contained source/history, V60 archive, verification and checksums |
+| source-history.bundle | Exact original history; verify the enclosing checkpoint and its CHECKPOINT.md |
+| SST_Stylized_20db0f4_Runnable_Comparison.txt | Separate baseline/candidate runtime snapshots and QA/capture code; not full Git history |
+| SST_iPhone_One_Session_Playtest_20261016.md | Existing operating-playtest plan; apply current baseline/status rather than old identities |
 
-Legacy filenames ending 20261020 use the UTC creation date; the development/acceptance session occurred October 19 Pacific. Preserve filenames and original files rather than renaming evidence or overwriting the protected checkpoint. No old package, branch, report or screenshot is deleted by this cleanup.
+Stylized artifact Library ID: `libfile_f5307ee588b08191b4de4cbb690d5dbb`. A collaborator with only GitHub access needs the file supplied separately. Its restore code validates per-file hashes. Do not restore from a retrieved excerpt or treat the .txt as a ZIP.
 
-## Safe recovery
+## Safe recovery procedure
 
-Verify package checksums and the complete source-history.bundle. Recover into a new empty directory; never overwrite master or an existing worktree. The bundle contains exact accepted 7346fb6 and protected 2096ef6 as well as the documentation-maintenance child. The package's CHECKPOINT.md records its exact maintenance SHA and clone instructions.
+1. Determine whether the need is source recovery, hosting rollback or company-save recovery. They are different operations.
+2. Reverify current live refs, Site metadata and intended target; avoid displacing newer accepted work.
+3. Restore source into a new empty directory. Verify package checksums and Git objects/tree before using them. Incremental bundles require their stated parents.
+4. Keep original history, snapshot identity and hosting identity explicit.
+5. Publish only when explicitly tasked, through the supported existing Site path; verify exact served source before issuing a ready-to-test URL.
+6. Recover a playable company only from a verified company export/backup and into an appropriate separate test context.
 
-For an exact version 60 build, check out 7346fb686c86801556fb918d27b62a427cd293fe. For current documentation with identical runtime bytes, use maintenance/status-cleanup-20261019. Keep both identities explicit. Incremental candidate bundles require their stated parent objects; the self-contained checkpoint removes that dependency for recovery.
+**No source checkpoint listed here is an export of Eddie's playable company.** Source restoration does not restore Safari local storage, earned goals or pricing.
 
-Restoration and publication are separate actions. Before any later deployment, verify current live identity and stop if newer intended work would be displaced. Publish through the supported existing Sites project and verify served bytes; Sites hosting commits do not replace game-source identities.
+Coastal was isolated from the game baseline and rejected. No completed rollback is established. Do not roll the game back to V60 or V57 merely because those versions precede Coastal; first identify the actual affected target.
 
-These packages contain source, tests, records and static hosting output. They contain no exported copy of Eddie's playable company. Do not claim source recovery restores browser storage or a normal save.
+## Preserved historical index
+
+[Recovery index through October 19](history/RECOVERY-INDEX-through-20261019.md) preserves earlier exact hosting identities, intermediate candidates and package names. Its “current” V60/master statements are superseded by CURRENT-STATUS.

@@ -1,72 +1,61 @@
-# Self Storage Tycoon JavaScript
+# Self Storage Tycoon — start here
 
-A touch-first 3D self-storage construction and management game. Design the property, operate the business and grow the company: layout → operations → economics → growth.
+A touch-first 3D game about operating and growing a self-storage business on iPhone Safari. The property is the game board: **layout → operations → economics → growth**.
 
-Use only EezzyE88/self-storage-tycoon-js. JavaScript/Three.js is this project's authority; do not combine it with the C++/WASM or Grok projects.
+**Project state, October 21, 2026 (America/Los_Angeles):** playable development game with scoped physical-iPhone acceptance. The next goal is a dependable, understandable and rewarding first-facility experience. Commercial release readiness is not established.
 
-## Current accepted preview
+## New to the project?
 
-Updated October 19, 2026, America/Los_Angeles.
+1. Read [Project overview](docs/PROJECT-OVERVIEW.md) for the product, implemented systems, remaining work and finish criteria.
+2. Read [Current status](docs/CURRENT-STATUS.md) for exact source, hosting, acceptance and candidate identities.
+3. Use [Handoff](docs/HANDOFF.md) to begin work without rediscovering the project.
+4. Use [Recovery index](docs/RECOVERY-INDEX.md) only when restoring source or locating retained checkpoints.
 
-| Item | State |
+Use only **EezzyE88/self-storage-tycoon-js**, the standalone JavaScript/Three.js game. Keep the C++/WASM and Grok projects separate.
+
+## Current baseline
+
+| Item | Identity / meaning |
 |---|---|
-| Accepted game commit | 7346fb686c86801556fb918d27b62a427cd293fe |
-| Safari preview | Version 60; user-reported focused physical Safari PASS |
-| Protected solid-build recovery | 2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d; version 57 retained |
-| Live GitHub master | e04a808dd1cac558b9e97e8cd5f021f874ac7cfe; unchanged |
-| Runtime scope | Three playable floors; up to five company properties |
+| Accepted gameplay source snapshot | `0385af259c35058da69ed7d6cbb29e2ab7619abb` |
+| Original tested source represented by snapshot | `b2c55a6ee9033e5b52dbb253fe61689ba5f71f11` |
+| Gameplay baseline tree | `b309d23cca38b17fe02e8f79c654f2d9622b6b66` |
+| Existing Safari game Site | Version 62; current Site metadata checked October 21 |
+| Protected earlier recovery | `2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d`; retained version 57 |
+| This update | Documentation only on `maintenance/project-status-20261021`; no merge or deployment |
 
-Preview: https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site
+[Open the existing Safari game](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site). It is a public development preview. Its old slug and Site description do not identify its current game source. Publication records associate version 62 with original tested source b2c55a6. This reconciliation checked Site metadata, not fresh served-file hashes or gameplay.
 
-Version 60 restores title-screen taps and retains the financing layout and investment-guidance work. Eddie reported PASS, repeated it, then said the game is in a good state. This is scoped acceptance of the development preview, not blanket device or commercial-release acceptance.
+## What exists
 
-This maintenance branch updates documentation only. Its runtime is byte-identical to accepted 7346fb6; it does not advance master or change the deployed version. The reused on-screen build label is historical; source-proof.json identifies the exact served game commit.
+Maple tutorial, Comeback Yard recovery, scenarios, Business sandbox and Free Build; placement/rotation, construction, commissioning and access; drive-up/interior/climate storage; carts, loading, halls, stairs and elevators; Owner capacity and staff delegation; leasing, operating finance, investment guidance and reserve waiting; career and portfolio systems; local saves, Continue and save export/recovery.
 
-Start with [CURRENT-STATUS.md](docs/CURRENT-STATUS.md), [RECOVERY-INDEX.md](docs/RECOVERY-INDEX.md) and [the version 60 acceptance record](docs/releases/title-taps-hotfix-20261019-ACCEPTANCE.md). [HANDOFF.md](docs/HANDOFF.md) carries a current notice above the preserved historical material.
+Supported scope is three playable floors and up to five company properties. A five-floor specification is a target, not implemented-scope evidence. Pause, 1x, 2x and 4x remain player-controlled; a 1x day is 24 real seconds. Build confirmations preserve an existing manual Pause.
 
-## Implemented game
+## Latest decisions and limits
 
-- Maple Street tutorial, Comeback Yard recovery, other scenarios, Business sandbox and Free Build.
-- Placement, preview, construction, commissioning, access checks and renovation.
-- Drive-up/interior units, climate products, loading, carts, halls, stairs and elevators.
-- Owner capacity, eligible automatic simple repairs, staff priority/delegation, office coverage and requests.
-- Leasing, billing, collections, costs, payroll, credit, financial commitments, reserves and outlook.
-- Separate investment opportunity, affordability and evidence-supported payback; role-relevant capacity advice.
-- Optional reserve waiting with review/resume/stop, interruptions and no automatic purchase.
-- Career tiers, acquisitions, company transfers and portfolio operation.
-- Historical diagnostics, feedback, stylized 3D presentation and procedural audio.
-- Save codes/files, local persistence, Continue and previous-game/archive recovery.
+- Preserve the accepted gameplay baseline and protected checkpoints.
+- Coastal proof `3391b7a3add74fe0f070c15eaee7dab2851ab69d` was **rejected by Eddie** with a request to return to the pre-Coastal version. It is separate from the game; its Site still exists. No completed rollback is verified.
+- Stylized slice `20db0f474f02dbd9891b27bcdef5eaa8fe858fa4` is an unaccepted comparison candidate. Its handoff reports automated passes but zero actual moving captures; physical iPhone remains NOT TESTED.
+- Complete the ordinary ownership loop: operate → understand → invest or defer → see payoff. Do not force hiring/building or tune economics merely to manufacture a successful playthrough.
+- Broad iPhone performance, beginner comprehension, long-term career/portfolio pacing and whole-game acceptance remain incomplete. Older focused passes retain their scope.
 
-Pause, 1x, 2x and 4x are supported. A 1x game day is 24 real seconds. Reviews and build confirmations preserve an existing manual Pause.
+## Source and development
 
-## Acceptance and remaining work
+Static browser ES modules; vendored Three.js is in `vendor/`. Serve over HTTP using the supported environment workflow; do not open `index.html` via file://. Managed Sites work uses its supported preview/publication path. There is no game compilation step. External fonts have system fallbacks.
 
-Protected 2096ef6 retains the earlier scoped Owner repair/capacity/Pause acceptance. Earlier rescue/history/career/save continuity, Ambience silence and floor navigation retain their original physical acceptance. Version 60 closes the title-screen tap blocker through the reported focused Safari check.
-
-Publication verified 44/44 runtime files against exact version 60 source. Actual browser UI clicks and focused Node checks are retained separately from physical Safari acceptance. The hotfix browser fixture uses real UI DOM/listeners with disposable state and renderer/persistence boundary doubles; it is not full-game WebGL or real-save integration testing.
-
-Desktop full-game WebGL QA remains NOT TESTED and its blocker is parked. Dense-device performance, broad layout coverage and sustained natural career/portfolio pacing remain incomplete. Do not reopen passed rescue checks or call historical test counts a new blanket pass.
-
-The next gameplay milestone is ordinary management of the existing rescued/expanded test company: understand cash, vacancies, workload and demand, obtain useful operational relief where appropriate, then choose a justified next improvement or defer spending. No forced hiring, construction, new mode or economy tuning is required.
-
-## Development and source map
-
-The game uses browser ES modules and static runtime assets; there is no game compilation step. Serve over HTTP through the environment's supported preview workflow. In managed Sites environments use the supported Sites preview path, not a separate ad hoc server. External fonts have system fallbacks; Three.js is bundled in vendor/.
-
-Focused Node scripts are under tests/headless/. Read each script's invocation contract; some require exact parent source, fixtures or environment variables. The title interaction fixture is tests/browser/title-taps.html; its setup and limits are in the hotfix release record. Do not equate a zero exit, a DOM fixture or a viewport frame with physical device acceptance.
-
-| Source | Purpose |
+| Files | Responsibility |
 |---|---|
 | js/sim.js, js/data.js | Simulation and centralized tuning |
-| js/main.js, js/ui.js | Company/lifecycle handling and player interface |
+| js/main.js, js/ui.js | Lifecycle, input and interface |
 | js/render.js, js/audio.js | Presentation |
-| js/finance.js, js/economics.js | Finance authority and derived investment guidance |
-| js/comeback.js, js/career.js, js/yardloop.js, js/yardinfill.js | Rescue, career and yard opportunities |
-| js/reservewait.js | Opt-in waiting and its safeguards |
-| js/localsave.js, js/savearchive.js | Local save and recovery |
-| docs/CURRENT-STATUS.md | Current identities, acceptance and next milestone |
-| docs/RECOVERY-INDEX.md | Protected and current recovery targets |
-| docs/releases/, docs/validation/ | Dated evidence with original scope |
-| docs/design/SST_Master_GDD_v1_1_Art_Audio_Complete.pdf | Target design, not proof of implementation |
+| js/finance.js, js/economics.js | Finance and investment guidance |
+| js/comeback.js, js/career.js, js/yardloop.js, js/yardinfill.js | Recovery and progression |
+| js/reservewait.js | Opt-in waiting and interruption safeguards |
+| js/localsave.js, js/savearchive.js | Persistence and recovery |
+| tests/headless/, tests/browser/, tests/browser-qa/ | Focused and browser checks; inspect each invocation contract |
+| docs/releases/, docs/validation/, docs/qa/ | Dated evidence; not automatically current instructions |
 
-Source checkpoints contain code/history, not Eddie's playable company save. A restored source package must never be assumed to restore Safari storage.
+Use isolated branches for new work. Reverify live refs first. No silent master merge, deployment, economics change or normal-save access. Source checkpoints do not contain Eddie's playable company.
+
+Historical packaging and handoff records are preserved and explicitly marked. Current status reconciles their obsolete claims; do not treat historical “no GitHub,” “no physical testing,” or “version 60 current” wording as present state.

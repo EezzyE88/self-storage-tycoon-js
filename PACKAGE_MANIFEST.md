@@ -1,3 +1,5 @@
+> **Historical packaging record — September 30, 2026.** The statements below describe the original package only. They are not current source, hosting, testing or access status. Read [README.md](README.md) and [docs/CURRENT-STATUS.md](docs/CURRENT-STATUS.md) for the reconciled October 21 state. The original body is preserved unchanged.
+
 # Package manifest
 
 This file records how this GitHub-ready package was assembled and how it differs from the original.
