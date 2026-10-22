@@ -259,7 +259,7 @@ export class UI {
       case 'verticalBack': { const R=this.verticalReview; if(R) this.showVertical(R.shell,R); break; }
       case 'verticalCancel': this.endVerticalReview(); this.renderActionBar(); this.resumePopup('vpreview'); break;
       case 'verticalConfirm': {const R=this.verticalQuote;if(R){const result=this.do({type:'verticalUpgrade',shell:R.shell,fitout:R.fitout,stairs:R.stairs,stamp:R.stamp},true);if(result.ok){const was=this.verticalPreviewing;this.closeModal();if(was){this.renderActionBar();this.resumePopup('vpreview');}this.select(R.shell);}else this.showVertical(R.shell,R);}break;}
-      case 'floorPick': this.floorBuilding=+el.dataset.building||null; this.setView(v==='ext'?'ext':+v);this.closeModal();if(this.floorBuilding){const o=this.sim.s.objects[this.floorBuilding];if(o)this.rend.lookAt(o.x+o.w/2,o.y+o.h/2);}break;
+      case 'floorPick': this.floorBuilding=+el.dataset.building||null; this.setView(v==='ext'?'ext':+v);this.closeModal();break;
       case 'view': this.setView(v === 'ext' ? 'ext' : +v); this.sfx('click'); break;
       case 'rot': this.rend.rotate(+v); this.sfx('click'); break;
       case 'zoom': this.rend.zoomBy(+v); break;
@@ -420,6 +420,7 @@ export class UI {
   }
   setView(v) {
     this.rend.setView(v);
+    if (this.sel != null && !this.selectionOnActiveFloor(this.sel)) this.select(null);
     this.syncFloorUi();
     if (this.tool) this.replan();
   }
@@ -455,7 +456,23 @@ export class UI {
   }
   // Selected view to restore from a save: 'ext' or an existing completed floor, otherwise a safe fallback.
   validView(v) { if (v === 'ext') return 'ext'; const max = Math.max(1, ...this.sim.objs('shell').map((o) => o.floors || 1)); return Number.isInteger(v) && v >= 0 && v < max ? v : 'ext'; }
+  // Context below the selected floor is visible, but cannot be inspected.
+  selectionOnActiveFloor(id) {
+    if (id == null || this.rend.view === 'ext') return true;
+    const f = this.rend.view, sim = this.sim, s = sim.s;
+    if (typeof id === 'object') {
+      if (id.kind === 'dirt') return id.f === f;
+      if (id.kind === 'cart') return s.carts.some(c => c.id === id.id && (c.f || 0) === f);
+      return false;
+    }
+    const o = s.objects[id]; if (!o) return false;
+    if (o.type === 'shell') return f < (o.floors || 1);
+    if (o.type === 'elevator' || o.type === 'stairs')
+      return (sim.D.at.get(f * s.W * s.H + o.y * s.W + o.x) || []).includes(id);
+    return (o.f || 0) === f;
+  }
   select(id, keepTab = false) {
+    if (!this.selectionOnActiveFloor(id)) id = null;
     this.reserveWait?.interrupt('Inspection paused waiting.');
     if (id != null) this.sectionMenuKey = null;
     this.sel = id; this.rend.setSelection(typeof id === 'number' ? id : null);
@@ -992,6 +1009,7 @@ export class UI {
     return h;
   }
   inspector() {
+    if (!this.selectionOnActiveFloor(this.sel)) return '';
     const sim = this.sim, s = sim.s, D = sim.D;
     if (typeof this.sel === 'object' && this.sel && this.sel.kind === 'cart') {
       const c = s.carts.find((x) => x.id === this.sel.id); if (!c) return '';
@@ -1116,7 +1134,7 @@ export class UI {
     if (at.length) return at[0].id;
     if (D.unitAt[f][i]) return D.unitAt[f][i];
     if (s.dirt[f][i] > 0.3) return { kind: 'dirt', f, x: cell.x, y: cell.y };
-    if (D.shellAt[i]) return D.shellAt[i];
+    if (D.shellAt[i] && this.selectionOnActiveFloor(D.shellAt[i])) return D.shellAt[i];
     return null;
   }
   tapMap(cell) {
@@ -2462,7 +2480,7 @@ export class UI {
       const selected = view === f && (this.floorBuilding === o.id || (!this.floorBuilding && shells.length === 1));
       return `<button class="btn floor-choice${selected ? ' selected' : ''}${pending ? ' inprog' : ''}" data-a="floorPick" data-building="${o.id}" data-v="${f}" aria-pressed="${selected}"><b>Floor ${f + 1}${selected ? ' · Viewing' : ''}</b><small>${detail}</small></button>`;
     };
-    return `<div class="modal-bg"><div class="modal floors"><div class="row"><h2>View a floor</h2><button class="x" data-a="modalClose" data-qa="floors-close" aria-label="Close floor chooser">${I.x}</button></div><p class="note">Upper floors show that level only. Choose Exterior to see the whole property.</p><button class="btn floor-choice${view === 'ext' ? ' selected' : ''}" data-a="floorPick" data-v="ext" aria-pressed="${view === 'ext'}"><b>Exterior${view === 'ext' ? ' · Viewing' : ''}</b><small>Whole property · roofs and yard</small></button>${shells.map((o, index) => {
+    return `<div class="modal-bg"><div class="modal floors"><div class="row"><h2>View a floor</h2><button class="x" data-a="modalClose" data-qa="floors-close" aria-label="Close floor chooser">${I.x}</button></div><p class="note">Inspect the selected floor. Lower buildings remain visible as roofed context. Choose Exterior to see the whole property.</p><button class="btn floor-choice${view === 'ext' ? ' selected' : ''}" data-a="floorPick" data-v="ext" aria-pressed="${view === 'ext'}"><b>Exterior${view === 'ext' ? ' · Viewing' : ''}</b><small>Whole property · roofs and yard</small></button>${shells.map((o, index) => {
       const F = this.floorState(o);
       const choices = Array.from({length:F.done}, (_, f) => {
         const count = units.filter(u => u.access === 'interior' && (u.f || 0) === f && u.x >= o.x && u.x < o.x + o.w && u.y >= o.y && u.y < o.y + o.h).length;

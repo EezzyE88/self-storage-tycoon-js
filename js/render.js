@@ -203,6 +203,7 @@ export class Renderer {
     this.ovPlane = new THREE.Mesh(new THREE.PlaneGeometry(sim.s.W, sim.s.H), new THREE.MeshBasicMaterial({ map: this.ovTex, transparent: true, depthWrite: false, opacity: 0.85 }));
     this.ovPlane.rotation.x = -Math.PI / 2; this.ovPlane.position.set(sim.s.W / 2, 0.03, sim.s.H / 2); this.ovPlane.renderOrder = 5; this.ovPlane.visible = false; this.scene.add(this.ovPlane);
     this.staticG = new THREE.Group(); this.scene.add(this.staticG);
+    this.contextG = new THREE.Group(); this.scene.add(this.contextG);
     this.dynG = new THREE.Group(); this.scene.add(this.dynG);
     this.previewG = new THREE.Group(); this.scene.add(this.previewG);
     this.envG = new THREE.Group(); this.scene.add(this.envG);
@@ -512,7 +513,7 @@ export class Renderer {
     });
   }
   clearGroup(g) { while (g.children.length) { const c = g.children[0]; g.remove(c); this.disposeTree(c); } }
-  clearStatic() { this.clearGroup(this.staticG); this.openHouse = null; this.anim = []; this.badges = []; this.statusSlots = []; this.statusBatches = new Map(); }
+  clearStatic() { this.clearGroup(this.staticG); this.clearGroup(this.contextG); this.openHouse = null; this.anim = []; this.badges = []; this.statusSlots = []; this.statusBatches = new Map(); }
   add(mesh, f = 0, tag = {}) { mesh.userData = { f, ...tag }; mesh.castShadow = mesh.castShadow ?? true;
     // Tiny box props retain appearance/selection, but phones skip their shadow-map draw.
     if (this.mobile && mesh.geometry === this.geo.box && Math.max(mesh.scale.x, mesh.scale.y, mesh.scale.z) <= 0.85) mesh.castShadow = false; this.staticG.add(mesh); return mesh; }
@@ -548,7 +549,38 @@ export class Renderer {
     this.buildArchitectureDetail();
     this.openHouse = new OpenHousePresentation(this);
     this.buildFence();
+    this.buildBuildingContext();
     this.applyView();
+  }
+  // Roofed, non-interactive massing keeps lower buildings in the property context.
+  // Batch by highest completed floor: no tenant contents, labels or pick targets.
+  buildBuildingContext() {
+    const batches = new Map(), {s, D} = this.sim;
+    for (const o of Object.values(s.objects)) {
+      if (o.cstate === 'construction') continue;
+      const shell = o.type === 'shell';
+      if (!shell && !(['unit', 'office'].includes(o.type) && !D.shellAt[o.y * s.W + o.x])) continue;
+      const f = shell ? (o.floors || 1) - 1 : (o.f || 0);
+      const key = `${f}:${o.type}`;
+      if (!batches.has(key)) batches.set(key, {f, objects: []});
+      batches.get(key).objects.push(o);
+    }
+    const matrix = new THREE.Matrix4(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), scale = new THREE.Vector3();
+    for (const {f, objects} of batches.values()) {
+      const group = new THREE.Group(); group.userData = {contextFloor: f, contextIds: objects.map(o => o.id)};
+      for (const roof of [false, true]) {
+        const mesh = new THREE.InstancedMesh(this.geo.box, roof ? this.mat.shellRoof : this.mat.shellWall, objects.length);
+        objects.forEach((o, i) => {
+          const bottom = o.type === 'shell' ? 0 : (o.f || 0) * FLOOR_H;
+          const h = o.type === 'shell' ? (o.floors || 1) * FLOOR_H : o.type === 'office' ? 1.8 : WALL_H;
+          matrix.compose(pos.set(o.x + o.w / 2, roof ? bottom + h + .07 : bottom + h / 2, o.y + o.h / 2), q,
+            scale.set(o.w + (roof ? .12 : 0), roof ? .14 : h, o.h + (roof ? .12 : 0)));
+          mesh.setMatrixAt(i, matrix);
+        });
+        mesh.receiveShadow = true; mesh.castShadow = false; group.add(mesh);
+      }
+      this.contextG.add(group);
+    }
   }
   buildStatusMarks() {
     const capacity=new Map();for(const slot of this.statusSlots)capacity.set(slot.f,(capacity.get(slot.f)||0)+1);
@@ -832,12 +864,14 @@ export class Renderer {
   applyView() {
     const v = this.view;
     this.f2Plate.visible = Number.isInteger(v)&&v>0; this.f2Plate.position.y=this.floorY();
+    for (const group of this.contextG.children) group.visible = Number.isInteger(v) && v > group.userData.contextFloor;
     for (const m of this.staticG.children) {
       const u = m.userData;
       if (u.roof) { m.visible = v === 'ext'; continue; }
       if (u.canopy) { m.material.opacity = v === 'ext' ? 0.88 : 0.35; }
       if (u.shellWall) {
         const shell = this.sim.s.objects[u.shell];
+        if (Number.isInteger(v) && v >= (shell?.floors || 1)) { m.visible = false; continue; }
         if (v === 'ext') { m.visible = true; this.setWallH(m, FLOOR_H); }
         else if (v === 0) { m.visible = u.wf === 0; this.setWallH(m, 0.45); }
         else { m.visible = u.wf <= v; this.setWallH(m, u.wf === v ? 0.45 : FLOOR_H); }
