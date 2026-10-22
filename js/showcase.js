@@ -1,4 +1,4 @@
-import { BEATS } from './tutorial.js';
+import { BEATS, tutorialText } from './tutorial.js';
 // Showcase layer: living title screen, cinematic tour, follow-cam with tenant stories, photo mode,
 // milestone celebrations and money pops. Presentation only: reads the simulation, never changes it.
 import { NAMES_FIRST, NAMES_LAST, FLOOR_H, MIN_PER_DAY } from './data.js';
@@ -311,7 +311,7 @@ export function installShowcase(game) {
       case 'milestone': if (MILESTONES[e.k] && !String(e.k).startsWith('scenario_')) celebrate('Milestone', MILESTONES[e.k], milestoneSub(e.k), officeAt()); break;
       case 'commissioned': if (e.n >= 2) celebrate('Grand opening', `${e.n} new units open`, 'Now visible to shoppers. Leasing starts today.', { x: e.x + 0.5, z: e.y + 0.5, f: e.f }); break;
       case 'scenario_end': if (e.won) celebrate('Scenario complete', s.scenario ? s.scenario.name || 'Goals met' : 'Goals met', `Finished on day ${game.sim.day}`, officeAt()); break;
-      case 'tut_done': if (s.tut.done) celebrate('Graduated', 'Maple Street is yours', 'The full game is unlocked. Build whatever you like.', officeAt()); else if (BEATS[e.beat] && BEATS[e.beat + 1] && e.beat > 0) celebrate(`Part ${e.beat + 1} of ${BEATS.length} complete`, BEATS[e.beat].title.replace(/\.$/, ''), `Next: ${BEATS[e.beat + 1].title.replace(/\.$/, '')}`, officeAt()); break;
+      case 'tut_done': if (s.tut.done) celebrate('Graduated', 'Maple Street is yours', 'The full game is unlocked. Build whatever you like.', officeAt()); else if (BEATS[e.beat] && BEATS[e.beat + 1] && e.beat > 0) celebrate(`Part ${e.beat + 1} of ${BEATS.length} complete`, tutorialText(game.sim, BEATS[e.beat].title).replace(/\.$/, ''), `Next: ${tutorialText(game.sim, BEATS[e.beat + 1].title).replace(/\.$/, '')}`, officeAt()); break;
       case 'movedin': case 'moveout': checkFull(); break;
       case 'auction_start': auctionCrowd(e.units); { const u = s.objects[e.units[0]]; celebrate('Auction day', `${e.units.length} unit${e.units.length > 1 ? 's' : ''} up for bid`, 'Bidders are gathering at the doors. Sales close in about an hour.', u ? { x: u.x + 0.5, z: u.y + 0.5, f: u.f || 0 } : officeAt()); } break;
       case 'auction_sold': if (e.tier === 'treasure') celebrate('Auction surprise', `Unit ${(game.sim.s.objects[e.unit] || {}).num || ''}: ${e.what}`, `Bidding war - sold for ${money(e.price)}`, { x: e.x + 0.5, z: e.y + 0.5, f: e.f });

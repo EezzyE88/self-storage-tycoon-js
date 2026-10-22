@@ -1,0 +1,7 @@
+PASS cards and completion banners use the same live role number without changing state
+PASS tutorial names the existing speed, rotation and repair controls
+PASS 390×844 caption geometry avoids price, tabs, instructions and viewport edges
+PASS 390×844 production pointer hides redundant/blocked captions and preserves state
+PASS 375×667 caption geometry avoids price, tabs, instructions and viewport edges
+PASS 375×667 production pointer hides redundant/blocked captions and preserves state
+ALL PASS: 6 guidance groups. Rectangle/DOM-double checks only; rendered browser and physical Safari NOT TESTED.

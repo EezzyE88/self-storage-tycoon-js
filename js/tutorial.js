@@ -63,7 +63,7 @@ export const BEATS = [
     steps: [
       { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin (the ring points at it). Tap the unit itself.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim, ui) => (ui && ui.sel === unitByRole(sim, 'mapleTurnover').id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
       { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the <b>Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
-      { t: 'Start the clock: tap <b>1x</b>', d: 'The speed controls are at the <b>top right</b>. At <b>1x</b>, a day takes <b>24 real seconds</b>; <b>2x</b> takes 12 seconds and <b>4x</b> takes 6. Pause whenever you want to inspect or plan.', sel: PLAY, done: (sim) => running(sim) || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Start the clock: tap <b>1x</b>', d: 'The speed controls are at the <b>top left</b>. At <b>1x</b>, a day takes <b>24 real seconds</b>; <b>2x</b> takes 12 seconds and <b>4x</b> takes 6. Pause whenever you want to inspect or plan.', sel: PLAY, done: (sim) => running(sim) || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
       { t: 'Watch the Owner finish', d: 'The Owner walks from the office to Unit 107. The pin fills as work progresses (about 2-3 game hours). Use <b>4x</b> to hurry.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
     ],
     check: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
@@ -72,7 +72,7 @@ export const BEATS = [
     why: 'Prospects compare your asking rent with the market. Price higher and fewer sign; price lower and you fill faster but earn less. Change asking rents later in <b>Business &rarr; Asking rents</b>.',
     enter: (sim) => { const t = sim.s.t; const m = t % 1440; const at = m < 8.5 * 60 ? t - m + 8.5 * 60 : m > 17 * 60 ? t - m + 1440 + 8.5 * 60 : t + 45; sim.schedule({ kind: 'prospect', size: '5x10', climate: false, keen: true }, at); },
     steps: [
-      { t: 'Keep time running', d: 'If paused, tap <b>1x</b> or faster at the top right. The office opens at 8:30 AM.', sel: PLAY, done: (sim) => running(sim) || sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
+      { t: 'Keep time running', d: 'If paused, tap <b>1x</b> or faster at the top left. The office opens at 8:30 AM.', sel: PLAY, done: (sim) => running(sim) || sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
       { t: 'Watch for the prospect', d: 'A car enters through the gate at the bottom, parks by the <b>Office</b> (lower left) and the customer walks inside.', done: (sim) => sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
       { t: 'They sign a lease', d: 'At the counter they pick a unit. A green <b>+$/mo</b> pop shows the new rent, and the feed on the right logs the lease.', done: (sim) => !!sim.s.milestones.first_lease_after_turnover },
     ],
@@ -93,7 +93,7 @@ export const BEATS = [
     focus: () => ({ tool: 'du10x10', cell: { x: 13, y: 22 } }),
     steps: [
       ...buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, end: { x: 13, y: 28 }, axis: 'y', placed: (sim) => ordered(sim, 'du10x10'),
-        place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Flip doors</b> if they don\'t.' }),
+        place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.' }),
       waitBuild('Let construction finish', (sim) => newUnits(sim).some((u) => u.cstate !== 'construction') || !!sim.s.milestones.first_expansion),
       commissionStep(() => true, (sim) => !!sim.s.milestones.first_expansion),
     ],
@@ -105,7 +105,7 @@ export const BEATS = [
     focus: (sim) => { const L = hallLight(sim); return { obj: L && L.id, view: 0 }; },
     steps: [
       { t: 'Look inside: tap <b>F1</b>', d: 'On the right-hand rail, <b>EXT</b> shows roofs; <b>F1</b> lifts the roof so you see inside floor 1.', sel: '#floors [data-v="0"]', done: (sim, ui) => (ui && ui.rend && ui.rend.view === 0) || !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
-      { t: 'Tap the broken <b>light</b>', d: 'It\'s in the middle of the main hallway, under the red wrench pin (the ring marks it).', obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
+      { t: 'Tap the broken <b>light</b>', d: 'It\'s in the middle of the main hallway, under the orange wrench pin (the ring marks it).', obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
       { t: 'Tap <b>Send Owner</b>', d: 'In the light\'s panel, tap <b>Send Owner</b>. If the Owner is busy, the job waits its turn.', sel: `[data-cmd*='"ownerTask"']`, done: (sim) => !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
       { t: 'Let the Owner fix it', d: 'Keep time running. The Owner walks in through the wide door and repairs the light (sparks when done).', sel: PLAY, done: (sim) => !!sim.s.milestones.first_repair },
     ],
@@ -220,10 +220,16 @@ export const LESSONS = [
 export const lessonById = (id) => LESSONS.find((l) => l.id === id);
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
+export function tutorialText(sim, value) {
+  return typeof value === 'string' ? value.replace(/Unit (107|203)\b/g, (_, n) => {
+    const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
+    return u ? `Unit ${u.num}` : 'the tutorial unit';
+  }) : value;
+}
 export function curBeat(sim) {
   const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[sim.s.tut.beat] : null;
   if(!b)return null;
-  const text=v=>typeof v==='string'?v.replace(/Unit (107|203)\b/g,(_,n)=>{const u=unitByRole(sim,n==='107'?'mapleTurnover':'mapleInteriorMoveout');return u?`Unit ${u.num}`:'the tutorial unit';}):v;
+  const text = value => tutorialText(sim, value);
   return {...b,title:text(b.title),body:text(b.body),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
 }
 // A navigation step whose destination is already showing is complete: never ask the player to tap what is selected.
