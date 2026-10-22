@@ -1,3 +1,4 @@
+import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';
 import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';
 import { normalizeYardLoop, yardFocus, yardLease, updateYardLoop } from './yardloop.js';
 import { normalizeProjects, projectOffers, matchesProject, startProject, reconcileProject, projectLease } from './propertyprojects.js';
@@ -49,7 +50,7 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [], ad: null, adHistory: [] },
     milestones: {}, tut: { on: mode === 'tutorial', beat: 0, flags: {}, done: false },
     open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true },
-    weather: 'fair', nextId: 1, structV: 1, unitNo: { drive: 101, interior: 201, upper: 301 },
+    weather: 'fair', nextId: 1, structV: 1, unitNumbering: freshNumbering(), unitRoles: {},
     lastCommit: null,
   };
   const M = MARKETS[market];
@@ -104,6 +105,7 @@ export class Sim {
         bucket.categories[row.cat] = cents((bucket.categories[row.cat] || 0) + row.amt);
       }
     }
+    normalizeNumbering(state);
     ensureFloors(state,floorCount(state));
     normalizeComeback(state);
     ensureWorkReport(state);
@@ -853,6 +855,8 @@ export class Sim {
     if (a.tool === 'demolish') return this.demolish(R);
     const rush = !!a.rush && (s.coTier || 1) >= 2 && !this.instantOn(); if (rush) { R.cost = Math.round(R.cost * 1.25); R.dur = R.dur * 0.5; }
     if (!this.unlimited() && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }
+    const capacity=numberCapacity(s,R.creates);if(!capacity.ok)return capacity;
+    reserveNumbers(s,R.creates);
     const ord = { id: this.id(), label: R.label, tool: a.tool, cost: R.cost, dur: Math.max(30, Math.round(R.dur)), prog: 0, st: 'construction', objs: [], tiles: R.tiles, t0: s.t, cells: R.items.filter((it) => !it.skip).map((it) => ({ x: it.x, y: it.y, f: it.f })) };
     if (!s.creative) this.money(-R.cost, 'capex', R.label);
     if (R.waitShell) ord.waitShell = R.waitShell;
@@ -861,8 +865,7 @@ export class Sim {
       const o = { id: this.id(), ...c, cstate: 'construction', order: ord.id, cond: c.cond ?? 1 };
       if (o.type === 'unit') {
         o.commercial = 'none'; o.lease = null;
-        const key = o.access === 'drive' ? 'drive' : o.f > 0 ? 'upper' : 'interior';
-        { const base = { drive: 100, interior: 200, upper: 300 }[key], k = s.unitNo[key]++ - base - 1; o.num = base + Math.floor(k / 99) * 1000 + (k % 99) + 1; } o.name = 'Unit ' + o.num;
+        nameUnit(s,o,c.unitNumber);
       }
       if (o.type === 'corral') { o.name = this.corralName(o); }
       if (o.type === 'elevator') Object.assign(o, { pos: 0, tgt: null, door: 0, riders: [], q: Array.from({length:o.servedFloors?.length||2},()=>[]), cap: 4, trips: 0 });
@@ -1201,6 +1204,7 @@ export class Sim {
     const op = this.renovateOptions(u).find((x) => x.kind === a.kind); if (!op) return { ok: false, msg: 'Only vacant units can be renovated' };
     if (!op.ok) return { ok: false, msg: op.why };
     if (!this.unlimited() && s.cash < op.cost) return { ok: false, msg: 'Not enough cash' };
+    if(a.kind==='split'){const cap=numberCapacity(s,[{type:'unit',f:u.f||0}]);if(!cap.ok)return cap;}
     if (!s.creative) this.money(-op.cost, 'capex', `${op.label} - ${u.name}`);
     s.tasks = s.tasks.filter((t) => !(t.obj === u.id && t.type === 'makeready'));
     const ready = (o) => { o.commercial = 'unready'; o.vacatedAt = s.t; this.addTask({ type: 'makeready', need: 'makeready', obj: o.id, label: `Make-ready ${o.name}`, work: WORK.makeready }); };
@@ -1208,7 +1212,7 @@ export class Sim {
     else {
       const dx = u.dir && u.dir[0] !== 0; const parts = dx ? [{ x: u.x, y: u.y, w: 2, h: 1 }, { x: u.x, y: u.y + 1, w: 2, h: 1 }] : [{ x: u.x, y: u.y, w: 1, h: 2 }, { x: u.x + 1, y: u.y, w: 1, h: 2 }];
       delete s.objects[u.id];
-      parts.forEach((p, k) => { const o = { ...u, ...p, id: this.id(), size: '5x10', lease: null }; if (k) { const key = 'drive'; const base = 100, n = s.unitNo[key]++ - base - 1; o.num = base + Math.floor(n / 99) * 1000 + (n % 99) + 1; o.name = 'Unit ' + o.num; } s.objects[o.id] = o; ready(o); });
+      parts.forEach((p, k) => { const o = { ...u, ...p, id: this.id(), size: '5x10', lease: null }; if (k) nameUnit(s,o); s.objects[o.id] = o; ready(o); });
     }
     this.markDirty(); this.emit('renovated', { unit: u.id, kind: a.kind });
     return { ok: true, msg: `${op.label}: done. Make-ready queued.` };

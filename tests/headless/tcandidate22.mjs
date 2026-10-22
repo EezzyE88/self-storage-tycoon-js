@@ -28,13 +28,13 @@ function fixture(sim=clone(three),speed=0){sim.s.speed=speed;const ui=Object.cre
   ui.root={querySelectorAll:sel=>sel==='#floors button'?floors:[],querySelector:sel=>sel==='[data-a="floorChoose"]'?floors[2]:null,classList:el().classList};
   ui.renderSheet=()=>{};ui.renderTut=()=>{};ui.renderActionBar=()=>{};return{ui,sim,floors,boxes,rend};}
 
-await test('1. unit floor identity: F1, F2 and F3 units never share a label (Unit 307 vs Unit 315)',()=>{
+await test('1. unit floor identity: F1, F2 and F3 units never share a label (Unit 2007 vs Unit 3001)',()=>{
   assert.equal(floorName(0),'Floor 1');assert.equal(floorName(1),'Floor 2');assert.equal(floorName(2),'Floor 3');assert.equal(floorName(undefined),'Floor 1');
   const {ui}=fixture(three);const html=num=>{ui.sel=unitNo(num).id;return ui.inspector();};
-  assert.equal(unitNo(307).f,1);assert.equal(unitNo(315).f,2);
-  assert.match(html(307),/>Floor 2</);assert.doesNotMatch(html(307),/>Floor 3</);assert.match(html(315),/>Floor 3</);assert.doesNotMatch(html(315),/>Floor 2</);
+  assert.equal(unitNo(2007).f,1);assert.equal(unitNo(3001).f,2);
+  assert.match(html(2007),/>Floor 2</);assert.doesNotMatch(html(2007),/>Floor 3</);assert.match(html(3001),/>Floor 3</);assert.doesNotMatch(html(3001),/>Floor 2</);
   const f1=three.objs('unit').find(u=>u.access==='interior'&&!u.f);assert.match(html(f1.num),/>Floor 1</);
-  ui.sel=unitNo(315).id;assert.match(ui.dockSummary('Unit 315',''),/5x10 · Floor 3/);ui.sel=unitNo(307).id;assert.match(ui.dockSummary('Unit 307',''),/5x10 · Floor 2/);});
+  ui.sel=unitNo(3001).id;assert.match(ui.dockSummary('Unit 3001',''),/5x10 · Floor 3/);ui.sel=unitNo(2007).id;assert.match(ui.dockSummary('Unit 2007',''),/5x10 · Floor 2/);});
 await test('1. EXT/F1/Floors highlight follows the rendered view, including direct renderer changes',()=>{
   const {ui,floors,rend}=fixture();for(const [v,on] of [['ext',[1,0,0]],[0,[0,1,0]],[1,[0,0,1]],[2,[0,0,1]]]){rend.view=v;ui.syncFloorUi();assert.deepEqual(floors.map(b=>+b.classList.contains('on')),on,String(v));}
   assert.equal(floors[2].textContent,'F3 ▾');rend.view=0;ui.syncFloorUi();assert.equal(floors[2].textContent,'Floors');assert.equal(floors[1].classList.contains('on'),true);});
@@ -102,7 +102,7 @@ await test('4. tutorial step is the first incomplete step; restored lessons neve
   const s=makeMaple(3);s.s.tut.on=false;s.s.tut.done=true;s.s.lesson={id:'interior',idMark:s.s.nextId,built:[],flags:{},entered:true};s.s.milestones.first_cart_trip=true;
   const st=stepState(s,{tab:null,sel:null});assert.equal(st.cur,0,'cart lesson starts at its unmet first step');assert.deepEqual(st.done,[false,true,true]);
   s.s.lesson.flags.corralInspected=true;assert.equal(stepState(s,{sel:null}).all,true);
-  const m=makeMaple(3);m.s.tut.beat=BEATS.findIndex(b=>b.id==='makeready');const u107=m.objs('unit').find(u=>u.num===107);
+  const m=makeMaple(3);m.s.tut.beat=BEATS.findIndex(b=>b.id==='makeready');const u107=m.s.objects[m.s.unitRoles.mapleTurnover];
   m.s.speed=1;assert.equal(stepState(m,{sel:null}).cur,0,'running clock does not skip "Tap Unit 107"');
   assert.equal(stepState(m,{sel:u107.id}).cur,1);});
 await test('4. an already-selected tab or category completes its navigation step',()=>{
@@ -169,10 +169,10 @@ await test('A. map rings require the point itself to be the map, never an interf
   hit={id:'',closest:()=>null,className:'tabs'};assert.equal(ui.mapPointClear({x:200,y:620}),false,'covered by bottom navigation');assert.equal(ui.mapPointClear({x:200,y:700}),false,'outside viewport');
   const src=readFileSync('js/ui.js','utf8');assert.match(src,/#pins \.pin\[data-k="obj"\]\[data-id="\$\{o\.id\}"\]/,'ring binds to the object pin');assert.match(src,/g\.style\.transition = jump \|\| g\.hidden \? 'none' : ''/);});
 await test('B. make-ready action stays in compact and detailed unit views until accepted, then shows status only',()=>{
-  const s=makeMaple(3);const u=s.objs('unit').find(u=>u.num===107);if(u.lease)s.endLease(s.s.leases[u.lease],'moveout');assert.ok(s.s.tasks.some(t=>t.type==='makeready'&&t.obj===u.id));const {ui}=fixture(s);ui.sel=u.id;
+  const s=makeMaple(3);const u=s.s.objects[s.s.unitRoles.mapleTurnover];if(u.lease)s.endLease(s.s.leases[u.lease],'moveout');assert.ok(s.s.tasks.some(t=>t.type==='makeready'&&t.obj===u.id));const {ui}=fixture(s);ui.sel=u.id;
   for(const tall of [false,true]){ui.sheetTall=tall;const h=ui.inspector(),rail=h.slice(h.indexOf('class="dock-actions"'),h.indexOf('class="body"'));assert.match(rail,/ownerMakeReady/,`action present when ${tall?'detailed':'compact'}`);}
   assert.ok(s.dispatch({type:'ownerMakeReady',unit:u.id,forceOwner:true}).ok);for(const tall of [false,true]){ui.sheetTall=tall;const h=ui.inspector();assert.doesNotMatch(h,/"type":"ownerMakeReady"/,'no stale action');assert.match(h,/Make-ready assigned|Make-ready \d+%/);}
-  const p=makeMaple(3);const v=p.objs('unit').find(u=>u.num===107);if(v.lease)p.endLease(p.s.leases[v.lease],'moveout');p.dispatch({type:'hire',role:'porter'});const f=fixture(p).ui;f.sel=v.id;assert.match(f.inspector(),/Queue Porter|ownerMakeReady/,'staff-first route still offered');});
+  const p=makeMaple(3);const v=p.s.objects[p.s.unitRoles.mapleTurnover];if(v.lease)p.endLease(p.s.leases[v.lease],'moveout');p.dispatch({type:'hire',role:'porter'});const f=fixture(p).ui;f.sel=v.id;assert.match(f.inspector(),/Queue Porter|ownerMakeReady/,'staff-first route still offered');});
 await test('D. floor chooser shows live in-progress state, never "not built yet", never counts it complete',()=>{
   const s=makeMaple(3);s.s.cash=1e6;const R=s.verticalPlan(SH);s.dispatch({type:'verticalUpgrade',...R});const ord=s.s.orders.at(-1);const {ui}=fixture(s);
   let h=ui.floorsHtml();assert.match(h,/Building 12 · 1 completed floor</);assert.match(h,/F2 · 0% · reinforcement/);assert.doesNotMatch(h,/F2 not built yet/);assert.match(h,/Plan next floor · after F2 handover/);assert.doesNotMatch(h,/data-a="verticalReview"/);

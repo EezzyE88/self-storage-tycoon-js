@@ -119,7 +119,7 @@ export function makeComeback(seed = 4401) {
   for (const o of Object.values(s.objects)) o.cond = 1;
   for (const cart of s.carts) cart.cond = 1;
   for (const d of s.dirt) d.fill(0);
-  const targets = sim.objs('unit').filter(u => u.access === 'drive' && u.num >= 101 && u.num <= 106).sort((a,b) => a.num-b.num);
+  const targets = sim.objs('unit').filter(u => u.access === 'drive' && (u.f||0)===0).sort((a,b) => a.id-b.id).slice(0,6);
   for (const u of sim.objs('unit')) if (!u.lease) u.commercial = 'ready';
   for (const u of targets) {
     const L = s.leases[u.lease]; if (L) { delete s.tenants[L.tenant]; delete s.leases[L.id]; }

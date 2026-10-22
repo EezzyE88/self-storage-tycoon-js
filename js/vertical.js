@@ -1,5 +1,6 @@
 // Vertical prototype: isolated extension rules; legacy one/two-floor tool quotes are untouched.
 import {TOOLS,SIZES,CLIMATE_COST_MULT,POWER,OPEX} from './data.js';
+import { numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';
 export const MAX_FLOORS=5, RELEASE_FLOORS=3;
 export function floorCount(s){return Math.max(2,...Object.values(s.objects).filter(o=>o.type==='shell').map(o=>o.floors||1),s.hall?.length||2);}
 export function ensureFloors(s,n){if(!Number.isInteger(n)||n<2||n>MAX_FLOORS)throw Error('Invalid floor count');for(const k of ['hall','dirt'])while(s[k].length<n)s[k].push(new Array(s.W*s.H).fill(0));}
@@ -44,16 +45,17 @@ export function verticalPlan(sim,id,{fitout=true,stairs=false}={}){
  let extraPower=Math.max(0,Math.ceil((P.demand+power-P.cap)/TOOLS.power.kw));while(extraPower-->0)if(!pad('power'))return bad('No free Electrical Service pad.');
  const shaft=elevator||newShaft,i=sim.idx(shaft.x,shaft.y);
  if(fitout&&![[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>tiles.some(t=>t.i===sim.idx(shaft.x+dx,shaft.y+dy))))return bad('Copied hallway does not reach the new freight landing.');
+ const capacity=numberCapacity(s,creates);if(!capacity.ok)return bad(capacity.msg);
  const cost=rows.reduce((a,r)=>a+r.cost,0),unitCreates=creates.filter(o=>o.type==='unit');
  const opex=creates.reduce((n,o)=>n+(o.type==='hvac'?OPEX.hvacPlant:o.type==='power'?OPEX.power:OPEX[o.type]||0)+(o.type==='unit'?OPEX.perUnit+(o.env==='climate'?OPEX.hvacPerClimateCell*SIZES[o.size].sqft/25:0):0),0);
  return {ok:true,opex,shell:id,from:sh.floors,f,fitout,stairs:!!stair,elevator:elevator?.id||null,stair:stair?.id||null,newShaft,creates,tiles,rows,cost,stamp:s.structV,unitCreates,dur:rows.reduce((a,r)=>a+r.dur,0)+30,warning:!fitout?'Structure only; fit-out and commissioning are still required.': 'Copies the existing interior layout and product mix. Commission units after construction; rentals are not guaranteed.'};
 }
 export function beginVertical(sim,a){const R=verticalPlan(sim,a.shell,a);if(!R.ok)return R;if(a.stamp!==sim.s.structV)return{ok:false,msg:'Building changed. Review a fresh quote.'};if(!sim.unlimited()&&sim.s.cash<R.cost)return{ok:false,msg:'Not enough cash for the reviewed package.'};
- const s=sim.s;ensureFloors(s,R.f+1);s.floorModelVersion=1;
+ const s=sim.s;reserveNumbers(s,R.creates);ensureFloors(s,R.f+1);s.floorModelVersion=1;
  const ord={id:sim.id(),tool:'vertical',label:`Building ${R.shell} → F${R.f+1}`,cost:R.cost,dur:R.dur,prog:0,st:'construction',objs:[],tiles:R.tiles,t0:s.t,cells:[],vertical:{...R,phase:0,elapsed:0,spent:0,ids:[],stages:[{kind:'reinforce',cost:R.rows[0]?.label==='Structural reinforcement'?R.rows[0].cost:0,dur:R.rows[0]?.label==='Structural reinforcement'?R.rows[0].dur:0},{kind:'structure',cost:26*s.objects[R.shell].w*s.objects[R.shell].h,dur:600+14*s.objects[R.shell].w*s.objects[R.shell].h},{kind:'fitout',cost:R.rows.filter(r=>!['Structural reinforcement',`F${R.f+1} structure`,'Required freight elevator','Required freight landing extension','Optional stair landing extension'].includes(r.label)).reduce((n,r)=>n+r.cost,0),dur:R.rows.filter(r=>!['Structural reinforcement',`F${R.f+1} structure`,'Required freight elevator','Required freight landing extension','Optional stair landing extension'].includes(r.label)).reduce((n,r)=>n+r.dur,0)},{kind:'shaft',cost:(R.newShaft?9500+1900*Math.max(0,R.f-1):1900)+(R.stair?560:0),dur:(R.newShaft?2160+720*Math.max(0,R.f-1):720)+(R.stair?240:0)},{kind:'test',cost:0,dur:30}]}};
  // State contains serializable plans only; passengers and existing equipment are never recreated.
  if(!s.creative)sim.money(-R.cost,'capex',ord.label);s.orders.push(ord);s.lastCommit={order:ord.id,t:s.t};sim.markDirty();sim.emit('commit',{order:ord.id,cells:[]});return{ok:true,order:ord.id,msg:`F${R.f+1} package committed: $${R.cost.toLocaleString()}`};}
-function addObjects(sim,ord){const V=ord.vertical,s=sim.s;for(const c of V.creates){if(c===V.newShaft||c.type==='elevator')continue;const o={id:sim.id(),...c,order:ord.id,cond:1,cstate:c.type==='unit'?'built':'operating'};if(o.type==='unit'){const k=s.unitNo.upper++-301;o.num=300+Math.floor(k/99)*1000+(k%99)+1;o.name='Unit '+o.num;o.commercial='none';o.lease=null;}s.objects[o.id]=o;ord.objs.push(o.id);V.ids.push(o.id);}for(const t of ord.tiles)s.hall[t.f][t.i]=1;}
+function addObjects(sim,ord){const V=ord.vertical,s=sim.s;for(const c of V.creates){if(c===V.newShaft||c.type==='elevator')continue;const o={id:sim.id(),...c,order:ord.id,cond:1,cstate:c.type==='unit'?'built':'operating'};if(o.type==='unit'){nameUnit(s,o,c.unitNumber);o.commercial='none';o.lease=null;}s.objects[o.id]=o;ord.objs.push(o.id);V.ids.push(o.id);}for(const t of ord.tiles)s.hall[t.f][t.i]=1;}
 export function tickVertical(sim,ord){const V=ord.vertical,s=sim.s,sh=s.objects[V.shell];if(!sh){cancelVertical(sim,ord);return;}
  const stage=V.stages[V.phase];if(!stage)return;
  const el=V.elevator?s.objects[V.elevator]:null;

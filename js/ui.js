@@ -359,7 +359,7 @@ export class UI {
       }
       case 'scenMin': this.scMin = !this.scMin; this.renderTut(true); break;
       case 'saveCode': this.showSave(); break;
-      case 'saveFile': if(this.sim.s.hall.length>2)this.toast('This expanded save requires a build with multi-floor support.');this.g.saveFile(); break;
+      case 'saveFile': this.toast('This save uses floor-based unit numbers. Keep your original export for older builds.');this.g.saveFile(); break;
       case 'loadOpen': this.showLoad(); break;
       case 'gfx': { const g = this.g; if (g.autoQ) { g.autoQ = false; g.rend.setQuality(2); } else if (g.rend.quality > 0) g.rend.setQuality(g.rend.quality - 1); else { g.autoQ = true; g.rend.setQuality(2); } this.showMenu(); break; }
       case 'battery': this.g.battery = !this.g.battery; this.showMenu(); break;
@@ -2531,6 +2531,7 @@ export class UI {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
       <div class="menu-list"><button class="btn" data-a="requests" data-v="settings">Customer requests <small>Staff responses and saved handling settings</small></button><button class="btn" data-a="handbook">Builder\'s handbook <small>How, why and when to use every build item</small></button><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}</div>
+      ${this.numberingInfo()}
       <details class="settings"><summary>Audio &amp; performance</summary><h3>Audio</h3>${['master', 'sfx', 'music', 'amb'].map((k) => `<label class="slider"><span>${{ master: 'Master', sfx: 'Effects', music: 'Music', amb: 'Ambience' }[k]}</span><input type="range" min="0" max="1" step="0.05" value="${a.vol[k]}" data-vol="${k}"></label>`).join('')}
       <div class="row wrap"><button class="btn sm" data-a="music">Music ${a.musicOn ? 'on' : 'off'}</button><button class="btn sm" data-a="fps">Performance stats ${this.g.showFps ? 'on' : 'off'}</button></div>
       ${this.g.showFps ? `<details class="performance-panel"><summary>Performance samples</summary><pre id="fps">${esc(this.g.performanceText ? this.g.performanceText() : 'Collecting samples…')}</pre><p class="note">CPU submission is not GPU time. Resource counts are not memory bytes. Samples remain separate while this menu is open.</p></details>` : ''}
@@ -2559,10 +2560,15 @@ export class UI {
       '<p class="note">Every item in the Build menu is listed here. The handbook explains the current game rules; build previews remain the final authority for whether a specific placement is valid.</p>' + groups + '</div></div>';
   }
 
+  numberingInfo() {
+    const rows=this.sim.s.unitNumbering?.legacy||[];
+    return '<p class="note">Unit numbers start with their floor: 1xxx on F1, 2xxx on F2, through 5xxx on F5. New saves require a build with floor-based numbering. Keep your original export for older builds.</p>'+
+      (rows.length?'<details><summary>Previous unit numbers</summary><p class="note">Numbers at conversion. Older financial and event history keeps its original text.</p><div class="list">'+rows.map(r=>`<div class="row"><span>Unit ${esc(String(r.old??'?'))}</span><span>→ Unit ${esc(String(r.num))}</span></div>`).join('')+'</div></details>':'');
+  }
   async showSave() {
     const code = await this.g.saveCode();
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Save code</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
-      <p class="note">${this.sim.s.hall.length>2?'Expanded saves require a build with multi-floor support. ':''}Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p><textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
+      <p class="note">${this.sim.s.hall.length>2?'Expanded saves require a build with multi-floor support. ':''}Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p>${this.numberingInfo()}<textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
   }
   // Import: validate fully first; only a valid save reaches the confirmation, and only confirmation touches slots.
   async importSave(text, source) {

@@ -1,0 +1,12 @@
+{
+  "result": "PASS",
+  "parent": "9700d9d4475555e1a4907d1702cb8d81d31ded55",
+  "seeds": [7, 99, 9711],
+  "days_per_seed": 30,
+  "comparisons": ["parent vs new authored start", "parent vs migrated parent"],
+  "scenario_starts_and_migrations": ["comeback", "turnaround", "vertical", "climate"],
+  "excluded": ["unitNumbering", "unitRoles", "unitNo", "unitNumber", "num", "Unit-number tokens in text"],
+  "raw_log_captured": false,
+  "physical_iPhone": "NOT TESTED",
+  "rendered_browser": "NOT TESTED"
+}

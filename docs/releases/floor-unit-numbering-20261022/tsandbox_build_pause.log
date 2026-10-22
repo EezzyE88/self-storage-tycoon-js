@@ -1,0 +1,16 @@
+PASS business, instant=false, paused: placement and real Confirm
+PASS business, instant=false, expanded: placement and real Confirm
+PASS business, instant=false, running: placement and real Confirm
+PASS business, instant=false, pauseDuringReview: placement and real Confirm
+PASS business, instant=true, paused: placement and real Confirm
+PASS business, instant=true, expanded: placement and real Confirm
+PASS business, instant=true, running: placement and real Confirm
+PASS business, instant=true, pauseDuringReview: placement and real Confirm
+PASS free, instant=false, paused: placement and real Confirm
+PASS free, instant=false, expanded: placement and real Confirm
+PASS free, instant=false, running: placement and real Confirm
+PASS free, instant=false, pauseDuringReview: placement and real Confirm
+PASS free, instant=true, paused: placement and real Confirm
+PASS free, instant=true, expanded: placement and real Confirm
+PASS free, instant=true, running: placement and real Confirm
+PASS free, instant=true, pauseDuringReview: placement and real Confirm

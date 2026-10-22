@@ -1,0 +1,210 @@
+{
+  "parent": "9700d9d4475555e1a4907d1702cb8d81d31ded55",
+  "master_before": "f6e4c1eace1720dc703d8cd5758626b158b6aa03",
+  "runtime_js": [
+    {
+      "path": "js/audio.js",
+      "sha256": "140d39a8096f034044f50e6ace388e26b39494ce38704b0301ff13a92bb8ace0",
+      "git_blob": "a69a535f27c1cd21e015d0be665ea53bd8f62f08"
+    },
+    {
+      "path": "js/bannerplace.js",
+      "sha256": "17b4b169901a6b44bd39771d8e0fd178f4eeb1aeed24e61f88c7b57662b8a016",
+      "git_blob": "1d47a037d68db8d37c9c59801289ebdd99de34e3"
+    },
+    {
+      "path": "js/blueprint.js",
+      "sha256": "bdd3dd4f87fef0c2174bbd75e09707f229dc2740469dc110ee85a4f720ac55ca",
+      "git_blob": "93796d9169903852464f374af40dfd5a971bb813"
+    },
+    {
+      "path": "js/captions.js",
+      "sha256": "23db5f142f70d31da5cad3c31c4f7be6e7b11f8947f25268284af7a92121cd4d",
+      "git_blob": "a26cfcb38e5139af9df8fb28bc6075feb53c90d8"
+    },
+    {
+      "path": "js/career.js",
+      "sha256": "10b769e9ff60b67ac07f5474eea1385e2d1daaf8178989745f7789555cd25a2b",
+      "git_blob": "5c0b08dfc328502aac0edf878e5d6696bb781458"
+    },
+    {
+      "path": "js/climateavailability.js",
+      "sha256": "640a3c48156d335abd15c8354b6b5de9c2189f416595392aa774140bd4cb9b5b",
+      "git_blob": "86abda3c72a19533f7210d2f7d0852b3978723db"
+    },
+    {
+      "path": "js/cloud.js",
+      "sha256": "cc784d86fb0d2a7165700f33a6cc2c309f5ae2bc9be079001707ca86b96676e7",
+      "git_blob": "b313a7c2071db6c5909d4c909ef71fc1f73fdb44"
+    },
+    {
+      "path": "js/comeback.js",
+      "sha256": "fb369516cbbab3e7e5d1537745d10ca6d5c5a6e4b136ed777d5d5c28c4434ae2",
+      "git_blob": "bf299ce89968be6467ba09e720de57bcbe1fb1b7"
+    },
+    {
+      "path": "js/complaints.js",
+      "sha256": "5d15b9390b482ba74e427055bfbb56444bbf9e5ed346fb4625ba4300c873b6f0",
+      "git_blob": "efdb50b8e6e97bd3422de37a78ca4947ff0da20e"
+    },
+    {
+      "path": "js/data.js",
+      "sha256": "b436e451836b91b7db500aa0f23161a6b55c347c0552aceb0f748162fd94bfd2",
+      "git_blob": "216a025d28d809d361b2d9ad46a21342f8c0de71"
+    },
+    {
+      "path": "js/economics.js",
+      "sha256": "029c9d767b0a3871617ce07ed961a87fa389577df89fce60dc4cf41bde393c6b",
+      "git_blob": "8213edf5221a7cf460c89a664f76b9262e289988"
+    },
+    {
+      "path": "js/feedbackcopy.js",
+      "sha256": "34954ab8c3f1e434fe919c03c10a8c79e6da1a4c2e4a0e61807dc4aedfe6aa5d",
+      "git_blob": "641b30cf2a6eee914d07fb4b6d0629f97f8b3de4"
+    },
+    {
+      "path": "js/finance.js",
+      "sha256": "fc53b3d54969aedc4d36ac3cb2e9e9640de5b235d89ad04defea49088af831e9",
+      "git_blob": "b1d5d3c85d3a611598069892c59ae2328035093f"
+    },
+    {
+      "path": "js/fx.js",
+      "sha256": "5fc2f184b9137262be5b3e27c41bc17a6671f366dddeed4b8999b73094946476",
+      "git_blob": "326dc49d8e74e4103c10f0f2bd407f1dfc6eed02"
+    },
+    {
+      "path": "js/handbook.js",
+      "sha256": "1dc69d5236d182a05d93aafb375bd5087b0e3c6020e1c1e849a6f8d2274ef6ea",
+      "git_blob": "97923b84f182286cc9816a124dc3407e99a8507a"
+    },
+    {
+      "path": "js/localsave.js",
+      "sha256": "fe3915174398f314eadc84a28831322fc09e4b830c15b76a20c73706465b7873",
+      "git_blob": "6a58e5eeb02a2503b765235e3f4ef8b6816caa47"
+    },
+    {
+      "path": "js/main.js",
+      "sha256": "251744e4ed63bf6f296841edc405c8c9ab6c5fc85e4ba263e6f49976ce42ef5f",
+      "git_blob": "03809a09b87985f824f57bd8d65a21c905fc6987"
+    },
+    {
+      "path": "js/maple.js",
+      "sha256": "3e8cf5698b4f0d659c2dae49b9f99a8ec0b2a1cb04f9810cede9a2ec3ea66f82",
+      "git_blob": "983b26976fd906b90633018bfcdf549ef27ab6c1"
+    },
+    {
+      "path": "js/openhouse.js",
+      "sha256": "366fc47570a995cb3758a918594535ed832e5629273662b828c6a2e3d4418848",
+      "git_blob": "26e9d2256d4ae7f01058ff72e40423d261647c82"
+    },
+    {
+      "path": "js/performance.js",
+      "sha256": "3e89f8b54e7e76e0a83fdfe5a938b9f1ca75ab178066ec63eced613a2991f5ac",
+      "git_blob": "f394e915e86996a660d6596966d102165a9fca68"
+    },
+    {
+      "path": "js/post.js",
+      "sha256": "4930e21fd5afc935f6f8bd22902226a47cda917bbf3fcc70af7b67d93537b8a1",
+      "git_blob": "9583257d753cd91999f24441f04479ddd91b16dc"
+    },
+    {
+      "path": "js/propertyprojects.js",
+      "sha256": "31f7496b83527a86e4529a0b2e08fd0ee840f65da904432ed2c479aa0a88961f",
+      "git_blob": "7341f64d37d230a216ff6c07897ef573888a9d81"
+    },
+    {
+      "path": "js/render.js",
+      "sha256": "bc178a27e68d03e3ec93dcefa83ee460cfbe1a0e088fd3d8ad4257ecb555c2c9",
+      "git_blob": "3250773865298b69fb9d3e6fbad0d07ff6437e37"
+    },
+    {
+      "path": "js/reporting.js",
+      "sha256": "3b21ae7ae4c17b814f4f9d4db5cd62926aa62eb4fcb7725381f9d42cb946983f",
+      "git_blob": "07c486e921a63eefa6c5c0c82f138646d8030203"
+    },
+    {
+      "path": "js/rescueoperations.js",
+      "sha256": "ef93736a0544cc1047be94f8c005fabbcf6432e1a15a7c2103fc0a9f9a44691b",
+      "git_blob": "50940d97e8cea703823ea23f788e0f2ae87b9e0e"
+    },
+    {
+      "path": "js/reservewait.js",
+      "sha256": "f80d554cb1dc1513eba640eac17025e30ffdb070e8305d1cd4a86e66f49ee945",
+      "git_blob": "d1ec44b824f46da5a7fb7caf5bdecea566ec7bf8"
+    },
+    {
+      "path": "js/savearchive.js",
+      "sha256": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
+      "git_blob": "95ec357b3bece1c8c926a4d01a6f5c3fae338384"
+    },
+    {
+      "path": "js/scenarios.js",
+      "sha256": "1fa1b52ee787b52c19a481b3a346511f0e927a50e80e801c4bd36b30985a11f7",
+      "git_blob": "e76a9b112257efd9e778092d095c34596368ef9e"
+    },
+    {
+      "path": "js/showcase.js",
+      "sha256": "b6220879a4fde0569d2e4420107e6919cc918fe63dc6e8448cb5b5b77003ec3a",
+      "git_blob": "8e366e0c3b5cb8c2c5f4fc35d3b26a3cfc911254"
+    },
+    {
+      "path": "js/sim.js",
+      "sha256": "eb4547f7593e2195e9d25a84d017122aed5ba0d44736f2c06993d15a853b3250",
+      "git_blob": "4df2f2ada98f5da55fa00699db2aa3ada1d70224"
+    },
+    {
+      "path": "js/startup.js",
+      "sha256": "1f8317f144ecf645f93a1d2b662c6570dc4150c826004b0bb3163c7e5b47a032",
+      "git_blob": "e23a376f07303628a1484d9ff116236b366d900a"
+    },
+    {
+      "path": "js/status.js",
+      "sha256": "a7e0d8a43c6e07b6dfda1d0a2d3e6b3a442b7035ab35957061fd06e059a936a6",
+      "git_blob": "4d9ddd39e640c29734092302cf677a9e88e248c2"
+    },
+    {
+      "path": "js/tutorial.js",
+      "sha256": "cd3e534e1b8ba96785b5b031e89ad4fe889085537c23877ff3458c41c23db735",
+      "git_blob": "3eec5957c9568c8112df663168c36adce606b7a4"
+    },
+    {
+      "path": "js/ui.js",
+      "sha256": "36380ca078378eeee03ac09d5fe65b41576008b43511a2fd433f4a9818a91613",
+      "git_blob": "83f3282ee4237ff43f19c1007e2fbf73ae1f6f9e"
+    },
+    {
+      "path": "js/unitnumbering.js",
+      "sha256": "73d75ba5d4cd24605522db76e9773c77b26d7f3b89be19aac927e26aa0bb4d29",
+      "git_blob": "168be8a112b47dc95d5d0539db4d53e294a42e09"
+    },
+    {
+      "path": "js/version.js",
+      "sha256": "81470873b8c75784681f12bc5de3eda1d2b6564961488c5c5dcd01430c4c447a",
+      "git_blob": "cc49e647004dfb80f7a0a6759c9f9886226363cc"
+    },
+    {
+      "path": "js/vertical.js",
+      "sha256": "714eaba04146c1ab2b3dd2c1e4764ef4966ee23a29b114f7dbed964c4ad0974d",
+      "git_blob": "f23e07377ff08355139da2f6ff5b739c3c7fb2bc"
+    },
+    {
+      "path": "js/workreport.js",
+      "sha256": "885fd49490f038b67658581e8b0af0036e4a6823ebb79ffe55ad50f8f1e8ee87",
+      "git_blob": "5b95c568344fed2ffbcc51e02c5cdb063449e673"
+    },
+    {
+      "path": "js/yardinfill.js",
+      "sha256": "8339ebdc120503ec9bd648e0800a32e391c068ff3ef4c9beb123778ecec1f05a",
+      "git_blob": "ad4b8e30e07ae979988f8c3e09e711c8c07c2380"
+    },
+    {
+      "path": "js/yardloop.js",
+      "sha256": "26bbc9fec355a0f5626c903215deb55c55cb11fac9036a2ecd048c71f030c98c",
+      "git_blob": "e5a532ff7ac1b8ef63817837a0304bf1d8052055"
+    }
+  ],
+  "physical_iPhone": "NOT TESTED",
+  "rendered_browser": "NOT TESTED",
+  "deployment": "NOT PERFORMED",
+  "merge": "NOT PERFORMED"
+}

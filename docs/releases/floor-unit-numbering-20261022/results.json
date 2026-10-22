@@ -1,0 +1,220 @@
+[
+  {
+    "command": [
+      "node",
+      "tests/headless/tunitnumbering.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 3.07
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tbugs.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 4.65
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tpause_policy.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 3.19
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tbuildability_save.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 1.5
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tsave_recovery.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 16.92
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tcomeback36.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 5.43
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tcomeback36_save.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 1.99
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tthreefloor_save.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 4.63
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tthreefloor_hardening.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 61.49
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tthreefloor_journeys.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 34.21
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tfinancial_trust.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.86
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/ttraffic_delegation_save.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 1.39
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tworking_yard_save.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 1.34
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tproperty_projects_save.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 7.28
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/trescue_operation_save.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 1.71
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tsandbox.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 25.24
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tsandbox_build_pause.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 9.55
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/towner_auto_repairs.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 5.42
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/topenhouse.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 6.86
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/topenhouse_qa.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 2.77
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tcontrol_access.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 2.08
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tgestures.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 1.36
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tinvestment_guidance.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 2.18
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/twalk.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 3.82
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tmenu_touch.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.88
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tcandidate22.mjs"
+    ],
+    "exit_code": 1,
+    "seconds": 4.94
+  },
+  {
+    "command": [
+      "node",
+      "tests/headless/tfuzz.mjs",
+      "30",
+      "1"
+    ],
+    "exit_code": 0,
+    "seconds": 10.97
+  }
+]

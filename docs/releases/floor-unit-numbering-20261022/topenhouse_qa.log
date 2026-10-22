@@ -1,0 +1,8 @@
+PASS restoration follows access loss without a commercial or lease change
+PASS restoration follows missing-service changes without a lease change
+PASS cutaway changes exactly when a facing wall crosses its threshold
+PASS steady frames do not rescan the entire task array for each room
+PASS small rotations inside the same cutaway region do not reupload every instance
+PASS unit floors sit above the inherited foundation slab
+PASS contents rest on the room floor instead of sinking through it
+{"passed":7,"failed":0,"environment":"CPU scene graph; Canvas/WebGL stubbed"}

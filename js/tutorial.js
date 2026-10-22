@@ -1,10 +1,11 @@
+import { tutorialUnit } from './unitnumbering.js';
 import { careerEligibility } from './career.js';
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
 import { TOOLS } from './data.js';
 import { verticalDone, verticalLayout, shaftHallState } from './blueprint.js';
 
-const unitByNum = (sim, n) => sim.objs('unit').find((u) => u.num === n);
+const unitByRole = (sim, role) => tutorialUnit(sim, role);
 const createdSince = (sim, type, t) => sim.objs(type).some((o) => o.cstate === 'operating' && o.id > (ctx(sim).idMark || 0));
 
 // Each beat has an intro, a "why" note, and an ordered checklist of steps. Steps are UI guidance only:
@@ -58,14 +59,14 @@ export const BEATS = [
   { id: 'makeready', chapter: 'Take Control', title: 'Turn over Unit 107',
     body: 'A tenant moved out of Unit 107. It must be cleaned and checked (a <b>make-ready</b>) before it can rent again.',
     why: 'Vacant units earn nothing until they are rent-ready. Make-ready is the most common job on a storage property.',
-    focus: (sim) => ({ obj: unitByNum(sim, 107).id }),
+    focus: (sim) => ({ obj: unitByRole(sim, 'mapleTurnover').id }),
     steps: [
-      { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin (the ring points at it). Tap the unit itself.', obj: (sim) => unitByNum(sim, 107).id, done: (sim, ui) => (ui && ui.sel === unitByNum(sim, 107).id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
-      { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the <b>Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByNum(sim, 107).id) || {}).assigned || unitByNum(sim, 107).commercial === 'ready' },
-      { t: 'Start the clock: tap <b>1x</b>', d: 'The speed controls are at the <b>top right</b>. At <b>1x</b>, a day takes <b>24 real seconds</b>; <b>2x</b> takes 12 seconds and <b>4x</b> takes 6. Pause whenever you want to inspect or plan.', sel: PLAY, done: (sim) => running(sim) || unitByNum(sim, 107).commercial === 'ready' },
-      { t: 'Watch the Owner finish', d: 'The Owner walks from the office to Unit 107. The pin fills as work progresses (about 2-3 game hours). Use <b>4x</b> to hurry.', obj: (sim) => unitByNum(sim, 107).id, done: (sim) => unitByNum(sim, 107).commercial === 'ready' || !!unitByNum(sim, 107).lease },
+      { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin (the ring points at it). Tap the unit itself.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim, ui) => (ui && ui.sel === unitByRole(sim, 'mapleTurnover').id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the <b>Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Start the clock: tap <b>1x</b>', d: 'The speed controls are at the <b>top right</b>. At <b>1x</b>, a day takes <b>24 real seconds</b>; <b>2x</b> takes 12 seconds and <b>4x</b> takes 6. Pause whenever you want to inspect or plan.', sel: PLAY, done: (sim) => running(sim) || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Watch the Owner finish', d: 'The Owner walks from the office to Unit 107. The pin fills as work progresses (about 2-3 game hours). Use <b>4x</b> to hurry.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
     ],
-    check: (sim) => unitByNum(sim, 107).commercial === 'ready' || !!unitByNum(sim, 107).lease },
+    check: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
   { id: 'lease', chapter: 'Take Control', title: 'Rent-ready units can lease',
     body: 'Unit 107 is on the market. A prospect is driving over to the office to rent it.',
     why: 'Prospects compare your asking rent with the market. Price higher and fewer sign; price lower and you fill faster but earn less. Change asking rents later in <b>Business &rarr; Asking rents</b>.',
@@ -112,7 +113,7 @@ export const BEATS = [
   { id: 'hire', chapter: 'Keep the Property Working', title: 'The Owner is the bottleneck',
     body: 'Unit 203 just moved out and the loading area is dirty. Two jobs, and the Owner can only do one at a time.',
     why: '<b>Hiring adds service capacity.</b> Porters clean and turn over units; Techs repair equipment; Clerks run the counter; Managers handle routine decisions. Each has a daily wage.',
-    enter: (sim) => { const u = unitByNum(sim, 203); if (u && u.lease) { const L = sim.s.leases[u.lease]; const tn = sim.s.tenants[L.tenant]; tn.leaving = true; sim.schedule({ kind: 'moveout', tenant: tn.id, unit: u.id }, sim.s.t + 20); } for (let x = 18; x <= 21; x++) sim.s.dirt[0][15 * sim.s.W + x] = 0.7; },
+    enter: (sim) => { const u = unitByRole(sim, 'mapleInteriorMoveout'); if (u && u.lease) { const L = sim.s.leases[u.lease]; const tn = sim.s.tenants[L.tenant]; tn.leaving = true; sim.schedule({ kind: 'moveout', tenant: tn.id, unit: u.id }, sim.s.t + 20); } for (let x = 18; x <= 21; x++) sim.s.dirt[0][15 * sim.s.W + x] = 0.7; },
     focus: () => ({ tab: 'operate' }),
     steps: [
       { t: 'Open <b>Operate</b>', d: 'Tap <b>Operate</b> in the bottom bar (the person icon; the red badge counts waiting jobs).', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || sim.s.staff.some((x) => x.role === 'porter') },
@@ -219,7 +220,12 @@ export const LESSONS = [
 export const lessonById = (id) => LESSONS.find((l) => l.id === id);
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
-export function curBeat(sim) { return sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[sim.s.tut.beat] : null; }
+export function curBeat(sim) {
+  const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[sim.s.tut.beat] : null;
+  if(!b)return null;
+  const text=v=>typeof v==='string'?v.replace(/Unit (107|203)\b/g,(_,n)=>{const u=unitByRole(sim,n==='107'?'mapleTurnover':'mapleInteriorMoveout');return u?`Unit ${u.num}`:'the tutorial unit';}):v;
+  return {...b,title:text(b.title),body:text(b.body),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
+}
 // A navigation step whose destination is already showing is complete: never ask the player to tap what is selected.
 export function alreadyShowing(st, ui) {
   if (!ui || !st || !st.sel) return false;

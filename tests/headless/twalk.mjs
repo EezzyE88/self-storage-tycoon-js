@@ -16,7 +16,7 @@ tick(2);
 // welcome
 ui.tutLooked = true; obs(); d({ type: 'tutFlag', flag: 'welcome' }); tick();
 // makeready
-const u107 = sim.objs('unit').find((u) => u.num === 107);
+const u107 = sim.s.objects[sim.s.unitRoles.mapleTurnover];
 ui.sel = u107.id; obs(); d({ type: 'ownerMakeReady', unit: u107.id }); ui.sel = null; s.speed = 4; beat('makeready');
 beat('lease');
 ui.tab = 'business'; d({ type: 'tutFlag', flag: 'businessOpened' }); tick(); d({ type: 'tutFlag', flag: 'moneyAck' }); ui.tab = null; tick();

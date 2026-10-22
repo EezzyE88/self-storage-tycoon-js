@@ -1,0 +1,13 @@
+maple-tutorial         seed 1: day 31 cash 29277 units 41 leases 23 objects 67 save 68KB
+maple-career           seed 1: day 31 cash 55902 units 43 leases 21 objects 60 save 64KB
+sc:comeback            seed 1: day 31 cash 4613 units 47 leases 22 objects 71 save 77KB
+sc:turnaround          seed 1: day 31 cash 46934 units 34 leases 22 objects 56 save 72KB
+sc:vertical            seed 1: day 31 cash 81602 units 37 leases 0 objects 53 save 43KB
+sc:climate             seed 1: day 31 cash 33070 units 62 leases 3 objects 84 save 82KB
+sb-business-empty      seed 1: day 31 cash 1 units 42 leases 0 objects 59 save 52KB
+sb-business-starter    seed 1: day 31 cash 12765 units 31 leases 23 objects 59 save 63KB
+sb-free                seed 1: day 31 cash 0 units 44 leases 0 objects 66 save 54KB
+sb-challenging-urban   seed 1: day 31 cash 1 units 34 leases 0 objects 47 save 47KB
+
+5244 actions (1296 accepted), 8.5s in sim steps, 11s total
+NO ISSUES

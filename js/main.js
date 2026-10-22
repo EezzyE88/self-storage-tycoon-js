@@ -215,7 +215,7 @@ const game = {
   modeLabel,
   playing() { return this.sim !== this.demo && this.ui && !this.ui.title; },
   async saveFile() {
-    const code = await this.saveCode(); const fname = `storage-day${Math.floor(this.sim.s.t / 1440) + 1}.sst`;
+    const code = await this.saveCode(); const fname = `storage-floor-numbering-v1-day${Math.floor(this.sim.s.t / 1440) + 1}.sst`;
     try { // iPhone: the share sheet offers "Save to Files", which a download link does not do reliably
       const f = new File([code], fname, { type: 'text/plain' });
       if (navigator.canShare && navigator.share && navigator.canShare({ files: [f] }) && matchMedia('(pointer: coarse)').matches) { await navigator.share({ files: [f], title: 'Self Storage Tycoon save' }); return; }

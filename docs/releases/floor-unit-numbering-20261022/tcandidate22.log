@@ -1,0 +1,46 @@
+PASS 1. unit floor identity: F1, F2 and F3 units never share a label (Unit 2007 vs Unit 3001)
+PASS 1. EXT/F1/Floors highlight follows the rendered view, including direct renderer changes
+PASS 1. saved floor restores when valid, otherwise falls back to an existing view
+PASS 2. completion reports defined order counts, separately labelled extras, and order-only commissioning
+PASS 2. full package arithmetic, single charge and full grace-period refund
+PASS 3. handover topology is held, not reported; a real disconnection still warns after handover
+PASS 6. import validates fully with no slot writes; a valid import keeps the outgoing game and archives the displaced one
+PASS 6. legacy Candidate-21 saves (no view field) and expanded saves load; reload after import restores the saved floor
+PASS 6. import confirmation names incoming, running, stored-previous and displaced games
+PASS 7. switching games clears transient overlay, review and panel state; only the saved view carries over
+PASS 4. tutorial step is the first incomplete step; restored lessons never skip an unmet step
+PASS 4. an already-selected tab or category completes its navigation step
+PASS 4. clock steps never target an inert 1x: an expanded panel redirects to Back to map, then 1x works
+PASS 4. an armed build tool redirects map/commission steps to putting the tool away
+PASS 4. instructions use current UI terms and navigation
+PASS 4. passive watch steps are labelled as watching, not tapping
+PASS 5. Requests navigation closes the dialog first, keeps time paused and returns predictably
+PASS 8/12. review keeps full terms, exact price, preview on map without losing the quote, and demand evidence
+PASS 12. evidence verdicts follow observed history only
+PASS 13. destroying a construction order needs a deliberate second tap even for a full refund
+PASS 13. wage copy matches the Porter wage and does not silently round $12.50
+PASS 9. orientation policy: portrait manifest and a pausing rotate prompt for phone-height landscape
+PASS 10. suite runs without hidden Git history
+PASS A. map rings require the point itself to be the map, never an interface layer or off-screen
+PASS B. make-ready action stays in compact and detailed unit views until accepted, then shows status only
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Building 12 · 1 completed floor</. Input:
+
+'<div class="modal-bg"><div class="modal floors"><div class="row"><h2>View a floor</h2><button class="x" data-a="modalClose" data-qa="floors-close" aria-label="Close floor chooser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><p class="note">Upper floors show that level only. Choose Exterior to see the whole property.</p><button class="btn floor-choice selected" data-a="floorPick" data-v="ext" aria-pressed="true"><b>Exterior · Viewing</b><small>Whole property · roofs and yard</small></button><section class="floor-building"><b>Building 1</b><small class="note">11 × 9 · 1 completed floor</small><button class="btn floor-choice" data-a="floorPick" data-building="12" data-v="0" aria-pressed="false"><b>Floor 1</b><small>14 units</small></button><p class="note" role="status">Floor 2 · Under construction · 0% · reinforcement</p><details class="floor-growth"><summary>Expand this building</summary><p class="note">Plan the next floor after this floor is handed over.</p></details></section></div></div>'
+
+    at file:///workspace/scratch/7141d597ca4e/numbering-candidate/tests/headless/tcandidate22.mjs:178:32
+    at test (file:///workspace/scratch/7141d597ca4e/numbering-candidate/tests/headless/tcandidate22.mjs:14:42)
+    at file:///workspace/scratch/7141d597ca4e/numbering-candidate/tests/headless/tcandidate22.mjs:176:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '<div class="modal-bg"><div class="modal floors"><div class="row"><h2>View a floor</h2><button class="x" data-a="modalClose" data-qa="floors-close" aria-label="Close floor chooser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><p class="note">Upper floors show that level only. Choose Exterior to see the whole property.</p><button class="btn floor-choice selected" data-a="floorPick" data-v="ext" aria-pressed="true"><b>Exterior · Viewing</b><small>Whole property · roofs and yard</small></button><section class="floor-building"><b>Building 1</b><small class="note">11 × 9 · 1 completed floor</small><button class="btn floor-choice" data-a="floorPick" data-building="12" data-v="0" aria-pressed="false"><b>Floor 1</b><small>14 units</small></button><p class="note" role="status">Floor 2 · Under construction · 0% · reinforcement</p><details class="floor-growth"><summary>Expand this building</summary><p class="note">Plan the next floor after this floor is handed over.</p></details></section></div></div>',
+  expected: /Building 12 · 1 completed floor</,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

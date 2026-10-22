@@ -34,7 +34,7 @@ await test('panel closure: Details → Back to map and close restore the previou
     ui.sheetTall=true;ui.renderSheet(true);assert.equal(sim.s.speed,0);ui.sheetTall=false;ui.renderSheet(true);assert.equal(sim.s.speed,v,'Back to map');
     ui.sheetTall=true;ui.renderSheet(true);ui.tab=null;ui.renderSheet(true);assert.equal(sim.s.speed,v,'closing the expanded panel');}});
 await test('actions: commissioning, owner make-ready and build placement never start a paused clock',()=>{
-  for(const v of SPEEDS){const {ui,sim}=fixture(v);const u=sim.objs('unit').find(u=>u.num===107);click(ui,{a:'cmd',cmd:JSON.stringify({type:'ownerMakeReady',unit:u.id,forceOwner:true})});assert.equal(sim.s.speed,v,'make-ready');
+  for(const v of SPEEDS){const {ui,sim}=fixture(v);const u=sim.s.objects[sim.s.unitRoles.mapleTurnover];click(ui,{a:'cmd',cmd:JSON.stringify({type:'ownerMakeReady',unit:u.id,forceOwner:true})});assert.equal(sim.s.speed,v,'make-ready');
     const r=sim.objs('unit')[0];r.cstate='ready';click(ui,{a:'cmd',cmd:JSON.stringify({type:'commission',unit:r.id})});assert.equal(sim.s.speed,v,'commission');
     const box={innerHTML:''};ui.$=()=>box;ui.tool='du10x10';ui.plan={status:'valid',cost:0,count:1,reasons:[],missing:[],dur:0};ui.buildPlacing=false;ui.renderActionBar();assert.equal(sim.s.speed,0,'review holds time');ui.tool=null;ui.plan=null;ui.renderActionBar();assert.equal(sim.s.speed,v,'placement review released');}});
 await test('confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed',()=>{
