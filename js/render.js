@@ -3,14 +3,15 @@ import { isComeback, targetInService, targetUnits } from './comeback.js';
 import * as THREE from 'three';
 import { unitStatus, UNIT_STATUS, loadingStatus } from './status.js';
 import { G, FLOOR_H, TOOLS } from './data.js';
+import { OpenHousePresentation } from './openhouse.js';
 
 const CELL = 32; // px per cell on ground textures
 const WALL_H = 1.25; // drive-up unit height
 const COL = {
-  grass: '#849969', grass2: '#7a9063', asphalt: '#454d54', concrete: '#ded5c4', street: '#3c4750', sidewalk: '#e6decd',
+  grass: '#9fcb6a', grass2: '#95c262', asphalt: '#565d70', concrete: '#ded5c4', street: '#67708a', sidewalk: '#e6decd',
   loading: '#4f5257', parking: '#4c4f54', stripe: '#f1efe6', yellow: '#e8b923', hall: '#e4e0d6', shellFloor: '#bdb8ad',
-  unitWall: '#e7dcc8', unitWall2: '#ded0b9', roof: '#70818c', roofTrim: '#334d5c', door: '#c8723f', doorInt: '#3c6b8b',
-  shellWall: '#ded5c3', shellRoof: '#70818c', office: '#f0e5d2', officeTrim: '#203d53', glass: '#7398ac',
+  unitWall: '#fbf3e6', unitWall2: '#eadcc6', roof: '#2f8a8f', roofTrim: '#267277', door: '#ff7a2f', doorInt: '#3c8586',
+  shellWall: '#f1f6f2', shellRoof: '#3d6f9a', office: '#f7e2c2', officeTrim: '#1f5e66', glass: '#9fd6ee',
 };
 function tex(canvas, repeat = false) {
   const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
@@ -191,7 +192,7 @@ export class Renderer {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(sim.s.W, sim.s.H), new THREE.MeshStandardMaterial({ map: this.groundTex, roughness: 0.95 }));
     ground.rotation.x = -Math.PI / 2; ground.position.set(sim.s.W / 2, 0, sim.s.H / 2); ground.receiveShadow = true;
     this.scene.add(ground); this.ground = ground;
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x879e71, roughness: 1 }));
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x86b85a, roughness: 1 }));
     outer.rotation.x = -Math.PI / 2; outer.position.set(sim.s.W / 2, -0.02, sim.s.H / 2); outer.receiveShadow = true; this.scene.add(outer); this.outer = outer; this.worldW = sim.s.W; this.worldH = sim.s.H;
     // Reused selected upper-floor plate
     this.f2Canvas = mkCanvas(sim.s.W * CELL, sim.s.H * CELL); this.f2Tex = tex(this.f2Canvas);
@@ -220,6 +221,10 @@ export class Renderer {
   makeMaterials() {
     const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o });
     return {
+      ohWall: std('#ffffff'), ohTrim: std('#2f8a8f'), ohFloor: std('#e8e0d0'),
+      ohCrate: std('#c8925a'), ohTape: std('#e9c48c'), ohSofa: std('#3a6fc4'),
+      ohTool: std('#c8372d'), ohCounter: std('#8a6b4a'),
+      ohScreen: std('#222831', {emissive:0x3f9fd8,emissiveIntensity:.35}),
       comebackWorn: std('#817561', {map:this.tx.wall}), comebackRestored: std('#eee3cf', {map:this.tx.wall}),
       foundation: std('#a3937a', {map:this.tx.office,roughness:.94}), pier: std('#d7c7aa',{map:this.tx.wall}),
       rescueDoorTurn: std('#766752',{map:this.tx.turnover,roughness:.95}),
@@ -507,7 +512,7 @@ export class Renderer {
     });
   }
   clearGroup(g) { while (g.children.length) { const c = g.children[0]; g.remove(c); this.disposeTree(c); } }
-  clearStatic() { this.clearGroup(this.staticG); this.anim = []; this.badges = []; this.statusSlots = []; this.statusBatches = new Map(); }
+  clearStatic() { this.clearGroup(this.staticG); this.openHouse = null; this.anim = []; this.badges = []; this.statusSlots = []; this.statusBatches = new Map(); }
   add(mesh, f = 0, tag = {}) { mesh.userData = { f, ...tag }; mesh.castShadow = mesh.castShadow ?? true;
     // Tiny box props retain appearance/selection, but phones skip their shadow-map draw.
     if (this.mobile && mesh.geometry === this.geo.box && Math.max(mesh.scale.x, mesh.scale.y, mesh.scale.z) <= 0.85) mesh.castShadow = false; this.staticG.add(mesh); return mesh; }
@@ -541,6 +546,7 @@ export class Renderer {
     for(const ord of s.orders.filter(o=>o.st==='construction'&&o.vertical)){const v=ord.vertical,sh=s.objects[v.shell];if(sh&&v.phase<2){const edge=new THREE.LineSegments(this.geo.edges,this.mat.scaffold);edge.scale.set(sh.w,FLOOR_H,sh.h);edge.position.set(sh.x+sh.w/2,v.f*FLOOR_H+FLOOR_H/2,sh.y+sh.h/2);this.add(edge,v.f,{obj:sh.id,pendingFloor:true});}}
     this.buildStatusMarks();
     this.buildArchitectureDetail();
+    this.openHouse = new OpenHousePresentation(this);
     this.buildFence();
     this.applyView();
   }
@@ -573,16 +579,7 @@ export class Renderer {
       if(o.access==='drive')for(const k of [-1,1])add(f,'pier',x+side[0]*along*.46,H*.5,z+side[1]*along*.46,o.dir[0]?.18:.16,H,o.dir[0]?.16:.18);
       for(const k of [-1,1])add(f,'frame',x+side[0]*along*.405,H*.40,z+side[1]*along*.405,o.dir[0]?.055:.075,H*.80,o.dir[0]?.075:.055);
       add(f,'frame',x,H*.81,z,o.dir[0]?.06:along*.86,.065,o.dir[0]?along*.86:.06);
-      if(o.access==='drive') {
-        add(f,'pier',x,H+.04,z,o.dir[0]?.20:along,.17,o.dir[0]?along:.20);
-        const adjoining=(x,y)=>{if(x<0||y<0||x>=this.sim.s.W||y>=this.sim.s.H)return false;const id=this.sim.D.unitAt[f]?.[y*this.sim.s.W+x],u=this.sim.s.objects[id];return u&&u.id!==o.id&&u.access==='drive'&&u.cstate!=='construction';};
-        const edgeX=y=>Array.from({length:o.w},(_,i)=>adjoining(o.x+i,y)).every(Boolean);
-        const edgeY=x=>Array.from({length:o.h},(_,i)=>adjoining(x,o.y+i)).every(Boolean);
-        if(!edgeX(o.y-1))add(f,'eave',cx,H+.01,o.y-.035,o.w+.13,.10,.065);
-        if(!edgeX(o.y+o.h))add(f,'eave',cx,H+.01,o.y+o.h+.035,o.w+.13,.10,.065);
-        if(!edgeY(o.x-1))add(f,'eave',o.x-.035,H+.01,cz,.065,.10,o.h+.13);
-        if(!edgeY(o.x+o.w))add(f,'eave',o.x+o.w+.035,H+.01,cz,.065,.10,o.h+.13);
-      }
+
     }
     for (const o of this.sim.objs('office')) {
       if (o.cstate === 'construction') continue;
@@ -623,14 +620,8 @@ export class Renderer {
       case 'unit': {
         const cx = o.x + o.w / 2, cz = o.y + o.h / 2; const H = o.access === 'drive' ? WALL_H : 1.05;
         if (inConst) { this.scaffold(o, cx, cz, o.w, o.h, H, f); break; }
-        const body = this.box(o.w - 0.06, H, o.h - 0.06, (o.num % 2) ? this.mat.unitWall : this.mat.unitWall2, cx, H / 2, cz, f, { obj: o.id });
-        const rescueTarget = isComeback(S) && S.scenario.targets?.find(t => t.ids.includes(o.id));
-        if (rescueTarget) { body.material = this.comebackFinish(o,rescueTarget); this.anim.push({k:'comeback',mesh:body,target:rescueTarget,o}); }
-        if (o.access === 'drive') {
-          const roof=this.box(o.w + 0.1, 0.08, o.h + 0.1, this.mat.roof, cx, H + 0.04, cz, f, { obj: o.id });
-          if(rescueTarget){this.anim.push({k:'rescueRoof',mesh:roof,o,target:rescueTarget});roof.material=this.comebackFinish(o,rescueTarget)===this.mat.comebackWorn?this.mat.rescueRoofTurn:this.mat.roof;}
-        }
-        else this.box(o.w - 0.02, 0.05, o.h - 0.02, this.mat.roofTrim, cx, H + 0.02, cz, f, { obj: o.id });
+        // Hollow, batched rooms are generated by OpenHousePresentation.
+        // Keep the authoritative door, status marks, identity and animation below.
         const along = o.dir[0] !== 0 ? o.h : o.w;
         const fx = cx + o.dir[0] * (o.w / 2 + 0.005), fz = cz + o.dir[1] * (o.h / 2 + 0.005);
         this.faceMesh(along * 0.78, H * 0.74, this.mat.doorDark, fx, H * 0.37, fz, o.dir, f);
@@ -673,19 +664,18 @@ export class Renderer {
       case 'office': {
         const cx = o.x + o.w / 2, cz = o.y + o.h / 2;
         if (inConst) { this.scaffold(o, cx, cz, o.w, o.h, 1.7, 0); break; }
-        this.box(o.w - 0.1, 1.7, o.h - 0.1, this.mat.office, cx, 0.85, cz, 0, { obj: o.id });
-        this.box(o.w + 0.1, 0.20, o.h + 0.1, this.mat.officeTrim, cx, 1.80, cz, 0, { obj: o.id });
+        // Open-topped office retains its V62 frontage and entrance.
+
         const d = o.door.dir; const fx = cx + d[0] * (o.w / 2 - 0.04), fz = cz + d[1] * (o.h / 2 - 0.04);
         const len = d[0] ? o.h : o.w;
         this.box(d[0]?.16:len+.1,.30,d[0]?len+.1:.16,this.mat.officeTrim,fx+d[0]*.045,1.80,fz+d[1]*.045,0,{obj:o.id,officeFascia:true});
-        this.faceMesh(len * 0.8, 0.8, this.mat.glass, fx + d[0] * 0.02, 0.95, fz + d[1] * 0.02, d, 0);
+
         const dxw = o.door.x + 0.5 - d[0] * 0.5, dzw = o.door.y + 0.5 - d[1] * 0.5;
         this.faceMesh(0.6, 1.1, this.mat.officeTrim, dxw + d[0] * 0.03, 0.55, dzw + d[1] * 0.03, d, 0);
         this.faceMesh(0.45, 0.9, this.mat.glass, dxw + d[0] * 0.04, 0.5, dzw + d[1] * 0.04, d, 0);
         this.box(d[0] ? .85 : 1.8, .10, d[0] ? 1.8 : .85, this.mat.officeTrim, dxw + d[0] * .4, 1.4, dzw + d[1] * .4, 0,{obj:o.id});
         for(const side of [-1,1])this.box(.06,1.35,.06,this.mat.metal,dxw+d[0]*.7-d[1]*side*.78,.675,dzw+d[1]*.7+d[0]*side*.78,0,{obj:o.id});
-        this.box(o.w+.18,.12,.10,this.mat.roofTrim,cx,1.89,o.y-.04,0,{obj:o.id});
-        this.box(o.w+.18,.12,.10,this.mat.roofTrim,cx,1.89,o.y+o.h+.04,0,{obj:o.id});
+        for(const side of [-1,1])this.box(.06,.40,.06,this.mat.darkMetal,fx+d[0]*.13-d[1]*side*len*.32,1.62,fz+d[1]*.13+d[0]*side*len*.32,0,{obj:o.id});
         this.faceMesh(Math.min(2.8,len-.3),.48,new THREE.MeshBasicMaterial({map:this.signTex('OFFICE')}),fx+d[0]*.13,1.84,fz+d[1]*.13,d,0,{obj:o.id,officeSign:true});
         break;
       }
@@ -1040,6 +1030,7 @@ export class Renderer {
   updateAnim(dt, night) {
     const sim = this.sim, s = sim.s;
     this.updateStatusMarks();
+    if(this.openHouse)this.openHouse.update();
     for (const A of this.anim) {
       const o = A.o;
       switch (A.k) {
@@ -1095,12 +1086,15 @@ export class Renderer {
     this.sun.position.set(this.center.x + sx, sy, this.center.z + 22); this.sun.target.position.copy(this.center);
     const lf = rain && this.lightningAt ? performance.now() - this.lightningAt : 9999;
     const flash = lf < 85 ? 1 : lf > 130 && lf < 210 ? 0.45 : 0;
-    this.sun.intensity = (0.10 + dayK * 1.95) * (1 - rain * 0.45) + flash * 2.8;
+    this.sun.intensity = (0.10 + dayK * 2.25) * (1 - rain * 0.45) + flash * 2.8;
     this.sun.color.setRGB(1, 0.93 - golden * 0.2, 0.84 - golden * 0.35);
-    this.hemi.intensity = 0.88 + dayK * 0.24 - rain * 0.06 + flash * 1.25;
+    this.hemi.intensity = 0.88 + dayK * 0.32 - rain * 0.06 + flash * 1.25;
     this.hemi.color.setRGB(0.66 + dayK * 0.27, 0.72 + dayK * 0.23, 0.88 + dayK * 0.10);
     this.ambient.intensity = night * 0.85 + flash * 0.75;
+    // Warm miniature daylight; retain V62's night fill and operational light cues.
+    if(dayK>0)this.hemi.color.lerp(new THREE.Color(0xfff0d8),dayK*.28);
     const sky = new THREE.Color().setRGB(0.12 + dayK * 0.57 + golden * 0.12 - rain * 0.12, 0.09 + dayK * 0.7 - rain * 0.1, 0.17 + dayK * 0.72 - rain * 0.05);
+    if(dayK>0)sky.lerp(new THREE.Color(0xe9dcc0),dayK*.30);
     if (flash) sky.lerp(new THREE.Color(0xe8efff), flash * 0.62);
     this.scene.background = sky; this.scene.fog.color.copy(sky);
     this.mat.head.emissiveIntensity = night * 2.2; this.mat.tail.emissiveIntensity = night * 1.2;
@@ -1262,3 +1256,4 @@ export class Renderer {
     if (this.post && this.post.active()) this.post.render(this.scene, this.camera); else this.r.render(this.scene, this.camera);
   }
 }
+

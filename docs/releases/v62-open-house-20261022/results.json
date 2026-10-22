@@ -1,0 +1,49 @@
+{
+  "environment": "Node CPU tests; no rendered WebGL or device acceptance",
+  "results": [
+    {
+      "test": "tbuildability",
+      "exit": 0
+    },
+    {
+      "test": "tbuildability_save",
+      "exit": 0
+    },
+    {
+      "test": "tcontrol_access",
+      "exit": 0
+    },
+    {
+      "test": "tdisplay_repair",
+      "exit": 0
+    },
+    {
+      "test": "tfinancial_trust",
+      "exit": 0
+    },
+    {
+      "test": "tgestures",
+      "exit": 0
+    },
+    {
+      "test": "tmenu_touch",
+      "exit": 0
+    },
+    {
+      "test": "tpause_policy",
+      "exit": 0
+    },
+    {
+      "test": "tsave_recovery",
+      "exit": 0
+    },
+    {
+      "test": "tthreefloor_save",
+      "exit": 0
+    },
+    {
+      "test": "topenhouse",
+      "exit": 0
+    }
+  ]
+}

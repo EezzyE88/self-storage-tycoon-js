@@ -1,2 +1,2 @@
-// Traffic and policy delegation candidate; not published or accepted.
-export const BUILD = { name: 'bplus-display-repair-20261020', date: '2026-10-20' };
+// Isolated V62 visual adaptation; not accepted or deployed.
+export const BUILD = { name: 'v62-open-house-20261022', date: '2026-10-22' };

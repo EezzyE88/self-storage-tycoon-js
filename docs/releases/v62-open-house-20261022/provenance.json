@@ -1,0 +1,174 @@
+{
+  "baseline": "0385af259c35058da69ed7d6cbb29e2ab7619abb",
+  "parent": "f6e4c1eace1720dc703d8cd5758626b158b6aa03",
+  "reference": "EezzyE88/self-storage-tycoon@26e8d4db0a0ad979950bd74804efb4655aacd1ff",
+  "runtimeChanges": [
+    "js/render.js",
+    "js/version.js",
+    "js/openhouse.js"
+  ],
+  "unchangedBaselineFiles": [
+    {
+      "path": "css/game.css",
+      "gitBlob": "e74df5f00d03754604cce58677f0fbe2edd120e4"
+    },
+    {
+      "path": "index.html",
+      "gitBlob": "435bd12d2f31d42d1b84f2767340c77a0300f0ad"
+    },
+    {
+      "path": "js/audio.js",
+      "gitBlob": "a69a535f27c1cd21e015d0be665ea53bd8f62f08"
+    },
+    {
+      "path": "js/bannerplace.js",
+      "gitBlob": "1d47a037d68db8d37c9c59801289ebdd99de34e3"
+    },
+    {
+      "path": "js/blueprint.js",
+      "gitBlob": "93796d9169903852464f374af40dfd5a971bb813"
+    },
+    {
+      "path": "js/captions.js",
+      "gitBlob": "a26cfcb38e5139af9df8fb28bc6075feb53c90d8"
+    },
+    {
+      "path": "js/career.js",
+      "gitBlob": "5c0b08dfc328502aac0edf878e5d6696bb781458"
+    },
+    {
+      "path": "js/climateavailability.js",
+      "gitBlob": "86abda3c72a19533f7210d2f7d0852b3978723db"
+    },
+    {
+      "path": "js/cloud.js",
+      "gitBlob": "b313a7c2071db6c5909d4c909ef71fc1f73fdb44"
+    },
+    {
+      "path": "js/comeback.js",
+      "gitBlob": "bf299ce89968be6467ba09e720de57bcbe1fb1b7"
+    },
+    {
+      "path": "js/complaints.js",
+      "gitBlob": "efdb50b8e6e97bd3422de37a78ca4947ff0da20e"
+    },
+    {
+      "path": "js/data.js",
+      "gitBlob": "216a025d28d809d361b2d9ad46a21342f8c0de71"
+    },
+    {
+      "path": "js/economics.js",
+      "gitBlob": "8213edf5221a7cf460c89a664f76b9262e289988"
+    },
+    {
+      "path": "js/feedbackcopy.js",
+      "gitBlob": "641b30cf2a6eee914d07fb4b6d0629f97f8b3de4"
+    },
+    {
+      "path": "js/finance.js",
+      "gitBlob": "b1d5d3c85d3a611598069892c59ae2328035093f"
+    },
+    {
+      "path": "js/fx.js",
+      "gitBlob": "326dc49d8e74e4103c10f0f2bd407f1dfc6eed02"
+    },
+    {
+      "path": "js/handbook.js",
+      "gitBlob": "97923b84f182286cc9816a124dc3407e99a8507a"
+    },
+    {
+      "path": "js/localsave.js",
+      "gitBlob": "6a58e5eeb02a2503b765235e3f4ef8b6816caa47"
+    },
+    {
+      "path": "js/main.js",
+      "gitBlob": "507e95852e98822b1da68eb7f536063e96264cd2"
+    },
+    {
+      "path": "js/maple.js",
+      "gitBlob": "4358eeb3597fe31f4859bc4c6b9e17a194c01434"
+    },
+    {
+      "path": "js/performance.js",
+      "gitBlob": "f394e915e86996a660d6596966d102165a9fca68"
+    },
+    {
+      "path": "js/post.js",
+      "gitBlob": "9583257d753cd91999f24441f04479ddd91b16dc"
+    },
+    {
+      "path": "js/propertyprojects.js",
+      "gitBlob": "7341f64d37d230a216ff6c07897ef573888a9d81"
+    },
+    {
+      "path": "js/reporting.js",
+      "gitBlob": "07c486e921a63eefa6c5c0c82f138646d8030203"
+    },
+    {
+      "path": "js/rescueoperations.js",
+      "gitBlob": "50940d97e8cea703823ea23f788e0f2ae87b9e0e"
+    },
+    {
+      "path": "js/reservewait.js",
+      "gitBlob": "d1ec44b824f46da5a7fb7caf5bdecea566ec7bf8"
+    },
+    {
+      "path": "js/savearchive.js",
+      "gitBlob": "95ec357b3bece1c8c926a4d01a6f5c3fae338384"
+    },
+    {
+      "path": "js/scenarios.js",
+      "gitBlob": "2946ab0f7ef8e2bbc3fedddd723383f552e154b5"
+    },
+    {
+      "path": "js/showcase.js",
+      "gitBlob": "8e366e0c3b5cb8c2c5f4fc35d3b26a3cfc911254"
+    },
+    {
+      "path": "js/sim.js",
+      "gitBlob": "8fd4bfd4a1a809d843ba626762fd2c4f804fea08"
+    },
+    {
+      "path": "js/startup.js",
+      "gitBlob": "e23a376f07303628a1484d9ff116236b366d900a"
+    },
+    {
+      "path": "js/status.js",
+      "gitBlob": "4d9ddd39e640c29734092302cf677a9e88e248c2"
+    },
+    {
+      "path": "js/tutorial.js",
+      "gitBlob": "3a8f85243457b523565483efa36f6a99c2624c4e"
+    },
+    {
+      "path": "js/ui.js",
+      "gitBlob": "914cefd41fa5517496066fa097867651bedc545d"
+    },
+    {
+      "path": "js/vertical.js",
+      "gitBlob": "2f7bdbdd54dba7e91275eabef366bb06f056b4da"
+    },
+    {
+      "path": "js/workreport.js",
+      "gitBlob": "5b95c568344fed2ffbcc51e02c5cdb063449e673"
+    },
+    {
+      "path": "js/yardinfill.js",
+      "gitBlob": "ad4b8e30e07ae979988f8c3e09e711c8c07c2380"
+    },
+    {
+      "path": "js/yardloop.js",
+      "gitBlob": "e5a532ff7ac1b8ef63817837a0304bf1d8052055"
+    },
+    {
+      "path": "vendor/three.module.min.js",
+      "gitBlob": "282d1087068fab752a7e59b65aaa61c8b0a4be8c"
+    }
+  ],
+  "limitations": [
+    "WebGL rendering NOT TESTED",
+    "physical iPhone NOT TESTED",
+    "subjective visual acceptance NOT TESTED",
+    "no deployment performed"
+  ]
+}
