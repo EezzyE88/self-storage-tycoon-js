@@ -6,7 +6,7 @@ import {UI} from '../../js/ui.js';
 import {ReserveWait} from '../../js/reservewait.js';
 import {yardChoices,yardQuote} from '../../js/yardloop.js';
 import {recovered} from './project-fixture.mjs';
-const seed=recovered().s;
+const seed=recovered({settleDecisions:true}).s;
 function fresh(){const sim=new Sim(structuredClone(seed));sim.s.cash=1100;sim.ensure();return sim;}
 function uiFor(sim){const ui=Object.create(UI.prototype);ui.g={sim,acc:0};ui.title=false;ui.toast=()=>{};ui.renderTut=()=>{};ui.sfx=()=>{};ui.renderFeed=()=>{sim.syncRequestHandling();if(sim.s.convos.some(c=>!c.staffHandling))ui.pauseForPopup('convo');};return ui;}
 const source=fs.readFileSync('js/main.js','utf8');

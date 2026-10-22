@@ -126,7 +126,7 @@ for(const blocked of ['policy','tutorial','agent','office','route','specialist',
 }
 const main=fs.readFileSync('js/main.js','utf8');
 const batch=main.slice(main.indexOf('function stepTicks(n)'),main.indexOf('let last = performance.now()'));
-const recoveredSeed=recovered().s;
+const recoveredSeed=recovered({settleDecisions:true}).s;
 for(const loss of ['policy','agent','office','critical']){
  const sim=new Sim(structuredClone(recoveredSeed));sim.s.cash=1100;sim.s.policies.ownerChores=true;
  sim.s.t=Math.floor(sim.s.t/1440)*1440+22*60; // Off-hours: no immediate Owner assignment.

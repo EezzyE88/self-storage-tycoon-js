@@ -1,0 +1,42 @@
+PASS du5x5 single corner orientation 0
+PASS du5x5 single corner orientation 1
+PASS du5x5 single corner orientation 2
+PASS du5x5 single corner orientation 3
+PASS du5x10 single corner orientation 0
+PASS du5x10 single corner orientation 1
+PASS du5x10 single corner orientation 2
+PASS du5x10 single corner orientation 3
+PASS du10x10 single corner orientation 0
+PASS du10x10 single corner orientation 1
+PASS du10x10 single corner orientation 2
+PASS du10x10 single corner orientation 3
+PASS du10x20 single corner orientation 0
+PASS du10x20 single corner orientation 1
+PASS du10x20 single corner orientation 2
+PASS du10x20 single corner orientation 3
+PASS interior orientation 0 preserves hallway requirement
+PASS interior orientation 1 preserves hallway requirement
+PASS interior orientation 2 preserves hallway requirement
+PASS interior orientation 3 preserves hallway requirement
+PASS du5x5 four rotations preserve row count, cost, time and state
+PASS iu5x5 four rotations preserve row count, cost, time and state
+PASS du5x10 four rotations preserve row count, cost, time and state
+PASS iu5x10 four rotations preserve row count, cost, time and state
+PASS du10x10 four rotations preserve row count, cost, time and state
+PASS iu10x10 four rotations preserve row count, cost, time and state
+PASS du10x20 four rotations preserve row count, cost, time and state
+PASS iu10x20 four rotations preserve row count, cost, time and state
+PASS aisle rectangle rotation swaps footprint without buying
+PASS loading rectangle rotation swaps footprint without buying
+PASS parking rectangle rotation swaps footprint without buying
+PASS walk rectangle rotation swaps footprint without buying
+PASS canopy rectangle rotation swaps footprint without buying
+PASS shell1 rectangle rotation swaps footprint without buying
+PASS shell2 rectangle rotation swaps footprint without buying
+PASS hall rectangle rotation swaps footprint without buying
+PASS office 0 footprint and explicit access side survive build/save
+PASS office 1 footprint and explicit access side survive build/save
+PASS office 2 footprint and explicit access side survive build/save
+PASS office 3 footprint and explicit access side survive build/save
+PASS occupied footprint blocks each rotation and failed build spends nothing
+41 buildability groups passed

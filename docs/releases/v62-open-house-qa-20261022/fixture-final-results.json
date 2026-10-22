@@ -1,0 +1,33 @@
+[
+  {
+    "test": "towner_auto_repairs",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 3.94
+  },
+  {
+    "test": "treserve_wait",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 12.3
+  },
+  {
+    "test": "treserve_wait_continuity",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.6
+  },
+  {
+    "test": "tproperty_projects_save",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.54
+  },
+  {
+    "test": "tthreefloor_journeys",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 13.38,
+    "note": "Retested successfully after explicitly covering the legitimate upstairs cart-left branch."
+  }
+]

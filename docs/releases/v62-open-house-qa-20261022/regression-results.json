@@ -1,0 +1,192 @@
+[
+  {
+    "test": "tbugs",
+    "exit": 0,
+    "seconds": 3.23
+  },
+  {
+    "test": "tfuzz",
+    "exit": "timeout",
+    "seconds": 100
+  },
+  {
+    "test": "tbuildability",
+    "exit": 0,
+    "seconds": 1.06
+  },
+  {
+    "test": "tbuildability_save",
+    "exit": 0,
+    "seconds": 2.98
+  },
+  {
+    "test": "tcontrol_access",
+    "exit": 0,
+    "seconds": 1.19
+  },
+  {
+    "test": "tdisplay_repair",
+    "exit": 0,
+    "seconds": 1.44
+  },
+  {
+    "test": "tfinancial_trust",
+    "exit": 0,
+    "seconds": 0.41
+  },
+  {
+    "test": "tgestures",
+    "exit": 0,
+    "seconds": 1.34
+  },
+  {
+    "test": "tmenu_touch",
+    "exit": 0,
+    "seconds": 1.3
+  },
+  {
+    "test": "tpause_policy",
+    "exit": 0,
+    "seconds": 1.81
+  },
+  {
+    "test": "tsave_recovery",
+    "exit": 0,
+    "seconds": 33.39
+  },
+  {
+    "test": "tthreefloor",
+    "exit": 0,
+    "seconds": 1.49
+  },
+  {
+    "test": "tthreefloor_hardening",
+    "exit": 0,
+    "seconds": 66.54
+  },
+  {
+    "test": "tthreefloor_journeys",
+    "exit": 1,
+    "seconds": 16.21
+  },
+  {
+    "test": "tthreefloor_parity",
+    "exit": 1,
+    "seconds": 0.87
+  },
+  {
+    "test": "tthreefloor_save",
+    "exit": 0,
+    "seconds": 5.67
+  },
+  {
+    "test": "tsandbox",
+    "exit": 0,
+    "seconds": 11.76
+  },
+  {
+    "test": "tsandbox_build_pause",
+    "exit": 0,
+    "seconds": 4.26
+  },
+  {
+    "test": "tinvestment_guidance",
+    "exit": 0,
+    "seconds": 16.15
+  },
+  {
+    "test": "towner_auto_repairs",
+    "exit": 1,
+    "seconds": 1.63
+  },
+  {
+    "test": "treserve_wait",
+    "exit": 1,
+    "seconds": 1.09
+  },
+  {
+    "test": "treserve_wait_continuity",
+    "exit": 1,
+    "seconds": 4.66
+  },
+  {
+    "test": "ttraffic_delegation",
+    "exit": 0,
+    "seconds": 0.94
+  },
+  {
+    "test": "ttraffic_delegation_save",
+    "exit": 0,
+    "seconds": 2.94
+  },
+  {
+    "test": "tcomeback36",
+    "exit": 1,
+    "seconds": 7.44
+  },
+  {
+    "test": "tcomeback36_save",
+    "exit": 0,
+    "seconds": 3.12
+  },
+  {
+    "test": "trescue_operation",
+    "exit": 1,
+    "seconds": 2.91
+  },
+  {
+    "test": "trescue_operation_save",
+    "exit": 0,
+    "seconds": 1.83
+  },
+  {
+    "test": "tproperty_projects",
+    "exit": 1,
+    "seconds": 3.37
+  },
+  {
+    "test": "tproperty_projects_save",
+    "exit": 1,
+    "seconds": 8.14
+  },
+  {
+    "test": "tworking_yard",
+    "exit": 1,
+    "seconds": 3.55
+  },
+  {
+    "test": "tworking_yard_save",
+    "exit": 0,
+    "seconds": 3.6
+  },
+  {
+    "test": "tyard_loop",
+    "exit": 1,
+    "seconds": 0.82
+  },
+  {
+    "test": "tyard_loop_repairs",
+    "exit": 0,
+    "seconds": 5.16
+  },
+  {
+    "test": "tstartup_graphics",
+    "exit": 0,
+    "seconds": 1.67
+  },
+  {
+    "test": "twhole_game_art",
+    "exit": 1,
+    "seconds": 4.01
+  },
+  {
+    "test": "topenhouse_qa",
+    "exit": 0,
+    "seconds": 3.83
+  },
+  {
+    "test": "topenhouse",
+    "exit": 0,
+    "seconds": 1.02
+  }
+]

@@ -575,7 +575,7 @@ export class Renderer {
       const f=o.f||0,H=o.access==='drive'?WALL_H:1.05,cx=o.x+o.w/2,cz=o.y+o.h/2,along=o.dir[0]?o.h:o.w;
       const x=cx+o.dir[0]*(o.w/2+.025),z=cz+o.dir[1]*(o.h/2+.025),side=[-o.dir[1],o.dir[0]];
       // Plinths and projecting jambs make doors read as recessed bays, not painted rectangles.
-      add(f,'foundation',cx,.075,cz,o.w,.15,o.h);
+      add(f,'foundation',cx,.04,cz,o.w,.08,o.h);
       if(o.access==='drive')for(const k of [-1,1])add(f,'pier',x+side[0]*along*.46,H*.5,z+side[1]*along*.46,o.dir[0]?.18:.16,H,o.dir[0]?.16:.18);
       for(const k of [-1,1])add(f,'frame',x+side[0]*along*.405,H*.40,z+side[1]*along*.405,o.dir[0]?.055:.075,H*.80,o.dir[0]?.075:.055);
       add(f,'frame',x,H*.81,z,o.dir[0]?.06:along*.86,.065,o.dir[0]?along*.86:.06);

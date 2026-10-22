@@ -1,0 +1,5 @@
+PASS production raw/compressed save-code retention: construction
+PASS production raw/compressed save-code retention: commissioned
+PASS production raw/compressed save-code retention: first lease acknowledged
+PASS production raw/compressed save-code retention: both completed projects
+PASS legacy and malformed optional metadata load without changing company

@@ -1,0 +1,22 @@
+PASS production raw/compressed save-code retention: construction
+PASS production raw/compressed save-code retention: commissioned
+PASS production raw/compressed save-code retention: first lease acknowledged
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(g.sim.dispatch({type:'build',...PROJECTS.cover.args,projectKey:'cover'}).ok)
+
+    at file:///workspace/scratch/fa1cabbd63d8/v62/tests/headless/tproperty_projects_save.mjs:44:8
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

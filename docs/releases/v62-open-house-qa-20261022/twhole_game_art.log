@@ -1,0 +1,23 @@
+PASS shared drive-up/interior/climate finishes differ in ordinary Maple and sandbox
+PASS all eight states retain distinct bands and non-color shape marks
+PASS blocked and handover states cannot invent cleaning scuffs
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 6
+
+    at file:///workspace/scratch/fa1cabbd63d8/v62/tests/headless/twhole_game_art.mjs:26:132
+    at test (file:///workspace/scratch/fa1cabbd63d8/v62/tests/headless/twhole_game_art.mjs:9:24)
+    at file:///workspace/scratch/fa1cabbd63d8/v62/tests/headless/twhole_game_art.mjs:26:1 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 6,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

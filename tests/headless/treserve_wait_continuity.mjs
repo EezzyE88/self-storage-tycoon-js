@@ -7,7 +7,7 @@ import {ReserveWait} from '../../js/reservewait.js';
 import {yardChoices,yardQuote} from '../../js/yardloop.js';
 import {recovered} from './project-fixture.mjs';
 
-const seed=recovered().s;
+const seed=recovered({settleDecisions:true}).s;
 const fresh=()=>{const sim=new Sim(structuredClone(seed));sim.s.cash=1100;sim.ensure();return sim;};
 const main=fs.readFileSync('js/main.js','utf8');
 const batch=main.slice(main.indexOf('function stepTicks(n)'),main.indexOf('let last = performance.now()'));

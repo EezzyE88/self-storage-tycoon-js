@@ -84,9 +84,19 @@ for(const seed of SEEDS){
   // Determinism: an identical run reproduces the same phases and state.
   const again=clone(base),{J:J2}=journey(again);assert.deepEqual(J2.phases,J.phases);assert.deepEqual(again.s,run.s);
 
+  // V62 can legitimately leave a cart upstairs. Verify that branch explicitly;
+  // only perform the returning-cart checkpoint when that phase actually exists.
   // 11. Production save/reload while waiting, riding, on F3, and with the cart on F3; continuation is identical.
-  for(const [name,stop] of [['waiting',a=>a.elev&&!a.inElev&&a.f===0],['riding',a=>a.inElev&&a.f===1],['travelling on F3',a=>!a.inElev&&a.f===2&&a.st==='walk'],['cart returning from F3',a=>a.f===2&&a.st==='retCart'&&!a.elev]]){
-    const s1=clone(base),r=journey(s1,{stop});assert.ok(r.stopped,`seed ${seed}: reached ${name}`);
+  for(const [name,stop] of [['waiting',a=>a.elev&&!a.inElev&&a.f===0],['riding',a=>a.inElev&&a.f===1],['travelling on F3',a=>!a.inElev&&a.f===2&&a.st==='walk'],['cart returning from F3',a=>a.f===2&&!!a.cart&&a.st==='retCart'&&!a.elev]]){
+    const s1=clone(base),r=journey(s1,{stop});
+    if(name==='cart returning from F3'&&!r.stopped){
+      assert.ok(done(r.J),'visitor still completes the journey');
+      assert.ok(r.J.events.some(e=>e.type==='cart_left'&&e.f===2),'missing return checkpoint must have an explicit upstairs cart-left event');
+      assert.ok(s1.s.carts.some(c=>c.f===2&&['stranded','damaged'].includes(c.st)),'left cart remains represented on its real floor');
+      counts.validCartLeft=(counts.validCartLeft||0)+1;
+      continue;
+    }
+    assert.ok(r.stopped,`seed ${seed}: reached ${name}`);
     const s2=await reload(s1);assert.notEqual(s2,s1);assert.deepEqual(diff(json(s1.s),json(s2.s)),[],'reload is exact');
     const a1=journey(s1),a2=journey(s2);assert.ok(a1.J.departed&&a2.J.departed,`seed ${seed}: journey completes after reload (${name})`);
     assert.equal(a2.J.departed,a1.J.departed);assert.deepEqual(diff(json(s1.s),json(s2.s)),[],`seed ${seed}: reload diverged (${name})`);settled(s2);counts.reloads++;

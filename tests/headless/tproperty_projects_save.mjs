@@ -21,6 +21,8 @@ const g=ctx.game;g.attach=function(sim){this.sim=sim;installTutorial(sim)};g.ui=
 vm.runInContext(main.slice(main.indexOf('const BG_EVENTS'),main.indexOf('let last = performance.now'))+'globalThis.stepTicks=stepTicks;',ctx);
 
 const sm=recovered();
+// This suite tests serialization, not affordability; fund the whole fixture.
+sm.s.cash=100000;
 assert.ok(sm.dispatch({type:'build',tool:'du5x5',a:{x:13,y:4},b:{x:13,y:4},axis:'y',f:0}).ok);
 assert.ok(sm.dispatch({type:'build',...PROJECTS.small.args,projectKey:'small'}).ok);
 assert.equal(sm.s.yardLoop.groups.length,2,'overlapping construction groups both survive production saves');

@@ -1,0 +1,4 @@
+PASS production raw/compressed save-code retention: construction
+PASS production raw/compressed save-code retention: commissioned
+PASS production raw/compressed save-code retention: first lease acknowledged
+COVER_DIAGNOSTIC {"result":{"ok":false,"msg":"Not enough cash (1,680 needed)"},"cash":1561.0000000000005}

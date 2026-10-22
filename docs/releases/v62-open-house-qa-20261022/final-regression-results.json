@@ -1,0 +1,204 @@
+[
+  {
+    "test": "tbugs",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.72
+  },
+  {
+    "test": "tbuildability",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.26
+  },
+  {
+    "test": "tbuildability_save",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 0.65
+  },
+  {
+    "test": "tcontrol_access",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.31
+  },
+  {
+    "test": "tdisplay_repair",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.42
+  },
+  {
+    "test": "tfinancial_trust",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 0.71
+  },
+  {
+    "test": "tgestures",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.29
+  },
+  {
+    "test": "tmenu_touch",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.32
+  },
+  {
+    "test": "tpause_policy",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.58
+  },
+  {
+    "test": "tsave_recovery",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 15.29
+  },
+  {
+    "test": "tthreefloor",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.14
+  },
+  {
+    "test": "tthreefloor_hardening",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 51.85
+  },
+  {
+    "test": "tthreefloor_save",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 4.06
+  },
+  {
+    "test": "tsandbox",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 13.84
+  },
+  {
+    "test": "tsandbox_build_pause",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 0.5
+  },
+  {
+    "test": "tinvestment_guidance",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.17
+  },
+  {
+    "test": "ttraffic_delegation",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 4.06
+  },
+  {
+    "test": "ttraffic_delegation_save",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.57
+  },
+  {
+    "test": "tcomeback36_save",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.44
+  },
+  {
+    "test": "trescue_operation_save",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.89
+  },
+  {
+    "test": "tworking_yard_save",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 0.88
+  },
+  {
+    "test": "tyard_loop_repairs",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.23
+  },
+  {
+    "test": "tstartup_graphics",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 1.1
+  },
+  {
+    "test": "topenhouse_qa",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 3.63
+  },
+  {
+    "test": "topenhouse",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.55
+  },
+  {
+    "test": "twhole_game_art",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 3.0
+  },
+  {
+    "test": "tcomeback36",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.76
+  },
+  {
+    "test": "tfuzz",
+    "arguments": [
+      "30",
+      "1"
+    ],
+    "exit": 0,
+    "seconds": 30.41
+  },
+  {
+    "test": "towner_auto_repairs",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 3.94
+  },
+  {
+    "test": "treserve_wait",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 12.3
+  },
+  {
+    "test": "treserve_wait_continuity",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.6
+  },
+  {
+    "test": "tproperty_projects_save",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 2.54
+  },
+  {
+    "test": "tthreefloor_journeys",
+    "arguments": [],
+    "exit": 0,
+    "seconds": 13.38,
+    "note": "Retested successfully after explicitly covering the legitimate upstairs cart-left branch."
+  }
+]

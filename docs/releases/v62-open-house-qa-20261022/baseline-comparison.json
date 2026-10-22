@@ -1,0 +1,22 @@
+[
+  {
+    "test": "towner_auto_repairs",
+    "baseline_exit": 1
+  },
+  {
+    "test": "treserve_wait",
+    "baseline_exit": 1
+  },
+  {
+    "test": "treserve_wait_continuity",
+    "baseline_exit": 1
+  },
+  {
+    "test": "tproperty_projects_save",
+    "baseline_exit": 1
+  },
+  {
+    "test": "tthreefloor_journeys",
+    "baseline_exit": 1
+  }
+]

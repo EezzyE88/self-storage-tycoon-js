@@ -1,0 +1,6 @@
+{"kind":"dense-lifecycle","units":550,"rebuilds":25,"counts":{"nodes":3063,"materials":1232,"geometry":4,"instances":10489},"disposedOriginalBatches":9,"cpuMs":13796.54}
+{"kind":"steady-presentation","frames":5000,"perRoomTaskScans":0,"instanceReuploads":0,"cpuMs":5681.8}
+{"kind":"simulation-parity","seed":4401,"days":30,"presentationSamples":720,"pairedSaveRoundtrips":6,"cash":28439.75,"units":23,"agents":1,"tasks":0}
+{"kind":"simulation-parity","seed":5150,"days":30,"presentationSamples":720,"pairedSaveRoundtrips":6,"cash":28702.75,"units":23,"agents":1,"tasks":0}
+{"kind":"simulation-parity","seed":9101,"days":30,"presentationSamples":720,"pairedSaveRoundtrips":6,"cash":28428.75,"units":23,"agents":1,"tasks":0}
+PASS dense rebuild/visibility/disposal, 5000 steady frames, three paired 30-day simulations and 18 paired state reloads. No FPS or human playtest claim.

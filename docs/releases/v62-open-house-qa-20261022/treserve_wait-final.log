@@ -1,0 +1,7 @@
+PASS stable build specification, live quote and ranking independence; no save metadata
+PASS actual production batch stops at first funded minute; full ordinary simulation parity; no automatic purchase
+PASS actionable interruptions, delegated work, quote/demand/placement invalidation, seven-day boundary, explicit speeds, nested pauses and actual background/foreground handler
+PASS production UI arming, exact-target completion preview, already-funded/stale offers, blockers, blur and pagehide
+PASS real staff-classified request continues; loss of coverage pauses before next minute; production property switch cancels before speed transfer
+PASS natural reserve-wait / ordinary-play full-state parity {"minutes":396,"reason":"An operating change needs review.","cash":1100}
+PASS policy/agent/operating-office blockers at start and mid-batch; real offshift/capacity/busy coverage continues; refused waits and follow-up pauses preserve state

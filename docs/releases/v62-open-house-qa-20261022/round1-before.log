@@ -1,0 +1,31 @@
+FAIL restoration follows access loss without a commercial or lease change :: wall retained a restored finish after access was lost
++ actual - expected
+
+  [
++   0.8549926280975342,
++   0.7681511640548706,
++   0.6239603757858276
+-   0.9646862745285034,
+-   0.8962693810462952,
+-   0.7912979125976562
+  ]
+
+FAIL restoration follows missing-service changes without a lease change :: wall retained a restored finish with a missing service
++ actual - expected
+
+  [
++   0.8549926280975342,
++   0.7681511640548706,
++   0.6239603757858276
+-   0.9646862745285034,
+-   0.8962693810462952,
+-   0.7912979125976562
+  ]
+
+FAIL cutaway changes exactly when a facing wall crosses its threshold :: wall cache rounded away a real threshold crossing
+FAIL steady frames do not rescan the entire task array for each room :: task-array full scans=2760 across 120 unchanged frames
+FAIL small rotations inside the same cutaway region do not reupload every instance :: unchanged wall cuts rewrote content matrices
+
+2 !== 1
+
+{"passed":0,"failed":5,"environment":"CPU scene graph; Canvas/WebGL stubbed"}
