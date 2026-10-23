@@ -2296,9 +2296,11 @@ export class UI {
     const a = this.coachAct; if (!a) return; this.sfx('click');
     if (a.project) { this.viewProject(a.project); return; }
     if (a.tab) { if (a.cat) this.cat = a.cat; this.select(null); this.setTab(a.tab); if (a.section) this.jumpSection(a.section); return; }
-    const sel = a.sel ?? a.dirt; this.select(sel);
-    const o = typeof sel === 'number' ? this.sim.s.objects[sel] : sel.kind === 'cart' ? this.sim.s.carts.find((c) => c.id === sel.id) : sel;
-    if(o&&(o.f||0)>0&&this.rend.view!==o.f&&this.sim.objs('shell').some(x=>x.floors>o.f))this.setView(o.f);
+    const sel = a.sel ?? a.dirt;
+    const o = typeof sel === 'number' ? this.sim.s.objects[sel] : sel?.kind === 'cart' ? this.sim.s.carts.find((c) => c.id === sel.id) : sel;
+    const f = o?.f || 0;
+    if(o&&this.rend.view!==f&&(f===0||this.sim.objs('shell').some(x=>x.floors>f)))this.setView(f);
+    this.select(sel);
   }
   computePins() {
     const sim = this.sim, s = sim.s, pins = [], seen = new Set();
