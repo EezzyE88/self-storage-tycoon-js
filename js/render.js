@@ -152,6 +152,12 @@ function glowTexture(inner = 'rgba(255,226,160,0.85)') {
   gr.addColorStop(0, inner); gr.addColorStop(0.24, 'rgba(255,224,177,.40)'); gr.addColorStop(0.60, 'rgba(255,218,164,.12)'); gr.addColorStop(1, 'rgba(255,218,164,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return tex(c);
 }
+// Outdoor lamp pools share one light map. Each pool is a broad smooth shoulder across the lamp's gameplay radius plus a small
+// hot spot under the head; summed pools pass through one soft cap, so dense lamps level off instead of stacking into white.
+// Lamps add a warm wash (KE) plus light scaled by the surface color (KD), so dark asphalt lights up and markings still read;
+// surfaces brighter than LAMP_LUM keep their hue but no extra glare, so lit grass and concrete don't turn day-bright.
+const LAMP_PX = 8, LAMP_CAP = 0.5, LAMP_KD = 1.8, LAMP_KE = 0.32, LAMP_LUM = 0.2;
+function lampPool(t) { if (t >= 1) return 0; const e = 1 - t * t; return 0.25 * Math.exp(-((t / 0.18) ** 2)) + 0.60 * e * e; }
 function ringTexture() {
   const c = mkCanvas(128, 128), g = c.getContext('2d');
   g.strokeStyle = '#ffd23a'; g.lineWidth = 10; g.beginPath(); g.arc(64, 64, 52, 0, Math.PI * 2); g.stroke();
@@ -190,6 +196,13 @@ export class Renderer {
     this.groundCanvas = mkCanvas(sim.s.W * CELL, sim.s.H * CELL);
     this.groundTex = tex(this.groundCanvas);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(sim.s.W, sim.s.H), new THREE.MeshStandardMaterial({ map: this.groundTex, roughness: 0.95 }));
+    this.lampU = { uLampMap: { value: null }, uLampK: { value: 0 }, uLampKd: { value: LAMP_KD }, uLampKe: { value: LAMP_KE }, uLampColor: { value: new THREE.Color(1, 0.76, 0.35) } }; this.lampLayout = '';
+    ground.material.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, this.lampU);
+      sh.fragmentShader = 'uniform sampler2D uLampMap; uniform float uLampK, uLampKd, uLampKe; uniform vec3 uLampColor;\n' + sh.fragmentShader.replace('#include <lights_fragment_end>',
+        '#include <lights_fragment_end>\n  vec3 lampBase = material.diffuseColor * min(1.0, ' + LAMP_LUM.toFixed(2) + ' / max(dot(material.diffuseColor, vec3(0.2126, 0.7152, 0.0722)), 1e-3));\n' +
+        '  reflectedLight.directDiffuse += (lampBase * uLampKd + uLampKe) * uLampColor * (texture2D(uLampMap, vMapUv).r * uLampK);');
+    };
     ground.rotation.x = -Math.PI / 2; ground.position.set(sim.s.W / 2, 0, sim.s.H / 2); ground.receiveShadow = true;
     this.scene.add(ground); this.ground = ground;
     const outer = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x86b85a, roughness: 1 }));
@@ -540,6 +553,8 @@ export class Renderer {
   }
   rebuildStatic() {
     const sim = this.sim, s = sim.s; this.clearStatic();
+    // Buildings and property switches can change the interior mask without moving lamps.
+    this.lampLayout = '';
     this.drawGround(); this.lastGroundT = s.t;
     for (const o of Object.values(s.objects)) {
       try { this.buildObj(o); } catch (e) { console.warn('render obj', o.type, e); }
@@ -763,6 +778,7 @@ export class Renderer {
         const lampH = inside ? 1.6 : unitTop ? 1.55 : 2.6;
         if (!inside && !unitTop) this.box(0.08, lampH, 0.08, this.mat.darkMetal, cx, lampH / 2, cz, f, { obj: o.id });
         const head = this.box(inside ? 0.5 : 0.36, 0.1, inside ? 0.18 : 0.24, this.mat.lamp.clone(), cx, lampH, cz, f, { obj: o.id });
+        if (!inside && f === 0) { this.anim.push({ k: 'light', mesh: head, glow: null, o, inside, pool: 0 }); break; }
         const glow = new THREE.Mesh(this.geo.plane, new THREE.MeshBasicMaterial({ map: this.tx.glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
         const R = TOOLS.light.radius * 2; glow.scale.set(R, R, 1); glow.rotation.x = -Math.PI / 2; glow.position.set(cx, f * FLOOR_H + 0.05, cz); glow.renderOrder = 4; glow.castShadow = false;
         this.add(glow, f, { glow: true, inside });
@@ -1061,6 +1077,40 @@ export class Renderer {
       m.visible = this.floorVisible(c.f || 0) && !(this.view === 'ext' && sim.D.shellAt[Math.floor(z) * s.W + Math.floor(x)]) && !(this.view === 0 && y > 0.5);
     }, dt);
   }
+  updateLampMap(night) {
+    const s = this.sim.s, W = s.W, H = s.H, pools = this.anim.filter(A => A.k === 'light' && !A.glow);
+    this.lampU.uLampK.value = night * (this.floorVisible(0) ? 1 : 0);
+    const layout = W + 'x' + H + ':' + pools.map(A => A.o.x + ',' + A.o.y).join(';'), lv = pools.map(A => +A.pool.toFixed(2));
+    const w = W * LAMP_PX, h = H * LAMP_PX, R = TOOLS.light.radius, shell = this.sim.D.shellAt;
+    const rect = (A) => { const cx = A.o.x + 0.5, cz = A.o.y + 0.5; return [Math.max(0, Math.floor((cx - R) * LAMP_PX)), Math.max(0, Math.floor((cz - R) * LAMP_PX)), Math.min(w - 1, Math.ceil((cx + R) * LAMP_PX)), Math.min(h - 1, Math.ceil((cz + R) * LAMP_PX))]; };
+    let x0 = 0, y0 = 0, x1 = w - 1, y1 = h - 1;
+    if (layout === this.lampLayout) { // same lamps: redraw only around the ones whose level changed (a flickering lamp)
+      x0 = w; y0 = h; x1 = -1; y1 = -1;
+      pools.forEach((A, k) => { if (lv[k] === this.lampLv[k]) return; const r = rect(A); x0 = Math.min(x0, r[0]); y0 = Math.min(y0, r[1]); x1 = Math.max(x1, r[2]); y1 = Math.max(y1, r[3]); });
+      if (x1 < 0) return;
+    }
+    this.lampLayout = layout; this.lampLv = lv;
+    if (!this.lampCanvas || this.lampCanvas.width !== w || this.lampCanvas.height !== h) {
+      this.lampCanvas = mkCanvas(w, h); if (this.lampTex) this.lampTex.dispose();
+      const t = new THREE.CanvasTexture(this.lampCanvas); t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
+      this.lampTex = t; this.lampU.uLampMap.value = t;
+    }
+    const rw = x1 - x0 + 1, rh = y1 - y0 + 1, sum = new Float32Array(rw * rh);
+    pools.forEach((A, k) => {
+      if (lv[k] <= 0) return; const cx = A.o.x + 0.5, cz = A.o.y + 0.5, r = rect(A);
+      for (let py = Math.max(y0, r[1]); py <= Math.min(y1, r[3]); py++) for (let px = Math.max(x0, r[0]); px <= Math.min(x1, r[2]); px++) {
+        const dx = (px + 0.5) / LAMP_PX - cx, dz = (py + 0.5) / LAMP_PX - cz;
+        sum[(py - y0) * rw + px - x0] += lv[k] * 0.75 * lampPool(Math.sqrt(dx * dx + dz * dz) / R);
+      }
+    });
+    const g = this.lampCanvas.getContext('2d'), img = g.createImageData(rw, rh), d = img.data;
+    for (let py = 0; py < rh; py++) for (let px = 0; px < rw; px++) {
+      const i = py * rw + px, cell = (((py + y0) / LAMP_PX) | 0) * W + (((px + x0) / LAMP_PX) | 0);
+      const v = shell[cell] || !sum[i] ? 0 : Math.round(255 * (1 - Math.exp(-sum[i] / LAMP_CAP))), j = i * 4; // interiors keep their own lamps
+      d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255;
+    }
+    g.putImageData(img, x0, y0); this.lampTex.needsUpdate = true;
+  }
   updateAnim(dt, night) {
     const sim = this.sim, s = sim.s;
     this.updateStatusMarks();
@@ -1082,6 +1132,7 @@ export class Renderer {
           const lvl = (A.inside ? 0.85 : night) * (on ? 1 : 0) * flick;
           A.mesh.material.emissiveIntensity = on ? (A.inside ? 1.2 : 0.3 + night * 1.8) * flick : 0;
           A.mesh.material.color.set(on ? 0xfff4d6 : 0x444444);
+          if (!A.glow) { A.pool = (on ? 1 : 0) * flick * (A.mesh.visible ? 1 : 0); break; }
           A.glow.material.opacity = lvl * (A.inside ? (this.view === 'ext' ? 0 : 0.55) : 0.75);
           A.glow.visible = A.glow.material.opacity > 0.01 && A.mesh.visible && this.floorVisible(A.glow.userData.f || 0);
           break;
@@ -1275,7 +1326,7 @@ export class Renderer {
     if (this.overlay && (this.lastOv < 0 || this.time - this.lastOv > 0.5)) { this.lastOv = this.time; this.drawOverlay(); }
     const night = this.updateSky(dt);
     this.baySignature=s.vehicles.map(v=>v.dest).join(',');
-    this.updateAnim(dt, night);
+    this.updateAnim(dt, night); this.updateLampMap(night);
     this.updateDynamic(dt);
     // focus ring
     const fc = this.focusT;
