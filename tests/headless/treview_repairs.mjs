@@ -50,7 +50,13 @@ await test('#2 Freeze: Space cannot run time while frozen; Unfreeze and exiting 
 
 // ---------- #3 / #4 labels and visible instructions
 await test('#3 ring labels avoid blueprint captions, and no blueprint caption is drawn twice',()=>{
-  const u=readFileSync('js/ui.js','utf8');assert.match(u,/\.actionbar \.status, #blueprint text'\)/);
+  // Exercise actual updateGuide with selector-aware controlled rectangles, not source spelling.
+  const model=makeMaple(3),probe=Object.create(UI.prototype),classes=new Set(),rect=(left,top,width,height)=>({left,top,width,height,right:left+width,bottom:top+height});
+  const label={textContent:'',style:{},getBoundingClientRect:()=>rect(0,0,88,28)},guide={hidden:true,style:{},lastChild:label,classList:{remove:k=>classes.delete(k),toggle:(k,on)=>on?classes.add(k):classes.delete(k)}};
+  probe.g={sim:model};probe.title=true;probe.$=()=>guide;probe.guideTarget=()=>({el:{getBoundingClientRect:()=>rect(160,280,44,44),closest:()=>null},lbl:'Tap'});
+  globalThis.innerWidth=390;globalThis.innerHeight=844;let blocked=false;const checked=new Set(),before=JSON.stringify(model.s);
+  probe.root={querySelectorAll:selectors=>{const list=selectors.split(',').map(x=>x.trim());for(const expected of ['.actionbar','#blueprint text'])if(list.includes(expected))checked.add(expected);return blocked?list.filter(x=>['.actionbar','#blueprint text'].includes(x)).map((x,i)=>({getBoundingClientRect:()=>i?rect(0,324,390,50):rect(0,230,390,50)})):[];}};
+  probe.updateGuide();assert.ok(!classes.has('nolabel'));blocked=true;probe.updateGuide();assert.ok(classes.has('nolabel'),'caption hidden when actionbar and blueprint occupy both placements');assert.equal(guide.hidden,false,'target ring remains');assert.deepEqual([...checked].sort(),['#blueprint text','.actionbar']);assert.equal(JSON.stringify(model.s),before);
   const s=makeMaple(20260929);s.s.tut={on:false,done:true,flags:{}};s.s.lesson={id:'up',idMark:s.s.nextId,built:[],flags:{},entered:true};s.s.creative=true;
   for(const k of ['aisle','shell2','hall','doorWide','loading','hall2'])assert.ok(s.dispatch({type:'build',...verticalLayout(s).plans[k]}).ok,k);
   const ui=Object.create(UI.prototype),box={innerHTML:'',setAttribute(){}};ui.g={sim:s,rend:{view:0,project:(x,y)=>({x:x*12,y:y*9,vis:true})}};ui.$=()=>box;ui.modalOpen=()=>false;globalThis.innerWidth=800;globalThis.innerHeight=600;
@@ -59,7 +65,7 @@ await test('#3 ring labels avoid blueprint captions, and no blueprint caption is
 await test('#4 the docked instruction strip keeps the how-to line visible',()=>{
   const {ui,sim}=fixture(0),box={innerHTML:''};ui.$=()=>box;ui.rend.setFocus=()=>{};ui.currentBlueprintPlan=()=>null;delete ui.renderTut;sim.s.tut.beat=BEATS.findIndex(b=>b.id==='makeready');ui.tutMin=true;UI.prototype.renderTut.call(ui,true);
   assert.match(box.innerHTML,/<span class="how-line">In the unit panel that opened|<span class="how-line">It.s on the drive-up row/);
-  const css=readFileSync('css/game.css','utf8');assert.match(css,/#ui\.has-sheet \.tut:not\(\.offer\):not\(\.scen\) \.how-line, #ui:has\(\.actionbar\) \.tut:not\(\.offer\):not\(\.scen\) \.how-line \{ display:-webkit-box/);assert.match(css,/#ui \.tut \.how-line \{ display:none; \}/);});
+  const css=readFileSync('css/game.css','utf8');assert.match(css,/#ui\.has-sheet \.tut:not\(\.offer\):not\(\.scen\) \.how-line, #ui:has\(\.actionbar\) \.tut:not\(\.offer\):not\(\.scen\) \.how-line \{ display:block; max-height:min\(24dvh, 180px\); overflow-y:auto/);assert.match(css,/#ui \.tut \.how-line \{ display:none; \}/);assert.match(css,/touch-action:pan-y; white-space:normal; overflow-wrap:anywhere/);});
 
 // ---------- #5 hallway: missing / ordered / built, with a working route to time and no auto-resume
 function upLesson(){const s=makeMaple(20260929);s.s.tut={on:false,done:true,flags:{}};s.s.lesson={id:'up',idMark:s.s.nextId,built:[],flags:{},entered:true};s.s.cash=1e6;s.s.open=false;return s;}
