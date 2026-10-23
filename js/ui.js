@@ -25,6 +25,19 @@ import { expansionEvidence, cancellationBreakdown } from './vertical.js';
 import { layoutCaptions, edgePoint, CAPTION_PRIORITY as CP } from './captions.js';
 // Results of savearchive.keep(): older callers and test doubles may still return a plain boolean.
 const stored = (r) => r === true || !!(r && r.ok);
+// Put the optional pointer caption outside every interface surface. The ring is
+// sufficient when neither side has room; hiding a caption never hides its target.
+export function guideLabelPlacement(target, label, width, height, blockers) {
+  const pad = 8, gap = 8;
+  if (label.width > width - 2 * pad) return null;
+  const left = Math.max(pad, Math.min(width - pad - label.width, target.left + target.width / 2 - label.width / 2));
+  for (const [below, top] of [[false, target.top - gap - label.height], [true, target.bottom + gap]]) {
+    if (top < pad || top + label.height > height - pad) continue;
+    if (blockers.some(r => left < r.right && left + label.width > r.left && top < r.bottom && top + label.height > r.top)) continue;
+    return { below, center: left + label.width / 2 };
+  }
+  return null;
+}
 const namesOf = (metas) => metas.map((m) => (m && m.name) || 'Saved game').join(', ');
 // What a failed store left behind, read back from storage, never assumed.
 export function storeFailText(r, what) {
@@ -2039,13 +2052,14 @@ export class UI {
     g.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; g.style.width = Math.round(w) + 'px'; g.style.height = Math.round(h) + 'px';
     const lb = g.lastChild; if (lb.textContent !== t.lbl) lb.textContent = t.lbl;
     // The label must not hide the instruction, HUD, status text or toasts: use the clear side, else drop the label.
-    const lw = Math.max(70, t.lbl.length * 7 + 20), lx = x + w / 2 - lw / 2;
-    const blockers = [...this.root.querySelectorAll('#tut .tut, .hud > .chip, .hud > .iconbtn, .viewctl, #feed .toast, .sheet header, .sheet .cats, .sheet .pill, .sheet .kv, .sheet .dock-summary, .sheet .miss, #tabs, .actionbar .status, #blueprint text')].filter((e) => !(t.el && (e.contains(t.el) || t.el.contains(e)))).map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
-    const clear = (top) => top >= 0 && top + 30 <= innerHeight && !blockers.some((r) => lx < r.right && lx + lw > r.left && top < r.bottom && top + 30 > r.top);
-    const above = clear(y - 38), below = clear(y + h + 8);
+    g.classList.remove('nolabel'); // measure the actual font and caption, including after a hidden step
+    const label = lb.getBoundingClientRect();
+    const blockers = [...this.root.querySelectorAll('#tut .tut, .hud > *, #speed, .viewctl, .viewextra, #feed .toast, #feed .convo, .sheet, .actionbar, #tabs, #blueprint text')].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+    const place = guideLabelPlacement({left:x, top:y, bottom:y+h, width:w}, label, innerWidth, innerHeight, blockers);
     // A ring on the instruction card's own button needs no label: the card title and the button already say it.
-    const inCard = !!(t.el && t.el.closest && t.el.closest('#tut')) && this.guideStep?.redirect === 'switch';
-    g.classList.toggle('below', !inCard && !above && below); g.classList.toggle('nolabel', inCard || (!above && !below)); g.classList.toggle('passive', !!t.passive);
+    const inCard = !!(t.el && t.el.closest && t.el.closest('#tut'));
+    if (place) lb.style.left = `${place.center - x}px`;
+    g.classList.toggle('below', !!place?.below); g.classList.toggle('nolabel', inCard || !place); g.classList.toggle('passive', !!t.passive);
   }
 
   fmtGoal(g, v) { return g.fmt === 'pct' ? pct(v) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }

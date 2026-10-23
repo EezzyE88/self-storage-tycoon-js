@@ -1,0 +1,19 @@
+{
+  "base": "1339648652cf61bfce23a96a60cbb54a7006c32a",
+  "f2": "a8be9d03c2b6cc9322acc8f74178dd6f0f241dcf",
+  "tutorial": "1c4f15e3d3533254b7aa022c49af07f1c500bd3b",
+  "expected_union_tree": "01c5d3ffb8249adefd1f0d15969c147c5435c1f8",
+  "differences_from_union": [
+    "js/version.js"
+  ],
+  "runtime_changes_against_base": [
+    "css/game.css",
+    "js/render.js",
+    "js/showcase.js",
+    "js/tutorial.js",
+    "js/ui.js",
+    "js/version.js"
+  ],
+  "all_other_existing_files": "exact union of both inputs",
+  "combined_regression_scripts_passed": 18
+}

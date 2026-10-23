@@ -1,0 +1,66 @@
+[
+  {
+    "script": "ttutorial_guidance",
+    "exit": 0,
+    "tail": [
+      "ALL PASS: 6 guidance groups. Rectangle/DOM-double checks only; rendered browser and physical Safari NOT TESTED."
+    ]
+  },
+  {
+    "script": "tblueprint",
+    "exit": 0,
+    "tail": [
+      "ALL PASS: 26 blueprint/recovery checks"
+    ]
+  },
+  {
+    "script": "tunitnumbering",
+    "exit": 0,
+    "tail": [
+      "ALL PASS: 9 numbering and migration groups; physical Safari NOT TESTED"
+    ]
+  },
+  {
+    "script": "tunitnumbering_vertical_legacy",
+    "exit": 0,
+    "tail": [
+      "PASS migrate native parent expansion phase 4 then complete without recharging or changing existing IDs/leases"
+    ],
+    "note": "Initial invocation omitted required parent-checkout argument; rerun with verified 9700d9d parent passed."
+  },
+  {
+    "script": "tpause_policy",
+    "exit": 0,
+    "tail": [
+      "13 pause-policy checks passed"
+    ]
+  },
+  {
+    "script": "tsandbox_build_pause",
+    "exit": 0,
+    "tail": [
+      "PASS free, instant=true, pauseDuringReview: placement and real Confirm"
+    ]
+  },
+  {
+    "script": "tbuildability_save",
+    "exit": 0,
+    "tail": [
+      "PASS production raw/compressed saves preserve all four unit directions and rotated office geometry, pending construction, cash, time and Pause across repeated loads"
+    ]
+  },
+  {
+    "script": "tsave_recovery",
+    "exit": 0,
+    "tail": [
+      "14 save-recovery checks passed; autosave=original double; delay=0ms"
+    ]
+  },
+  {
+    "script": "tunitnumbering_parity",
+    "exit": 0,
+    "tail": [
+      "PASS actual parent scenario start/migration parity: climate"
+    ]
+  }
+]
