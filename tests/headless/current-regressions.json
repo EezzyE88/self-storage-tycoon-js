@@ -540,8 +540,8 @@
           "@node",
           "tests/headless/towner_auto_repairs.mjs"
         ],
-        "completion": "PASS\\ automatic\\ scheduling,\\ real\\ completion,\\ normal\\ hours,\\ one\\ reservation\\ and\\ existing\\ quick\\-fix\\ quality",
-        "minimum_pass_lines": 1,
+        "completion": "PASS\\ staff\\ priority,\\ temporary\\ delays,\\ daily\\ reset,\\ disabled/missing\\ coverage,\\ specialist/PM\\ limits,\\ critical\\ interruptions,\\ save/load\\ and\\ paused\\ production\\ clock",
+        "minimum_pass_lines": 2,
         "timeout": 180,
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
       },
@@ -712,10 +712,11 @@
           "@node",
           "tests/headless/tsoft_audio.mjs"
         ],
-        "completion": "PASS\\ rent\\ uses\\ rounded\\ envelopes,\\ restrained\\ peaks\\ and\\ no\\ jagged\\ waveforms",
-        "minimum_pass_lines": 12,
+        "completion": "33\\ soft\\-audio\\ checks\\ passed",
+        "minimum_pass_lines": 33,
         "timeout": 180,
-        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "scope": "Complete source-declared 33-check audio suite; earlier audit log was not sufficient terminal evidence."
       },
       {
         "id": "tstafffirst",
