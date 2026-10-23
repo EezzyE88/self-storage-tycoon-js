@@ -1149,3 +1149,8 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  /* Expanded camera controls use this same row; restore the explanation on close. */
  #ui:has(.viewctl.open) .career-goal { display:none; }
 }
+/* Narrow portrait stacks the 44px camera button alongside this row. Reserve
+   its own target plus an 8px gap; existing text wrapping can grow the row. */
+@media (max-width:410px) and (min-height:521px) {
+ #ui .hud .career-goal { width:calc(100% - 52px); min-width:0; }
+}
