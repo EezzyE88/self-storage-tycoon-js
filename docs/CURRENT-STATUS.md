@@ -3,11 +3,13 @@ Repository: EezzyE88/self-storage-tycoon-js. Timezone: America/Los_Angeles.
 This supersedes older current-state summaries; dated evidence retains its original scope.
 
 ## Authority and release state
-- Accepted game source and freshly verified remote master: `7d9bce5dfe431974112391a8e7fe39c2e0552744`.
-- Complete accepted tree: `31b81acc56a7239ebd866f6a6b14b5369d6277f3`.
+- Remote master observed when this correction was prepared: `5298f6edcd4ae3329de61007ac382c527d62d4cc`, the adopted documentation checkpoint.
+- Accepted game source: `7d9bce5dfe431974112391a8e7fe39c2e0552744`. All non-documentation files in 5298f6e match it. Reverify the live master before a task; later documentation commits do not change this game-source identity by themselves.
+- Complete accepted game-source tree (later documentation commits have a different complete tree): `31b81acc56a7239ebd866f6a6b14b5369d6277f3`.
 - Build: `v62-career-camera-clearance-20261023`.
 - Authorized fast-forward from ea65f43570d01e74de4e21fd3756705a70408aac is complete. No new merge commit or recreated game source.
-- This documentation reconciliation is isolated on maintenance/project-checkpoint-20261023, based on accepted 7d9bce5. It is not a game change, deployment, or merge into master.
+- Documentation checkpoint 5298f6e, originally prepared on maintenance/project-checkpoint-20261023, was adopted into master by authorized fast-forward from 7d9bce5. The original branch remains preserved. This changed no runtime files, deployments or saves.
+- The current correction records that completed adoption; it does not authorize or predict adoption of any successor branch. Historical candidate notes and checkpoint inventories retain their dated status.
 - PR #2 remains an open draft, unmerged and excluded. Its historical body describes the state when written, not current master.
 
 ## Hosting — metadata freshly checked October 23
@@ -16,10 +18,11 @@ This supersedes older current-state summaries; dated evidence retains its origin
 | Open House review Site | 5 | Exact accepted 7d9bce5; prior independent verification matched all 47 runtime files | Public |
 | Protected original game preview | 62 | Retained pre-Open-House accepted V62 snapshot 0385af2 / original tested b2c55a6 | Public |
 
-Open House: https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site
-Protected V62: https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site
+[Accepted Open House game / public review, V5](https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site)
 
-The review URL's 23a68ba slug is historical; it does not identify the current served build. Review metadata last changed 2026-10-23T13:27:11.817574Z; V62 metadata last changed 2026-10-21T06:33:54.527842Z. No publication occurred in this cleanup. The 47-file result is retained earlier verification, not a fresh download of every asset in this housekeeping task. Hosting source commits and game commits are different identities.
+[Protected original V62 preview](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site)
+
+The review URL's 23a68ba slug is historical; it does not identify the current served build. Review metadata last changed 2026-10-23T13:27:11.817574Z; V62 metadata last changed 2026-10-21T06:33:54.527842Z. No publication occurred in this cleanup. The 47-file result is retained earlier verification, not a fresh download of every asset in this housekeeping task. Hosting source commits and game commits are different identities. The later audit received HTTP 403 for fresh asset requests from its environment; no renewed byte-verification PASS is claimed. That does not establish a player-facing outage.
 
 ## Accepted scope and evidence
 | Area | Current evidence | Limits |
@@ -55,6 +58,6 @@ The v2 ZIP's 40 manifest entries verify. Recorded captures use Eddie's Day-699 s
 The preservation hash covers time, cash, objects, dirt and tenant count, not every simulation field. Exact served-source matching is collaborator-reported without its underlying comparison log. Original PNGs used for numerical analysis are absent; JPEGs support visual inspection. Blending/radius/opacity/overlap sub-factors remain inferred. No repair, physical-device repair acceptance, upper-floor/motion pass or performance claim exists.
 
 ## Next decision
-Finish this checkpoint before new implementation. If Eddie elects to resume visual work, use one isolated lamp-glow presentation prototype from exact 7d9bce5 and compare the same disposable company/camera in fair and rainy nights. Preserve useful coverage and fault cues. No fresh implementation, deployment or merge is authorized by this status file.
+The checkpoint adoption is complete. Documentation corrections, test maintenance and visual experiments remain separate scopes. If Eddie elects to resume visual work, use one isolated lamp-glow presentation prototype from exact 7d9bce5 and compare the same disposable company/camera in fair and rainy nights. Preserve useful coverage and fault cues. No fresh implementation, deployment or merge is authorized by this status file.
 
 See [HANDOFF.md](HANDOFF.md), [RECOVERY-INDEX.md](RECOVERY-INDEX.md), [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and [checkpoint inventory](checkpoints/20261023/INVENTORY.json).

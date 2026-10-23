@@ -4,14 +4,17 @@ Recovery instructions do not authorize a rollback, deployment or save replacemen
 ## Source targets
 | Role | Exact identity |
 | --- | --- |
-| Accepted game / current master | `7d9bce5dfe431974112391a8e7fe39c2e0552744` |
+| Master observed when this correction was prepared; adopted docs checkpoint | `5298f6edcd4ae3329de61007ac382c527d62d4cc` |
+| Unchanged accepted game source | `7d9bce5dfe431974112391a8e7fe39c2e0552744` |
 | Accepted tree | `31b81acc56a7239ebd866f6a6b14b5369d6277f3` |
 | Prior accepted Open House integration | `ea65f43570d01e74de4e21fd3756705a70408aac` |
 | Original protected V62 snapshot | `0385af259c35058da69ed7d6cbb29e2ab7619abb` |
 | Original tested V62 source represented by snapshot | `b2c55a6ee9033e5b52dbb253fe61689ba5f71f11` |
 | Earlier solid-build checkpoint | `2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d` |
 
-Fresh remote branch inventory is in [INVENTORY.json](checkpoints/20261023/INVENTORY.json). It is a point-in-time inventory, not a full Git-history backup. Protected earlier original-history packages are retained from project records; not all were redownloaded during this cleanup.
+Reverify live master before recovery. The completed 7d9bce5 → 5298f6e adoption changed documentation only; later documentation successors have different full trees without necessarily changing the accepted game.
+
+The dated pre-adoption remote branch inventory is in [INVENTORY.json](checkpoints/20261023/INVENTORY.json). It is a point-in-time inventory, not a full Git-history backup. Protected earlier original-history packages are retained from project records; not all were redownloaded during this cleanup.
 
 ## Current evidence to use
 | Artifact | Role |
@@ -36,4 +39,4 @@ Preserve original branches and packages. Do not force-push, delete candidates, r
 
 ## Cleanup scope
 Eight local ZIPs passed CRC checks; seven available checksum manifests had 2,986 entries and zero SHA-256 mismatches. Full artifact hashes and remote refs are in INVENTORY.json. This does not inventory all historical Library files or certify all tests inside those packages.
-Previous orientation docs are preserved verbatim under [history/checkpoint-before-20261023/](history/checkpoint-before-20261023/). Older “current” notices should be read as historical.
+Previous orientation docs are preserved verbatim under [history/checkpoint-before-20261023/](history/checkpoint-before-20261023/). The adopted 5298f6e versions of README, status, handoff and recovery are also preserved under [history/before-post-adoption-20261023/](history/before-post-adoption-20261023/). Older “current” notices should be read as historical.

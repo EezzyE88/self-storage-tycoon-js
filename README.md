@@ -2,7 +2,7 @@
 
 A touch-first 3D game about operating and growing a self-storage business on iPhone Safari. The property is the game board: **layout → operations → economics → growth**.
 
-**Project state, October 21, 2026 (America/Los_Angeles):** playable development game with scoped physical-iPhone acceptance. The next goal is a dependable, understandable and rewarding first-facility experience. Commercial release readiness is not established.
+**Project state, October 23, 2026 (America/Los_Angeles):** playable development game with scoped physical-iPhone acceptance. The next goal is a dependable, understandable and rewarding first-facility experience. Commercial release readiness is not established.
 
 ## New to the project?
 
@@ -13,18 +13,24 @@ A touch-first 3D game about operating and growing a self-storage business on iPh
 
 Use only **EezzyE88/self-storage-tycoon-js**, the standalone JavaScript/Three.js game. Keep the C++/WASM and Grok projects separate.
 
-## Current baseline
+## Current source and previews
 
-| Item | Identity / meaning |
-|---|---|
-| Accepted gameplay source snapshot | `0385af259c35058da69ed7d6cbb29e2ab7619abb` |
-| Original tested source represented by snapshot | `b2c55a6ee9033e5b52dbb253fe61689ba5f71f11` |
-| Gameplay baseline tree | `b309d23cca38b17fe02e8f79c654f2d9622b6b66` |
-| Existing Safari game Site | Version 62; current Site metadata checked October 21 |
-| Protected earlier recovery | `2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d`; retained version 57 |
-| This update | Documentation only on `maintenance/project-status-20261021`; no merge or deployment |
+| Role | Identity / meaning |
+| --- | --- |
+| Master observed when this correction was prepared | `5298f6edcd4ae3329de61007ac382c527d62d4cc`; adopted documentation checkpoint |
+| Accepted game source | `7d9bce5dfe431974112391a8e7fe39c2e0552744`; unchanged runtime beneath the documentation checkpoint |
+| Complete accepted game-source tree | `31b81acc56a7239ebd866f6a6b14b5369d6277f3`; a later documentation commit has a different complete tree |
+| Earlier protected V62 snapshot | `0385af259c35058da69ed7d6cbb29e2ab7619abb`, representing original tested `b2c55a6ee9033e5b52dbb253fe61689ba5f71f11` |
+| Earlier solid-build recovery | `2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d`; historical checkpoint |
 
-[Open the existing Safari game](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site). It is a public development preview. Its old slug and Site description do not identify its current game source. Publication records associate version 62 with original tested source b2c55a6. This reconciliation checked Site metadata, not fresh served-file hashes or gameplay.
+The authorized fast-forward from accepted game source 7d9bce5 to documentation checkpoint 5298f6e is complete. It changed documentation only and did not deploy anything. Re-read the live master ref before work: later documentation successors do not imply a new accepted game build. This file records verified events and identities, not the future merge state of any correction branch.
+
+| Preview | Link | Recorded source and purpose |
+| --- | --- | --- |
+| Accepted Open House game / public review | [Open House, version 5](https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site) | Accepted game source 7d9bce5; scoped iPhone PASS |
+| Protected original V62 preview | [Original V62, version 62](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site) | Earlier pre-Open-House game; preserved separately |
+
+Both are public development previews. Their historical URL slugs do not identify current source. Prior Open House publication verification matched all 47 runtime files; this is retained evidence. Later audit HTTP requests returned 403 from that environment, so no renewed served-file PASS is claimed. Site metadata/provenance remained unchanged; a blocked audit request does not establish a broken player URL.
 
 ## What exists
 
@@ -37,7 +43,8 @@ Supported scope is three playable floors and up to five company properties. A fi
 - Preserve the accepted gameplay baseline and protected checkpoints.
 - Coastal proof `3391b7a3add74fe0f070c15eaee7dab2851ab69d` was **rejected by Eddie** with a request to return to the pre-Coastal version. It is separate from the game; its Site still exists. No completed rollback is verified.
 - Stylized slice `20db0f474f02dbd9891b27bcdef5eaa8fe858fa4` is an unaccepted comparison candidate. Its handoff reports automated passes but zero actual moving captures; physical iPhone remains NOT TESTED.
-- Complete the ordinary ownership loop: operate → understand → invest or defer → see payoff. Do not force hiring/building or tune economics merely to manufacture a successful playthrough.
+- The ordinary ownership playtest is completed: Eddie likes building/expanding and the visible payoff, while prolonged waiting drags. Do not require a repeat merely because documentation changed. Preserve justified choices; do not force spending or retune economics to manufacture progress.
+- Open House and the career interface are accepted within their recorded scope. PR #2 remains excluded; milestone-wait is parked; test maintenance and the paused lamp-glow prototype are separate future tasks.
 - Broad iPhone performance, beginner comprehension, long-term career/portfolio pacing and whole-game acceptance remain incomplete. Older focused passes retain their scope.
 
 ## Source and development
