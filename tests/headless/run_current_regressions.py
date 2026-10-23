@@ -44,6 +44,10 @@ def assess(entry, code, stdout, stderr, timed_out=False):
         return 'OBSERVATION', 'non-gating historical result; cause unresolved', failures
     return 'PASS', 'process, output and completion checks passed', failures
 
+def attempted_count(rows):
+    # A timed-out child did execute even though it has no exit code.
+    return sum('seconds' in row for row in rows)
+
 def aggregate(rows):
     if any(r['status'] in ['FAIL', 'TIMEOUT'] for r in rows):
         return 1
@@ -192,7 +196,7 @@ def main(argv=None):
     report['counts'] = {k:sum(x['status']==k for x in report['results']) for k in ['PASS','FAIL','ERROR','BLOCKED','TIMEOUT','OBSERVATION','NOT_RUN']}
     report['selected'] = len(report['results'])
     report['required'] = sum(x.get('required',True) for x in report['results'])
-    report['attempted'] = sum('exit_code' in x and x['exit_code'] is not None for x in report['results'])
+    report['attempted'] = attempted_count(report['results'])
     report['exit_code'] = aggregate(report['results'])
     (output/'results.json').write_text(json.dumps(report, indent=2)+'\n')
     headline = ('ALL REQUIRED CHECKS PASSED' if report['exit_code']==0 and args.profile!='observations'

@@ -33,7 +33,9 @@ class RunnerTests(unittest.TestCase):
     def test_thrown_exception(self):
         self.assertNotEqual(self.execute("raise RuntimeError('broken')")['status'],'PASS')
     def test_timeout(self):
-        self.assertEqual(self.execute('import time;time.sleep(2)',timeout=.03)['status'],'TIMEOUT')
+        row=self.execute('import time;time.sleep(2)',timeout=.03)
+        self.assertEqual(row['status'],'TIMEOUT')
+        self.assertEqual(runner.attempted_count([row,{'status':'BLOCKED'}]),1)
     def test_missing_fixture_and_export(self):
         self.assertEqual(self.execute("print('PASS complete')",required_files=['absent.sst'])['status'],'BLOCKED')
         self.assertEqual(self.execute('',command=['@export:missing'])['status'],'BLOCKED')
