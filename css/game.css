@@ -1127,3 +1127,9 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  #ui .actionbar .build-details .refund-note { opacity:1; color:var(--muted); }
  #ui .actionbar .access-side { margin:2px 0; }
 }
+
+/* Short portrait reviews need room to read the financial terms between the
+   fixed header and buttons. Retain a 64px yard gap; taller phones keep above. */
+@media (max-width:700px) and (min-height:521px) and (max-height:740px) and (orientation:portrait) {
+ #ui .actionbar:not(.placing):not(.idle-strip) { max-height:min(56dvh, calc(100dvh - var(--review-top, 116px) - 64px - var(--safe-b) - 64px)); }
+}

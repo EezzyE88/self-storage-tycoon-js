@@ -1,0 +1,79 @@
+[
+  {
+    "script": "treview_space",
+    "exit": 0,
+    "tail": [
+      "ALL PASS: 4 review checks. CSS budget arithmetic/production HTML only; rendered browser sizes and physical Safari NOT TESTED."
+    ]
+  },
+  {
+    "script": "ttutorial_guidance",
+    "exit": 0,
+    "tail": [
+      "ALL PASS: 6 guidance groups. Rectangle/DOM-double checks only; rendered browser and physical Safari NOT TESTED."
+    ]
+  },
+  {
+    "script": "tblueprint",
+    "exit": 0,
+    "tail": [
+      "ALL PASS: 26 blueprint/recovery checks"
+    ]
+  },
+  {
+    "script": "tpause_policy",
+    "exit": 0,
+    "tail": [
+      "13 pause-policy checks passed"
+    ]
+  },
+  {
+    "script": "tbuildability",
+    "exit": 0,
+    "tail": [
+      "41 buildability groups passed"
+    ]
+  },
+  {
+    "script": "tbuildability_save",
+    "exit": 0,
+    "tail": [
+      "PASS production raw/compressed saves preserve all four unit directions and rotated office geometry, pending construction, cash, time and Pause across repeated loads"
+    ]
+  },
+  {
+    "script": "tsave_recovery",
+    "exit": 0,
+    "tail": [
+      "14 save-recovery checks passed; autosave=original double; delay=0ms"
+    ]
+  },
+  {
+    "script": "tgestures",
+    "exit": 0,
+    "tail": [
+      "12 executed checks passed; physical Safari acceptance pending"
+    ]
+  },
+  {
+    "script": "tcontrol_access",
+    "exit": 0,
+    "tail": [
+      "PASS unsuccessful bounded attempt remains false without repeated automatic camera correction"
+    ]
+  },
+  {
+    "script": "tfloor_context",
+    "exit": 0,
+    "tail": [
+      "LIMIT: CPU scene graph + UI handler checks; WebGL pixels, Safari and physical iPhone not tested."
+    ]
+  },
+  {
+    "script": "tcoach_floor_selection",
+    "exit": 0,
+    "tail": [
+      "PASS exact 4f2929a handler reproduces F1-to-F2 and F2-to-F1 selection loss; fixed handler retains both"
+    ]
+  }
+]

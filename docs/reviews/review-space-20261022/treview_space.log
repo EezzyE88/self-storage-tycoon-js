@@ -1,0 +1,5 @@
+PASS real invalid review names Rotate, keeps refusal and preserves paused company
+PASS real valid review retains financial terms in scroller and Confirm in fixed footer
+PASS short-screen CSS budget grows at 375×667 while 390×844 retains the parent budget
+PASS tutorial banner implementation is byte-identical to exact integration parent
+ALL PASS: 4 review checks. CSS budget arithmetic/production HTML only; rendered browser sizes and physical Safari NOT TESTED.
