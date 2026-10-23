@@ -6,6 +6,7 @@ import { creditProjection, creditNeeded } from './finance.js';
 import { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';
 import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
+import { careerGoalPresentation } from './careerhud.js';
 import { yardInfill } from './yardinfill.js';
 import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
 import { climateSuggestionText } from './climateavailability.js';
@@ -109,6 +110,7 @@ export class UI {
         <div class="spacer"></div>
         <div class="chip speed" id="speed"><button data-a="speed" data-v="0" aria-label="Pause">${I.pause}</button><button data-a="speed" data-v="1" aria-label="1×: 24-second day" title="1×: 24-second day">1x</button><button data-a="speed" data-v="2" aria-label="2×: 12-second day" title="2×: 12-second day">2x</button><button data-a="speed" data-v="4" aria-label="4×: 6-second day" title="4×: 6-second day">4x</button></div>
         <button class="iconbtn" data-a="menu" aria-label="Menu">${I.menu}</button>
+        <button class="career-goal" id="careerGoal" data-a="careerGoal" hidden><span id="careerGoalTitle"></span><small id="careerGoalDetail"></small></button>
       </div>
       <div class="viewctl">
         <div class="seg floorseg" id="floors"><button data-a="view" data-v="ext" class="on">EXT</button><button data-a="view" data-v="0">F1</button><button data-a="floorChoose" aria-label="Choose building and floor">Floors</button></div>
@@ -134,6 +136,8 @@ export class UI {
       <div id="modal"></div>`;
     this.$ = (id) => document.getElementById(id);
     this.root.addEventListener('click', (e) => this.onClick(e));
+    // Let native button activation handle Enter/Space without invoking the game clock/build shortcuts.
+    this.$('careerGoal').addEventListener('keydown', e => this.careerGoalKeydown(e));
     // Observe all surfaces: a second touch on the map must invalidate bubble help too.
     for(const [event,phase] of [['pointerdown','down'],['pointerup','up'],['pointercancel','cancel']]) document.addEventListener(event,e=>this.trackFeedbackPointer(e,phase),{capture:true,passive:true});
     window.addEventListener('blur',()=>this.resetFeedbackPointers());
@@ -250,6 +254,11 @@ export class UI {
     switch (a) {
       case 'speed': this.requestSpeed(v); this.sfx('click'); break;
       case 'finances': this.showFinances(); this.sfx('click'); break;
+      case 'careerGoal':
+        if (!this.title && careerEligibility(this.sim.s).eligible && this.g.tierInfo?.().cur) {
+          this.select(null); this.setTab('growth', true); this.jumpSection('Operator career'); this.sfx('click');
+        }
+        break;
       case 'calendar': this.showCalendar(); this.sfx('click'); break;
       case 'workingNext': this.setTab(v, true); this.jumpSection(v === 'growth' ? 'Growth Readiness' : v === 'business' ? 'Your market' : 'Work queue'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
@@ -2174,6 +2183,23 @@ export class UI {
   }
 
   // ------------------------------------------------------------ HUD (per frame, cheap)
+  careerGoalKeydown(e) {
+    if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+  }
+  renderCareerGoal() {
+    const eligible = this.g.tierInfo && !this.title && careerEligibility(this.sim.s).eligible;
+    const goal = eligible ? careerGoalPresentation(this.g.tierInfo()) : null;
+    const bar = this.$('goalbar'), button = this.$('careerGoal');
+    bar.hidden = !goal || goal.progress == null;
+    button.hidden = !goal;
+    if (!goal) return;
+    if (goal.progress != null) bar.firstChild.style.width = Math.round(goal.progress * 100) + '%';
+    // The decorative bar is explained by a separate native button, never a nested Finance action.
+    bar.title = goal.accessible;
+    this.$('careerGoalTitle').textContent = goal.title + ' →';
+    this.$('careerGoalDetail').textContent = goal.detail;
+    button.setAttribute('aria-label', goal.accessible);
+  }
   update(dt) {
     const s = this.sim.s; const now = performance.now();
     if (!this.title && this.modalOpen()) this.pauseForPopup('modal');
@@ -2181,9 +2207,7 @@ export class UI {
     const cash = Math.round(s.cash);
     const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small>${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }
     if (now - (this.goalT || 0) > 1000) { // next career goal, always visible as a thin bar under the cash
-      this.goalT = now; const gb = this.$('goalbar'); const on = this.g.tierInfo && !this.title && careerEligibility(s).eligible;
-      const ti = on && this.g.tierInfo(), nx = ti && ti.next; gb.hidden = !nx;
-      if (nx) { const pr = Math.min(1, Math.min(ti.roll / nx.roll, ti.n / nx.props)); gb.firstChild.style.width = Math.round(pr * 100) + '%'; gb.title = `Next: ${nx.name} - rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? `, ${ti.n} of ${nx.props} properties` : ''}`; }
+      this.goalT = now; this.renderCareerGoal();
     }
     const tm = fmtTime(s.t); if (tm !== this.hTime) { this.hTime = tm; this.$('clock').textContent = tm; const d = dayOf(s.t); this.$('date').textContent = `Day ${d} · ${DOW[(d - 1) % 7]}${s.weather === 'rain' ? ' ☂' : ''}`; this.$('date').title = `Day ${d} · ${DOW[(d - 1) % 7]} · ${s.weather === 'rain' ? 'Rain' : 'Clear'}`; }
     if (s.speed !== this.hSpeed) { this.hSpeed = s.speed; for (const b of this.root.querySelectorAll('#speed button')) b.classList.toggle('on', +b.dataset.v === s.speed); }
