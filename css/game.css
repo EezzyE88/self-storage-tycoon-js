@@ -1141,6 +1141,9 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .career-goal > small { font-size:12px; color:#d5dedb; }
 #ui .career-goal:focus-visible { outline:3px solid #f3c66b; outline-offset:2px; }
 #ui .career-goal[hidden] { display:none; }
+/* Expanded workspaces use this space; removing the row also removes its margin.
+   Closing/compacting the last tall sheet restores the existing career explanation. */
+#ui:has(.sheet.tall) .career-goal { display:none; }
 @media (max-width:700px) {
  #ui .hud .career-goal { grid-column:1 / -1; margin-top:54px; max-width:none; width:100%; }
  /* Expanded camera controls use this same row; restore the explanation on close. */
