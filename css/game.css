@@ -1127,3 +1127,19 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  #ui .actionbar .build-details .refund-note { opacity:1; color:var(--muted); }
  #ui .actionbar .access-side { margin:2px 0; }
 }
+
+/* Short portrait phones (e.g. 375x667): price, Rotate and Confirm share one line so the review body keeps
+   readable height, and the lesson hint and money facts come before the reminders so they show without scrolling. */
+@media (max-width:700px) and (min-height:521px) and (max-height:740px) {
+ #ui .actionbar .bot .cost { flex:1 1 96px; min-width:96px; }
+ #ui .actionbar .review-body { display:flex; flex-direction:column; gap:4px; }
+ #ui .actionbar .review-body > * { margin-top:0; margin-bottom:0; }
+ #ui .actionbar .review-body > :is(.project-review, .project-switch, .status) { order:-2; }
+ #ui .actionbar .review-body > .tut-hint { order:-3; }
+ #ui .actionbar .review-body > :is(.access-side, .build-details, .refund-note) { order:1; }
+ #ui .actionbar:not(.placing):not(.idle-strip) .top { padding:0; }
+ #ui .actionbar .review-body > .status { padding:4px 8px; }
+ #ui .actionbar .review-body > .note { font-size:13px; line-height:1.35; }
+ /* Once a placement is under review, the lesson's long how-to scrolls inside four lines so the review can say why. */
+ #ui:has(.actionbar:not(.placing):not(.idle-strip)) .tut:not(.offer):not(.scen) .how-line { max-height:64px; }
+}

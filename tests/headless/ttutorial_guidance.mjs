@@ -35,6 +35,10 @@ test('tutorial names the existing speed, rotation and repair controls', () => {
   assert.match(text, /top left/);
   assert.match(text, /tap <b>Rotate<\/b>/);
   assert.match(text, /orange wrench pin/);
+  // The action bar's invalid-placement hint during the lesson must name the same control.
+  const ui = readFileSync('js/ui.js', 'utf8');
+  assert.doesNotMatch(ui, /Try Flip doors/);
+  assert.match(ui, /Confirm unlocks when the doors face a connected aisle\. Tap Rotate or move the row beside the aisle\./);
 });
 
 for (const [width, height] of [[390,844],[375,667]]) {
