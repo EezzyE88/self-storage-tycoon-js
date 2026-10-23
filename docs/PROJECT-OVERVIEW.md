@@ -1,64 +1,33 @@
 # Project overview and finish target
+Reconciled October 23, 2026, America/Los_Angeles. Exact authority: [CURRENT-STATUS.md](CURRENT-STATUS.md).
 
-Reconciled October 21, 2026, America/Los_Angeles. This is an orientation for someone with no conversation history. Exact identities and evidence are in [CURRENT-STATUS.md](CURRENT-STATUS.md).
+## Goal
+A satisfying touch-first self-storage ownership game on iPhone Safari: understand the facility, choose a worthwhile action, delegate routine work, invest deliberately and see a visible payoff. Preserve the accepted JavaScript/Three.js V62 foundation.
 
-## Product and player
+## Established capabilities
+Construction and four-way access-aware placement; leasing and billing; finance/reserves and investment guidance; staff/Owner capacity and delegation; restoration/scenarios; floors and unit numbering; career/portfolio growth; local saves and continuation; Open House architecture/materials/day-night presentation.
+These exist in source and have scoped evidence. They are not a blanket certification of every device or game state.
 
-Self Storage Tycoon is a touch-first JavaScript/Three.js management game for iPhone Safari. Eddie is the product owner and physical-iPhone playtester. The aim is an enjoyable business to operate, not merely an extensive simulation.
+## Recent accepted work
+- Open House adapted to the existing foundation, rather than replacing game rules.
+- F2 building context while selection remains on the active floor; coach floor selection and numbering corrections.
+- Opening tutorial wording/pointer/instruction access; build-review financial scrolling and Confirm access.
+- Readable next career tier and actual limiting requirement; separate Career/Finance actions.
+- Career explanation hides/restores with expanded panels and camera controls; camera has separate space and long requirement text wraps.
+- Completed authorized fast-forward: ea65f43 → 7d9bce5. No deployment accompanied it.
 
-The player lays out the property, restores and maintains storage, handles customers, chooses prices and staffing, interprets results and reinvests. The causal chain is layout → operations → economics → growth. The property should visibly explain those relationships.
+## What feedback establishes
+Eddie already completed the expansion playtest. He wants to build and expand, likes seeing the payoff, and finds prolonged days/weeks of waiting tedious. This supports improving comprehension or decision pacing where demonstrated, not automatically changing economics, adding a wait control or prescribing purchases.
+The latest iPhone check accepts current map space and control separation. A HUD overhaul is not an established next requirement.
 
-The immediate product goal is one trustworthy and satisfying facility. Career, acquisitions and portfolio systems exist, but deeper expansion should follow a strong first-facility experience.
+## Current focus
+Consolidate the accepted baseline and evidence. Claude's mature-company isolation points to lamp glows as the dominant contributor to mottled night pavement. A minimal presentation prototype is a possible next task, currently paused; no exact repair or physical-Safari improvement has been established.
+Do not bundle geometry, palette, status-tag, camera, animation or economics changes into that narrow experiment.
 
-## Implemented experience
+## Still unproven
+Sustained dense-yard iPhone performance, broad device/accessibility coverage, long-term balance and a complete novice experience remain incomplete. These are release questions, not automatic blockers to every isolated presentation change.
+The rejected Coastal direction and parked milestone-wait proposal are not active milestones.
 
-| Area | Existing capabilities | Remaining product question |
-|---|---|---|
-| Entry | Maple tutorial, Comeback Yard, scenarios, Business sandbox, Free Build | Can a newcomer reach independent operation without outside coaching? |
-| Property | Four-way placement, access validation, construction, commissioning, restoration and renovation | Can players place what they intend and recognize valid access comfortably? |
-| Operations | Owner capacity, staff priority/delegation, office coverage, requests, loading/carts and maintenance | Does delegation provide visible relief while important exceptions remain understandable? |
-| Economics | Leasing, billing, collections, costs/payroll, credit, reserves and investment guidance | Can the player explain available cash and choose a sensible investment? |
-| Progression | Rescue goals, yard opportunities, independent investment tracking, career and portfolio | Does a worthwhile next decision arrive at a satisfying pace? |
-| Presentation | 3D facility, people/vehicles, status feedback, day/night/weather and audio | Are activity, access and improvements attractive and clear on a phone? |
-| Persistence | Local persistence, Continue, save codes/files and archive/recovery | Do integrated device flows remain reliable through ordinary use? |
-
-Three playable floors and up to five company properties are the documented scope. The five-floor design is a target. This list establishes implemented breadth, not blanket acceptance.
-
-## What recent work accomplished
-
-- Automatic Owner fallback can handle eligible unassigned simple repairs using existing daily capacity, chores policy and staff priority. It does not authorize specialist work, hiring or vendor spending.
-- Investment guidance distinguishes an opportunity from affordability and evidence-supported payback.
-- Yard tracking distinguishes reserved from occupied, checks connected frontage, selects the correct floor and tracks overlapping investments independently.
-- Placement adds explicit four-way frontage/footprint control, including single-unit corner placement without stretching to two units.
-- Phone controls and build details were repaired to preserve useful yard visibility, terms scrolling and access to Rotate/Confirm.
-- Routine visit generation was reduced to a shared 10% daily probability, and authorized retention can wait for staff coverage. Long-term balance remains a separate question.
-- Scoped user-reported passes exist for repairs/capacity/Pause, title navigation, corner placement, terms/access visibility and save continuation. Earlier rescue, floor-view and audio results remain preserved.
-
-## Remaining work, in practical order
-
-1. **Honor the visual decision.** Coastal is rejected. Keep it out of the gameplay baseline. Resolve the precise rollback target before any hosting operation; an existing separate proof does not establish that the game changed.
-2. **Evaluate the existing stylized comparison if pursued.** Actual matched moving evidence and full-game checks are outstanding. Do not create another direction merely to avoid finishing the existing comparison. This is a candidate evaluation, not a requirement to adopt it.
-3. **Prove ordinary ownership.** From a separate already rescued test company, understand cash, vacancies, workload, coverage and demand; make a worthwhile decision or explain why waiting is sensible; observe the result.
-4. **Repair the weakest observed connection.** Prioritize player comprehension, visible work and payoff over additional systems. Do not presume a defect without current evidence.
-5. **Validate sustained iPhone use and beginner experience.** Dense activity, background/foreground, long sessions, battery/heat/frame stability, fresh onboarding and natural progression remain incomplete.
-
-The 30-game-day cap from the existing operating-playtest plan is an observation boundary, not a win condition. No worthwhile opportunity within that window is a pacing finding. Hiring or construction must remain justified choices. Preserve existing pricing and earned goals in any continuation.
-
-## Release target
-
-A useful first release has a clear beginning, understandable operating choices, comfortable property interaction, trustworthy finance/saves/time controls, visible customers and workers, improvements with observable benefit, sustained iPhone stability and a satisfying reason to return.
-
-No completion percentage, launch date, broad device acceptance or commercial readiness is established. Automated test counts cannot measure enjoyment.
-
-## Working principles
-
-- Reverify live GitHub refs; use only this JS repository.
-- Preserve accepted work and keep experiments isolated.
-- Presentation reflects simulation outcomes; it must not invent success.
-- Manual Pause is a player choice. Do not auto-resume after build confirmation.
-- Use the existing Safari game Site intentionally; verify source and served assets before describing a new publication as ready.
-- Browser emulation, DOM fixtures, actual WebGL and physical iPhone are different evidence categories.
-- Preserve passed checks; do not repeat them without a changed area or unresolved integration concern.
-- Documentation supports the game. Keep current entries concise and historical evidence available.
-
-See [HANDOFF.md](HANDOFF.md) for the starting procedure and [RECOVERY-INDEX.md](RECOVERY-INDEX.md) for source versus company-save recovery.
+## Finish target
+A clear beginning; understandable operating decisions; comfortable placement/navigation; trustworthy finance, Pause and saves; visible work and investment benefit; stable sustained iPhone play; a satisfying reason to return.
+No launch date, completion percentage or whole-game release certification is claimed.
