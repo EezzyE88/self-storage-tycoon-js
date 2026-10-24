@@ -2329,13 +2329,13 @@ export class UI {
     if (blocked.length) return T(`${blocked.length > 1 ? blocked.length + ' units' : sim.objName(blocked[0])} can't be reached by customers. Tap to see why.`, { sel: blocked[0].id }, 'bad');
     const el = objs.find((o) => o.type === 'elevator' && o.cstate === 'operating' && o.cond < 0.2);
     if (el) return T('The freight elevator is out of service. Upper units cannot rent.', { sel: el.id }, 'bad');
+    const ready = objs.filter((o) => o.type === 'unit' && o.cstate === 'ready');
+    if (ready.length) return T(`${ready.length} new ${ready.length === 1 ? 'unit is' : 'units are'} ready to commission.`, { sel: ready[0].id }, 'good');
     const open = s.tasks.filter((t) => !t.assigned);
     const rep = open.filter((t) => (t.type === 'repair') && s.objects[t.obj]).sort((a, b) => b.pri - a.pri)[0];
     if (rep) { const d = sim.taskDelegation(rep); return T(`${sim.objName(s.objects[rep.obj])} needs repair. ${d && d.status === 'missing' ? 'A Tech can handle repairs for you.' : d ? d.message : 'Review repair options.'}`, { sel: rep.obj }); }
     const mr = open.find((t) => t.type === 'makeready' && s.objects[t.obj]);
     if (mr) return T(`${sim.objName(s.objects[mr.obj])} needs a make-ready before it can rent again.`, { sel: mr.obj });
-    const ready = objs.filter((o) => o.type === 'unit' && o.cstate === 'ready');
-    if (ready.length) return T(`${ready.length} new ${ready.length === 1 ? 'unit is' : 'units are'} ready to commission.`, { sel: ready[0].id }, 'good');
     if (!s.open && s.mode !== 'tutorial') { const iss = sim.openingIssues(); return T(iss.length ? `Not open yet: ${iss[0].charAt(0).toLowerCase() + iss[0].slice(1)}${iss.length > 1 ? ` (+${iss.length - 1} more)` : ''}. Tap for the checklist.` : 'Ready to open. Tap to open for business.', { tab: 'growth' }); }
     const late = Object.values(s.leases).filter((L) => L.status !== 'current');
     if (late.length) { const u = objs.find((o) => o.lease === late[0].id); return T(`${late.length} ${late.length === 1 ? 'tenant is' : 'tenants are'} past due on rent.`, u ? { sel: u.id } : { tab: 'business' }); }

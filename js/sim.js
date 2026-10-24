@@ -1093,6 +1093,7 @@ export class Sim {
     if (t.vendor) return { ok: false, msg: 'A vendor is already booked for this' };
     if (t.assigned && t.assigned !== owner.id) return { ok: false, msg: 'Already assigned to someone else' };
     if (ag.task === t.id) return { ok: false, msg: 'Owner is already on it' };
+    if (this.s.objects[t.obj]?.type === 'light') t.unreachable = null;
     const delegated = a.forceOwner ? null : this.assignStaffFirst(t);
     if (delegated) {
       this.emit('task_assigned');
@@ -1185,8 +1186,13 @@ export class Sim {
     const s = this.s, c = s.convos.find((x) => x.id === a.id); if (!c) return { ok: false };
     const act = c.actions[a.i];
     if (!act || this.requestActionDisabled(act)) return { ok: false, msg: 'That response is no longer available. Choose a remaining response.' };
+    if (act.action) {
+      const result=this.dispatch(act.action);
+      if(!result.ok)return result;
+      s.convos=s.convos.filter(x=>x!==c);
+      return result;
+    }
     s.convos = s.convos.filter((x) => x !== c);
-    if (act.action) return this.dispatch(act.action);
     return { ok: true };
   }
   renovateOptions(u) { // what a vacant unit can be turned into (after the tutorial)
@@ -2107,6 +2113,8 @@ export class Sim {
   }
   availabilityReport(size) {
     const all = this.objs('unit'), units = all.filter(u => u.size === size);
+    const ready=units.filter(u=>u.cstate==='operating'&&!u.blocked&&u.commercial==='ready');
+    if(ready.length)return {text:`${ready.length} ${size} unit${ready.length===1?' is':'s are'} ready to rent.`,availability:'ready'};
     const full = all.length > 0 && all.every(u => u.commercial === 'occupied' || u.commercial === 'reserved');
     const reason = full ? 'full' : units.some(u => !u.lease && u.commercial === 'unready') ? 'makeReady' : units.some(u => u.blocked) ? 'access' : units.some(u => u.cstate !== 'operating') ? 'construction' : 'sizeFull';
     const text = {full:'All units occupied or reserved.', makeReady:`Vacant ${size} units need make-ready.`, access:`${size} rental access is blocked.`, construction:`New ${size} units are not open yet.`, sizeFull:`No ${size} units ready to rent.`}[reason];
@@ -2714,9 +2722,9 @@ export class Sim {
       if (s.tasks.some((t) => t.type === 'clean' && t.f === f && Math.abs(t.x - x) + Math.abs(t.y - y) < 6)) continue;
       this.addTask({ type: 'clean', need: 'clean', obj: null, f, x, y, label: 'Clean ' + (D.shellAt[i] ? (f > 0 ? `Floor ${f+1} hallway` : 'hallway') : 'loading area'), work: WORK.clean });
     }
-    for (const t of s.tasks) if (t.unreachable && s.t - t.unreachable > 120) t.unreachable = null;
+    for (const t of s.tasks) if (t.unreachable != null && (s.objects[t.obj]?.type === 'light' || s.t - t.unreachable > 120)) t.unreachable = null;
   }
-  taskCell(t) {
+  taskCell(t, worker = null) {
     const s = this.s, D = this.D;
     const walkNear = (f, x, y) => {
       if (this.inb(x, y) && D.walk[f][this.idx(x, y)]) return { f, x, y };
@@ -2733,6 +2741,21 @@ export class Sim {
       return home ? walkNear(home.f || 0, home.x, home.y) : null;
     }
     const o = s.objects[t.obj]; if (!o) return null;
+    if (o.type === 'light') {
+      // Light placement must not create permanently unserviceable equipment.
+      // Work at the nearest reachable service point; other assets keep local access rules.
+      const office=this.objs('office').find(o=>o.cstate==='operating');
+      const origin=worker&&!worker.hidden?worker:office?{f:0,x:office.door.x,y:office.door.y}:worker;
+      if(!origin)return null;
+      const reach=this.distField([this.node(origin.f||0,Math.floor(origin.x),Math.floor(origin.y))],n=>this.pedNbr(n));
+      let best=null,score=Infinity;
+      for(const n of reach.keys()){
+        const c=this.unnode(n);if(!D.walk[c.f]?.[c.i])continue;
+        const value=(c.x-o.x)**2+(c.y-o.y)**2+Math.abs(c.f-(o.f||0))*(s.W*s.W+s.H*s.H+1);
+        if(value<score){best={f:c.f,x:c.x,y:c.y};score=value;}
+      }
+      return best;
+    }
     if (o.type === 'gate') return walkNear(0, o.x, o.y);
     if (o.type === 'hvac') { for (const [dx, dy] of DIRS) { const r = walkNear(0, o.x + dx, o.y + dy); if (r) return r; } return null; }
     if (o.type === 'elevator') return walkNear(0, o.x, o.y);
@@ -2742,7 +2765,7 @@ export class Sim {
   startTask(ag, t) {
     const st = this.staffOf(ag);
     if (!this.reserveTaskWork(st, t)) return false;
-    const c = this.taskCell(t);
+    const c = this.taskCell(t, ag);
     if (ag.hidden) { const office = this.objs('office')[0]; if (office) { ag.f = 0; ag.x = office.door.x + 0.5; ag.y = office.door.y + 0.5; } }
     if (!c || !this.goTo(ag, c.f, c.x, c.y)) { this.refundTaskWork(st, t); t.unreachable = this.s.t; t.assigned = null; t.queued = false; ag.task = null; this.emit('refuse'); return false; }
     ag.task = t.id; t.assigned = ag.sid; ag.st = 'walk'; ag.hidden = false;
@@ -2788,8 +2811,9 @@ export class Sim {
     if (!t || t.assigned || t.vendor) return null;
     const row = this.staffForTask(t); if (!row) return null;
     const { st, ag } = row;
-    const cell = this.taskCell(t), probe = { ...ag };
+    const probe = { ...ag };
     if (probe.hidden) { const office = this.objs('office')[0]; if (office) { probe.f = 0; probe.x = office.door.x + .5; probe.y = office.door.y + .5; } }
+    const cell=this.taskCell(t,probe);
     if (!cell || !this.goTo(probe, cell.f, cell.x, cell.y)) { t.unreachable = this.s.t; return null; }
     if (ag.task || (ag.queue && ag.queue.length)) {
       if (!this.reserveTaskWork(st, t)) return null;
