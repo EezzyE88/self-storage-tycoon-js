@@ -964,18 +964,34 @@ export class Sim {
     if (ord.tool === 'hall' || ord.tool === 'aisle') { /* infra */ }
     s.orders = s.orders.filter((o) => o.st === 'construction' || s.t - o.t0 < 3 * MIN_PER_DAY);
   }
+  autoOpenEnabled() {
+    const s=this.s;
+    return s.mode==='sandbox'&&!s.scenario&&!s.lesson&&!s.tut?.on&&!this.unlimited();
+  }
+  autoOpenReadyUnits(advancingMinute = false) {
+    // Called only from ordinary advancing minutes, never load/rebuild/poll.
+    if(!this.autoOpenEnabled()||!advancingMinute)return;
+    this.ensure();
+    if(this.objs('unit').some(u=>u.cstate==='ready'))this.act_commission({all:true,automatic:true});
+  }
   act_commission(a) {
     const s = this.s; this.ensure();
     let targets = [];
     if (a.order) { const ord = s.orders.find((o) => o.id === a.order); targets = ord ? ord.objs.map((id) => s.objects[id]).filter(Boolean) : []; if (!targets.length) targets = this.objs('unit').filter((u) => u.order === a.order); } // finished orders are pruned after 3 days; the units keep their order id
     else if (a.unit) targets = [s.objects[a.unit]];
     else if (a.all) targets = this.objs('unit');
-    targets = targets.filter((u) => u && u.type === 'unit' && u.cstate === 'ready');
-    if (!targets.length) { this.emit('refuse'); return { ok: false, msg: 'Nothing is ready to commission' }; }
-    for (const u of targets) { u.cstate = 'operating'; u.commercial = 'ready'; }
-    this.markDirty(); this.rebuild();
+    const candidates=targets.filter(u=>u&&u.type==='unit'&&u.cstate==='ready').sort((a,b)=>a.id-b.id);
+    targets=[];
+    for(const u of candidates){
+      // Opening changes HVAC load: refresh readiness before each subsequent unit.
+      this.ensure();
+      if(u.cstate!=='ready'||u.missing?.length)continue;
+      u.cstate='operating';u.commercial='ready';targets.push(u);
+      this.markDirty();this.rebuild();
+    }
+    if(!targets.length){this.emit('refuse');return {ok:false,msg:'Nothing is ready to commission'};}
     reconcileProject(this);
-    this.emit('commissioned', { n: targets.length, x: targets[0].x, y: targets[0].y, f: targets[0].f || 0 });
+    this.emit('commissioned', { automatic:!!a.automatic, propertyOpen:!!s.open, n: targets.length, x: targets[0].x, y: targets[0].y, f: targets[0].f || 0 });
     this.milestone('first_expansion');
     if (targets.some((u) => u.env === 'climate')) this.milestone('first_climate');
     if (targets.some((u) => u.f > 0)) this.milestone('first_upper');
@@ -1294,6 +1310,7 @@ export class Sim {
     // tutorial hooks run in tutorial module via sim.onTick
     if (this.onTick) this.onTick(this);
     if (this.dirty) this.rebuild();
+    this.autoOpenReadyUnits(true);
     checkComeback(this);
     reconcileProject(this);
     updateYardLoop(this);

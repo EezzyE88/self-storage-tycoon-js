@@ -906,6 +906,7 @@ export class UI {
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
       const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
       status = projectMarker + compareProjects + `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
+      if(T.unit&&this.sim.autoOpenEnabled())status += '<p class="note">Confirm authorizes construction. These units enter rental inventory automatically when construction and required access, lighting and capacity are complete. Opening the property remains your decision.</p>';
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
@@ -1738,8 +1739,14 @@ export class UI {
       case 'project_first_lease': this.toast(`${e.label}: first lease at ${money(e.rent,true)}/mo. Customer use, not proven payback.`, 'good'); break;
       case 'project_stopped': this.toast(`${e.label}: targets changed; tracking stopped. Existing refund rules apply.`, 'warn'); break;
       case 'thought': this.addBubble(e); break;
-      case 'complete': this.toast(completeText(e), 'good'); this.sfx('complete'); break;
-      case 'commissioned': this.sfx('confirm'); break;
+      case 'complete': {
+        if(this.sim.autoOpenEnabled()&&e.units){
+          const waiting=this.sim.objs('unit').filter(u=>u.order===e.order&&u.cstate==='built');
+          if(waiting.length)this.toast(`${e.label} finished · waiting: ${waiting[0].missing?.join('; ')||'readiness requirements'}`, 'good');
+        }else this.toast(completeText(e), 'good');
+        this.sfx('complete');break;
+      }
+      case 'commissioned': if(e.automatic)this.toast(`${e.n} new unit${e.n===1?' is':'s are'} now rent-ready.${e.propertyOpen?' Available to rent.':' Property remains closed.'}`, 'good'); this.sfx('confirm'); break;
       case 'lease': { const u = s.objects[e.unit]; this.toast(`Lease signed: ${u ? u.name : 'unit'} at ${money(e.rent,true)}/mo · reserved for move-in`, 'good'); if(u&&s.yardLoop?.targets.some(t=>t.id===u.id))this.rend.highlightProject?.({x:u.x,y:u.y,w:u.w,h:u.h});this.sfx('lease'); break; }
       case 'moveout': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A unit'} moved out - needs make-ready`); break; }
       case 'fault': { const o = s.objects[e.obj]; if (!o && s.carts.some((c) => c.id === e.obj)) { this.toast('A cart was damaged - it needs repair'); break; } this.toast(`${o ? this.sim.objName(o) : 'Equipment'} has failed`, 'bad'); this.sfx('fault'); break; }
@@ -2329,7 +2336,10 @@ export class UI {
     if (blocked.length) return T(`${blocked.length > 1 ? blocked.length + ' units' : sim.objName(blocked[0])} can't be reached by customers. Tap to see why.`, { sel: blocked[0].id }, 'bad');
     const el = objs.find((o) => o.type === 'elevator' && o.cstate === 'operating' && o.cond < 0.2);
     if (el) return T('The freight elevator is out of service. Upper units cannot rent.', { sel: el.id }, 'bad');
+    const waiting=sim.autoOpenEnabled()&&objs.filter(o=>o.type==='unit'&&o.cstate==='built'&&o.missing?.length);
+    if(waiting?.length)return T(`${waiting.length} finished unit${waiting.length===1?' is':'s are'} waiting: ${waiting[0].missing.join('; ')}.`,{sel:waiting[0].id},'warn');
     const ready = objs.filter((o) => o.type === 'unit' && o.cstate === 'ready');
+    if(ready.length&&sim.autoOpenEnabled())return T(`${ready.length} finished units become rent-ready when time advances.`,{sel:ready[0].id},'good');
     if (ready.length) return T(`${ready.length} new ${ready.length === 1 ? 'unit is' : 'units are'} ready to commission.`, { sel: ready[0].id }, 'good');
     const open = s.tasks.filter((t) => !t.assigned);
     const rep = open.filter((t) => (t.type === 'repair') && s.objects[t.obj]).sort((a, b) => b.pri - a.pri)[0];
