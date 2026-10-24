@@ -26,8 +26,15 @@ const warn=console.warn;console.warn=(...a)=>warnings.push(a.join(' '));
 const r=new Renderer({clientWidth:393,clientHeight:720},sim);r.rebuildStatic();
 console.warn=warn;assert.deepEqual(warnings,[]);
 const parent=new Parent({clientWidth:393,clientHeight:720},sim);parent.rebuildStatic();
-const originalScene=renderer=>renderer.staticG.children.map(m=>({visible:m.visible,position:m.position.toArray(),scale:m.scale.toArray()}));
-for(const view of ['ext',0]){r.setView(view);parent.setView(view);assert.deepEqual(originalScene(r),originalScene(parent),'Exterior/F1 retained geometry matches numbering parent');assert.ok(r.contextG.children.every(g=>!g.visible));}
+// The light map replaces only legacy outdoor ground-floor glow planes.
+// Keep all other parent geometry, and reject any remaining/extra ground glow.
+const legacyGroundGlow=m=>m.userData.glow===true&&!m.userData.inside&&(m.userData.f||0)===0;
+const originalScene=(renderer,omitLegacyGroundGlow=false)=>renderer.staticG.children.filter(m=>!omitLegacyGroundGlow||!legacyGroundGlow(m)).map(m=>({visible:m.visible,position:m.position.toArray(),scale:m.scale.toArray()}));
+const oldGroundGlows=parent.staticG.children.filter(legacyGroundGlow);
+assert.ok(oldGroundGlows.length>0,'fixture must exercise replaced outdoor ground glows');
+assert.equal(oldGroundGlows.length,r.anim.filter(a=>a.k==='light'&&!a.inside&&(a.o.f||0)===0).length,'one replaced glow per outdoor ground lamp');
+assert.equal(r.staticG.children.filter(legacyGroundGlow).length,0,'outdoor ground glows are replaced, not duplicated');
+for(const view of ['ext',0]){r.setView(view);parent.setView(view);assert.deepEqual(originalScene(r),originalScene(parent,true),'Exterior/F1 retained geometry matches numbering parent except replaced outdoor ground glows');assert.ok(r.contextG.children.every(g=>!g.visible));}
 const drive=sim.objs('unit').find(o=>!sim.D.shellAt[o.y*sim.s.W+o.x]);
 assert.ok(drive);assert.ok(sim.objs('office').length);
 const contextFor=o=>r.contextG.children.find(g=>g.userData.contextIds.includes(o.id));

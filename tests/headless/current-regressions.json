@@ -1,0 +1,1239 @@
+{
+  "version": 1,
+  "base_master": "ee39e0986718ce33fb84018a2c108249f793e3f8",
+  "accepted_game": "ee39e0986718ce33fb84018a2c108249f793e3f8",
+  "profiles": {
+    "current": [
+      {
+        "id": "tads",
+        "command": [
+          "@node",
+          "tests/headless/tads.mjs"
+        ],
+        "completion": "ALL\\ PASS",
+        "minimum_pass_lines": 10,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tambient39",
+        "command": [
+          "@node",
+          "tests/headless/tambient39.mjs"
+        ],
+        "completion": "9\\ ambient\\ lifecycle\\ groups\\ passed",
+        "minimum_pass_lines": 9,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tart_design",
+        "command": [
+          "@node",
+          "tests/headless/tart_design.mjs"
+        ],
+        "completion": "PASS\\ architecture\\ reuse,\\ bounded\\ trees,\\ read\\-only\\ lighting\\ and\\ concise\\ vacancy\\ guidance;\\ visual\\ acceptance\\ pending",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "taudio38",
+        "command": [
+          "@node",
+          "tests/headless/taudio38.mjs"
+        ],
+        "completion": "PASS\\ lifecycle:\\ delayed\\ cues\\ cancelled,\\ background\\ silent,\\ gesture\\ resume,\\ cleanup,\\ resume\\ race,\\ hidden\\ unlock",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tblueprint",
+        "command": [
+          "@node",
+          "tests/headless/tblueprint.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ 26\\ blueprint/recovery\\ checks",
+        "minimum_pass_lines": 26,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tbplus",
+        "command": [
+          "@node",
+          "tests/headless/tbplus.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ 21\\ B\\+\\ tests",
+        "minimum_pass_lines": 21,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tbplus_payback",
+        "command": [
+          "@node",
+          "tests/headless/tbplus_payback.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ live\\-simulation\\ expansion\\ comparisons\\ completed;\\ benchmark\\ assessment\\ uses\\ observed\\ payback",
+        "minimum_pass_lines": 0,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tbplus_scenarios",
+        "command": [
+          "@node",
+          "tests/headless/tbplus_scenarios.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ deterministic\\ scenario\\ matrix\\ completed\\ \\(target\\ decision\\ uses\\ reported\\ outcomes\\)",
+        "minimum_pass_lines": 0,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tbugs",
+        "command": [
+          "@node",
+          "tests/headless/tbugs.mjs"
+        ],
+        "completion": "ALL\\ PASS",
+        "minimum_pass_lines": 9,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tbuildability",
+        "command": [
+          "@node",
+          "tests/headless/tbuildability.mjs"
+        ],
+        "completion": "41\\ buildability\\ groups\\ passed",
+        "minimum_pass_lines": 41,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tbuildability_save",
+        "command": [
+          "@node",
+          "tests/headless/tbuildability_save.mjs"
+        ],
+        "completion": "PASS\\ production\\ raw/compressed\\ saves\\ preserve\\ all\\ four\\ unit\\ directions\\ and\\ rotated\\ office\\ geometry,\\ pending\\ construction,\\ cash,\\ time\\ and\\ Pause\\ across\\ repeated\\ loads",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tc23_crash_repairs",
+        "command": [
+          "@node",
+          "tests/headless/tc23_crash_repairs.mjs"
+        ],
+        "completion": "PASS\\ orphan\\ work\\ task=999999\\ recovers\\ after\\ reload",
+        "minimum_pass_lines": 8,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tc24_requests",
+        "command": [
+          "@node",
+          "tests/headless/tc24_requests.mjs"
+        ],
+        "completion": "53\\ request\\ handling\\ and\\ window\\ checks\\ passed",
+        "minimum_pass_lines": 53,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tc27_availability",
+        "command": [
+          "@node",
+          "tests/headless/tc27_availability.mjs"
+        ],
+        "completion": "8\\ availability\\ checks\\ passed",
+        "minimum_pass_lines": 8,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tc29_climate_bubbles",
+        "command": [
+          "@node",
+          "tests/headless/tc29_climate_bubbles.mjs"
+        ],
+        "completion": "10\\ climate\\ bubble\\ checks\\ passed",
+        "minimum_pass_lines": 10,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcalm",
+        "command": [
+          "@node",
+          "tests/headless/tcalm.mjs"
+        ],
+        "completion": "PASS\\ notices\\ stop\\ after\\ two\\ acknowledgements\\ unless\\ security\\ worsens\\ notices\\ on\\ days\\ 3,\\ 49\\ at\\ security\\ 0\\.65,\\ 0\\.5",
+        "minimum_pass_lines": 5,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcancellation",
+        "command": [
+          "@node",
+          "tests/headless/tcancellation.mjs"
+        ],
+        "completion": "PASS\\ F2\\ cancellation\\ arithmetic:\\ \\$17,810\\ commit,\\ full\\ undo\\ \\$17,810,\\ partial\\ refund\\ \\$10371\\ after\\ reinforcement\\ \\(retained\\ \\$396\\),\\ second\\ quote\\ \\$17,414\\ with\\ no\\ duplicated\\ reinforcement,\\ production\\ reload\\ without\\ a\\ second\\ charge;\\ net\\ spent\\ \\$24853",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcapacity",
+        "command": [
+          "@node",
+          "tests/headless/tcapacity.mjs"
+        ],
+        "completion": "ALL\\ PASS",
+        "minimum_pass_lines": 15,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcareer37",
+        "command": [
+          "@node",
+          "tests/headless/tcareer37.mjs"
+        ],
+        "completion": "18\\ career\\ integration\\ test\\ groups\\ passed",
+        "minimum_pass_lines": 18,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcareer_hud",
+        "command": [
+          "@node",
+          "tests/headless/tcareer_hud.mjs"
+        ],
+        "completion": "6\\ career\\ HUD\\ test\\ groups\\ passed",
+        "minimum_pass_lines": 6,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tclock24",
+        "command": [
+          "@node",
+          "tests/headless/tclock24.mjs"
+        ],
+        "completion": "PASS\\ 24/12/6\\-second\\ days,\\ unchanged\\ one\\-minute\\ simulation\\ ticks,\\ and\\ speed\\ guidance",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcoach_floor_selection",
+        "command": [
+          "@node",
+          "tests/headless/tcoach_floor_selection.mjs"
+        ],
+        "completion": "PASS\\ exact\\ 4f2929a\\ handler\\ reproduces\\ F1\\-to\\-F2\\ and\\ F2\\-to\\-F1\\ selection\\ loss;\\ fixed\\ handler\\ retains\\ both",
+        "minimum_pass_lines": 14,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "required_objects": [
+          "4f2929ab85c3ae01f379e9115e19dae2831911ee"
+        ]
+      },
+      {
+        "id": "tcomeback36",
+        "command": [
+          "@node",
+          "tests/headless/tcomeback36.mjs"
+        ],
+        "completion": "19\\ Comeback\\ Yard\\ checks\\ passed",
+        "minimum_pass_lines": 19,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcomeback36_save",
+        "command": [
+          "@node",
+          "tests/headless/tcomeback36_save.mjs"
+        ],
+        "completion": "4\\ production\\ save\\ checkpoints\\ passed;\\ malformed\\ progress\\ retains\\ property\\ with\\ notice",
+        "minimum_pass_lines": 4,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcomplaint_capacity",
+        "command": [
+          "@node",
+          "tests/headless/tcomplaint_capacity.mjs"
+        ],
+        "completion": "11\\ capacity\\ regression\\ checks\\ passed",
+        "minimum_pass_lines": 11,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcomplaint_hardening",
+        "command": [
+          "@node",
+          "tests/headless/tcomplaint_hardening.mjs"
+        ],
+        "completion": "33\\ hardening\\ checks\\ passed;\\ 0\\ failed",
+        "minimum_pass_lines": 33,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcomplaints",
+        "command": [
+          "@node",
+          "tests/headless/tcomplaints.mjs"
+        ],
+        "completion": "38\\ complaint\\ regressions\\ passed",
+        "minimum_pass_lines": 38,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcontrol_access",
+        "command": [
+          "@node",
+          "tests/headless/tcontrol_access.mjs"
+        ],
+        "completion": "PASS\\ unsuccessful\\ bounded\\ attempt\\ remains\\ false\\ without\\ repeated\\ automatic\\ camera\\ correction",
+        "minimum_pass_lines": 8,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tdelegation",
+        "command": [
+          "@node",
+          "tests/headless/tdelegation.mjs"
+        ],
+        "completion": "13\\ delegation\\ regressions\\ passed",
+        "minimum_pass_lines": 13,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tdisplay_repair",
+        "command": [
+          "@node",
+          "tests/headless/tdisplay_repair.mjs"
+        ],
+        "completion": "6\\ display\\ repair\\ behavior\\ groups\\ passed;\\ real\\ layout/touch\\ visibility\\ requires\\ browser\\ recheck\\.",
+        "minimum_pass_lines": 6,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tfeedback35",
+        "command": [
+          "@node",
+          "tests/headless/tfeedback35.mjs"
+        ],
+        "completion": "16\\ concise\\ feedback\\ checks\\ passed;\\ fixtures\\ do\\ not\\ establish\\ physical\\-iPhone\\ acceptance",
+        "minimum_pass_lines": 16,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tfeedback_interactions",
+        "command": [
+          "@node",
+          "tests/headless/tfeedback_interactions.mjs"
+        ],
+        "completion": "16\\ feedback\\ checks\\ passed;\\ 0\\ failed",
+        "minimum_pass_lines": 16,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tfin",
+        "command": [
+          "@node",
+          "tests/headless/tfin.mjs"
+        ],
+        "completion": "ALL\\ PASS",
+        "minimum_pass_lines": 5,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tfinal_repairs",
+        "command": [
+          "@node",
+          "tests/headless/tfinal_repairs.mjs"
+        ],
+        "completion": "14\\ final\\-repair\\ checks\\ passed",
+        "minimum_pass_lines": 14,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tfinancial_trust",
+        "command": [
+          "@node",
+          "tests/headless/tfinancial_trust.mjs"
+        ],
+        "completion": "ALL\\ PASS",
+        "minimum_pass_lines": 5,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tfloor_context",
+        "command": [
+          "@node",
+          "tests/headless/tfloor_context.mjs"
+        ],
+        "completion": "LIMIT:\\ CPU\\ scene\\ graph\\ \\+\\ UI\\ handler\\ checks;\\ WebGL\\ pixels,\\ Safari\\ and\\ physical\\ iPhone\\ not\\ tested\\.",
+        "minimum_pass_lines": 13,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "required_objects": [
+          "1339648652cf61bfce23a96a60cbb54a7006c32a"
+        ],
+        "allowed_notes": [
+          "^LIMIT:.*"
+        ]
+      },
+      {
+        "id": "tfloor_view",
+        "command": [
+          "@node",
+          "tests/headless/tfloor_view.mjs"
+        ],
+        "completion": "PASS\\ fitted\\-out\\ F2:\\ actual\\ chooser\\ action,\\ F1\\ \u2192\\ F2\\ \u2192\\ F1\\ \u2192\\ Exterior,\\ light\\ visibility,\\ exact\\ state\\ preservation",
+        "minimum_pass_lines": 2,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tfollowup_repairs",
+        "command": [
+          "@node",
+          "tests/headless/tfollowup_repairs.mjs"
+        ],
+        "completion": "8\\ follow\\-up\\ repair\\ checks\\ passed",
+        "minimum_pass_lines": 8,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tgestures",
+        "command": [
+          "@node",
+          "tests/headless/tgestures.mjs"
+        ],
+        "completion": "12\\ executed\\ checks\\ passed;\\ physical\\ Safari\\ acceptance\\ pending",
+        "minimum_pass_lines": 12,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tguidance_banner",
+        "command": [
+          "@node",
+          "tests/headless/tguidance_banner.mjs"
+        ],
+        "completion": "7\\ guidance/banner\\ checks\\ passed",
+        "minimum_pass_lines": 7,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tinvestment_guidance",
+        "command": [
+          "@node",
+          "tests/headless/tinvestment_guidance.mjs"
+        ],
+        "completion": "ALL\\ PASS\\ 16\\ groups",
+        "minimum_pass_lines": 16,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "allowed_notes": [
+          "^NOT TESTED baseline parity:.*"
+        ],
+        "scope": "16 native groups; optional protected-parent comparison not in current profile"
+      },
+      {
+        "id": "tlayout_hierarchy",
+        "command": [
+          "@node",
+          "tests/headless/tlayout_hierarchy.mjs"
+        ],
+        "completion": "PASS\\ tighter\\ read\\-only\\ framing,\\ occupied\\ footprint\\ containment,\\ camera\\ suppression,\\ compact\\ advice,\\ complete\\ section\\ chooser\\ and\\ retained\\ save\\ actions",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tmanagement",
+        "command": [
+          "@node",
+          "tests/headless/tmanagement.mjs"
+        ],
+        "completion": "10\\ management/diagnostic\\ regressions\\ passed",
+        "minimum_pass_lines": 10,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tmenu_touch",
+        "command": [
+          "@node",
+          "tests/headless/tmenu_touch.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ 8\\ menu/touch\\ checks",
+        "minimum_pass_lines": 8,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "toccupancy_proposal_polish",
+        "command": [
+          "@node",
+          "tests/headless/toccupancy_proposal_polish.mjs"
+        ],
+        "completion": "PASS\\ separated\\ proposal\\ fields,\\ honest\\ negative/positive\\ buffer,\\ original\\ preview\\ action,\\ read\\-only\\ render\\ and\\ wrapping\\ layout\\ contract",
+        "minimum_pass_lines": 10,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "topenhouse",
+        "command": [
+          "@node",
+          "tests/headless/topenhouse.mjs"
+        ],
+        "completion": "\\{\"environment\":\"CPU\\ scene\\ graph;\\ Canvas/GPU\\ stubbed;\\ WebGL\\ and\\ physical\\ iPhone\\ NOT\\ TESTED\",\"units\":23,\"batches\":9,\"counts\":\\{\"candidate\":\\{\"meshes\":264,\"instances\":436,\"casters\":111\\}\\}\\}",
+        "minimum_pass_lines": 2,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "scope": "Exact integrated scene: 264 meshes after three outdoor glow planes are replaced by the light map; 436 instances, 111 casters, 23 units and 9 batches unchanged. Original 0526 contract expected 267 meshes."
+      },
+      {
+        "id": "topenhouse_qa",
+        "command": [
+          "@node",
+          "tests/headless/topenhouse_qa.mjs"
+        ],
+        "completion": "\\{\"passed\":7,\"failed\":0,\"environment\":\"CPU\\ scene\\ graph;\\ Canvas/WebGL\\ stubbed\"\\}",
+        "minimum_pass_lines": 7,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "towner_auto_repairs",
+        "command": [
+          "@node",
+          "tests/headless/towner_auto_repairs.mjs"
+        ],
+        "completion": "PASS\\ staff\\ priority,\\ temporary\\ delays,\\ daily\\ reset,\\ disabled/missing\\ coverage,\\ specialist/PM\\ limits,\\ critical\\ interruptions,\\ save/load\\ and\\ paused\\ production\\ clock",
+        "minimum_pass_lines": 2,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tpause_policy",
+        "command": [
+          "@node",
+          "tests/headless/tpause_policy.mjs"
+        ],
+        "completion": "13\\ pause\\-policy\\ checks\\ passed",
+        "minimum_pass_lines": 13,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tperformance",
+        "command": [
+          "@node",
+          "tests/headless/tperformance.mjs"
+        ],
+        "completion": "11\\ performance/UI\\ regressions\\ passed",
+        "minimum_pass_lines": 11,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tproperty_projects_save",
+        "command": [
+          "@node",
+          "tests/headless/tproperty_projects_save.mjs"
+        ],
+        "completion": "PASS\\ legacy\\ and\\ malformed\\ optional\\ metadata\\ load\\ without\\ changing\\ company",
+        "minimum_pass_lines": 5,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tproperty_projects_ui",
+        "command": [
+          "@node",
+          "tests/headless/tproperty_projects_ui.mjs"
+        ],
+        "completion": "PASS\\ discard\\ preview\\ spends\\ nothing\\ and\\ preserves\\ Pause",
+        "minimum_pass_lines": 9,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "treporting34",
+        "command": [
+          "@node",
+          "tests/headless/treporting34.mjs"
+        ],
+        "completion": "16\\ reporting\\-period\\ and\\ office\\-guidance\\ checks\\ passed\\ \\(Node/DOM\\ fixtures,\\ not\\ Safari\\ acceptance\\)",
+        "minimum_pass_lines": 16,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "trescue_operation_save",
+        "command": [
+          "@node",
+          "tests/headless/trescue_operation_save.mjs"
+        ],
+        "completion": "PASS\\ legacy/corrupt\\ optional\\ fields\\ retain\\ company\\ and\\ earned\\ rescue",
+        "minimum_pass_lines": 5,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "treserve_wait",
+        "command": [
+          "@node",
+          "tests/headless/treserve_wait.mjs"
+        ],
+        "completion": "PASS\\ policy/agent/operating\\-office\\ blockers\\ at\\ start\\ and\\ mid\\-batch;\\ real\\ offshift/capacity/busy\\ coverage\\ continues;\\ refused\\ waits\\ and\\ follow\\-up\\ pauses\\ preserve\\ state",
+        "minimum_pass_lines": 7,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "treserve_wait_action_css",
+        "command": [
+          "@node",
+          "tests/headless/treserve_wait_action_css.mjs"
+        ],
+        "completion": "PASS\\ scoped\\ wait\\ action\\ display\\ wins\\ the\\ minimized\\-panel\\ CSS\\ cascade;\\ ordinary\\ minimized\\ rows\\ remain\\ hidden",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "treserve_wait_continuity",
+        "command": [
+          "@node",
+          "tests/headless/treserve_wait_continuity.mjs"
+        ],
+        "completion": "PASS\\ live\\ financial\\ completion,\\ original\\-spec\\ preview,\\ vacancy\\ explanation,\\ all\\ Resume\\ revalidation,\\ state\\ parity\\ and\\ wrapping\\ controls;\\ physical\\ Safari\\ acceptance\\ pending",
+        "minimum_pass_lines": 4,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "treview_space",
+        "command": [
+          "@node",
+          "tests/headless/treview_space.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ 4\\ review\\ checks\\.\\ CSS\\ budget\\ arithmetic/production\\ HTML\\ only;\\ rendered\\ browser\\ sizes\\ and\\ physical\\ Safari\\ NOT\\ TESTED\\.",
+        "minimum_pass_lines": 4,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "required_objects": [
+          "58d11b1e3498165865553805282c91bcbd6bde51"
+        ]
+      },
+      {
+        "id": "tsandbox",
+        "command": [
+          "@node",
+          "tests/headless/tsandbox.mjs"
+        ],
+        "completion": "ALL\\ PASS",
+        "minimum_pass_lines": 20,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tsandbox_build_pause",
+        "command": [
+          "@node",
+          "tests/headless/tsandbox_build_pause.mjs"
+        ],
+        "completion": "PASS\\ free,\\ instant=true,\\ pauseDuringReview:\\ placement\\ and\\ real\\ Confirm",
+        "minimum_pass_lines": 16,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tsave_recovery",
+        "command": [
+          "@node",
+          "tests/headless/tsave_recovery.mjs"
+        ],
+        "completion": "14\\ save\\-recovery\\ checks\\ passed;\\ autosave=original\\ double;\\ delay=0ms",
+        "minimum_pass_lines": 14,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tsection32",
+        "command": [
+          "@node",
+          "tests/headless/tsection32.mjs"
+        ],
+        "completion": "9\\ stable\\ section\\-menu\\ checks\\ passed\\ \\(DOM\\ fixture,\\ not\\ physical\\ Safari\\)",
+        "minimum_pass_lines": 9,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "allowed_notes": [
+          "^SKIP exact Candidate 31 reproduction:.*"
+        ],
+        "scope": "Current section menu; optional historical Candidate-31 reproduction excluded"
+      },
+      {
+        "id": "tsoft_audio",
+        "command": [
+          "@node",
+          "tests/headless/tsoft_audio.mjs"
+        ],
+        "completion": "33\\ soft\\-audio\\ checks\\ passed",
+        "minimum_pass_lines": 33,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "scope": "Complete source-declared 33-check audio suite; earlier audit log was not sufficient terminal evidence."
+      },
+      {
+        "id": "tstafffirst",
+        "command": [
+          "@node",
+          "tests/headless/tstafffirst.mjs"
+        ],
+        "completion": "ALL\\ PASS",
+        "minimum_pass_lines": 32,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tstaffing_compare",
+        "command": [
+          "@node",
+          "tests/headless/tstaffing_compare.mjs"
+        ],
+        "completion": "ALL\\ PASS",
+        "minimum_pass_lines": 11,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tstartup_graphics",
+        "command": [
+          "@node",
+          "tests/headless/tstartup_graphics.mjs"
+        ],
+        "completion": "PASS\\ actual\\ main\\ boot\\ failure\\ stops\\ before\\ game\\ UI,\\ clock,\\ handlers,\\ cloud\\ or\\ save\\ setup",
+        "minimum_pass_lines": 3,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tstatus_hierarchy",
+        "command": [
+          "@node",
+          "tests/headless/tstatus_hierarchy.mjs"
+        ],
+        "completion": "23\\ status/hierarchy\\ checks\\ passed",
+        "minimum_pass_lines": 23,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tsystems",
+        "command": [
+          "@node",
+          "tests/headless/tsystems.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ 16\\ systems\\ regression\\ checks",
+        "minimum_pass_lines": 16,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tthreefloor",
+        "command": [
+          "@node",
+          "tests/headless/tthreefloor.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ 12\\ three\\-floor\\ gameplay\\ checks",
+        "minimum_pass_lines": 12,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tthreefloor_hardening",
+        "command": [
+          "@node",
+          "tests/headless/tthreefloor_hardening.mjs"
+        ],
+        "completion": "PASS\\ 7,200\\ mixed\\ elevator\\ journeys\\ and\\ four\\ 30\\-day\\ full\\ simulation\\ playthroughs",
+        "minimum_pass_lines": 15,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tthreefloor_journeys",
+        "command": [
+          "@node",
+          "tests/headless/tthreefloor_journeys.mjs"
+        ],
+        "completion": "PASS\\ deterministic\\ F3\\ journeys:\\ 4\\ customer\\+cart\\ journeys\\ over\\ seeds\\ 1,2,3,4,\\ 15\\ production\\ save/reload\\ checkpoints,\\ 4\\ outage\\ recoveries,\\ 36\\ burst\\ callers;\\ 0\\ failures",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tthreefloor_save",
+        "command": [
+          "@node",
+          "tests/headless/tthreefloor_save.mjs"
+        ],
+        "completion": "PASS\\ production\\ compressed\\ save/reload\\ across\\ all\\ five\\ expansion\\ stages,\\ completion\\ and\\ no\\ repeated\\ charge",
+        "minimum_pass_lines": 19,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "ttraffic_delegation",
+        "command": [
+          "@node",
+          "tests/headless/ttraffic_delegation.mjs"
+        ],
+        "completion": "20\\ traffic/delegation\\ behavior\\ groups\\ passed",
+        "minimum_pass_lines": 20,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "ttraffic_delegation_save",
+        "command": [
+          "@node",
+          "tests/headless/ttraffic_delegation_save.mjs"
+        ],
+        "completion": "PASS\\ production\\ raw/compressed\\ load\\ preserves\\ queued\\ retention,\\ policy,\\ cash,\\ time\\ and\\ manual\\ Pause;\\ response\\ resumes\\ exactly\\ once\\ when\\ explicitly\\ exercised\\ with\\ coverage",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "ttutorial_guidance",
+        "command": [
+          "@node",
+          "tests/headless/ttutorial_guidance.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ 6\\ guidance\\ groups\\.\\ Rectangle/DOM\\-double\\ checks\\ only;\\ rendered\\ browser\\ and\\ physical\\ Safari\\ NOT\\ TESTED\\.",
+        "minimum_pass_lines": 6,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tunitnumbering",
+        "command": [
+          "@node",
+          "tests/headless/tunitnumbering.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ 9\\ numbering\\ and\\ migration\\ groups;\\ physical\\ Safari\\ NOT\\ TESTED",
+        "minimum_pass_lines": 9,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tunitnumbering_parity",
+        "command": [
+          "@node",
+          "tests/headless/tunitnumbering_parity.mjs",
+          "@export:9700d9d4475555e1a4907d1702cb8d81d31ded55"
+        ],
+        "completion": "PASS\\ actual\\ parent\\ scenario\\ start/migration\\ parity:\\ climate",
+        "minimum_pass_lines": 7,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tunitnumbering_vertical_legacy",
+        "command": [
+          "@node",
+          "tests/headless/tunitnumbering_vertical_legacy.mjs",
+          "@export:9700d9d4475555e1a4907d1702cb8d81d31ded55"
+        ],
+        "completion": "PASS\\ migrate\\ native\\ parent\\ expansion\\ phase\\ 4\\ then\\ complete\\ without\\ recharging\\ or\\ changing\\ existing\\ IDs/leases",
+        "minimum_pass_lines": 5,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tvisual30",
+        "command": [
+          "@node",
+          "tests/headless/tvisual30.mjs"
+        ],
+        "completion": "9\\ visual\\ presentation\\ checks\\ passed",
+        "minimum_pass_lines": 9,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tvisual31",
+        "command": [
+          "@node",
+          "tests/headless/tvisual31.mjs"
+        ],
+        "completion": "10\\ second\\ visual\\ pass\\ checks\\ passed",
+        "minimum_pass_lines": 10,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "twhole_game_art",
+        "command": [
+          "@node",
+          "tests/headless/twhole_game_art.mjs"
+        ],
+        "completion": "11\\ whole\\-game\\ art\\ regression\\ groups\\ passed;\\ actual\\ rendering\\ and\\ physical\\ acceptance\\ are\\ separate",
+        "minimum_pass_lines": 11,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tworking_yard_save",
+        "command": [
+          "@node",
+          "tests/headless/tworking_yard_save.mjs"
+        ],
+        "completion": "PASS\\ production\\ raw/compressed\\ save\\-code\\ preparation/load\\ repeated\\ three\\ times;\\ report\\ and\\ cash\\ exact,\\ no\\ repeated\\ accrual",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tyard41",
+        "command": [
+          "@node",
+          "tests/headless/tyard41.mjs"
+        ],
+        "completion": "PASS\\ actual\\ UI\\ preview\\ sets\\ door\\-side\\ view\\ once;\\ Growth\\ return\\ preserves\\ manual\\ angle,\\ plan,\\ guide\\ and\\ simulation",
+        "minimum_pass_lines": 2,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tyard_loop_repairs",
+        "command": [
+          "@node",
+          "tests/headless/tyard_loop_repairs.mjs"
+        ],
+        "completion": "PASS\\ two\\ overlapping\\ ordinary\\ builds\\ retain\\ original\\ leases,\\ independently\\ celebrate\\ once,\\ survive\\ save/reload,\\ migrate\\ old\\ tracker,\\ reject\\ malformed\\ optional\\ groups",
+        "minimum_pass_lines": 4,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tart_refinement",
+        "command": [
+          "@node",
+          "tests/headless/tart_refinement.mjs"
+        ],
+        "completion": "Refinement\\ completion:\\ 6\\ passed,\\ 0\\ failed;\\ device\\ readability\\ and\\ FPS\\ remain\\ separate",
+        "minimum_pass_lines": 6,
+        "timeout": 180,
+        "evidence": "native current behavior; maintained fixture/assertion mapping in docs/TEST-MAINTENANCE.md"
+      },
+      {
+        "id": "tcandidate22",
+        "command": [
+          "@node",
+          "tests/headless/tcandidate22.mjs"
+        ],
+        "completion": "28\\ candidate\\-22\\ regression\\ checks\\ passed",
+        "minimum_pass_lines": 28,
+        "timeout": 180,
+        "evidence": "native current behavior; maintained fixture/assertion mapping in docs/TEST-MAINTENANCE.md"
+      },
+      {
+        "id": "tclimate33",
+        "command": [
+          "@node",
+          "tests/headless/tclimate33.mjs"
+        ],
+        "completion": "19\\ climate\\ diagnostics\\ checks\\ passed\\ \\(Node/DOM\\ fixtures,\\ not\\ Safari\\ acceptance\\)",
+        "minimum_pass_lines": 19,
+        "timeout": 180,
+        "evidence": "native current behavior; maintained fixture/assertion mapping in docs/TEST-MAINTENANCE.md"
+      },
+      {
+        "id": "tproperty_ui",
+        "command": [
+          "@node",
+          "tests/headless/tproperty_ui.mjs"
+        ],
+        "completion": "22\\ executed\\ checks\\ passed;\\ physical\\ Safari\\ acceptance\\ pending",
+        "minimum_pass_lines": 22,
+        "timeout": 180,
+        "evidence": "native current behavior; maintained fixture/assertion mapping in docs/TEST-MAINTENANCE.md"
+      },
+      {
+        "id": "treview_repairs",
+        "command": [
+          "@node",
+          "tests/headless/treview_repairs.mjs"
+        ],
+        "completion": "14\\ review\\-repair\\ checks\\ passed",
+        "minimum_pass_lines": 14,
+        "timeout": 180,
+        "evidence": "native current behavior; maintained fixture/assertion mapping in docs/TEST-MAINTENANCE.md"
+      },
+      {
+        "id": "tyard40",
+        "command": [
+          "@node",
+          "tests/headless/tyard40.mjs"
+        ],
+        "completion": "11\\ infill\\ proposal\\ regression\\ groups\\ passed",
+        "minimum_pass_lines": 11,
+        "timeout": 180,
+        "evidence": "native current behavior; maintained fixture/assertion mapping in docs/TEST-MAINTENANCE.md"
+      },
+      {
+        "id": "tfix",
+        "command": [
+          "@node",
+          "tests/headless/tfix.mjs"
+        ],
+        "completion": "ALL\\ PASS:\\ deterministic\\ conversion/readiness/save\\ checks;\\ no\\ leasing\\-time\\ guarantee",
+        "minimum_pass_lines": 11,
+        "timeout": 180,
+        "evidence": "native current behavior; maintained fixture/assertion mapping in docs/TEST-MAINTENANCE.md"
+      },
+      {
+        "id": "tcurrent_runner",
+        "command": [
+          "@python",
+          "tests/headless/tcurrent_runner.py"
+        ],
+        "completion": "PASS runner failure-detection contract: 12 tests",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "evidence": "12 real child-process/aggregate contract tests; not game acceptance"
+      },
+      {
+        "id": "tdoorway_jambs",
+        "command": [
+          "@node",
+          "tests/headless/tdoorway_jambs.mjs"
+        ],
+        "completion": "Doorway\\ jamb\\ geometry\\ complete;\\ rendered\\ appearance\\ remains\\ NOT\\ TESTED",
+        "minimum_pass_lines": 2,
+        "timeout": 180,
+        "evidence": "native scene/production methods; GPU/Canvas fixtures; no rendered-browser or physical-device acceptance"
+      },
+      {
+        "id": "tlamp_lightmap",
+        "command": [
+          "@node",
+          "tests/headless/tlamp_lightmap.mjs"
+        ],
+        "completion": "Lamp\\-map\\ regression\\ complete;\\ WebGL\\ compilation,\\ rendered\\ appearance,\\ FPS\\ and\\ physical\\ Safari\\ remain\\ NOT\\ TESTED",
+        "minimum_pass_lines": 6,
+        "timeout": 180,
+        "evidence": "native scene/production methods; GPU/Canvas fixtures; no rendered-browser or physical-device acceptance"
+      }
+    ],
+    "historical": [
+      {
+        "id": "tcareer37_economy",
+        "blocked_reason": "requires immutable Candidate 36 export via SST_BASELINE_36; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "requires immutable Candidate 36 export via SST_BASELINE_36",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "tfeedback35_equivalence",
+        "blocked_reason": "historical Candidate 34 equivalence contract; later accepted gameplay differs; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "historical Candidate 34 equivalence contract; later accepted gameplay differs",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "tproperty_projects",
+        "blocked_reason": "requires declared historical parent via SST_PROJECT_BASE; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "requires declared historical parent via SST_PROJECT_BASE",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "treporting34_equivalence",
+        "blocked_reason": "historical Candidate 33 equivalence contract; later accepted gameplay differs; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "historical Candidate 33 equivalence contract; later accepted gameplay differs",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "trescue_operation",
+        "blocked_reason": "requires declared historical parent via SST_OPERATION_BASE; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "requires declared historical parent via SST_OPERATION_BASE",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "tthreefloor_parity",
+        "blocked_reason": "historical Candidate 35 exact-economy contract; later accepted gameplay differs; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "historical Candidate 35 exact-economy contract; later accepted gameplay differs",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "ttraffic_30day",
+        "blocked_reason": "requires parent a63d1f5 checkout argument; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "requires parent a63d1f5 checkout argument",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "tui38",
+        "blocked_reason": "requires production fixture SST_FIXTURE_06; not substitute another company; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "requires production fixture SST_FIXTURE_06; not substitute another company",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "tworking_yard",
+        "blocked_reason": "requires declared historical parent via SST_WORK_BASE; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "requires declared historical parent via SST_WORK_BASE",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "tyard_loop",
+        "blocked_reason": "requires declared historical parent via SST_YARD_BASE; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "requires declared historical parent via SST_YARD_BASE",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "tfinancing_layout",
+        "blocked_reason": "Invocation missing required immutable parent argument; no valid financing-parity result. No arbitrary parent substituted.; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+        "declared_prerequisite": "Invocation missing required immutable parent argument; no valid financing-parity result. No arbitrary parent substituted.",
+        "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      }
+    ],
+    "stress": [
+      {
+        "id": "tfuzz",
+        "command": [
+          "@node",
+          "tests/headless/tfuzz.mjs",
+          "120",
+          "3"
+        ],
+        "completion": "NO ISSUES",
+        "minimum_pass_lines": 0,
+        "timeout": 300,
+        "evidence": "30 seeded native mode runs, 120 days each; not enjoyment/performance evidence"
+      }
+    ],
+    "observations": [
+      {
+        "id": "climate-20day-observation",
+        "command": [
+          "@node",
+          "tests/headless/observe_climate_lease.mjs"
+        ],
+        "completion": "\\{.*\\}",
+        "minimum_pass_lines": 0,
+        "observation": true,
+        "timeout": 180,
+        "evidence": "Original seed/operator 20-day window; historical failed expectation remains data, not a required lease guarantee"
+      }
+    ]
+  },
+  "excluded_from_current": [
+    {
+      "id": "tcareer37_economy",
+      "blocked_reason": "requires immutable Candidate 36 export via SST_BASELINE_36; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "requires immutable Candidate 36 export via SST_BASELINE_36",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "tfeedback35_equivalence",
+      "blocked_reason": "historical Candidate 34 equivalence contract; later accepted gameplay differs; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "historical Candidate 34 equivalence contract; later accepted gameplay differs",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "tproperty_projects",
+      "blocked_reason": "requires declared historical parent via SST_PROJECT_BASE; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "requires declared historical parent via SST_PROJECT_BASE",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "treporting34_equivalence",
+      "blocked_reason": "historical Candidate 33 equivalence contract; later accepted gameplay differs; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "historical Candidate 33 equivalence contract; later accepted gameplay differs",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "trescue_operation",
+      "blocked_reason": "requires declared historical parent via SST_OPERATION_BASE; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "requires declared historical parent via SST_OPERATION_BASE",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "tthreefloor_parity",
+      "blocked_reason": "historical Candidate 35 exact-economy contract; later accepted gameplay differs; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "historical Candidate 35 exact-economy contract; later accepted gameplay differs",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "ttraffic_30day",
+      "blocked_reason": "requires parent a63d1f5 checkout argument; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "requires parent a63d1f5 checkout argument",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "tui38",
+      "blocked_reason": "requires production fixture SST_FIXTURE_06; not substitute another company; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "requires production fixture SST_FIXTURE_06; not substitute another company",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "tworking_yard",
+      "blocked_reason": "requires declared historical parent via SST_WORK_BASE; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "requires declared historical parent via SST_WORK_BASE",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "tyard_loop",
+      "blocked_reason": "requires declared historical parent via SST_YARD_BASE; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "requires declared historical parent via SST_YARD_BASE",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "tfinancing_layout",
+      "blocked_reason": "Invocation missing required immutable parent argument; no valid financing-parity result. No arbitrary parent substituted.; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
+      "declared_prerequisite": "Invocation missing required immutable parent argument; no valid financing-parity result. No arbitrary parent substituted.",
+      "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    }
+  ],
+  "coverage_notes": [
+    "91 game-script entries plus 1 runner-contract entry; imported suites are not unique coverage.",
+    "Six fixture/assertion repairs and a newly exposed coincident-jamb failure; do not suppress it.",
+    "Historical entries intentionally BLOCKED until exact original pairing/invocation registration; not PASS."
+  ],
+  "production_source": "70a4e318f78f2a528a9241186341209ff7eeb3bf",
+  "maintenance_origin": "0526ab8c1e256e851f22bb59ca626f74b65338fd"
+}
