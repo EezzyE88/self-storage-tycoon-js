@@ -4,6 +4,19 @@ import { unitInService } from './comeback.js';
 
 export class ReserveWait {
   constructor(onStop = () => {}) { this.onStop = onStop; this.active = null; this.pending = null; }
+  // Explicit wait only: normal minutes, with a small wall-time budget so input
+  // and rendering get control back. Nothing is advanced analytically or bought.
+  advance(sim, stepMinute, now = () => performance.now()) {
+    if (!this.active || this.active.sim !== sim || sim.s.speed !== 4) return 0;
+    this.check(sim);
+    if (!this.active) return 0;
+    const start = sim.s.t, deadline = now() + 6;
+    for (let i = 0; i < 240 && this.active && this.active.sim === sim && sim.s.speed === 4; i++) {
+      stepMinute();
+      if (now() >= deadline) break;
+    }
+    return sim.s.t - start;
+  }
   matches(args) {
     const a=(this.active||this.pending)?.args;
     const key=p=>JSON.stringify([p.tool,p.a.x,p.a.y,p.b.x,p.b.y,p.axis,p.f||0,!!p.flip,!!p.climate,!!p.rush]);

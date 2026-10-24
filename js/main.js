@@ -311,11 +311,15 @@ function stepTicks(n) {
     // Review between minutes, not just between frames: 4x can batch many ticks.
     if (!game.ui.title && sim.s.convos.length) game.ui.renderFeed();
     if (!game.ui.title && sim.s.speed === 0) break;
+    if (game.ui.reserveWait?.active && others.some(({p})=>p.sim.s.convos.some(c=>!c.staffHandling))) {
+      game.ui.reserveWait.interrupt('Another property has an owner decision.'); break;
+    }
     const eventStart=sim.events.length;
     sim.step(); const minuteEvents=sim.events.slice(eventStart);
     if (sim.events.length > 400) game.drain();
     for (const { p, k } of others) {
       p.sim.step();
+      if(game.ui.reserveWait?.active&&p.sim.s.convos.some(c=>!c.staffHandling))game.ui.reserveWait.interrupt('Another property has an owner decision.');
       if(game.ui.reserveWait?.active&&p.sim.events.some(e=>['access_lost','power_shed'].includes(e.type)||e.type==='fault'&&e.sev==='critical'))game.ui.reserveWait.interrupt('Another property needs attention.');
       for (const e of p.sim.events) { const f = BG_EVENTS[e.type]; const msg = f && f(e, p.sim); if (msg) { game.note(k, msg); if (e.type !== 'lease' && e.type !== 'moveout') game.ui.toast(`${p.name}: ${msg}`, 'bad'); } }
       p.sim.events.length = 0;
@@ -356,9 +360,14 @@ function tick(now) {
   const dt = Math.min(0.1, rafMs / 1000); last = now;
   const s = game.sim.s;
   if (s.speed > 0 && !game.ui.title && !game.ui.modalOpen()) {
+    if (game.ui.reserveWait?.active && !document.hidden) {
+      game.acc = 0;
+      game.ui.reserveWait.advance(game.sim, () => stepTicks(1));
+    } else {
     game.acc += dt * TICKS_PER_SEC_1X * s.speed;
     const n = Math.min(Math.floor(game.acc), 240); game.acc -= n; if (game.acc > 20) game.acc = 0;
     if (n) stepTicks(n);
+    }
   } else if (game.ui.title && game.sim === game.demo && !document.hidden) { // living title screen: the demo property keeps operating
     game.acc += dt * TICKS_PER_SEC_1X; const n = Math.min(Math.floor(game.acc), 40); game.acc -= n; if (n) stepTicks(n);
   } else { game.sim.poll(); game.drain(); }
