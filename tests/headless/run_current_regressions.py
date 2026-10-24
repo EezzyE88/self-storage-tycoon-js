@@ -83,16 +83,21 @@ def run_entry(entry, cwd, environment, output, exports=None):
     stdout_path, stderr_path = logdir / (entry['id'] + '.stdout.log'), logdir / (entry['id'] + '.stderr.log')
     start = time.monotonic()
     try:
-        with stdout_path.open('w') as out, stderr_path.open('w') as err:
-            proc = subprocess.Popen(args, cwd=cwd, env=environment, stdout=out, stderr=err)
-            try:
-                code = proc.wait(timeout=entry.get('timeout', 180))
-                timeout = False
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait()
-                code, timeout = None, True
-        stdout, stderr = stdout_path.read_text(errors='replace'), stderr_path.read_text(errors='replace')
+        proc = subprocess.Popen(args, cwd=cwd, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            stdout_bytes, stderr_bytes = proc.communicate(timeout=entry.get('timeout', 180))
+            code, timeout = proc.returncode, False
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout_bytes, stderr_bytes = proc.communicate()
+            code, timeout = None, True
+        # Keep the actual assessed bytes in the report as well as independent logs.
+        # A later damaged/truncated log must never silently support a PASS claim.
+        stdout, stderr = stdout_bytes.decode('utf-8'), stderr_bytes.decode('utf-8')
+        stdout_path.write_bytes(stdout_bytes); stderr_path.write_bytes(stderr_bytes)
+        result.update(captured_stdout=stdout, captured_stderr=stderr,
+                      stdout_sha256=digest(stdout_bytes), stderr_sha256=digest(stderr_bytes),
+                      stdout_bytes=len(stdout_bytes), stderr_bytes=len(stderr_bytes))
         status, reason, failures = assess(entry, code, stdout, stderr, timeout)
         notes=[line for line in stdout.splitlines() if re.match(r'^(?:SKIP|NOT TESTED|LIMIT:)',line)]
         unexpected=[line for line in notes if not any(re.fullmatch(pattern,line) for pattern in entry.get('allowed_notes',[]))]
@@ -102,10 +107,24 @@ def run_entry(entry, cwd, environment, output, exports=None):
         result.update(status=status, reason=reason, exit_code=code, failure_markers=failures)
         if status == 'OBSERVATION':
             result['observation'] = json.loads(stdout.splitlines()[-1])
-    except OSError as exc:
+    except (OSError, UnicodeError) as exc:
         result.update(status='ERROR', reason=str(exc), exit_code=None)
     result.update(seconds=round(time.monotonic()-start, 3), stdout=str(stdout_path.relative_to(output)), stderr=str(stderr_path.relative_to(output)))
     return result
+
+def verify_capture(row, output):
+    errors=[]
+    for stream in ['stdout','stderr']:
+        if 'captured_'+stream not in row:
+            continue
+        captured=row['captured_'+stream].encode('utf-8')
+        try:
+            retained=(output/row[stream]).read_bytes()
+        except OSError:
+            retained=None
+        if len(captured)!=row[stream+'_bytes'] or digest(captured)!=row[stream+'_sha256'] or retained!=captured:
+            errors.append(stream+' capture/log identity mismatch')
+    return errors
 
 def git(root, *args):
     return subprocess.check_output(['git', '-C', str(root), *args], stderr=subprocess.PIPE)
@@ -187,6 +206,9 @@ def main(argv=None):
             changed = [p for p,h in report['source_export']['files'].items()
                        if not p.startswith(('tests/', 'docs/')) and (not (source/p).is_file() or digest((source/p).read_bytes()) != h)]
             changed.extend(str(p.relative_to(source)) for p in source.rglob('*') if p.is_file() and str(p.relative_to(source)) not in report['source_export']['files'] and not str(p.relative_to(source)).startswith(('tests/','docs/')))
+            for row in report['results']:
+                errors=verify_capture(row,output)
+                if errors:row.update(status='ERROR',reason='; '.join(errors))
             report['production_export_unchanged'] = not changed
             if changed:
                 report['results'].append({'id':'production-preservation','status':'FAIL','required':True,'reason':str(changed)})

@@ -20,6 +20,20 @@ class RunnerTests(unittest.TestCase):
 
     def test_legitimate_complete_pass(self):
         self.assertEqual(self.execute("print('PASS complete')")['status'],'PASS')
+    def test_report_retains_exact_assessed_bytes(self):
+        row=self.execute("import sys;print('PASS complete');print('diagnostic',file=sys.stderr)")
+        self.assertEqual(row['captured_stdout'],'PASS complete\n')
+        self.assertEqual(row['captured_stderr'],'diagnostic\n')
+        self.assertEqual(row['stdout_bytes'],len(row['captured_stdout'].encode()))
+        self.assertEqual(row['stdout_sha256'],runner.digest(row['captured_stdout'].encode()))
+    def test_truncated_log_cannot_retain_pass(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            row=runner.run_entry({'id':'child','command':[sys.executable,'-c',"print('PASS complete')"],'completion':'PASS complete'},root,dict(os.environ),root)
+            self.assertEqual(runner.verify_capture(row,root),[])
+            (root/row['stdout']).write_text('PASS')
+            self.assertEqual(runner.verify_capture(row,root),['stdout capture/log identity mismatch'])
+            self.assertEqual(row['captured_stdout'],'PASS complete\n')
     def test_exit_zero_printed_failure(self):
         r=self.execute("print('FAIL conversion');print('PASS complete')")
         self.assertEqual(r['exit_code'],0);self.assertEqual(r['status'],'FAIL')
@@ -56,5 +70,5 @@ class RunnerTests(unittest.TestCase):
 
 if __name__=='__main__':
     result=unittest.TextTestRunner(stream=sys.stdout,verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(RunnerTests))
-    if result.wasSuccessful():print('PASS runner failure-detection contract: 12 tests')
+    if result.wasSuccessful():print('PASS runner failure-detection contract: 14 tests')
     raise SystemExit(0 if result.wasSuccessful() else 1)

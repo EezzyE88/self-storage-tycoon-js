@@ -1035,7 +1035,7 @@
           "@python",
           "tests/headless/tcurrent_runner.py"
         ],
-        "completion": "PASS runner failure-detection contract: 12 tests",
+        "completion": "PASS\\ runner\\ failure\\-detection\\ contract:\\ 14\\ tests",
         "minimum_pass_lines": 1,
         "timeout": 180,
         "evidence": "12 real child-process/aggregate contract tests; not game acceptance"
