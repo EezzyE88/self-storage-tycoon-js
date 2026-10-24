@@ -17,7 +17,7 @@ function fixture(){
  sim.s.cash=1300;sim.ensure();
  const ui=Object.create(UI.prototype),boxes={};
  const game={sim,ui,acc:0,syncTier(){},drain(){sim.events.length=0;},note(){},audio:{unlock(){}},rend:{view:'ext',setPreview(){},setSelection(){},setFocus(){},lookAt(){}}};
- ui.g=game;ui.title=false;ui.root={classList:el().classList,querySelectorAll:()=>[]};ui.$=k=>boxes[k]||=el();ui.sfx=()=>{};ui.toast=()=>{};
+ ui.g=game;ui.title=false;ui.toasts=[];ui.phone=()=>true;ui.root={classList:el().classList,querySelectorAll:()=>[]};ui.$=k=>boxes[k]||=el();ui.sfx=()=>{};ui.toast=()=>{};
  ui.syncFeedbackProperty=()=>{};ui.spendingHtml=()=>'';ui.buildSheet=()=>'';
  ui.renderFeed=()=>{sim.syncRequestHandling();if(sim.s.convos.some(c=>!c.staffHandling))ui.pauseForPopup('convo');else ui.resumePopup('convo');};
  ui.setView=v=>{game.rend.view=v;};ui.frameOutline=()=>{};
@@ -106,4 +106,39 @@ function fixture(){
  assert.equal(loaded.s.cash,f.sim.s.cash);assert.equal(loaded.s.t,f.sim.s.t);assert.deepEqual(loaded.s.sb,f.sim.s.sb);
  console.log('PASS production save serializer stores ordinary Sandbox state only; fresh session has no armed wait');
 }
-console.log('Sandbox fast reserve: 10 groups passed; rendered browser and physical Safari NOT TESTED');
+let lifecycleFailures=0;
+function lifecycle(label,check){try{check();console.log('PASS '+label);}catch(e){lifecycleFailures++;console.error('FAIL '+label+' :: '+e.message);}}
+lifecycle('completion purchase clears obsolete target-preview controls',()=>{
+ const f=fixture();f.start();const a=f.ui.reserveWait.active.args;
+ f.sim.money(-sandboxReserveQuote(f.sim,a).position.available+1,'other','Disposable completion receipt');f.ui.reserveWait.check(f.sim);
+ f.ui.previewYardOpportunity(null,f.ui.reserveResult);f.click('confirm');
+ assert.equal(f.ui.reserveResult,null,'purchased footprint must not remain offered for another preview');
+ f.ui.renderTut(true);assert.doesNotMatch(f.ui.sandboxReserveHtml(),/Preview investment/);
+});
+lifecycle('another selected investment is retained when an interrupted target rejects replacement',()=>{
+ const f=fixture();f.sim.s.coTier=2;f.start();f.ui.pauseForPopup('panel');f.ui.resumePopup('panel');
+ const original=structuredClone(f.ui.reserveWait.pending.args);f.preview({...args,rush:true});const preview=structuredClone(f.ui.plan.args);
+ assert.equal(f.ui.startSandboxReserveWait(),false);assert.equal(f.ui.tool,args.tool,'refused wait must not discard the current build review');
+ assert.deepEqual(f.ui.plan.args,preview);assert.deepEqual(f.ui.reserveWait.pending.args,original);assert.equal(f.sim.s.speed,0);
+});
+lifecycle('other-property owner decision blocks Start before closing the selected review',()=>{
+ const f=fixture(),other=makeSandbox({start:'starter',cash:60000});other.convo({key:'other-start',text:'Owner decision',actions:[{label:'Noted'}]});
+ f.game.company={props:[{sim:f.sim},{sim:other}]};f.preview();const before=structuredClone(f.sim.s);
+ assert.equal(f.ui.startSandboxReserveWait(),false);assert.equal(f.ui.tool,args.tool);assert.deepEqual(f.sim.s,before);
+});
+lifecycle('other-property owner decision blocks explicit Resume without an armed frame',()=>{
+ const f=fixture();f.start();f.ui.reserveWait.interrupt('Other property decision');const other=makeSandbox({start:'starter',cash:60000});
+ other.convo({key:'other-resume',text:'Owner decision',actions:[{label:'Noted'}]});f.game.company={props:[{sim:f.sim},{sim:other}]};
+ const before=structuredClone(f.sim.s);assert.equal(f.ui.resumeReserveWait(),false);assert.equal(f.ui.reserveWait.active,null);assert.deepEqual(f.sim.s,before);
+});
+lifecycle('live reserve card preserves an in-progress tap until pointer release',()=>{
+ for(const flag of ['pointerBusy','menuTouch']){
+  const f=fixture();f.start();const before=f.boxes.tut.innerHTML;f.ui[flag]=true;f.sim.s.cash+=1;f.ui.reserveWait.active.quote=sandboxReserveQuote(f.sim,f.ui.reserveWait.active.args);f.ui.renderTut();
+  assert.equal(f.boxes.tut.innerHTML,before,flag+': Stop target must not be replaced under the pointer');f.ui[flag]=false;f.ui.renderTut();assert.notEqual(f.boxes.tut.innerHTML,before);
+ }
+});
+lifecycle('interrupted wait exposes an actionable explanation while another build review is open',()=>{
+ const f=fixture();f.start();f.ui.reserveWait.interrupt('Review');f.preview();let message='';f.ui.toast=t=>message=t;
+ assert.equal(f.ui.resumeReserveWait(),false);assert.match(message,/build review/i);assert.equal(f.sim.s.speed,0);
+});
+if(lifecycleFailures){process.exitCode=1;console.error('FAIL lifecycle regressions: '+lifecycleFailures);}else console.log('Sandbox fast reserve: 16 groups passed; rendered browser and physical Safari NOT TESTED');

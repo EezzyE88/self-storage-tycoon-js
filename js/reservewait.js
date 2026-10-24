@@ -33,8 +33,7 @@ export class ReserveWait {
     }
     return sim.s.t - start;
   }
-  matches(args) {
-    const a=(this.active||this.pending)?.args;
+  matches(args, a=(this.active||this.pending)?.args) {
     const key=p=>JSON.stringify([p.tool,p.a.x,p.a.y,p.b.x,p.b.y,p.axis,p.f||0,!!p.flip,!!p.climate,!!p.rush,p.rotation??null,p.dir??null]);
     return !!a&&!!args?.a&&!!args?.b&&key(a)===key(args);
   }

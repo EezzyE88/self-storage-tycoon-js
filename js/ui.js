@@ -635,11 +635,18 @@ export class UI {
     this.rend.lookAt(11, 3); this.frameOutline();
     return true; // Ordinary Confirm remains the only way to buy.
   }
+  reserveOtherDecision() {
+    return this.g.company?.props.find(p=>p.sim!==this.sim&&p.sim.s.convos.some(c=>!c.staffHandling));
+  }
   startSandboxReserveWait() {
     const offer=sandboxReserveQuote(this.sim,this.plan?.args);
     if(!offer||this.title||this.sim.s.convos.some(c=>!c.staffHandling)||
       [...(this.popupBlocks||[])].some(k=>!['review','sandboxBuild','panel'].includes(k))){
       this.toast('Review a valid placement and outstanding decisions first.','bad');return false;
+    }
+    if(this.reserveOtherDecision()){this.toast('Another property has an owner decision. Review it in Properties first.','bad');return false;}
+    if(this.reserveWait?.pending&&!this.reserveWait.matches(offer.args)){
+      this.toast('Resume or end the selected investment wait before choosing another.','bad');return false;
     }
     // Explicit wait releases only its own build review; manual Pause is retained.
     this.notePause(0);this.pickTool(null);
@@ -654,6 +661,7 @@ export class UI {
   }
   startReserveWait(key) {
     const offer=this.reserveOffers?.get(key);
+    if(this.reserveOtherDecision()){this.toast('Another property has an owner decision. Review it in Properties first.','bad');return false;}
     if(!offer||this.title||this.tool||this.sim.s.convos.some(c=>!c.staffHandling)){
       this.toast('Review the proposal and outstanding decisions first.','bad');return false;
     }
@@ -671,7 +679,9 @@ export class UI {
     this.g.acc=0;this.reserveNotice=null;this.reserveResult=null;this.renderTut(true);return true;
   }
   resumeReserveWait() {
-    if(!this.reserveWait?.pending||this.title||this.tool)return false;
+    if(!this.reserveWait?.pending||this.title)return false;
+    if(this.tool){this.toast('Close the current build review before resuming the selected wait.','bad');return false;}
+    if(this.reserveOtherDecision()){this.toast('Another property has an owner decision. Review it in Properties first.','bad');return false;}
     this.notePause(0);this.setTab(null);this.select(null);
     if(this.popupBlocks?.size){this.toast('Finish the current review before resuming waiting.','bad');return false;}
     const result=this.reserveWait.resume(this.sim);
@@ -680,6 +690,7 @@ export class UI {
     this.g.acc=0;this.renderTut(true);return !!result.ok;
   }
   reviewReserveWait() {
+    if(this.reserveOtherDecision()){this.setTab('growth',true);this.jumpSection('Acquisitions');this.toast('Another property has an owner decision. Select it in Properties to review.','bad');return;}
     const r=this.reserveWait?.review(this.sim);if(!r)return;
     if(r.kind==='decision'){this.showRequests();return;}
     if(r.kind==='financial'){this.showFinances();return;}
@@ -868,8 +879,10 @@ export class UI {
     }
     const projectKey = this.projectProposal?.sim === this.sim && matchesProject(this.plan.args, this.projectProposal.key) ? this.projectProposal.key : null;
     const finishesWait=this.reserveWait?.pending&&this.reserveWait.matches(this.plan.args);
+    const finishesResult=this.reserveResult&&this.reserveWait?.matches(this.plan.args,this.reserveResult);
     const r = this.sim.dispatch({ type: 'build', ...this.plan.args, ...(projectKey ? { projectKey } : {}) });
     if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
+    if(r.ok&&(finishesWait||finishesResult)){this.reserveResult=null;this.reserveNotice=null;this.renderTut(true);}
     if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); }
     this.renderActionBar();
@@ -1828,6 +1841,7 @@ export class UI {
     this.resumePopup('scenario');
     const b = this.title ? null : curBeat(this.sim);
     if(!this.title&&!b&&!s.scenario&&!s.lessonOffer&&s.mode==='sandbox'&&(this.reserveWait?.active||this.reserveWait?.pending||this.reserveNotice)){
+      if((this.pointerBusy||this.menuTouch||performance.now()<(this.menuScrollUntil||0))&&!force)return;
       this.resumePopup('lessonOffer');
       const html=`<div class="tut"><div class="rescue-bridge reserve-wait-bridge">${this.sandboxReserveHtml()}</div></div>`;
       if(box.innerHTML!==html)box.innerHTML=html;

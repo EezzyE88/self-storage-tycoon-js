@@ -87,6 +87,8 @@ assert.equal(JSON.stringify(sim.s),saved);
 assert.ok(r.contextG.children.length <= 5,'mixed fixture uses at most ten instanced context draws, independent of unit count');
 // Keep floor-numbering/save/simulation source byte-identical to parent.
 import {execFileSync} from 'node:child_process';
-for(const file of ['js/sim.js','js/unitnumbering.js','js/main.js','js/vertical.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
+for(const file of ['js/sim.js','js/unitnumbering.js','js/vertical.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
+// Fast-reserve intentionally changed main's clock dispatch. Preserve its exact verified implementation.
+assert.equal(readFileSync('js/main.js','utf8'),execFileSync('git',['show','3c92a5eb6a8d906264e9019e26fa24a100bffb31:js/main.js'],{encoding:'utf8'}));
 console.log('PASS mixed-height context across Exterior/F1/F2/F3, four rotations, active-floor picking/inspection, camera preservation, repeated rebuild and byte-identical complete state');
 console.log('LIMIT: CPU scene graph + UI handler checks; WebGL pixels, Safari and physical iPhone not tested.');
