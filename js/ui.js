@@ -1,6 +1,6 @@
 import { demandEvidenceText, paybackText } from './economics.js';
 import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
-import { ReserveWait } from './reservewait.js';
+import { ReserveWait, sandboxReserveQuote, reserveQuote } from './reservewait.js';
 import { yardProgress, yardChoices, yardInventory, yardQuote } from './yardloop.js';
 import { creditProjection, creditNeeded } from './finance.js';
 import { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';
@@ -351,6 +351,7 @@ export class UI {
       case 'yardExplore': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Your next improvement'); break;
       case 'rescueLeasing': if (this.sim.s.scenario?.status === 'won') this.do({type:'comebackAck'}); this.scMin=true; this.renderTut(true); this.setTab('growth',true); this.jumpSection('Your next improvement'); break;
       case 'yardWatch': { const ids=this.sim.objs('unit').filter(u=>unitInService(this.sim.s,u)&&u.commercial==='ready').map(u=>u.id); this.do({type:'yardFocus',ids},true); this.renderSheet(true); this.renderTut(true); break; }
+      case 'sandboxReserveStart': this.startSandboxReserveWait(); break;
       case 'reserveStart': this.startReserveWait(v); break;
       case 'reserveResume': this.resumeReserveWait(); break;
       case 'reserveReview': this.reviewReserveWait(); break;
@@ -634,6 +635,23 @@ export class UI {
     this.rend.lookAt(11, 3); this.frameOutline();
     return true; // Ordinary Confirm remains the only way to buy.
   }
+  startSandboxReserveWait() {
+    const offer=sandboxReserveQuote(this.sim,this.plan?.args);
+    if(!offer||this.title||this.sim.s.convos.some(c=>!c.staffHandling)||
+      [...(this.popupBlocks||[])].some(k=>!['review','sandboxBuild','panel'].includes(k))){
+      this.toast('Review a valid placement and outstanding decisions first.','bad');return false;
+    }
+    // Explicit wait releases only its own build review; manual Pause is retained.
+    this.notePause(0);this.pickTool(null);
+    const key=JSON.stringify(offer.args);this.reserveOffers=new Map([[key,offer]]);
+    return this.startReserveWait(key);
+  }
+  sandboxReserveHtml() {
+    const active=this.reserveWait?.active,r=this.reserveWait?.review(this.sim);
+    if(active)return `<b>Fast-forwarding · ${esc(active.size)}</b><small>${money(Math.max(0,-active.quote.position.available),true)} reserve shortfall</small><button class="btn sm" data-a="reserveStop">Stop waiting</button>`;
+    if(r)return `<b>Waiting paused · ${esc(r.a.size)}</b><small>${esc(r.blocked?r.reason:r.ready?'Reserve covered. Review before purchasing.':`${money(Math.max(0,-r.quote.position.available),true)} reserve shortfall`)} · original limit Day ${dayOf(r.a.started+7*1440)}</small><button class="btn sm" data-a="${r.blocked?'reserveReview':'reserveResume'}">${r.blocked?'Review interruption':r.ready?'Preview investment':'Resume waiting'}</button><button class="btn sm" data-a="reserveStop">End wait</button>`;
+    return `${this.reserveNotice?`<small>${esc(this.reserveNotice)}</small>`:''}${this.reserveResult?'<button class="btn sm" data-a="reservePreview">Preview investment</button>':''}`;
+  }
   startReserveWait(key) {
     const offer=this.reserveOffers?.get(key);
     if(!offer||this.title||this.tool||this.sim.s.convos.some(c=>!c.staffHandling)){
@@ -669,11 +687,12 @@ export class UI {
     this.jumpSection(r.kind==='work'?'Work queue':'Your next improvement');
   }
   previewYardOpportunity(size, args=null) {
-    const c=args?yardQuote(this.sim,args):yardChoices(this.sim).find(c=>c.size===size);
+    const c=args?reserveQuote(this.sim,args):yardChoices(this.sim).find(c=>c.size===size);
     if(!c||!toolUnlocked(this.sim,c.args.tool)){this.toast('That opportunity changed. Review the yard again.','bad');return false;}
     this.pauseForPopup('review');this.scMin=true;this.renderTut(true);this.setTab(null);this.select(null);
-    this.setView('ext');this.pickTool(c.args.tool);this.flip=false;this.climate=false;this.rush=false;
-    this.planArgs=structuredClone({a:c.args.a,b:c.args.b,axis:c.args.axis});this.replan();
+    this.setView(c.args.f||'ext');this.pickTool(c.args.tool);this.flip=!!c.args.flip;this.climate=!!c.args.climate;this.rush=!!c.args.rush;
+    this.buildRotation=c.args.rotation??null;
+    this.planArgs=structuredClone({a:c.args.a,b:c.args.b,axis:c.args.axis,dir:c.args.dir});this.replan();
     const u=this.plan?.creates?.[0];if(u){this.rend.lookAt(u.x+u.w/2,u.y+u.h/2);this.frameOutline();}
     return true;
   }
@@ -757,6 +776,7 @@ export class UI {
   }
   yardInfillHtml() {
     const c = this.sim.s.scenario;
+    if(this.sim.s.mode==='sandbox'&&!c&&!this.sim.unlimited())return `<h3>Your next improvement</h3><section class="yard-loop">${this.sandboxReserveHtml()}<p class="note">Choose a placement in Build. If its cost would leave cash below bills and reserve, the build review offers Fast-forward to reserve. No purchase is made until you Confirm.</p></section>`;
     if (c?.id !== 'comeback' || c.status !== 'won' || !c.acknowledged) return '';
     const offers = projectOffers(this.sim), r = this.sim.s.propertyProjects;
     const cards = offers.map(p => {
@@ -878,7 +898,10 @@ export class UI {
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
         status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
-        if(this.sim.financialPosition({spend:R.cost,extraDaily:this.sim.planDailyCost(R)}).available<0)status += '<button class="btn sm" data-a="fundingReview">Review funding · optional</button>';
+        if(this.sim.financialPosition({spend:R.cost,extraDaily:this.sim.planDailyCost(R)}).available<0){
+          status += '<button class="btn sm" data-a="fundingReview">Review funding · optional</button>';
+          if(sandboxReserveQuote(this.sim,R.args))status += '<button class="btn sm" data-a="sandboxReserveStart">Fast-forward to reserve</button><p class="note">Runs normal time for up to 7 game days, then pauses. Owner decisions stop the wait. Stop or Pause ends it. Return to this placement and Confirm separately to buy.</p>';
+        }
         const inv = this.sim.investment(R);
         if (inv) status += `<details class="build-details"><summary>Payback &amp; build terms</summary><div class="refund-note">${esc(paybackText(inv))} Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class="note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;
       }
@@ -1804,6 +1827,12 @@ export class UI {
     if (s.scenario && !this.title && !(careerEligibility(s).eligible && (s.lesson || s.lessonOffer))) { this.renderScenario(force); return; }
     this.resumePopup('scenario');
     const b = this.title ? null : curBeat(this.sim);
+    if(!this.title&&!b&&!s.scenario&&!s.lessonOffer&&s.mode==='sandbox'&&(this.reserveWait?.active||this.reserveWait?.pending||this.reserveNotice)){
+      this.resumePopup('lessonOffer');
+      const html=`<div class="tut"><div class="rescue-bridge reserve-wait-bridge">${this.sandboxReserveHtml()}</div></div>`;
+      if(box.innerHTML!==html)box.innerHTML=html;
+      this.tutKey=null;return;
+    }
     if (!b) {
       this.guideStep = null;
       // one card at a time on phones: hold a new lesson offer while banners or notifications are up, but never longer than 12 s

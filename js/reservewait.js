@@ -1,6 +1,22 @@
 // Session-only clock controller. Quotes, simulation, spending and saves retain their ordinary owners.
 import { yardQuote } from './yardloop.js';
 import { unitInService } from './comeback.js';
+import { TOOLS } from './data.js';
+
+// Sandbox waits use the player's exact reviewed build, not an invented recommendation.
+export function sandboxReserveQuote(sim, args) {
+  const s=sim.s;
+  if(s.mode!=='sandbox'||s.scenario||s.lesson||s.tut?.on||sim.unlimited()||!TOOLS[args?.tool]||args.tool==='demolish'||!args.a||!args.b)return null;
+  const plan=sim.plan(args);
+  if(plan.status!=='valid'||plan.warn?.length||plan.missing?.length||!(plan.cost>0))return null;
+  if(args.rush){
+    if((s.coTier||1)<2||sim.instantOn())return null;
+    plan.cost=Math.round(plan.cost*1.25);plan.dur*=0.5;
+  }
+  const daily=sim.planDailyCost(plan),position=sim.financialPosition({spend:plan.cost,extraDaily:daily});
+  return {args:structuredClone(args),plan,daily,position,size:plan.label||TOOLS[args.tool].name};
+}
+export const reserveQuote=(sim,args)=>sim.s.mode==='sandbox'&&!sim.s.scenario?sandboxReserveQuote(sim,args):yardQuote(sim,args);
 
 export class ReserveWait {
   constructor(onStop = () => {}) { this.onStop = onStop; this.active = null; this.pending = null; }
@@ -19,7 +35,7 @@ export class ReserveWait {
   }
   matches(args) {
     const a=(this.active||this.pending)?.args;
-    const key=p=>JSON.stringify([p.tool,p.a.x,p.a.y,p.b.x,p.b.y,p.axis,p.f||0,!!p.flip,!!p.climate,!!p.rush]);
+    const key=p=>JSON.stringify([p.tool,p.a.x,p.a.y,p.b.x,p.b.y,p.axis,p.f||0,!!p.flip,!!p.climate,!!p.rush,p.rotation??null,p.dir??null]);
     return !!a&&!!args?.a&&!!args?.b&&key(a)===key(args);
   }
   start(sim, offer) {
@@ -28,7 +44,7 @@ export class ReserveWait {
       if(this.matches(offer.args))return this.resume(sim);
       return {ok:false,msg:'Resume or end the selected investment wait before choosing another.'};
     }
-    const args=structuredClone(offer.args), q=yardQuote(sim,args);
+    const args=structuredClone(offer.args), q=reserveQuote(sim,args);
     if(!q||q.plan.cost!==offer.plan.cost||q.daily!==offer.daily)return {ok:false,msg:'This proposal changed. Review it again.'};
     if(q.position.available>=0)return {ok:false,ready:true,msg:'Reserve is already covered. Preview the investment.'};
     this.active={sim,args,cost:q.plan.cost,daily:q.daily,size:q.size,started:sim.s.t,quote:q};
@@ -47,16 +63,17 @@ export class ReserveWait {
     a.sim.dispatch({type:'speed',v:0});this.onStop(reason,a);return true;
   }
   existingVacancy(sim,a) {
-    return sim.objs('unit').some(u=>u.size===a.size&&u.env==='std'&&unitInService(sim.s,u)&&u.commercial==='ready');
+    return sim.s.mode!=='sandbox'&&sim.objs('unit').some(u=>u.size===a.size&&u.env==='std'&&unitInService(sim.s,u)&&u.commercial==='ready');
   }
   proposalReason(sim,a) {
+    if(sim.s.mode==='sandbox'&&!sim.s.scenario)return 'Selected placement or build terms changed. Review this investment.';
     return this.existingVacancy(sim,a)?`Lease the existing ${a.size} space first.`:'Placement or supporting demand changed. Review this investment.';
   }
   review(sim) {
     const a=this.pending;if(!a)return null;
     if(a.sim!==sim)return {a,blocked:true,kind:'property',reason:'Property changed.'};
     if(sim.s.t-a.started>=7*1440)return {a,blocked:true,kind:'expired',reason:'Original seven-day wait ended. Review the investment again.'};
-    const quote=yardQuote(sim,a.args);
+    const quote=reserveQuote(sim,a.args);
     if(!quote)return {a,blocked:true,kind:this.existingVacancy(sim,a)?'vacancy':'proposal',reason:this.proposalReason(sim,a)};
     if(quote.plan.cost!==a.cost||quote.daily!==a.daily)return {a,quote,blocked:true,kind:'proposal',reason:'The investment quote changed. Review its costs.'};
     const reason=this.problem(sim,[]);
@@ -96,7 +113,7 @@ export class ReserveWait {
   check(sim, events=[]) {
     const a=this.active;if(!a)return;
     if(a.sim!==sim)return this.stop('Property changed.');
-    const q=yardQuote(sim,a.args);
+    const q=reserveQuote(sim,a.args);
     if(q)a.quote=q;
     const reason=this.problem(sim,events);if(reason)return this.interrupt(reason);
     if(!q)return this.interrupt(this.proposalReason(sim,a));
