@@ -1,3 +1,4 @@
+import { attachmentCoverage } from './unitupgrades.js';
 import { isComeback, targetInService, targetUnits } from './comeback.js';
 // Three.js presentation layer. Reads sim.s / sim.D; never mutates simulation state.
 import * as THREE from 'three';
@@ -757,7 +758,17 @@ export class Renderer {
         this.anim.push({ k: 'elev', mesh: cab, o });
         break;
       }
+      case 'unitLight': {
+        const u=S.objects[o.mount?.host];if(!u)break;
+        const head=this.box(.35,.08,.18,this.mat.lamp.clone(),o.mount.x,1.3,o.mount.y,f,{obj:o.id});
+        const cells=[];for(let y=u.y;y<u.y+u.h;y++)for(let x=u.x;x<u.x+u.w;x++)cells.push({x,y});
+        const glow=this.fixtureCoverageMesh(o,cells,0);this.add(glow,f,{inside:u.access==='interior',glow:true});this.anim.push({k:'privateLight',mesh:head,glow,o});break;
+      }
       case 'light': {
+        if(o.mount){
+          const d=o.mount.dir,head=this.box(.3,.12,.18,this.mat.lamp.clone(),o.mount.x+d[0]*.08,1.35,o.mount.y+d[1]*.08,f,{obj:o.id});
+          const glow=this.fixtureCoverageMesh(o,attachmentCoverage(this.sim,o),0);this.add(glow,f,{glow:true,inside:o.mount.indoor});this.anim.push({k:'light',mesh:head,glow,o,inside:o.mount.indoor});break;
+        }
         const cx = o.x + 0.5, cz = o.y + 0.5, inside = !!this.sim.D.shellAt[o.y * S.W + o.x], unitTop = !inside && this.sim.D.unitAt[0][o.y * S.W + o.x];
         if (inConst) { this.scaffold(o, cx, cz, 0.3, 0.3, 1.0, f); break; }
         const lampH = inside ? 1.6 : unitTop ? 1.55 : 2.6;
@@ -770,6 +781,8 @@ export class Renderer {
         break;
       }
       case 'camera': {
+        if(o.mount){const d=o.mount.dir,side=[-d[1],d[0]],cx=o.mount.x+d[0]*.1+side[0]*.28,cz=o.mount.y+d[1]*.1+side[1]*.28;
+          const cam=this.box(.14,.14,.30,this.mat.office,cx,1.4,cz,f,{obj:o.id});cam.rotation.y=Math.atan2(d[0],d[1]);this.anim.push({k:'cam',mesh:cam,o});break;}
         const cx = o.x + 0.5, cz = o.y + 0.5, inside = !!this.sim.D.shellAt[o.y * S.W + o.x];
         if (inConst) { this.scaffold(o, cx, cz, 0.3, 0.3, 1.0, f); break; }
         const h = inside ? 1.55 : 2.3;
@@ -1077,6 +1090,10 @@ export class Renderer {
         case 'keypadLed': { A.mesh.material = o.cond < 0.2 ? this.mat.cartDmg : this.mat.yellow; break; }
         case 'door': { const open = o.openT != null && s.t - o.openT < 3; A.cur = (A.cur || 0) + ((open ? 1 : 0) - (A.cur || 0)) * Math.min(1, dt * 8); const side = o.dir[1] ? [1, 0] : [0, 1]; A.mesh.position.x = A.cx + o.dir[0] * 0.09 + side[0] * A.cur * A.w * 0.8; A.mesh.position.z = A.cz + o.dir[1] * 0.09 + side[1] * A.cur * A.w * 0.8; break; }
         case 'elev': { A.mesh.position.y = o.pos * FLOOR_H + 0.63; A.mesh.visible = !(this.view === 0 && o.pos > 0.5); A.mesh.material = !sim.works(o) ? this.mat.cartDmg : this.mat.elevCab; break; }
+        case 'privateLight': {
+          const u=s.objects[o.mount?.host],active=u&&(this.sel===u.id||this.sel===o.id||this.sim.s.agents.some(a=>a.unit===u.id));
+          const on=o.cstate==='operating'&&!o.unpowered&&!!active;A.mesh.material.emissiveIntensity=on?1.2:0;A.glow.material.opacity=on?.35:0;A.glow.visible=on&&A.mesh.visible&&this.floorVisible(o.f||0);break;
+        }
         case 'light': {
           const on = sim.works(o); const flick = o.cond < 0.45 && on ? (Math.sin(this.time * 23 + o.id) > 0.6 ? 0.25 : 1) : 1;
           const lvl = (A.inside ? 0.85 : night) * (on ? 1 : 0) * flick;
@@ -1147,6 +1164,11 @@ export class Renderer {
   }
 
   // ================================================================ PREVIEW / OVERLAYS / FOCUS
+  fixtureCoverageMesh(c,cells,opacity=.32) {
+    const points=[];for(const p of cells){const x=p.x,y=p.y;points.push(x,0,y,x,0,y+1,x+1,0,y+1,x,0,y,x+1,0,y+1,x+1,0,y);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
+    const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:c.type==='camera'?0x7fb7ff:0xffdf83,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide}));m.position.y=(c.f||0)*FLOOR_H+.065;m.renderOrder=32;m.castShadow=false;return m;
+  }
   setPreview(R, anchor = null) {
     this.clearGroup(this.previewG);
     if (!R) return;
@@ -1200,6 +1222,12 @@ export class Renderer {
       if (c.type === 'canopy') {
         const roof = new THREE.Mesh(this.geo.box, ghost); roof.scale.set(c.w,.06,c.h); roof.position.set(c.x+c.w/2,1.55,c.y+c.h/2); this.previewG.add(roof);
         for (const x of [c.x+.1,c.x+c.w-.1]) for (const y of [c.y+.1,c.y+c.h-.1]) { const post=new THREE.Mesh(this.geo.box,ghost); post.scale.set(.07,1.55,.07); post.position.set(x,.78,y); this.previewG.add(post); }
+      }
+      if(c.mount){
+        const fixture=new THREE.Mesh(this.geo.box,new THREE.MeshBasicMaterial({color:c.type==='camera'?0x7fb7ff:0xffdf83,depthTest:false}));fixture.scale.set(.22,.12,.16);fixture.position.set(c.mount.x,(c.f||0)*FLOOR_H+1.35,c.mount.y);fixture.renderOrder=35;this.previewG.add(fixture);
+        if(c.type!=='unitLight')this.previewG.add(this.fixtureCoverageMesh(c,attachmentCoverage(this.sim,c,R.tool==='unitRetrofit'?[]:R.units||[])));
+        else {const host=(R.units||[]).find(u=>u.id===c.mount.host)||(R.units||[])[c.mount.host];if(host){const cells=[];for(let y=host.y;y<host.y+host.h;y++)for(let x=host.x;x<host.x+host.w;x++)cells.push({x,y});this.previewG.add(this.fixtureCoverageMesh(c,cells));}}
+        continue;
       }
       if (c.type === 'light' || c.type === 'camera') {
         const r = TOOLS[c.type].radius; const ring = new THREE.Mesh((this.ringGeo[r] ||= new THREE.RingGeometry(r - 0.08, r, 48)), new THREE.MeshBasicMaterial({ color: c.type === 'light' ? 0xffe08a : 0x7fb7ff, transparent: true, opacity: 0.8, depthTest: false }));

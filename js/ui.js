@@ -1,3 +1,4 @@
+import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';
 import { demandEvidenceText, paybackText } from './economics.js';
 import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
 import { ReserveWait, sandboxReserveQuote, reserveQuote } from './reservewait.js';
@@ -274,6 +275,13 @@ export class UI {
       case 'returnGrowthProposal': this.returnGrowthProposal(); break;
       case 'rotateBuild': this.rotateBuild(); break;
       case 'flip': if(Number.isInteger(this.buildRotation)) { this.rotateBuild(2); } else { this.flip = !this.flip; this.replan(); } break;
+      case 'upgradeMode': this.changeUpgrade('lighting',v); break;
+      case 'upgradeCamera': this.changeUpgrade('outsideCameras',!(this.retrofitReview?.args||this.upgradeOptions||{}).outsideCameras); break;
+      case 'upgradeFixture': {const opts=this.retrofitReview?.args||this.upgradeOptions;const list=new Set(opts?.excludedFixtures||[]);list.has(v)?list.delete(v):list.add(v);this.changeUpgrade('excludedFixtures',[...list]);break;}
+      case 'unitAttachment': this.select(Number(v)); break;
+      case 'upgradeRetrofit': this.beginRetrofit(Number(v)); break;
+      case 'upgradeCancel': this.endRetrofit(); break;
+      case 'upgradeConfirm': {const r=this.retrofitReview;if(r){const result=this.do({type:'unitRetrofit',...r.args,upgradeStamp:r.quote.upgradeStamp},true);if(result.ok){this.endRetrofit();this.renderSheet(true);}else{this.toast(result.msg,'bad');this.refreshRetrofit();}}break;}
       case 'climate': this.climate = !this.climate; this.replan(); break;
       case 'floorChoose': this.showFloors(); break;
       case 'verticalReview': this.showVertical(+v); break;
@@ -427,6 +435,7 @@ export class UI {
 
   // ------------------------------------------------------------ tabs / sheets
   setTab(t, expanded = false) {
+    if(this.retrofitReview)this.endRetrofit();
     this.reserveWait?.interrupt('Navigation paused waiting.');
     this.sectionMenuKey = null; this.sectionChoice = null;
     if (t === 'growth' && this.plan && this.plan.args) {
@@ -495,6 +504,7 @@ export class UI {
     return (o.f || 0) === f;
   }
   select(id, keepTab = false) {
+    if(this.retrofitReview)this.endRetrofit();
     if (!this.selectionOnActiveFloor(id)) id = null;
     this.reserveWait?.interrupt('Inspection paused waiting.');
     if (id != null) this.sectionMenuKey = null;
@@ -701,7 +711,7 @@ export class UI {
     const c=args?reserveQuote(this.sim,args):yardChoices(this.sim).find(c=>c.size===size);
     if(!c||!toolUnlocked(this.sim,c.args.tool)){this.toast('That opportunity changed. Review the yard again.','bad');return false;}
     this.pauseForPopup('review');this.scMin=true;this.renderTut(true);this.setTab(null);this.select(null);
-    this.setView(c.args.f||'ext');this.pickTool(c.args.tool);this.flip=!!c.args.flip;this.climate=!!c.args.climate;this.rush=!!c.args.rush;
+    this.setView(c.args.f||'ext');this.pickTool(c.args.tool);this.upgradeOptions={lighting:c.args.lighting||'none',outsideCameras:!!c.args.outsideCameras,excludedFixtures:c.args.excludedFixtures||[]};this.flip=!!c.args.flip;this.climate=!!c.args.climate;this.rush=!!c.args.rush;
     this.buildRotation=c.args.rotation??null;
     this.planArgs=structuredClone({a:c.args.a,b:c.args.b,axis:c.args.axis,dir:c.args.dir});this.replan();
     const u=this.plan?.creates?.[0];if(u){this.rend.lookAt(u.x+u.w/2,u.y+u.h/2);this.frameOutline();}
@@ -800,6 +810,7 @@ export class UI {
     return `<h3>Your next improvement</h3><div class="yard-infill">${this.yardLoopHtml()}${this.rescueOperationHtml()}<details data-yard-detail="optional-projects"><summary>Other property improvements</summary><p class="note">Optional projects. Keep your cash if the evidence or buffer is weak.</p>${this.projectProgressHtml()}${cards ? `<div class="list">${cards}</div>` : r?.active ? '' : '<p class="note">Ordinary building remains available.</p>'}</details>${history ? `<details data-yard-detail="project-history"><summary>Your completed projects</summary>${history}</details>` : ''}</div>`;
   }
   pickTool(k) {
+    if(this.retrofitReview)this.endRetrofit();
     this.fundingContext = null;
     this.projectProposal = null;
     this.yardGuide = null;
@@ -812,7 +823,7 @@ export class UI {
       this.pauseForPopup('sandboxBuild'); this.notePause(0);
     }
     if (!k) this.resumePopup('sandboxBuild');
-    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.plan = null; this.planArgs = null; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
+    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
   }
@@ -848,7 +859,7 @@ export class UI {
     return `<button class="btn sm build-rotate" data-a="rotateBuild" aria-label="Rotate placement clockwise">↻ Rotate${side?' · '+side:''}</button>`;
   }
   toolFloor() { const v = this.rend.view; return Number.isInteger(v)?v:0; }
-  placeStart(cell) { if (!this.tool || !cell) return; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
+  placeStart(cell) { if (!this.tool || !cell) return; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
   finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.renderActionBar(); }
   cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); this.renderActionBar(); }
   placeMove(cell) {
@@ -865,7 +876,8 @@ export class UI {
     const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, rotation:this.buildRotation, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush };
     if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
     if (this.tool.startsWith('du')) a.f = 0;
-    this.plan = this.sim.plan(a); this.plan.args = a;
+    Object.assign(a,this.upgradeOptions||{});
+    this.plan = this.sim.plan(a); a.upgradeStamp=this.plan.upgradeStamp; this.plan.args = a;
     this.rend.setPreview(this.plan, this.planArgs.a); this.renderActionBar();
   }
   canRush() { const s = this.sim.s; return !s.creative && (s.coTier || 1) >= 2; }
@@ -884,10 +896,30 @@ export class UI {
     if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
     if(r.ok&&(finishesWait||finishesResult)){this.reserveResult=null;this.reserveNotice=null;this.renderTut(true);}
     if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
-    else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); }
+    else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); this.replan(); }
     this.renderActionBar();
   }
+  changeUpgrade(key,value) {
+    if(this.retrofitReview){this.retrofitReview.args[key]=value;if(key!=='excludedFixtures')this.retrofitReview.args.excludedFixtures=[];this.refreshRetrofit();}
+    else {this.upgradeOptions||={lighting:'none',outsideCameras:false,excludedFixtures:[]};this.upgradeOptions[key]=value;if(key!=='excludedFixtures')this.upgradeOptions.excludedFixtures=[];this.replan();}
+  }
+  beginRetrofit(id) {
+    if(!retrofitEligible(this.sim,this.sim.s.objects[id]))return;
+    if(this.tool)this.pickTool(null);
+    this.retrofitReview={sim:this.sim,args:{tool:'unitRetrofit',unit:id,lighting:'none',outsideCameras:false,excludedFixtures:[]}};this.refreshRetrofit();
+  }
+  refreshRetrofit() {
+    const r=this.retrofitReview;if(!r)return;r.quote=this.sim.plan(r.args);r.quote.args=r.args;
+    this.pauseForPopup('review');this.rend.setPreview(r.quote);this.renderActionBar();
+  }
+  endRetrofit() {this.retrofitReview=null;this.rend.setPreview(null);this.resumePopup('review');this.renderActionBar();}
+  upgradeHtml(R,args={}) {
+    if(!upgradesEnabled(this.sim))return '';const U=R.upgrades;
+    const modes=[['none','None'],['interior','Interior'],['outside','Outside wall'],['both','Both']];
+    return `<h3>Unit lighting &amp; security</h3><div class="row wrap">${modes.map(([v,label])=>`<button class="btn sm ${((args.lighting||'none')===v)?'pri':''}" data-a="upgradeMode" data-v="${v}" aria-pressed="${(args.lighting||'none')===v}">${label}</button>`).join('')}</div><button class="btn sm ${args.outsideCameras?'pri':''}" data-a="upgradeCamera" aria-pressed="${!!args.outsideCameras}">Include outside cameras: ${args.outsideCameras?'on':'off'}</button>${U?`<p>${U.counts.unitLight} interior lights · ${U.counts.light} wall lights · ${U.counts.camera} cameras<br>Added ${money(U.cost)} · +${money(U.daily,true)}/day base · ${((R.power?.add)||0).toFixed(2)} kW<br>${U.minutes} installation minutes included in total.</p>${U.options.map(o=>`<button class="btn sm" data-a="upgradeFixture" data-v="${o.key}" aria-pressed="${o.selected}">${o.selected?'✓':'○'} ${o.fixture.type==='light'?'Wall light':'Camera'} (${o.fixture.x}, ${o.fixture.y}) · F${o.fixture.f+1}</button>`).join('')}<p class="note">${[...U.notices,...U.pending].map(esc).join(' · ')}</p>`:''}<p class="note">Outside fixtures share security coverage. Interior lights serve only their unit. No rent is changed. Existing equipment is retained.</p>`;
+  }
   renderActionBar() {
+    if(this.retrofitReview){const r=this.retrofitReview;if(r.sim!==this.sim){this.retrofitReview=null;this.rend.setPreview(null);this.resumePopup('review');}else{const R=r.quote;this.$('abar').innerHTML=`<div class="actionbar"><div class="review-body"><h3>Vacant-unit retrofit</h3>${this.upgradeHtml(R,r.args)}<p>Combined ${money(R.cost)} · ${R.dur} game minutes · +${money(this.sim.planDailyCost(R),true)}/day after modifiers.</p><p class="note">This unit cannot rent during installation. Property opening remains your decision. ${[...R.reasons,...R.missing,...R.warn||[]].map(esc).join('; ')}</p></div><div class="bot"><button class="btn" data-a="upgradeCancel">Cancel review</button><button class="btn pri" data-a="upgradeConfirm" ${R.status==='invalid'||(!this.sim.unlimited()&&this.sim.s.cash<R.cost)?'disabled':''}>Confirm · ${money(R.cost)}</button></div></div>`;return;}}
     if (!this.tool || !this.plan || this.buildPlacing) this.placementFrameKey = null;
     if(this.tool && this.plan && !this.buildPlacing) this.pauseForPopup('review'); else this.resumePopup('review');
     const box = this.$('abar'); if (this.verticalPreviewing && !this.tool) { const h = this.verticalBarHtml(); if (box.innerHTML !== h) box.innerHTML = h; return; } if (!this.tool) { box.innerHTML = ''; return; }
@@ -905,7 +937,7 @@ export class UI {
       const compareProjects = this.projectProposal?.sim === this.sim && this.projectProposal.key !== 'cover' ? '<div class="row wrap project-switch"><button class="btn sm" data-a="projectPreview" data-v="small">Two 5×10s</button><button class="btn sm" data-a="projectPreview" data-v="large">One 10×10</button></div>' : '';
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
       const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
-      status = projectMarker + compareProjects + `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
+      status = (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects + `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
       if(T.unit&&this.sim.autoOpenEnabled())status += '<p class="note">Confirm authorizes construction. These units enter rental inventory automatically when construction and required access, lighting and capacity are complete. Opening the property remains your decision.</p>';
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
@@ -1130,6 +1162,9 @@ export class UI {
         else if (o.blocked) h += `<div class="miss"><b>Customers can't reach this unit</b><ul>${(o.missing || []).map((m) => `<li>${esc(m)}</li>`).join('')}</ul><small>It won't rent until access is restored.</small></div>`;
         if ((o.cstate === 'built' || o.cstate === 'ready') && o.missing && o.missing.length) h += `<div class="miss"><b>Why it can't open yet</b><ul>${o.missing.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>`;
         const acts = [];
+        const attachments=mountedOn(sim,o.id);if(attachments.length)h+=`<h3>Unit equipment</h3><div class="row wrap">${attachments.map(f=>`<button class="btn sm" data-a="unitAttachment" data-v="${f.id}">${f.type==='unitLight'?'Interior light':f.type==='light'?'Wall light':'Outside camera'} · ${f.cstate==='construction'?'installing':f.unpowered?'no power':'installed'}</button>`).join('')}</div>`;
+        if(o.retrofitOrder){const ord=s.orders.find(q=>q.id===o.retrofitOrder);h+='<p class="note">Lighting/security installation: temporarily unavailable for rental.</p>';if(ord)acts.push(this.cmdBtn('Cancel installation…',{type:'cancelOrder',id:ord.id}));}
+        if(retrofitEligible(sim,o))acts.push(`<button class="btn" data-a="upgradeRetrofit" data-v="${o.id}">Review unit upgrades</button>`);
         if (o.cstate === 'ready') acts.push(`<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', unit: o.id })}'>Commission unit</button>`);
         if (o.cstate === 'ready' && o.order) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: o.order })}'>Commission whole order · ${sim.objs('unit').filter((u) => u.cstate === 'ready' && u.order === o.order).length} units</button>`);
         if (o.cstate === 'ready') { const allReady = sim.objs('unit').filter((u) => u.cstate === 'ready').length, inOrder = o.order ? sim.objs('unit').filter((u) => u.cstate === 'ready' && u.order === o.order).length : 1; if (allReady > inOrder) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission all ready units on property · ${allReady}</button>`); }
@@ -1140,9 +1175,10 @@ export class UI {
         if (acts.length) h += `<div class="row wrap" style="margin-top:8px">${acts.join('')}</div>`;
         return this.sheet(nm, `${o.access === 'drive' ? 'Drive-up' : 'Interior'} ${o.size}`, h);
       }
+      case 'unitLight': return this.sheet('Interior light',o.unpowered?'No power':'Installed', '<p>Private unit illumination. $0.03/day base upkeep includes routine servicing. Does not replace shared hallway lighting.</p>');
       case 'light': case 'camera': {
         const inside = !!D.shellAt[o.y * s.W + o.x];
-        return this.sheet(nm, inside ? 'Interior' : 'Exterior', `${this.condBar(o.cond)}<div class="kv"><span>Coverage radius</span><span>${TOOLS[o.type].radius} cells</span><span>Daily cost</span><span>${money(o.type === 'light' ? 0.5 : 0.35, true)}</span></div>${this.taskActions(o)}<p class="note">${o.type === 'light' ? 'Dark hallways block new interior units and hurt security.' : 'Visible camera coverage lifts security quality.'}</p>`);
+        return this.sheet(nm, inside ? 'Interior' : 'Exterior', `${this.condBar(o.cond)}<div class="kv"><span>Coverage radius</span><span>${TOOLS[o.type].radius} cells</span><span>Daily cost</span><span>${money(0.35, true)}</span></div>${this.taskActions(o)}<p class="note">${o.type === 'light' ? 'Dark hallways block new interior units and hurt security.' : 'Visible camera coverage lifts security quality.'}</p>`);
       }
       case 'gate': {
         const q = s.gateQ.length;

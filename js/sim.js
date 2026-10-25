@@ -1,3 +1,4 @@
+import { addUpgrades, attachmentCoverage, upgradeStamp, upgradePower, retrofitPlan, mountedOn, mountFor } from './unitupgrades.js';
 import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';
 import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';
 import { normalizeYardLoop, yardFocus, yardLease, updateYardLoop } from './yardloop.js';
@@ -220,6 +221,7 @@ export class Sim {
     // lighting + camera coverage
     for (const L of this.objs('light')) {
       if (!this.works(L)) continue;
+      if(L.mount){for(const c of attachmentCoverage(this,L))D.lit[c.f][c.i]=Math.max(D.lit[c.f][c.i],c.v);continue;}
       const r = TOOLS.light.radius, f = L.f || 0, sh = D.shellAt[this.idx(L.x, L.y)];
       for (let y = Math.floor(L.y - r); y <= L.y + r; y++) for (let x = Math.floor(L.x - r); x <= L.x + r; x++) {
         if (!this.inb(x, y)) continue; const i = this.idx(x, y);
@@ -231,6 +233,7 @@ export class Sim {
     }
     for (const C of this.objs('camera')) {
       if (!this.works(C)) continue;
+      if(C.mount){for(const c of attachmentCoverage(this,C))D.cam[c.f][c.i]=1;continue;}
       const r = TOOLS.camera.radius, f = C.f || 0, sh = D.shellAt[this.idx(C.x, C.y)];
       for (let y = Math.floor(C.y - r); y <= C.y + r; y++) for (let x = Math.floor(C.x - r); x <= C.x + r; x++) {
         if (!this.inb(x, y)) continue; const i = this.idx(x, y);
@@ -261,6 +264,7 @@ export class Sim {
   }
   works(o) { return !!o && o.cstate === 'operating' && (o.cond ?? 1) >= 0.2 && !o.unpowered; }
   powerKey(o) {
+    if (o.type === 'unitLight') return 'light';
     if (o.type === 'door') return o.kind === 'auto' ? 'doorAuto' : null;
     return POWER.load[o.type] != null ? o.type : null;
   }
@@ -271,7 +275,7 @@ export class Sim {
     for (const o of Object.values(s.objects)) {
       if (o.cstate !== 'operating') continue;
       const k = this.powerKey(o);
-      if (k) loads.push({ o, k, kw: POWER.load[k] });
+      if (k) loads.push({ o, k, kw: o.type==='unitLight' ? 0.02 : POWER.load[k] });
       if (o.type === 'door' && o.keypad === 'operating') loads.push({ o: null, k: 'keypad', kw: POWER.load.keypad });
     }
     const pr = (k) => POWER.priority.indexOf(k);
@@ -434,6 +438,8 @@ export class Sim {
       if (u.cstate === 'built' || u.cstate === 'ready') u.cstate = miss.length ? 'built' : 'ready';
       // operating units keep their status, but lose access when their route or frontage breaks
       const wasBlocked = !!u.blocked && !u.accessHold;
+      if(u.retrofitOrder)miss.push('Unit lighting/security installation in progress');
+      u.missing=miss;
       u.blocked = u.cstate === 'operating' && miss.some((m) => !/dark|HVAC/.test(m));
       const hold = u.blocked && (u.f || 0) > 0 && u.access !== 'drive' && handover.get(D.shellAt[this.idx(u.x, u.y)]);
       if (hold) u.accessHold = hold; // reported only if still disconnected after the handover
@@ -457,17 +463,18 @@ export class Sim {
     return !at.some((id) => { const t = this.s.objects[id].type; return t === 'hvac' || t === 'office' || t === 'unit'; });
   }
   plan(a) { // wraps planCore with utility-capacity consequences (GDD §22, §63.5)
-    const R = this.planCore(a);
+    const R = a.tool==='unitRetrofit' ? retrofitPlan(this,a) : this.planCore(a);
     if (!R || R.status === 'invalid' || !this.D.power) return R;
     const P = this.D.power, n = R.count || 1;
     if (a.tool === 'power') { R.power = { cap: P.cap + TOOLS.power.kw, demand: P.demand }; return R; }
-    let add = this.powerAdd(a.tool === 'units' ? '' : a.tool, n);
+    let add = this.powerAdd(a.tool === 'units' ? '' : a.tool, n) + upgradePower(R);
     if (a.tool === 'units' && R.climate) add = 0;
-    if (!add) return R;
+    if (!add) { if(R.upgrades)R.upgradeStamp=upgradeStamp(R);return R; }
     const after = P.demand + add; R.power = { cap: P.cap, demand: after, add };
     R.warn = R.warn || [];
     if (after > P.cap + 1e-9) R.warn.push(`Power: ${after.toFixed(1)} of ${P.cap} kW - over capacity, lowest-priority equipment will shut off. Add an Electrical Service Upgrade.`);
     else if (after > P.cap * 0.85) R.warn.push(`Power near limit: ${after.toFixed(1)} of ${P.cap} kW`);
+    if(R.upgrades)R.upgradeStamp=upgradeStamp(R);
     return R;
   }
   planCore(a) {
@@ -721,13 +728,15 @@ export class Sim {
       }
       case 'demolish': {
         const small = { light: 0, camera: 0, sign: 0, corral: 1, hvac: 1, amenity: 1, door: 2, unit: 5 };
-        const cand = atHere.filter((o) => o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));
+        const cand = atHere.filter((o) => o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office' && o.type !== 'unitLight').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));
         let o = cand[0];
         if (!o && D.elevAt[i]) o = s.objects[D.elevAt[i]];
         if (!o && D.stairAt[i]) o = s.objects[D.stairAt[i]];
         if (!o) { const dd = this.objs('door').find((d) => d.x === x && d.y === y); if (dd) o = dd; }
         if (!o) { failItem('Nothing removable here'); return R; }
         R.target = o.id; R.label = 'Demolish ' + this.objName(o);
+        const attached=mountedOn(this,o.id);if(attached.length)R.warn=[`Removes ${attached.length} attached fixtures; neighboring shared lighting and security coverage may be lost.`];
+        if(o.retrofitOrder){failItem('Cancel this unit’s upgrade installation before demolition');return R;}
         if (o.type === 'unit' && (o.lease || o.commercial === 'reserved')) { failItem('Occupied - the lease must end before demolition'); return R; }
         if (o.type === 'elevator' && this.objs('unit').some((u) => u.f > 0 && u.cstate === 'operating' && D.shellAt[this.idx(u.x, u.y)] === D.shellAt[i])) { failItem('Upper-floor units depend on this elevator'); return R; }
         if (s.agents.some((ag) => ag.unit === o.id)) { failItem('A customer is using this right now'); return R; }
@@ -820,6 +829,7 @@ export class Sim {
       if (!this.objs('door').some((d) => D.shellAt[this.idx(d.x, d.y)] === sh)) inc('Building has no entrance door');
     }
     for (const u of units) R.creates.push({ type: 'unit', x: u.x, y: u.y, w: u.w, h: u.h, dir: u.dir, f, size: T.size, access: T.access, env: climate ? 'climate' : 'std' });
+    addUpgrades(this,a,R,units);
     return R;
   }
 
@@ -852,6 +862,7 @@ export class Sim {
     if (a.projectKey && (!matchesProject(a, a.projectKey) || !projectOffers(this).some(p => p.key === a.projectKey))) return { ok: false, msg: 'That project has changed. Review the yard again.' };
     const s = this.s, R = this.plan(a);
     if (R.status === 'invalid') { this.emit('refuse'); return { ok: false, msg: R.reasons[0] }; }
+    if(R.upgrades && (a.lighting&&a.lighting!=='none'||a.outsideCameras) && a.upgradeStamp!==R.upgradeStamp)return {ok:false,msg:'Fixture package changed. Review positions and cost before confirming.'};
     if (a.tool === 'demolish') return this.demolish(R);
     const rush = !!a.rush && (s.coTier || 1) >= 2 && !this.instantOn(); if (rush) { R.cost = Math.round(R.cost * 1.25); R.dur = R.dur * 0.5; }
     if (!this.unlimited() && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }
@@ -860,10 +871,13 @@ export class Sim {
     const ord = { id: this.id(), label: R.label, tool: a.tool, cost: R.cost, dur: Math.max(30, Math.round(R.dur)), prog: 0, st: 'construction', objs: [], tiles: R.tiles, t0: s.t, cells: R.items.filter((it) => !it.skip).map((it) => ({ x: it.x, y: it.y, f: it.f })) };
     if (!s.creative) this.money(-R.cost, 'capex', R.label);
     if (R.waitShell) ord.waitShell = R.waitShell;
+    const hostIds=[];
     for (const c of R.creates) {
       if (c.type === 'keypadUpgrade') { const d = s.objects[c.door]; d.keypad = 'pending'; d.keypadOrder = ord.id; ord.keypadDoor = d.id; continue; }
       const o = { id: this.id(), ...c, cstate: 'construction', order: ord.id, cond: c.cond ?? 1 };
+      if(o.mount)o.mount={...o.mount,host:hostIds[o.mount.host]};
       if (o.type === 'unit') {
+        hostIds.push(o.id);
         o.commercial = 'none'; o.lease = null;
         nameUnit(s,o,c.unitNumber);
       }
@@ -892,7 +906,9 @@ export class Sim {
     this.money(-R.cost, 'capex', 'Demolition: ' + this.objName(o));
     if (o.type === 'corral') for (const c of s.carts) if (c.corral === o.id && c.st === 'corral') { c.st = 'stranded'; c.corral = null; c.f = o.f; c.x = o.x; c.y = o.y; c.since = s.t; }
     if (o.type === 'door' && o.keypad) { /* keypad removed with door */ }
-    s.tasks = s.tasks.filter((t) => t.obj !== o.id);
+    const removed=new Set([o.id,...mountedOn(this,o.id).map(f=>f.id)]);
+    for(const q of [...s.orders])if(q.retrofit===o.id&&q.st==='construction')this.act_cancelOrder({id:q.id});
+    this.removeEquipment(removed);
     delete s.objects[o.id];
     this.markDirty(); this.emit('demolish', { x: o.x, y: o.y, f: o.f || 0 });
     return { ok: true, msg: 'Demolished' };
@@ -905,7 +921,8 @@ export class Sim {
     const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     const refund = undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6);
     if (!s.creative) this.money(refund, 'capex', (undo ? 'Undo: ' : 'Cancelled: ') + ord.label);
-    for (const id of ord.objs) delete s.objects[id];
+    this.removeEquipment(new Set(ord.objs));
+    if(ord.retrofit && s.objects[ord.retrofit]?.retrofitOrder===ord.id)delete s.objects[ord.retrofit].retrofitOrder;
     if (ord.keypadDoor) { const d = s.objects[ord.keypadDoor]; if (d) { d.keypad = null; } }
     for (const tl of ord.tiles) if (tl.k === 'hall' && s.hall[tl.f][tl.i] === 2) s.hall[tl.f][tl.i] = 0;
     s.orders = s.orders.filter((o) => o !== ord);
@@ -946,6 +963,7 @@ export class Sim {
     const s = this.s;
     if(ord.vertical)return;
     ord.st = 'done'; ord.prog = 1;
+    if(ord.retrofit && s.objects[ord.retrofit]?.retrofitOrder===ord.id)delete s.objects[ord.retrofit].retrofitOrder;
     for (const tl of ord.tiles) {
       if (tl.k === 'ground') s.ground[tl.i] = tl.v;
       else if (tl.k === 'hall') s.hall[tl.f][tl.i] = 1;
@@ -1211,9 +1229,26 @@ export class Sim {
     s.convos = s.convos.filter((x) => x !== c);
     return { ok: true };
   }
+  removeEquipment(ids) {
+    const taskIds=new Set(this.s.tasks.filter(t=>ids.has(t.obj)).map(t=>t.id));
+    for(const ag of this.s.agents){if(taskIds.has(ag.task)){ag.task=null;ag.st='idle';}if(ag.queue)ag.queue=ag.queue.filter(id=>!taskIds.has(id));}
+    for(const t of this.s.tasks.filter(t=>taskIds.has(t.id)))if(t.workBooked)this.refundTaskWork(this.s.staff.find(st=>st.id===t.workBooked),t);
+    this.s.tasks=this.s.tasks.filter(t=>!taskIds.has(t.id));this.s.convos=this.s.convos.filter(c=>!ids.has(c.obj));
+    for(const id of ids)delete this.s.objects[id];
+  }
+  act_unitRetrofit(a) {
+    const R=this.plan({...a,tool:'unitRetrofit'});
+    if(R.status==='invalid')return {ok:false,msg:R.reasons[0]};
+    if(a.upgradeStamp!==R.upgradeStamp)return {ok:false,msg:'Fixture package changed. Review before confirming.'};
+    if(!this.unlimited()&&this.s.cash<R.cost)return {ok:false,msg:'Not enough cash'};
+    const u=this.s.objects[a.unit],ord={id:this.id(),label:R.label,tool:'unitRetrofit',cost:R.cost,dur:Math.max(30,R.dur),prog:0,st:'construction',objs:[],tiles:[],cells:[],t0:this.s.t,retrofit:u.id};
+    for(const c of R.creates){const o={...c,mount:{...c.mount},id:this.id(),order:ord.id,cstate:'construction'};this.s.objects[o.id]=o;ord.objs.push(o.id);}
+    u.retrofitOrder=ord.id;this.s.orders.push(ord);if(!this.s.creative)this.money(-R.cost,'capex',R.label);this.markDirty();
+    if(this.instantOn())this.completeOrder(ord);return {ok:true,order:ord.id,msg:'Upgrade installation confirmed'};
+  }
   renovateOptions(u) { // what a vacant unit can be turned into (after the tutorial)
     const s = this.s, out = [];
-    if (!u || u.type !== 'unit' || u.cstate !== 'operating' || u.lease || u.commercial === 'reserved' || s.scenario && s.scenario.noReno || (s.tut && s.tut.on)) return out;
+    if (!u || u.type !== 'unit' || u.cstate !== 'operating' || u.lease || u.commercial === 'reserved' || u.retrofitOrder || s.scenario && s.scenario.noReno || (s.tut && s.tut.on)) return out;
     if (u.access === 'interior' && u.env === 'std') {
       const hv = this.D.hvac[this.D.shellAt[this.idx(u.x, u.y)]], need = SIZES[u.size].sqft / 25;
       out.push({ kind: 'climate', label: 'Convert to climate', cost: 300 + SIZES[u.size].sqft * 6, ok: !!hv && hv.cap - hv.load >= need, why: !hv ? 'Needs an HVAC plant serving this building' : 'HVAC is at capacity; add another plant' });
@@ -1233,8 +1268,13 @@ export class Sim {
     if (a.kind === 'climate') { u.env = 'climate'; ready(u); }
     else {
       const dx = u.dir && u.dir[0] !== 0; const parts = dx ? [{ x: u.x, y: u.y, w: 2, h: 1 }, { x: u.x, y: u.y + 1, w: 2, h: 1 }] : [{ x: u.x, y: u.y, w: 1, h: 2 }, { x: u.x + 1, y: u.y, w: 1, h: 2 }];
+      const fixtures=mountedOn(this,u.id),replacements=[];
       delete s.objects[u.id];
-      parts.forEach((p, k) => { const o = { ...u, ...p, id: this.id(), size: '5x10', lease: null }; if (k) nameUnit(s,o); s.objects[o.id] = o; ready(o); });
+      parts.forEach((p, k) => { const o = { ...u, ...p, id: this.id(), size: '5x10', lease: null }; if (k) nameUnit(s,o); s.objects[o.id] = o; replacements.push(o); ready(o); });
+      for(const fixture of fixtures){const host=[...replacements].sort((a,b)=>Math.hypot(a.x+a.w/2-fixture.mount.x,a.y+a.h/2-fixture.mount.y)-Math.hypot(b.x+b.w/2-fixture.mount.x,b.y+b.h/2-fixture.mount.y))[0];
+        if(fixture.type==='unitLight'){fixture.x=host.x;fixture.y=host.y;fixture.mount={...fixture.mount,host:host.id,x:host.x+host.w/2,y:host.y+host.h/2};}
+        else {const updated=mountFor(this,host,host.id,fixture.type);if(updated){fixture.x=updated.x;fixture.y=updated.y;fixture.mount=updated.mount;}else fixture.mount.host=host.id;}
+      }
     }
     this.markDirty(); this.emit('renovated', { unit: u.id, kind: a.kind });
     return { ok: true, msg: `${op.label}: done. Make-ready queued.` };
@@ -1353,7 +1393,7 @@ export class Sim {
     if (s.open) this.genProspects(day, 1);
     // equipment wear
     for (const o of Object.values(s.objects)) if (o.cstate === 'operating') {
-      const w = { light: 0.006, camera: 0.004, hvac: 0.009, elevator: 0.004, door: o.kind === 'auto' ? 0.004 : 0.001, gate: 0.003, fountain: 0.007 }[o.type];
+      const w = { light: 0.003, camera: 0.004, hvac: 0.009, elevator: 0.004, door: o.kind === 'auto' ? 0.004 : 0.001, gate: 0.003, fountain: 0.007 }[o.type];
       if (w) this.wear(o, w * (0.5 + this.rnd()));
     }
     for (const L of this.objs('loading')) { /* none */ }
@@ -1478,6 +1518,7 @@ export class Sim {
       if (x.cstate !== 'operating') continue;
       if (x.type === 'unit') o.units += OPEX.perUnit;
       else if (x.type === 'light') o.lights += OPEX.light;
+      else if (x.type === 'unitLight') o.lights += 0.03;
       else if (x.type === 'camera') o.security += OPEX.camera;
       else if (x.type === 'gate') o.security += OPEX.gate + OPEX.keypad;
       else if (x.type === 'door') { if (x.kind === 'auto') o.doors += OPEX.doorAuto; if (x.keypad === 'operating') o.security += OPEX.keypad; }
@@ -2758,7 +2799,7 @@ export class Sim {
       return home ? walkNear(home.f || 0, home.x, home.y) : null;
     }
     const o = s.objects[t.obj]; if (!o) return null;
-    if (o.type === 'light') {
+    if (o.type === 'light' || o.type === 'camera' && o.mount) {
       // Light placement must not create permanently unserviceable equipment.
       // Work at the nearest reachable service point; other assets keep local access rules.
       const office=this.objs('office').find(o=>o.cstate==='operating');

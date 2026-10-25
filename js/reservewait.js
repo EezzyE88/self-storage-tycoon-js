@@ -34,7 +34,7 @@ export class ReserveWait {
     return sim.s.t - start;
   }
   matches(args, a=(this.active||this.pending)?.args) {
-    const key=p=>JSON.stringify([p.tool,p.a.x,p.a.y,p.b.x,p.b.y,p.axis,p.f||0,!!p.flip,!!p.climate,!!p.rush,p.rotation??null,p.dir??null]);
+    const key=p=>JSON.stringify([p.tool,p.a.x,p.a.y,p.b.x,p.b.y,p.axis,p.f||0,!!p.flip,!!p.climate,!!p.rush,p.rotation??null,p.dir??null,p.lighting||'none',!!p.outsideCameras,[...(p.excludedFixtures||[])].sort()]);
     return !!a&&!!args?.a&&!!args?.b&&key(a)===key(args);
   }
   start(sim, offer) {

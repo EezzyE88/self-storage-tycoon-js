@@ -1,0 +1,232 @@
+{
+  "parent": "b89d711c9a89ce49229fae5888c1d94b7b1666d4",
+  "profile": "17 focused native scripts; no full-game gate or browser/Safari acceptance",
+  "results": [
+    {
+      "command": [
+        "node",
+        "tests/headless/tautomatic_opening.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.738,
+      "stdout": "PASS purchase unchanged, paused poll, advancing-minute opening, grouped event and no replay\nPASS rental readiness never opens the property\nPASS connected-access blocker and visible reason; later infrastructure recovery opens units\nPASS tutorials, lessons, scenarios and Free Build retain manual commissioning\nPASS old ready saves remain paused until simulation resumes\nPASS shared manual/automatic commissioning path rechecks capacity between units\nPASS purchase disclosure and actual grouped UI notification\nPASS real running construction opens a whole eligible batch with one event and unchanged purchase charge\nPASS background company minutes open inventory; non-advancing calls remain inert\nALL PASS: automatic opening; native simulation/UI methods only\n",
+      "stderr": "",
+      "stdout_sha256": "18948d2b0c6d59b4180d9712940ea37d61a26cc1a1e0b20f25000e876b4706cc",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tbuildability_save.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.416,
+      "stdout": "PASS production raw/compressed saves preserve all four unit directions and rotated office geometry, pending construction, cash, time and Pause across repeated loads\n",
+      "stderr": "",
+      "stdout_sha256": "5f6caa3e283ce16eaa665fa228a18603125afe8a22792fb0b0d83a4459294014",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tc24_requests.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.979,
+      "stdout": "PASS clerk request runs at 1x and resolves exactly once after the existing delay\nPASS clerk request runs at 2x and resolves exactly once after the existing delay\nPASS clerk request runs at 4x and resolves exactly once after the existing delay\nPASS manager request runs at 1x and resolves exactly once after the existing delay\nPASS manager request runs at 2x and resolves exactly once after the existing delay\nPASS manager request runs at 4x and resolves exactly once after the existing delay\nPASS owner decisions block a 240-tick frame before any time or default advances\nPASS a new owner decision stops the same fast frame immediately after its creation\nPASS coverage loss escalates before expiry and remains an owner decision when staff return\nPASS firing the last handler hands the request back, while alternate coverage continues\nPASS missing staff leave an owner request rather than silently applying its default\nPASS request review and its closure preserve prior 0x\nPASS request review and its closure preserve prior 1x\nPASS request review and its closure preserve prior 2x\nPASS request review and its closure preserve prior 4x\nPASS manual Pause remains sticky through review, mode changes and answering\nPASS per-request owner intervention remains held after closing review\nPASS saved manual preference and pending escalation survive reload; old saves default to staff handling\nPASS existing retention policy controls the response without adding concessions or charges\nPASS a failed staff action is handed back once, without a retry or cash debit\nPASS history remains compact and Requests stays accessible without a pending card\nPASS stale or empty decision review does nothing at prior 0x\nPASS stale or empty decision review does nothing at prior 1x\nPASS stale or empty decision review does nothing at prior 2x\nPASS stale or empty decision review does nothing at prior 4x\nPASS answering the final owner decision dismisses it and restores prior 0x\nPASS answering the final owner decision dismisses it and restores prior 1x\nPASS answering the final owner decision dismisses it and restores prior 2x\nPASS answering the final owner decision dismisses it and restores prior 4x\nPASS staff-only progress stays passive and never opens a decision or pauses time\nPASS multiple owner decisions remain visible until the final response\nPASS mixed queues show only owner decisions and resume the remaining staff response\nPASS manual Pause selected during a decision survives automatic dismissal\nPASS a decision removed by the simulation closes its obsolete window\nPASS explicit Menu settings remain accessible when empty and retain the saved choice\nPASS an explicitly opened settings window remains open after its final request is answered\nPASS automatic decision dismissal preserves another panel pause\nPASS in-window Keep paused records manual Pause and prevents 1x restart\nPASS in-window Keep paused records manual Pause and prevents 2x restart\nPASS in-window Keep paused records manual Pause and prevents 4x restart\nPASS a decision opened from manual Pause already reports the correct stay-paused state\nPASS in-window Pause persists across multiple decisions and repeated taps\nPASS Keep paused does not change saved staff policy or create a permanent resume preference\nPASS stale Pause actions do nothing after dismissal or inside request settings\nPASS in-window Pause survives X, later response and other panel closure\nPASS old saved attempted offers disable repeat actions without losing valid move-out response\nPASS declined staff offer resolves once without a false owner failure or repeat discount\nPASS midnight routine move-out waits for manager office coverage across save/load\nPASS midnight routine move-out waits for clerk office coverage across save/load\nPASS midnight routine still requires owner if staff absent or manual review selected\nPASS firing deferred staff escalates; active routine coverage loss remains sticky\nPASS stale double taps and invalid indices cannot consume another pending decision\nPASS previously attempted price offer at midnight becomes routine staff steps\n53 request handling and window checks passed\n",
+      "stderr": "",
+      "stdout_sha256": "35274220ada5038102d3b27557f336d5723ae40812adca7cb98a4819d750958c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tcapacity.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.338,
+      "stdout": "PASS Owner begins with 8 work hours \u00b7 8\nPASS 2.5h make-ready can be assigned\nPASS Owner capacity drops to 5.5h \u00b7 5.5\nPASS second 2.5h make-ready can queue\nPASS Queued work reserves capacity \u00b7 3\nPASS third 2.5h make-ready can queue\nPASS Owner now has 0.5h left \u00b7 0.5\nPASS work exceeding remaining Owner capacity is refused \u00b7 Owner has 0.5h available today; this needs 2.5h. Wait for tomorrow, hire staff, or use a vendor.\nPASS Owner refreshes to 8h on new game day \u00b7 8\nPASS Porter wage supports first-facility hire\nPASS Tech wage supports first-facility hire\nPASS Clerk wage supports first-facility hire\nPASS Manager wage supports first-facility hire\nPASS Porter can be hired\nPASS Porter adds independent 8h task capacity \u00b7 8\nALL PASS\n",
+      "stderr": "",
+      "stdout_sha256": "804ad5cf6d58ff15aee95e403670b2abb62ea0e013c26071753c4d08bd7a18b3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tcomplaint_hardening.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.526,
+      "stdout": "PASS requested sizes remain separate at the same office\nPASS climate and standard requests remain separate at same office\nPASS negative and neutral reports cannot merge away a complaint\nPASS market inventory excludes irrelevant sizes and blocked ready stock\nPASS missing request target never invents map origin\nPASS old malformed thought cannot issue NaN camera navigation\nPASS expired thought cannot redirect a previously rendered View button\nPASS deleted object retains recorded camera position without selecting another object\nPASS invalid navigation data leaves camera and floor untouched\nPASS feedback View buttons hold target snapshots rather than mutable array offsets\nPASS removed building/target is still identified in saved feedback\nPASS partial moveout request remains readable without a text crash\nPASS valid bubble tap opens the tapped report rather than latest report\nPASS bubble drag cannot open feedback on the following click\nPASS bubble pinch cannot turn either release into a click\nPASS cancellation rejects delayed click but allows a subsequent clean tap\nPASS release beyond threshold rejects tap even when move was missed\nPASS bubble keyboard activation remains available\nPASS bubble activation is disabled during construction and title screen\nPASS old property bubble cannot open reports on another property\nPASS property change clears bubbles, cooldowns and focused reports\nPASS expired selected report stays first even when history reaches its cap\nPASS wrong property snapshot is rejected without touching selection\nPASS new report grouping survives JSON save and resume\nPASS malformed JSON target is ignored without crashing input handling\nPASS right click and click without pointer sequence do not open bubble help\nPASS a valid pointer click is consumed once\nPASS request-help opens its request first in the scrolling feedback sheet\nPASS feedback escapes customer text and object names containing markup\nPASS upper-floor report switches to a supported upper floor\nPASS removed upper floor safely falls back to ground view\nPASS routine bubble cooldown storage remains bounded under many locations\nPASS loading report for upstairs unit keeps camera on ground-floor bays\n33 hardening checks passed; 0 failed\n",
+      "stderr": "",
+      "stdout_sha256": "74ede014fefd98a9eddcc87cae9d7fa41db5344e4e417cfa52f1b0213b8ae390",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tlight_service_access.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.424,
+      "stdout": "PASS legal remote light: Owner assignment, normal booked work, paused dispatch, actual completion\nPASS repaired light retains condition through ordinary state reload\nPASS old saved unreachable light assignment recovers immediately\nPASS remote light: Tech priority, actual normal work completion and full repair\nPASS maintenance access exception remains light-only\nALL PASS: light service access; native simulation only\n",
+      "stderr": "",
+      "stdout_sha256": "19df03802190752d276bd0a70222142f8a9c531ac3c68ff11b0ba82f42c973f9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/towner_auto_repairs.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.895,
+      "stdout": "PASS automatic scheduling, real completion, normal hours, one reservation and existing quick-fix quality\nPASS staff priority, temporary delays, daily reset, disabled/missing coverage, specialist/PM limits, critical interruptions, save/load and paused production clock\n",
+      "stderr": "",
+      "stdout_sha256": "cc0e121459ba2e8b635a2a0aea682c712a97b56f3f9c2f33da4d52743fbc9cf3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tpause_policy.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)\nPASS nested and interleaved pauses restore the speed from before the first one\nPASS manual Pause during a temporary pause is preserved by button and keyboard\nPASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored\nPASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice\nPASS panel closure: Details \u2192 Back to map and close restore the previous speed, including Pause\nPASS actions: commissioning, owner make-ready and build placement never start a paused clock\nPASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed\nPASS requests: answering the last request, and navigating from Requests, keep the player speed\nPASS property switch never applies another property\u2019s saved speed; loads stay paused\nPASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause\nPASS tutorial wording no longer promises a 1x resume\nPASS the policy is UI-only: no simulation or save field is added\n13 pause-policy checks passed\n",
+      "stderr": "",
+      "stdout_sha256": "d66ca0705a1e9187c950ed78120de1c01b882abe6a37b54c336db7b346d8d6f1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/treserve_wait.mjs"
+      ],
+      "exit": 0,
+      "seconds": 1.295,
+      "stdout": "PASS stable build specification, live quote and ranking independence; no save metadata\nPASS actual production batch stops at first funded minute; full ordinary simulation parity; no automatic purchase\nPASS actionable interruptions, delegated work, quote/demand/placement invalidation, seven-day boundary, explicit speeds, nested pauses and actual background/foreground handler\nPASS production UI arming, exact-target completion preview, already-funded/stale offers, blockers, blur and pagehide\nPASS real staff-classified request continues; loss of coverage pauses before next minute; production property switch cancels before speed transfer\nPASS natural reserve-wait / ordinary-play full-state parity {\"minutes\":396,\"reason\":\"An operating change needs review.\",\"cash\":1100}\nPASS policy/agent/operating-office blockers at start and mid-batch; real offshift/capacity/busy coverage continues; refused waits and follow-up pauses preserve state\n",
+      "stderr": "",
+      "stdout_sha256": "1e4de8fd45d7210eb1a78626bb1fbe6bd1b01aaa38a3a39315bcf905fed70ee9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/treserve_wait_continuity.mjs"
+      ],
+      "exit": 0,
+      "seconds": 1.208,
+      "stdout": "PASS actual navigation, inspection and nested review retain the exact target; one-tap UI Resume uses the original start time\nPASS new owner decision suspends within the production batch; blocked Resume is inert; resolving it allows explicit Resume\nPASS explicit speeds, Stop/Pause, background/foreground and the original seven-day deadline across repeated resumes\nPASS live financial completion, original-spec preview, vacancy explanation, all Resume revalidation, state parity and wrapping controls; physical Safari acceptance pending\n",
+      "stderr": "",
+      "stdout_sha256": "94e7fc3c286261f83cfa77d348b4d02158e2c865bb3530ac6e1a3941b12b9d6f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/treserve_wait_fast.mjs"
+      ],
+      "exit": 0,
+      "seconds": 1.26,
+      "stdout": "PASS 240-minute cap and full-state/RNG/economics parity with ordinary simulation\nPASS six-millisecond cooperative budget returns control between bounded bursts\nPASS owner decision stops at its exact minute; answering never resumes automatically\nPASS reserve completion pauses immediately without constructing or purchasing\nPASS real manual Pause cancels fast waiting and cannot advance paused or another property\nPASS existing owner decision on another property prevents any advance\nPASS new owner decision on another property interrupts the same simulation minute\nPASS production frame fast-forwards only explicit waiting; ordinary 4x and Pause retain timing\nPASS original seven-day deadline checked before another minute\nFast reserve prototype: 9 groups passed; CPU simulation only, physical responsiveness NOT TESTED\n",
+      "stderr": "",
+      "stdout_sha256": "61373585924517c8db493f8be1ad09484d69c63ac4536d3c75984cb8468e255c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tsandbox_build_pause.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS business, instant=false, paused: placement and real Confirm\nPASS business, instant=false, expanded: placement and real Confirm\nPASS business, instant=false, running: placement and real Confirm\nPASS business, instant=false, pauseDuringReview: placement and real Confirm\nPASS business, instant=true, paused: placement and real Confirm\nPASS business, instant=true, expanded: placement and real Confirm\nPASS business, instant=true, running: placement and real Confirm\nPASS business, instant=true, pauseDuringReview: placement and real Confirm\nPASS free, instant=false, paused: placement and real Confirm\nPASS free, instant=false, expanded: placement and real Confirm\nPASS free, instant=false, running: placement and real Confirm\nPASS free, instant=false, pauseDuringReview: placement and real Confirm\nPASS free, instant=true, paused: placement and real Confirm\nPASS free, instant=true, expanded: placement and real Confirm\nPASS free, instant=true, running: placement and real Confirm\nPASS free, instant=true, pauseDuringReview: placement and real Confirm\n",
+      "stderr": "",
+      "stdout_sha256": "6efbc0683a9c3a09df072020beb7e580abad3e3a6d1dae25ee26f317811f71f8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tsandbox_reserve_fast.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS native Sandbox quote, visible build-review action, actual click arming and reachable Stop; no purchase\nPASS Sandbox burst bound and complete ordinary simulation parity at equal time\nPASS owner decision interrupts exact minute; resolving stays paused; explicit Resume preserves original deadline\nPASS manual Pause cancels Sandbox waiting without further simulation\nPASS funded target pauses without buying; original rotated geometry restored; actual Confirm alone purchases and stays paused\nPASS funded, unlimited Free Build, invalid, demolition, lesson and scenario contexts cannot arm inappropriate Sandbox waits\nPASS unrelated modal and outstanding owner decision block arming without dismissing or advancing\nPASS nested review stays paused; changed quote and original seven-day deadline block Resume\nPASS Rush quote matches actual purchase charge; orientation is part of retained investment identity\nPASS production save serializer stores ordinary Sandbox state only; fresh session has no armed wait\nPASS completion purchase clears obsolete target-preview controls\nPASS another selected investment is retained when an interrupted target rejects replacement\nPASS other-property owner decision blocks Start before closing the selected review\nPASS other-property owner decision blocks explicit Resume without an armed frame\nPASS live reserve card preserves an in-progress tap until pointer release\nPASS interrupted wait exposes an actionable explanation while another build review is open\nSandbox fast reserve: 16 groups passed; rendered browser and physical Safari NOT TESTED\n",
+      "stderr": "",
+      "stdout_sha256": "a0a2d73105efe439f4e8341a11a5938d91b3cdb407784ef699518232669662ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tstafffirst.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.36,
+      "stdout": "PASS Porter hire succeeds\nPASS Eligible work delegates to Porter before Owner \u00b7 Porter Grace assigned \u00b7 Owner stays free\nPASS Delegation preserves Owner daily capacity \u00b7 8\nPASS Delegated work reserves Porter capacity \u00b7 5.5\nPASS Busy Porter queues another eligible job \u00b7 Porter Grace assigned \u00b7 Owner stays free\nPASS Queued delegation still leaves Owner free \u00b7 8\nPASS Queued delegation reserves remaining Porter capacity \u00b7 3\nPASS Second job begins in Owner queue before hire\nPASS Unstarted Owner queue rebalances to Porter \u00b7 85\nPASS Rebalance refunds queued Owner capacity \u00b7 5.5\nPASS Rebalanced work consumes Porter capacity \u00b7 5.5\nPASS Owner still handles work when no qualified staff can cover \u00b7 Owner started this work (2.5h) \u00b7 5.5h left today\nPASS Owner fallback still charges daily capacity \u00b7 5.5\nPASS Porter capacity is exhausted below another 1h job \u00b7 0.5\nPASS Owner becomes fallback when Porter lacks capacity \u00b7 Owner started this work (1h) \u00b7 7h left today\nPASS Porter can be fired while work is queued\nPASS Fired staff queued task is released\nPASS Queued Porter work waits outside staff shift\nPASS Save/resume preserves Porter active/queued assignment\nPASS Save/resume preserves Owner capacity\nPASS Save/resume preserves Porter reserved capacity\nPASS Save/resume preserves Owner fallback assignee\nPASS Save/resume preserves Owner fallback reservation \u00b7 5.5\nPASS Save/resume preserves migrated staff assignee\nPASS Save/resume does not double-refund Owner migration \u00b7 5.5\nPASS Save/resume does not double-reserve Porter migration \u00b7 5.5\nPASS Tech receives simple repair before Owner \u00b7 Tech Zoe assigned \u00b7 Owner stays free\nPASS Simple repair delegation preserves Owner capacity \u00b7 8\nPASS Vendor can take over assigned repair\nPASS Vendor takeover refunds staff reservation once \u00b7 8\nPASS Cart policy off prevents Porter assignment \u00b7 Owner started this work (0.5h) \u00b7 7.5h left today\nPASS Two eligible jobs can split across two Porters\nALL PASS\n",
+      "stderr": "",
+      "stdout_sha256": "9da6ce1147e068240fb013cb43c5fadefd394d09a0b30e1df49d8b72082c1893",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tunit_upgrade_render_save.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS actual Three.js CPU meshes, fixture positions, clipped preview masks and private inspection lighting\nPASS production save sanitization/validation for attachments and unchanged legacy save compatibility\nPASS existing split renovation preserves attachment ownership without disabling renovation\n",
+      "stderr": "",
+      "stdout_sha256": "ade9eaa38cb43352f65629b333a1063d8be43a8cdcde84971859ccc68a4fd321",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tunit_upgrades.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS all eight lighting/camera combinations, shared suggestions, exact charges and host IDs\nPASS stable deselection, stale-quote refusal, paused load/poll, combined full and partial refunds\nPASS real construction, shared security, wall/corner masks, maintenance outcomes, load shedding and demolition cleanup\nPASS retrofit rental hold, charge-once, save/load, cancel/refund, completion and no duplicate or occupied installation\nPASS standalone affordability, unchanged camera wear, reserve selection identity and teaching/legacy guards\nPASS actual UI retrofit review/options/preview and manual Pause preservation\nPASS mounted hallway light satisfies real readiness, private light does not, working/pending coverage avoids duplicate purchase\nALL PASS: unit upgrades (native simulation/UI methods; no browser or Safari claim)\n",
+      "stderr": "",
+      "stdout_sha256": "ba2b0e2553c8bbf8b7628045f40b520794bd8090600a34996f6c03dc9b0df248",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tyear1_report_fixes.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.245,
+      "stdout": "PASS failed owner assignment retains the conversation and refusal reason\nPASS successful conversation answer closes once without automatic clock advance\nPASS actual ready inventory never reports no units ready\nPASS commissioning hint precedes ordinary repair and turnover distractions\nALL PASS: year-one report repairs\n",
+      "stderr": "",
+      "stdout_sha256": "187dd19bdd980d2b4ec7001808fa76346cd493f6cda358fa4548efbb297ec03f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "failure_evidence": {
+    "attempt-02.json": {
+      "command": [
+        "node",
+        "tests/headless/tunit_upgrades.mjs"
+      ],
+      "exit": 1,
+      "stdout": "PASS all eight lighting/camera combinations, shared suggestions, exact charges and host IDs\nPASS stable deselection, stale-quote refusal, paused load/poll, combined full and partial refunds\n",
+      "stderr": "file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-candidate/tests/headless/tunit_upgrades.mjs:54\n const dem=s.plan({tool:'demolish',a:{x:u.x,y:u.y},b:{x:u.x,y:u.y},f:0});assert.match(dem.warn.join(' '),/attached fixtures/);const task=s.ensureRepairTask(light);assert.ok(s.dispatch({type:'build',tool:'demolish',a:{x:u.x,y:u.y},b:{x:u.x,y:u.y},f:0}).ok);assert.equal(mountedOn(s,u.id).length,0);assert.ok(!s.s.tasks.some(t=>t.id===task.id));\n                                                                                               ^\n\nTypeError: Cannot read properties of undefined (reading 'join')\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-candidate/tests/headless/tunit_upgrades.mjs:54:96\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v24.22.1\n"
+    },
+    "attempt-03.json": {
+      "exit": 0,
+      "stdout": "PASS all eight lighting/camera combinations, shared suggestions, exact charges and host IDs\nPASS stable deselection, stale-quote refusal, paused load/poll, combined full and partial refunds\nPASS real construction, shared security, wall/corner masks, maintenance outcomes, load shedding and demolition cleanup\nPASS retrofit rental hold, charge-once, save/load, cancel/refund, completion and no duplicate or occupied installation\nPASS standalone affordability, unchanged camera wear, reserve selection identity and teaching/legacy guards\nPASS actual UI retrofit review/options/preview and manual Pause preservation\nALL PASS: unit upgrades (native simulation/UI methods; no browser or Safari claim)\n",
+      "stderr": ""
+    },
+    "render-attempt-01.json": {
+      "exit": 0,
+      "stdout": "PASS actual Three.js CPU meshes, fixture positions, clipped preview masks and private inspection lighting\nPASS production save sanitization/validation for attachments and unchanged legacy save compatibility\nPASS existing split renovation preserves attachment ownership without disabling renovation\n",
+      "stderr": ""
+    }
+  },
+  "notes": [
+    "The first new test attempt used the original still-occupied construction fixture after cancelling only its loaded copy; corrected test setup.",
+    "Attempt 02 caught private light selection taking precedence over host demolition; production selection fixed.",
+    "13 inherited local test copies contained one extra terminal newline; canonical parent bytes restored. Assertions were unchanged.",
+    "Final UI navigation cleanup rechecked new feature tests, Pause and Sandbox build/reserve paths."
+  ]
+}

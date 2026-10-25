@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {registerHooks} from 'node:module';
+import {makeSandbox} from '../../js/scenarios.js';
+import {Sim} from '../../js/sim.js';
+import {ROLES,MARKETS,MIN_PER_DAY} from '../../js/data.js';
+import {attachmentCoverage,mountedOn} from '../../js/unitupgrades.js';
+registerHooks({resolve(specifier,context,next){return specifier==='three'?{url:new URL('../../vendor/three.module.min.js',import.meta.url).href,shortCircuit:true}:next(specifier,context);}});
+const THREE=await import('three'),{Renderer}=await import('../../js/render.js');
+const s=makeSandbox({start:'starter',cash:100000});s.s.open=false;s.ensure();
+const a={tool:'du5x10',a:{x:10,y:2},b:{x:10,y:2},rotation:2,f:0,lighting:'both',outsideCameras:true},R=s.plan(a);
+const r=Object.create(Renderer.prototype);Object.assign(r,{sim:s,previewG:new THREE.Group(),staticG:new THREE.Group(),geo:{box:new THREE.BoxGeometry(1,1,1),cone:new THREE.ConeGeometry(.5,1,8)},mat:{lamp:new THREE.MeshStandardMaterial(),office:new THREE.MeshStandardMaterial()},ringGeo:{},tx:{plaques:{}},anim:[],view:0,sel:null});
+r.setPreview(R);assert.ok(r.previewG.children.length>3);
+for(const option of R.upgrades.options){const mesh=r.fixtureCoverageMesh(option.fixture,option.cells);assert.equal(mesh.geometry.attributes.position.count,option.cells.length*6);assert.ok(option.cells.every(c=>c.y>=4));}
+const cash=s.s.cash,paid=s.dispatch({type:'build',...a,upgradeStamp:R.upgradeStamp});assert.ok(paid.ok);const order=s.s.orders.find(o=>o.id===paid.order);for(let n=0;n<4000&&order.st==='construction';n++)s.step();
+const u=s.s.objects[order.objs[0]],fixtures=mountedOn(s,u.id);for(const fixture of fixtures)r.buildObj(fixture);
+assert.equal(r.anim.filter(a=>a.k==='privateLight').length,1);assert.equal(r.anim.filter(a=>a.k==='light').length,1);assert.equal(r.anim.filter(a=>a.k==='cam').length,1);
+r.updateStatusMarks=()=>{};r.sel=u.id;r.time=1;r.updateAnim(.016,1);const privateLight=r.anim.find(a=>a.k==='privateLight');assert.equal(privateLight.glow.visible,true);r.sel=null;r.updateAnim(.016,1);assert.equal(privateLight.glow.visible,false);
+const lamp=r.anim.find(a=>a.k==='light');assert.equal(lamp.glow.geometry.attributes.position.count,attachmentCoverage(s,lamp.o).length*6);
+console.log('PASS actual Three.js CPU meshes, fixture positions, clipped preview masks and private inspection lighting');
+const source=fs.readFileSync('js/main.js','utf8');const functions=source.slice(source.indexOf('function validState('),source.indexOf('function makeMapleSeedPrice('));
+const ctx=vm.createContext({ROLES,MARKETS,MIN_PER_DAY,Number,Array,Object,Math,Set,Map});vm.runInContext(functions,ctx);
+const saved=ctx.sanitizeSave(JSON.parse(JSON.stringify(s.s)));assert.equal(ctx.validState(saved),true);const restored=new Sim(saved);restored.ensure();assert.equal(mountedOn(restored,u.id).length,3);assert.equal(restored.s.cash,s.s.cash);assert.equal(restored.s.open,false);assert.equal(restored.s.speed,0);
+const legacy=makeSandbox({start:'starter',cash:100000});assert.equal(ctx.validState(ctx.sanitizeSave(JSON.parse(JSON.stringify(legacy.s)))),true);
+console.log('PASS production save sanitization/validation for attachments and unchanged legacy save compatibility');
+// Existing split renovation retains attached equipment rather than orphaning it.
+const t=makeSandbox({start:'starter',cash:100000});t.s.open=false;t.ensure();const host=t.objs('unit').find(u=>u.access==='drive'&&u.size==='10x10');if(host.lease){const L=t.s.leases[host.lease];delete t.s.tenants[L.tenant];delete t.s.leases[L.id];host.lease=null;}host.commercial='ready';
+const q=t.plan({tool:'unitRetrofit',unit:host.id,lighting:'interior'});assert.ok(t.dispatch({type:'unitRetrofit',unit:host.id,lighting:'interior',upgradeStamp:q.upgradeStamp}).ok);const ord=t.s.orders.at(-1);t.completeOrder(ord);const attachment=mountedOn(t,host.id)[0];assert.ok(t.dispatch({type:'renovate',unit:host.id,kind:'split'}).ok);assert.equal(t.s.objects[attachment.mount.host]?.type,'unit');assert.ok(!t.s.objects[host.id]);
+console.log('PASS existing split renovation preserves attachment ownership without disabling renovation');
