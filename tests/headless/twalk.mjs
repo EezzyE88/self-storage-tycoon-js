@@ -22,8 +22,7 @@ beat('lease');
 ui.tab = 'business'; d({ type: 'tutFlag', flag: 'businessOpened' }); tick(); d({ type: 'tutFlag', flag: 'moneyAck' }); ui.tab = null; tick();
 // expand
 build('du10x10', { x: 13, y: 18 }, { x: 13, y: 25 });
-until(() => sim.objs('unit').some((u) => u.cstate === 'ready'), 1440 * 3, 'build du');
-const ru = sim.objs('unit').find((u) => u.cstate === 'ready'); ui.sel = ru.id; obs(); d({ type: 'commission', order: ru.order }); ui.sel = null; beat('expand');
+until(() => !!s.milestones.first_expansion, 1440 * 3, 'build du'); beat('expand');
 // repair
 tick(2); ui.rend.view = 0; obs(); const L = sim.objs('light').find((l) => l.x === 20 && l.y === 8); ui.sel = L.id; obs(); const t = s.tasks.find((x) => x.obj === L.id); d({ type: 'ownerTask', task: t.id }); ui.sel = null; beat('repair');
 ui.tab = 'operate'; obs(); d({ type: 'hire', role: 'porter' }); ui.tab = null; beat('hire');
@@ -36,8 +35,7 @@ ui.tab = 'operate'; obs(); ui.rend.overlay = 'security'; obs(); build('camera', 
 lesson('climate');
 build('hvac', { x: 14, y: 8 }); build('light', { x: 17, y: 8 });
 ui.tab = 'build'; obs(); ui.cat = 'interior'; obs(); ui.tool = 'iu5x5'; obs(); ui.climate = true; obs(); ui.plan = sim.plan({ tool: 'iu5x5', a: { x: 16, y: 5 }, b: { x: 16, y: 11 }, f: 0, climate: true }); obs(); d({ type: 'build', tool: 'iu5x5', a: { x: 16, y: 5 }, b: { x: 16, y: 11 }, f: 0, climate: true }); ui.tool = null; ui.plan = null; ui.tab = null; obs();
-until(() => sim.objs('unit').some((u) => u.cstate === 'ready' && u.env === 'climate'), 1440 * 3, 'climate build');
-const cu = sim.objs('unit').find((u) => u.cstate === 'ready' && u.env === 'climate'); d({ type: 'commission', order: cu.order }); beat('climate');
+until(() => !!s.milestones.first_climate, 1440 * 3, 'climate build'); beat('climate');
 lesson('up'); console.log('cash before up', Math.round(s.cash)); if (s.cash < 60000) s.cash = 60000;
 build('aisle', { x: 28, y: 15 }, { x: 38, y: 17 }); build('shell2', { x: 29, y: 6 }, { x: 37, y: 14 });
 until(() => sim.objs('shell').some((x) => x.floors === 2 && x.cstate !== 'construction'), 1440 * 3, 'shell');
@@ -45,7 +43,6 @@ build('hall', { x: 33, y: 7 }, { x: 33, y: 14 }, 0); build('doorWide', { x: 33, 
 ui.rend.view = 1; obs(); build('hall', { x: 33, y: 7 }, { x: 33, y: 14 }, 1); build('elevator', { x: 34, y: 13 });
 build('light', { x: 33, y: 9 }, null, 1); build('light', { x: 33, y: 9 }, null, 0);
 build('iu5x5', { x: 32, y: 7 }, { x: 32, y: 13 }, 1);
-until(() => sim.objs('unit').some((u) => u.cstate === 'ready' && u.f > 0), 1440 * 5, 'upper');
-const uu = sim.objs('unit').find((u) => u.cstate === 'ready' && u.f > 0); d({ type: 'commission', order: uu.order });
+until(() => !!s.milestones.first_upper, 1440 * 5, 'upper');
 tick(5); console.log('upper milestone', !!s.milestones.first_upper, 'lesson', s.lesson, JSON.stringify(s.lessonsDone));
 console.log(log.join('\n')); console.log('done', s.tut.done, 'day', Math.floor(s.t / 1440));

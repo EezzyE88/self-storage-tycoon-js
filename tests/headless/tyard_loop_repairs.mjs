@@ -30,9 +30,8 @@ const tap=(u,a,v)=>u.onClick({target:{closest:()=>({dataset:{a,v:String(v)}})}})
   const r=sm.dispatch({type:'build',...q.args});assert.ok(r.ok,r.msg);
   const order=sm.s.orders.find(o=>o.id===r.order);
   for(let i=0;order.st==='construction'&&i<1500;i++)sm.step();
-  assert.ok(sm.dispatch({type:'commission',order:order.id}).ok);
   assert.ok(order.objs.every(id=>unitInService(sm.s,sm.s.objects[id])),'proposed units actually enter service');
-  console.log('PASS disconnected pavement skipped, connected alternative found, quotes read-only, actual construction and commissioning serviceable');
+  console.log('PASS disconnected pavement skipped, connected alternative found, quotes read-only, actual construction automatically opens serviceable units');
 }
 {
   const sm=fresh(),rs=ready(sm),before=yardInventory(sm);
@@ -68,7 +67,7 @@ const tap=(u,a,v)=>u.onClick({target:{closest:()=>({dataset:{a,v:String(v)}})}})
   for(const ord of orders)assert.ok(ord.objs.every(id=>sm.s.yardLoop.targets.some(t=>t.id===id)));
   const loaded=new Sim(structuredClone(sm.s));assert.deepEqual(loaded.s.yardLoop,sm.s.yardLoop);
   for(let i=0;orders.some(o=>o.st==='construction')&&i<1500;i++)sm.step();
-  for(const ord of orders)assert.ok(sm.dispatch({type:'commission',order:ord.id}).ok);
+  for(const ord of orders)assert.ok(ord.objs.every(id=>unitInService(sm.s,sm.s.objects[id])));
   for(const id of sm.s.yardLoop.targets.map(t=>t.id)){const u=sm.s.objects[id];if(!u.lease)sm.signLease(u,{size:u.size});}
   sm.events=[];
   for(let i=0;sm.s.yardLoop.completed==null&&i<3*1440;i++)sm.step();

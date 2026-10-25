@@ -48,7 +48,7 @@ export function verticalPlan(sim,id,{fitout=true,stairs=false}={}){
  const capacity=numberCapacity(s,creates);if(!capacity.ok)return bad(capacity.msg);
  const cost=rows.reduce((a,r)=>a+r.cost,0),unitCreates=creates.filter(o=>o.type==='unit');
  const opex=creates.reduce((n,o)=>n+(o.type==='hvac'?OPEX.hvacPlant:o.type==='power'?OPEX.power:OPEX[o.type]||0)+(o.type==='unit'?OPEX.perUnit+(o.env==='climate'?OPEX.hvacPerClimateCell*SIZES[o.size].sqft/25:0):0),0);
- return {ok:true,opex,shell:id,from:sh.floors,f,fitout,stairs:!!stair,elevator:elevator?.id||null,stair:stair?.id||null,newShaft,creates,tiles,rows,cost,stamp:s.structV,unitCreates,dur:rows.reduce((a,r)=>a+r.dur,0)+30,warning:!fitout?'Structure only; fit-out and commissioning are still required.': 'Copies the existing interior layout and product mix. Commission units after construction; rentals are not guaranteed.'};
+ return {ok:true,opex,shell:id,from:sh.floors,f,fitout,stairs:!!stair,elevator:elevator?.id||null,stair:stair?.id||null,newShaft,creates,tiles,rows,cost,stamp:s.structV,unitCreates,dur:rows.reduce((a,r)=>a+r.dur,0)+30,warning:!fitout?'Structure only; fit-out and readiness requirements are still required.': 'Copies the existing interior layout and product mix. Eligible units open automatically after construction; rentals are not guaranteed.'};
 }
 export function beginVertical(sim,a){const R=verticalPlan(sim,a.shell,a);if(!R.ok)return R;if(a.stamp!==sim.s.structV)return{ok:false,msg:'Building changed. Review a fresh quote.'};if(!sim.unlimited()&&sim.s.cash<R.cost)return{ok:false,msg:'Not enough cash for the reviewed package.'};
  const s=sim.s;reserveNumbers(s,R.creates);ensureFloors(s,R.f+1);s.floorModelVersion=1;

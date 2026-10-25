@@ -24,10 +24,8 @@ const planOk = (ui, k) => ui && ui.tool === k && ui.plan && ui.plan.status === '
 const running = (sim) => sim.s.speed > 0;
 const hallLight = (sim) => sim.objs('light').find((l) => l.x === 20 && l.y === 8);
 const repairTask = (sim, o) => o && sim.s.tasks.find((t) => t.obj === o.id && t.type !== 'makeready');
-const readyUnit = (sim, pred = () => true) => newUnits(sim, (u) => u.cstate === 'ready' && pred(u))[0];
 const TAB = (v) => `#tabs [data-v="${v}"]`, CAT = (v) => `.cats [data-v="${v}"]`, TOOL = (v) => `[data-a="tool"][data-v="${v}"]`;
 const CONFIRM = '#abar [data-a="confirm"]', PLAY = '#speed [data-v="1"]', FAST = '#speed [data-v="4"]';
-const COMMISSION = `[data-cmd*='"type":"commission"']`;
 
 // Standard build sequence: open Build -> category -> tool -> place at the marker -> Confirm.
 // `placed` = the order exists (later steps become meaningful once it does).
@@ -45,7 +43,6 @@ function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f 
   return after ? steps.map((st) => ({ ...st, done: (sim, ui) => placed(sim) || (after(sim) && st.done(sim, ui)) })) : steps;
 }
 const waitBuild = (label, doneFn) => ({ t: label || 'Let construction finish', d: 'Construction takes game hours. Tap <b>4x</b> at the top to speed up. A progress ring shows over the site.', sel: FAST, done: doneFn });
-const commissionStep = (pred, doneFn) => ({ t: 'Tap a new unit, then <b>Commission</b>', d: 'Tap one of the finished units on the map. In its panel tap <b>Commission whole order</b> (or <b>Commission unit</b>) to put it on the market.', obj: (sim) => { const u = readyUnit(sim, pred); return u && u.id; }, sel: COMMISSION, done: doneFn });
 
 export const BEATS = [
   { id: 'welcome', chapter: 'Take Control', title: 'Welcome to Maple Street Storage',
@@ -89,13 +86,12 @@ export const BEATS = [
     check: (sim) => sim.s.tut.flags.businessOpened && sim.s.tut.flags.moneyAck },
   { id: 'expand', chapter: 'Add Capacity', title: 'Maple Street is full',
     body: 'Every unit is leased and prospects are still asking. Build a new row of drive-up units on the empty grass east of the main aisle.',
-    why: 'Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. New units earn nothing until built <b>and</b> commissioned.',
+    why: 'Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. Eligible units open for rental automatically when construction finishes.',
     focus: () => ({ tool: 'du10x10', cell: { x: 13, y: 22 } }),
     steps: [
       ...buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, end: { x: 13, y: 28 }, axis: 'y', placed: (sim) => ordered(sim, 'du10x10'),
         place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.' }),
-      waitBuild('Let construction finish', (sim) => newUnits(sim).some((u) => u.cstate !== 'construction') || !!sim.s.milestones.first_expansion),
-      commissionStep(() => true, (sim) => !!sim.s.milestones.first_expansion),
+      waitBuild('Let construction finish and the units open', (sim) => !!sim.s.milestones.first_expansion),
     ],
     check: (sim) => !!sim.s.milestones.first_expansion },
   { id: 'repair', chapter: 'Keep the Property Working', title: 'A hallway light has failed',
@@ -166,8 +162,7 @@ export const LESSONS = [
         place: '<b>Drag</b> a column along the corridor\'s west side', placeD: 'On <b>F1</b>, press on the empty floor just left of the west corridor at the top, and drag straight down to the bottom. Unit doors must open onto the corridor.',
         extra: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar at the bottom, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 }] })
         .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (units)', done: (sim, ui) => (tabIs(ui, 'build') && built(sim, 'light')) || toolIs(ui, 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 } : st),
-      waitBuild('Let construction finish', (sim) => newUnits(sim, (u) => u.env === 'climate').some((u) => u.cstate !== 'construction') || !!sim.s.milestones.first_climate),
-      commissionStep((u) => u.env === 'climate', (sim) => !!sim.s.milestones.first_climate),
+      waitBuild('Let construction finish and the climate units open', (sim) => !!sim.s.milestones.first_climate),
     ],
     check: (sim) => !!sim.s.milestones.first_climate },
   { id: 'up', chapter: 'Lesson', offer: (sim) => ((sim.lostRecent(30).noReady || 0) + (sim.lostRecent(30).noSize || 0)) >= 8 && sim.objs('unit').length > 26, title: 'Build a working two-floor property',
@@ -191,7 +186,7 @@ export const LESSONS = [
         // An elevator committed early (allowed) does not complete the step: it waits for those hallways the same way.
         prereq:blueprint==='elevator'?(sim)=>{const st=shaftHallState(sim);if(!st||verticalDone(sim,'elevator'))return null;const miss=st.indexOf('missing'),f=miss>=0?miss:st.findIndex(x=>x!=='built');const l=verticalLayout(sim);return f<0?null:{state:st[f],floor:f+1,states:st,committed:sim.objs('elevator').some(o=>o.x>=l.sh.x&&o.x<l.sh.x+l.sh.w&&o.y>=l.sh.y&&o.y<l.sh.y+l.sh.h)};}:null})),
       {t:'Finish construction and check access',d:'Run time to finish construction. Recheck my layout lists any missing connection, lighting or power.',blueprint:'finished',sel:FAST,done:(sim)=>verticalDone(sim,'finished')},
-      {t:'Commission upstairs units',d:'Tap a ready upstairs unit in this building and Commission whole order.',obj:(sim)=>{const l=verticalLayout(sim);return l&&!l.proposed&&sim.objs('unit').find(u=>u.f===1&&u.x>=l.sh.x&&u.x<l.sh.x+l.sh.w&&u.y>=l.sh.y&&u.y<l.sh.y+l.sh.h&&u.cstate==='ready')?.id;},sel:COMMISSION,done:(sim)=>verticalDone(sim,'commissioned')},
+      {t:'Let the upstairs units open',d:'Keep time running. Finished units open automatically after their access, lighting, power and elevator checks pass.',sel:FAST,done:(sim)=>verticalDone(sim,'commissioned')},
     ],
     check:(sim)=>verticalDone(sim,'commissioned') },
 

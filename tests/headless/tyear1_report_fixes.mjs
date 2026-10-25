@@ -20,8 +20,8 @@ test('actual ready inventory never reports no units ready',()=>{
  const sim=fixture(),u=sim.objs('unit')[0];u.cstate='operating';u.commercial='ready';u.blocked=false;
  assert.equal(sim.availabilityReport(u.size).availability,'ready');assert.match(sim.availabilityReport(u.size).text,/ready to rent/);assert.doesNotMatch(sim.availabilityReport(u.size).text,/No .* ready/);
 });
-test('commissioning hint precedes ordinary repair and turnover distractions',()=>{
+test('automatic-opening hint precedes ordinary repair and turnover distractions',()=>{
  const sim=fixture();const u=sim.objs('unit')[0];u.cstate='ready';for(const x of sim.objs('unit'))x.blocked=false;
- const ui=Object.create(UI.prototype);ui.g={sim};const state=JSON.stringify(sim.s),hint=ui.coachHint();assert.match(hint.text,/ready to commission/);assert.equal(hint.act.sel,u.id);assert.equal(JSON.stringify(sim.s),state);
+ const ui=Object.create(UI.prototype);ui.g={sim};const state=JSON.stringify(sim.s),hint=ui.coachHint();assert.match(hint.text,/become rent-ready when time advances/);assert.equal(hint.act.sel,u.id);assert.equal(JSON.stringify(sim.s),state);
 });
 console.log(failed?'SOME FAILED':'ALL PASS: year-one report repairs');process.exitCode=failed?1:0;

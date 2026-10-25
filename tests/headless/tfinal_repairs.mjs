@@ -93,7 +93,7 @@ await test('3. desktop: the side view-control column narrows the usable width in
   const p=safeFixture(393,659,{tabs:[8,599,373,653],tut:[8,539,385,595],'.hud':[8,6,385,52],'.speed':[8,57,190,107],'.viewctl':[201,57,385,107]}).safeRect();assert.deepEqual(p,{top:115,bottom:531,left:8,right:385});});
 
 // ---------- 4. F3 complaint location (real three-floor property, production feedback sheet and click handler)
-const three=makeMaple(3);three.s.cash=1e6;three.s.open=true;{const SH=three.objs('shell')[0].id;for(let k=0;k<2;k++){const P=three.verticalPlan(SH);assert.ok(three.dispatch({type:'verticalUpgrade',...P}).ok);const o=three.s.orders.at(-1);for(let i=0;i<60000&&o.st==='construction';i++){three.step();three.events.length=0;}three.dispatch({type:'commission',order:o.id});}}
+const three=makeMaple(3);three.s.cash=1e6;three.s.open=true;{const SH=three.objs('shell')[0].id;for(let k=0;k<2;k++){const P=three.verticalPlan(SH);assert.ok(three.dispatch({type:'verticalUpgrade',...P}).ok);const o=three.s.orders.at(-1);for(let i=0;i<60000&&o.st==='construction';i++){three.step();three.events.length=0;}assert.ok(o.objs.every(id=>three.s.objects[id]?.type!=='unit'||three.s.objects[id].cstate==='operating'));}}
 const copy=()=>new Sim(JSON.parse(JSON.stringify(three.s)));
 function feedbackUi(sim){const ui=Object.create(UI.prototype),seen=[];ui.g={sim,audio:{unlock(){}},rend:{lookAt:(...a)=>seen.push(['camera',...a])}};ui.setTab=v=>seen.push(['tab',v]);ui.setView=v=>seen.push(['floor',v]);ui.select=v=>seen.push(['select',v]);ui.feedbackSim=sim;ui.feedbackEpoch=0;return {ui,seen};}
 const click=(ui,targetJson)=>ui.onClick({target:{closest:()=>({dataset:{a:'complaintView',property:'0',target:targetJson}})}});

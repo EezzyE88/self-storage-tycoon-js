@@ -37,7 +37,7 @@ export function projectStatus(sim, p = sim.s.propertyProjects?.active) {
   const commissionable = objects.filter(o => o?.cstate === 'ready').length;
   const service = intact ? objects.filter(o => d.kind === 'loading' ? o.cstate === 'operating' : unitInService(sim.s, o)).length : 0;
   const leased = intact && d.kind === 'extension' ? objects.filter(o => unitInService(sim.s, o) && !!o.lease).length : 0;
-  return { label: d.label, bounds: d.bounds, intact, building, commissionable, service, leased, total: d.count, text: !intact ? 'Targets changed — project tracking stopped' : building ? `Building · ${service}/${d.count} in service` : commissionable ? `Ready to commission · ${commissionable}/${d.count}` : service === d.count ? 'In service' : 'Access or readiness needs attention' };
+  return { label: d.label, bounds: d.bounds, intact, building, commissionable, service, leased, total: d.count, text: !intact ? 'Targets changed — project tracking stopped' : building ? `Building · ${service}/${d.count} in service` : commissionable ? `Opening automatically · ${commissionable}/${d.count}` : service === d.count ? 'In service' : 'Access or readiness needs attention' };
 }
 export function projectOffers(sim) {
   if (!authoredYard(sim) || sim.s.propertyProjects?.active) return [];

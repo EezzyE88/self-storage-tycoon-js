@@ -995,8 +995,7 @@ export class Sim {
     s.orders = s.orders.filter((o) => o.st === 'construction' || s.t - o.t0 < 3 * MIN_PER_DAY);
   }
   autoOpenEnabled() {
-    const s=this.s;
-    return s.mode==='sandbox'&&!s.scenario&&!s.lesson&&!s.tut?.on&&!this.unlimited();
+    return true;
   }
   autoOpenReadyUnits(advancingMinute = false) {
     // Called only from ordinary advancing minutes, never load/rebuild/poll.
@@ -1038,7 +1037,7 @@ export class Sim {
     const office = this.objs('office')[0];
     if (!office || office.cstate !== 'operating') out.push('No operating office');
     else { const di = this.idx(office.door.x, office.door.y); if (!D.vehReach[di] && !(D.dAccess && D.dAccess.has(di))) out.push('Office door has no customer route - pave a walkway or parking in front of it'); }
-    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No commissioned rent-ready units');
+    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No operating rent-ready units');
     return out;
   }
   act_rescuePricing(a) { return chooseRescuePricing(this,a); }
@@ -1077,9 +1076,7 @@ export class Sim {
     const s = this.s; if (!this.hasManager()) return;
     const h = this.hour; if (h < OFFICE_HOURS[0] || h >= OFFICE_HOURS[1]) return;
     const reserve = (c) => this.unlimited() || this.financialPosition({ spend: c }).available >= 0;
-    // 1. commission rent-ready units
-    if (s.open && this.objs('unit').some((u) => u.cstate === 'ready')) { const r = this.act_commission({ all: true }); if (r.ok) this.mgr('Opened rent-ready units for rental'); }
-    // 2. escalate stalled repairs to vendors
+    // 1. escalate stalled repairs to vendors. Finished eligible units open automatically for every player.
     const hasTech = s.staff.some((x) => x.role === 'tech');
     for (const t of s.tasks) {
       if (t.assigned || t.vendor || (t.type !== 'repair')) continue;

@@ -123,7 +123,7 @@ await test('#7 keeping the outgoing game is atomic: a failed write leaves no hal
 // ---------- #8 handover presentation (real F3 service test) vs genuine disconnection
 await test('#8 held upper units show "Handover test" everywhere, not a fault; genuine disconnections still warn',()=>{
   const sim=makeMaple(3);sim.s.cash=1e6;sim.s.open=true;const SH=sim.objs('shell')[0].id;let o=null;
-  for(let k=0;k<2;k++){const R=sim.verticalPlan(SH);sim.dispatch({type:'verticalUpgrade',...R});o=sim.s.orders.at(-1);if(k===0){for(let i=0;i<60000&&o.st==='construction';i++){sim.step();sim.events.length=0;}sim.dispatch({type:'commission',order:o.id});}}
+  for(let k=0;k<2;k++){const R=sim.verticalPlan(SH);sim.dispatch({type:'verticalUpgrade',...R});o=sim.s.orders.at(-1);if(k===0){for(let i=0;i<60000&&o.st==='construction';i++){sim.step();sim.events.length=0;}assert.ok(o.objs.every(id=>sim.s.objects[id]?.type!=='unit'||sim.s.objects[id].cstate==='operating'));}}
   let held=[];for(let i=0;i<60000&&o.st==='construction';i++){sim.step();sim.events.length=0;held=sim.objs('unit').filter(u=>u.accessHold!=null);if(held.length)break;}
   assert.equal(held.length,14);const {ui}=fixture(sim.s.speed,sim);
   assert.ok(held.every(u=>unitStatus(u)==='handover'));assert.equal(UNIT_STATUS.handover.label,'Handover test');
@@ -131,18 +131,18 @@ await test('#8 held upper units show "Handover test" everywhere, not a fault; ge
   assert.match(ui.coachHint().text,/Freight handover test: 14 upper units are briefly closed/);assert.doesNotMatch(ui.coachHint().text,/can't be reached/);
   ui.sel=held[0].id;assert.match(ui.dockSummary('Unit',''),/Handover test/);
   assert.match(readFileSync('js/render.js','utf8'),/if \(u\.blocked\) k = u\.accessHold != null \? null : 'missing';/);
-  for(let i=0;i<60000&&o.st==='construction';i++){sim.step();sim.events.length=0;}sim.dispatch({type:'commission',order:o.id});sim.ensure();assert.equal(sim.objs('unit').filter(u=>u.blocked).length,0);
+  for(let i=0;i<60000&&o.st==='construction';i++){sim.step();sim.events.length=0;}sim.ensure();assert.ok(o.objs.every(id=>sim.s.objects[id]?.type!=='unit'||sim.s.objects[id].cstate==='operating'));assert.equal(sim.objs('unit').filter(u=>u.blocked).length,0);
   const u=sim.objs('unit').find(u=>u.f===2&&u.cstate==='operating'),fc=sim.unitFront(u)[0];sim.s.hall[2][sim.idx(fc.x,fc.y)]=0;sim.markDirty();sim.ensure();
   assert.ok(sim.events.some(e=>e.type==='access_lost'));assert.equal(unitStatus(u),'blocked');ui.computePins();assert.ok(ui.pinList.some(p=>p.k==='blocked'&&p.id===u.id));assert.match(ui.coachHint().text,/can't be reached/);});
 
-// ---------- #9 commissioning scope
-await test('#9 building commissioning offers this order first; the property-wide action states its scope',()=>{
+// ---------- #9 automatic opening scope
+await test('#9 building status reports local ready units while the next minute opens all eligible property inventory',()=>{
   const sim=makeMaple(3);sim.s.cash=1e6;const SH=sim.objs('shell')[0].id;const R=sim.verticalPlan(SH);sim.dispatch({type:'verticalUpgrade',...R});const o=sim.s.orders.at(-1);for(let i=0;i<60000&&o.st==='construction';i++){sim.s.t++;tickVertical(sim,o);}sim.ensure();
   const other=sim.objs('unit').find(u=>u.f===0&&u.cstate==='operating'&&!u.lease);other.cstate='ready';other.order=null;
   const {ui}=fixture(0,sim);const h=ui.buildingCommissionHtml(sim.s.objects[SH]);
-  assert.match(h,/Commission F2 order · 14 units/);assert.match(h,/Commission all 15 ready units on property/);assert.match(h,/Property-wide: includes ready units outside this building/);assert.ok(h.indexOf('F2 order')<h.indexOf('all 15'));assert.doesNotMatch(readFileSync('js/ui.js','utf8'),/>Commission ready units</);
-  const cmd=JSON.parse(h.match(/data-cmd='([^']+)'>Commission F2 order/)[1]);assert.ok(sim.dispatch(cmd).ok);assert.equal(other.cstate,'ready','order commissioning leaves the unrelated unit');
-  assert.equal(fixture(0,sim).ui.buildingCommissionHtml(sim.s.objects[SH]).match(/Commission all 1 ready unit on property/)?.length,1);});
+  assert.match(h,/14 finished units will open automatically when time advances/);assert.doesNotMatch(h,/button|Commission/);assert.doesNotMatch(readFileSync('js/ui.js','utf8'),/>Commission ready units|>Commission unit|>Commission whole order/);
+  sim.autoOpenReadyUnits(true);assert.ok(o.objs.every(id=>sim.s.objects[id]?.type!=='unit'||sim.s.objects[id].cstate==='operating'));assert.equal(other.cstate,'operating','automatic opening applies consistently across the property');
+  assert.equal(fixture(0,sim).ui.buildingCommissionHtml(sim.s.objects[SH]),'');});
 
 // ---------- #10 information-only ledger facts
 await test('#10 cancellation records penalty, work-in-progress and retained-prerequisite facts without moving cash',()=>{

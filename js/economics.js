@@ -72,12 +72,12 @@ export function staffingEvidence(sim, role) {
     porter: `${o.makeReady} units await make-ready. Cleaning, cart and turnover work: ${workload} $${Math.round(o.askingOffline)}/mo asking-rent capacity offline, not promised income.`,
     tech: `Repair work: ${workload} ${o.equipmentRisk.length} access/climate assets failed or unreliable.`,
     clerk: `${o.officeWaiting} waiting now; ${o.officeServing} being served. Owner office service: ${o.officeHours}h over ${o.workDays.length} measured days. Current waits and historical work do not prove a shortage.`,
-    manager: `${o.tasks.filter(t => t.type === 'repair' && !t.assigned && !t.queued).length} repairs await assignment; ${sim.objs('unit').filter(u => u.cstate === 'ready').length} units await commissioning. Automates existing policies; does not add task-hours or prove Owner capacity relief.`,
+    manager: `${o.tasks.filter(t => t.type === 'repair' && !t.assigned && !t.queued).length} repairs await assignment. Automates existing pricing, vendor and cart policies; does not add task-hours or prove Owner capacity relief.`,
   }[role];
   return { evidence, hours, unassignedHours, assignedHours, monthlyWages: cents(ROLES[role].wage * 30) };
 }
 export function planDailyCost(sim, plan) {
-  // Full commissioned burden, including per-unit tax omitted by the older build preview.
+  // Full operating burden, including per-unit tax omitted by the older build preview.
   let value = plan.opex || 0;
   const units = (plan.creates || []).filter((x) => x.type === 'unit');
   if (sim.pressureOn()) value += units.length * 0.25;

@@ -37,8 +37,8 @@ console.log(JSON.stringify({stress:'3–5-floor dispatcher, 72 seeded bursts, 10
 }
 // Ordinary full simulation, including finances, scheduling, staff and visitors.
 for(let seed=1;seed<=4;seed++){
- const s=clone(base);s.s.rngS=seed;s.s.open=true;const R=s.verticalPlan(sh.id);const cash=s.s.cash;assert.ok(s.dispatch({type:'verticalUpgrade',...R}).ok);assert.equal(s.s.cash,cash-R.cost);let commissioned=false,seenUpper=false;
- for(let i=0;i<30*1440;i++){s.step();s.events.length=0;const ord=s.s.orders.find(o=>o.vertical?.f===2);if(ord?.st==='done'&&!commissioned){assert.ok(s.dispatch({type:'commission',order:ord.id}).ok);commissioned=true;}if(s.s.agents.some(a=>a.kind==='cust'&&a.f===2))seenUpper=true;assert.ok(Number.isFinite(s.s.cash));for(const el of s.objs('elevator'))assert.ok(el.riders.reduce((n,r)=>n+r.slots,0)<=4);}
- assert.ok(commissioned,'ordinary simulation must complete expansion');assert.equal(s.s.objects[sh.id].floors,3);console.log(JSON.stringify({playthroughSeed:seed,minutes:43200,commissioned,seenUpper,cash:s.s.cash,leases:s.objs('unit').filter(u=>u.lease).length,agents:s.s.agents.length}));
+ const s=clone(base);s.s.rngS=seed;s.s.open=true;const R=s.verticalPlan(sh.id);const cash=s.s.cash;assert.ok(s.dispatch({type:'verticalUpgrade',...R}).ok);assert.equal(s.s.cash,cash-R.cost);let opened=false,seenUpper=false;
+ for(let i=0;i<30*1440;i++){s.step();s.events.length=0;const ord=s.s.orders.find(o=>o.vertical?.f===2);if(ord?.st==='done'&&ord.objs.every(id=>s.s.objects[id]?.type!=='unit'||s.s.objects[id].cstate==='operating'))opened=true;if(s.s.agents.some(a=>a.kind==='cust'&&a.f===2))seenUpper=true;assert.ok(Number.isFinite(s.s.cash));for(const el of s.objs('elevator'))assert.ok(el.riders.reduce((n,r)=>n+r.slots,0)<=4);}
+ assert.ok(opened,'ordinary simulation must complete and automatically open expansion');assert.equal(s.s.objects[sh.id].floors,3);console.log(JSON.stringify({playthroughSeed:seed,minutes:43200,opened,seenUpper,cash:s.s.cash,leases:s.objs('unit').filter(u=>u.lease).length,agents:s.s.agents.length}));
 }
 console.log('PASS 7,200 mixed elevator journeys and four 30-day full simulation playthroughs');

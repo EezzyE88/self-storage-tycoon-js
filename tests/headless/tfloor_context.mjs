@@ -86,10 +86,20 @@ const count=counts();r.rebuildStatic();assert.deepEqual(counts(),count,'context 
 assert.equal(JSON.stringify(sim.s),saved);
 assert.ok(r.contextG.children.length <= 5,'mixed fixture uses at most ten instanced context draws, independent of unit count');
 // Keep unchanged floor-numbering/save/visual source byte-identical to the numbering parent.
-// Simulation includes intentional maintenance, automatic opening, upgrades and entrance-route changes through d84fb59.
+// Simulation includes intentional maintenance, upgrades and entrance-route changes through d84fb59.
+// Reconstruct the approved automatic-opening successor from that exact baseline so unrelated simulation drift still fails.
 import {execFileSync} from 'node:child_process';
-for(const file of ['js/unitnumbering.js','js/vertical.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
-assert.equal(readFileSync('js/sim.js','utf8'),execFileSync('git',['show','d84fb59171152e670a5d3d2940830310fd7cc1d9:js/sim.js'],{encoding:'utf8'}));
+for(const file of ['js/unitnumbering.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
+let expectedVertical=execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:js/vertical.js'],{encoding:'utf8'});
+const oldVertical="warning:!fitout?'Structure only; fit-out and commissioning are still required.': 'Copies the existing interior layout and product mix. Commission units after construction; rentals are not guaranteed.'";
+const newVertical="warning:!fitout?'Structure only; fit-out and readiness requirements are still required.': 'Copies the existing interior layout and product mix. Eligible units open automatically after construction; rentals are not guaranteed.'";
+assert.ok(expectedVertical.includes(oldVertical),'declared vertical.js baseline hunk exists');expectedVertical=expectedVertical.replace(oldVertical,newVertical);assert.equal(readFileSync('js/vertical.js','utf8'),expectedVertical);
+let expectedSim=execFileSync('git',['show','d84fb59171152e670a5d3d2940830310fd7cc1d9:js/sim.js'],{encoding:'utf8'});
+const intentional=(from,to)=>{assert.ok(expectedSim.includes(from),'declared sim.js baseline hunk exists');expectedSim=expectedSim.replace(from,to);};
+intentional("  autoOpenEnabled() {\n    const s=this.s;\n    return s.mode==='sandbox'&&!s.scenario&&!s.lesson&&!s.tut?.on&&!this.unlimited();\n  }","  autoOpenEnabled() {\n    return true;\n  }");
+intentional("    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No commissioned rent-ready units');","    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No operating rent-ready units');");
+intentional("    // 1. commission rent-ready units\n    if (s.open && this.objs('unit').some((u) => u.cstate === 'ready')) { const r = this.act_commission({ all: true }); if (r.ok) this.mgr('Opened rent-ready units for rental'); }\n    // 2. escalate stalled repairs to vendors","    // 1. escalate stalled repairs to vendors. Finished eligible units open automatically for every player.");
+assert.equal(readFileSync('js/sim.js','utf8'),expectedSim);
 // Fast-reserve intentionally changed main's clock dispatch. Preserve its exact verified implementation.
 assert.equal(readFileSync('js/main.js','utf8'),execFileSync('git',['show','3c92a5eb6a8d906264e9019e26fa24a100bffb31:js/main.js'],{encoding:'utf8'}));
 console.log('PASS mixed-height context across Exterior/F1/F2/F3, four rotations, active-floor picking/inspection, camera preservation, repeated rebuild and byte-identical complete state');

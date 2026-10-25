@@ -51,7 +51,7 @@ cash=sim.s.cash;sim.dispatch({type:'verticalUpgrade',...Q3});ord=sim.s.orders.at
 tick(500,ord);g.sim=sim;g.company={props:[{name:'Maple',sim}],active:0,feed:[]};const before=sim.s.cash,capexBefore=ledger().length;
 assert.equal(await g.loadCode(await g.saveCode()),true);const R=g.sim;assert.equal(R.s.cash,before);assert.equal(R.s.ledger.filter(x=>x.cat==='capex').length,capexBefore);
 const o2=R.s.orders.at(-1);for(let i=0;i<60000&&o2.st==='construction';i++){R.s.t++;tickVertical(R,o2);}assert.equal(o2.st,'done');assert.equal(R.s.cash,before,'completion and handover charge nothing');assert.equal(R.s.objects[SH].floors,2);
-assert.ok(R.dispatch({type:'commission',order:o2.id}).ok);assert.equal(R.s.cash,before);
+R.autoOpenReadyUnits(true);assert.ok(o2.objs.every(id=>R.s.objects[id]?.type!=='unit'||R.s.objects[id].cstate==='operating'));assert.equal(R.s.cash,before);
 
 // Separate ledger entries: original, undo refund, recommitment, partial refund, second commitment.
 const entries=JSON.parse(JSON.stringify(R.s.ledger.filter(x=>x.cat==='capex').slice(L0).map(x=>[x.amt,x.note]))); // reloaded state lives in the VM realm
