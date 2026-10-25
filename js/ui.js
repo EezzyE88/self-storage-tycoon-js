@@ -83,6 +83,8 @@ const I = {
   logo: '<svg viewBox="0 0 48 48" fill="none" aria-label="Self Storage Tycoon"><path d="M6 20 24 8l18 12" stroke="#f5c542" stroke-width="4" stroke-linejoin="round"/><rect x="9" y="21" width="30" height="21" rx="2" fill="currentColor"/><path d="M13 26h22M13 30.5h22M13 35h22" stroke="#16202b" stroke-width="2.2" opacity=".55"/></svg>',
 };
 const money = (v, dec = false) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: dec ? 2 : 0, minimumFractionDigits: dec ? 2 : 0 });
+// Existing acquisition term, also disclosed in Growth; checked against actual engine purchases.
+const ACQUISITION_OPENING_CASH = 5000;
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const pct = (v) => Math.round(v * 100) + '%';
 // Floor identity shown to the player: numeric level 0 is Floor 1. Non-integers fall back to Floor 1, never a guess.
@@ -354,7 +356,8 @@ export class UI {
       case 'sbSet': this.do({ type: 'sbSet', k: el.dataset.k, v: JSON.parse(v) }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
       case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.sfx('confirm'); }); break; }
       case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
-      case 'acquire': { const r = this.g.acquire(v, el.dataset.m); this.toast(r.msg, r.ok ? 'good' : 'bad'); this.renderSheet(true); break; }
+      case 'acquire': this.showAcquisitionReview(v, el.dataset.m); break;
+      case 'acquisitionConfirm': this.confirmAcquisitionReview(); break;
       case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
       case 'comebackClose': if (this.sim.s.scenario?.status === 'won') this.do({ type: 'comebackAck' }); this.scMin = true; this.renderTut(true); break;
       case 'comebackWork': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('operate'); this.jumpSection('Work queue'); break;
@@ -757,6 +760,36 @@ export class UI {
     const lower=approach==='lower',selected=lower?q.lower:q.ask;
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>${lower?'Review lower asking rent':'Keep current asking rent'}</h2><p>10×10 standard · ${money(q.ask,true)} → ${money(selected,true)}/month.</p><p>${q.restored} restored vacancies are being tracked. ${lower?`This asking-price group affects all ${q.matching} matching ready vacancies on this property. Existing signed lease rents stay unchanged. ${money(q.difference,true)} less monthly rent per new lease; ${q.restored} new leases would carry ${money(q.difference*q.restored,true)} less monthly rent than at the previous ask. Neither occupancy outcome is guaranteed.`:'No asking price changes. Measurement starts now; earlier leases are not counted.'}</p><div class="row wrap"><button class="btn" data-a="modalClose">Decide later</button><button class="btn pri" data-a="rescuePricingConfirm">${lower?'Apply '+money(selected,true)+' asking rent':'Keep rent &amp; watch leasing'}</button></div></div></div>`;
   }
+  acquisitionQuote(kind, market) {
+    const C=this.g.company;
+    if(!C)return {ok:false,msg:'No company'};
+    if(C.props.length>=5)return {ok:false,msg:'Portfolio is limited to 5 properties'};
+    const offer=this.g.offers().find(o=>o.kind===kind&&o.market===market);
+    if(!offer)return {ok:false,msg:'Offer not available'};
+    if(this.sim.s.cash<offer.price)return {ok:false,msg:'Not enough cash at this property'};
+    return {ok:true,offer,workingCash:ACQUISITION_OPENING_CASH,sourceName:C.props[C.active].name,cashAfter:this.sim.s.cash-offer.price};
+  }
+  showAcquisitionReview(kind, market) {
+    const q=this.acquisitionQuote(kind,market),C=this.g.company;
+    this.creditReview=null;this.termLoanReview=null;
+    this.acquisitionReview=q.ok?{sim:this.sim,company:C,source:C.props[C.active],kind,market,quote:q}:null;
+    this.requestPanel=false;this.pauseForPopup('modal');
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="acquisition-title"><h2 id="acquisition-title">Review property purchase</h2>${q.ok?`<h3>${esc(q.offer.name)}</h3><p>${esc(q.offer.desc)}</p><div class="kv"><span>Purchasing property</span><b>${esc(q.sourceName)}</b><span>Total price</span><b>${money(q.offer.price)}</b><span>Included opening working cash</span><b>${money(q.workingCash)}</b><span>Purchasing property's cash after purchase</span><b>${money(q.cashAfter,true)}</b></div><p class="note">Opening working cash is included in the total price and goes into the new property's account. The remaining cash shown stays at ${esc(q.sourceName)}. Future rent is not guaranteed.</p>`:`<p class="note">${esc(q.msg)}. Return to Acquisitions to review current offers.</p>`}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="acquisitionConfirm">Confirm ${money(q.offer.price)} purchase</button>`:''}</div></div></div>`;
+  }
+  confirmAcquisitionReview() {
+    const r=this.acquisitionReview,C=this.g.company;
+    if(!r)return;
+    if(r.sim!==this.sim||r.company!==C||r.source!==C?.props[C.active]){this.acquisitionReview=null;return;}
+    const q=this.acquisitionQuote(r.kind,r.market);
+    if(!q.ok||JSON.stringify(q)!==JSON.stringify(r.quote)) {
+      this.toast('Property quote changed. Review before confirming.','bad');this.showAcquisitionReview(r.kind,r.market);return;
+    }
+    // Consume the review before purchasing; queued/repeated confirmation taps cannot buy twice.
+    this.acquisitionReview=null;
+    const result=this.g.acquire(r.kind,r.market);this.toast(result.msg,result.ok?'good':'bad');
+    if(!result.ok){this.showAcquisitionReview(r.kind,r.market);return;}
+    this.closeModal();this.renderSheet(true);
+  }
   creditContext() {
     if(this.fundingContext?.sim!==this.sim)return null;
     const args=this.fundingContext.args,p=this.sim.plan(args);
@@ -781,7 +814,7 @@ export class UI {
   }
   showCreditReview(amount, bank=null) {
     const context=bank?null:this.creditContext(),q=amount>0?creditProjection(this.sim,amount,context||{}):null;
-    this.termLoanReview=null;
+    this.acquisitionReview=null;this.termLoanReview=null;
     this.creditReview=q?.ok?{sim:this.sim,amount:q.amount,bank,quote:q}:null;
     // The request remains pending, but must not repaint over its borrowing review.
     this.requestPanel=false;this.pauseForPopup('modal');
@@ -816,7 +849,7 @@ export class UI {
   }
   showTermLoanReview(amount) {
     const q=this.termLoanQuote(amount);
-    this.creditReview=null;this.termLoanReview=q.ok?{sim:this.sim,quote:q}:null;
+    this.acquisitionReview=null;this.creditReview=null;this.termLoanReview=q.ok?{sim:this.sim,quote:q}:null;
     this.requestPanel=false;this.pauseForPopup('modal');
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review expansion loan</h2>${q.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Annual interest rate</span><b>${(q.rate*100).toFixed(1)}%</b><span>Term</span><b>${q.months} months</b><span>New monthly payment</span><b>${money(q.payment,true)}</b><span>First payment</span><b>Day ${q.firstDay}</b><span>Total term-loan payments</span><b>${money(q.monthlyPayments,true)}/month</b><span>Cash after borrowing</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b></div><p class="note">Debt must be repaid. Borrowing creates no profit and buys no expansion. The existing 14-day reserve estimate excludes this new loan's first payment, due on Day ${q.firstDay}. Future rent is not guaranteed.</p>`:'<p class="note">That amount is no longer approved. Return to Financing to review current options.</p>'}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="termLoanConfirm">Confirm ${money(q.amount)} loan</button>`:''}</div></div></div>`;
   }
@@ -2356,8 +2389,8 @@ export class UI {
     if (C.feed.length) h += `<h3>Company attention</h3><div class="list">${C.feed.slice(0, 6).map((e) => `<div class="item"><div class="grow"><b>${esc(e.prop)}</b><small>Day ${dayOf(e.t)} · ${esc(e.msg)}</small></div>${C.props[e.k] && e.k !== cur ? `<button class="btn sm" data-a="switchProp" data-v="${e.k}">Go</button>` : ''}</div>`).join('')}</div>`;
     if (!this.sim.s.creative && (this.sim.s.mode !== 'tutorial' || this.sim.s.tut.done)) {
       const offers = this.g.offers();
-      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small></div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Buy ${money(of.price)}</button></div>`).join('')}</div>
-        <p class="note">Paid from this property's cash. Prices include $5,000 of opening working cash for the new property; send more from here to fund construction.</p>`;
+      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small></div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Review ${money(of.price)}</button></div>`).join('')}</div>
+        <p class="note">Paid from this property's cash. Prices include ${money(ACQUISITION_OPENING_CASH)} of opening working cash for the new property; send more from here to fund construction.</p>`;
     } else if (this.sim.s.mode === 'tutorial' && !this.sim.s.tut.done) h += `<p class="note">Finish the tutorial to unlock acquisitions and a multi-property company.</p>`;
     return h;
   }
@@ -2763,7 +2796,7 @@ export class UI {
     return `<div class="actionbar vpreview"><div class="top"><div class="nm">Proposed F${R.f+1} · Building ${R.shell}<small>Preview only — not built · ${money(R.cost)} complete package</small></div></div><div class="bot"><button class="btn" data-a="verticalBack" data-qa="vp-back">Back to review</button><button class="btn pri" data-a="verticalConfirm" data-qa="vp-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button><button class="btn" data-a="verticalCancel" data-qa="vp-discard">Discard preview</button></div></div>`;
   }
   modalOpen() { return !!this.$('modal').firstChild; }
-  closeModal() { this.creditReview=null; this.termLoanReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
+  closeModal() { this.acquisitionReview=null; this.creditReview=null; this.termLoanReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
