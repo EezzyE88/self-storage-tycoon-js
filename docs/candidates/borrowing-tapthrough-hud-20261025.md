@@ -29,6 +29,18 @@ A deliberate tap within about 450 ms of a review appearing or closing is ignored
   - The map-zoom variant did not reproduce in this harness run on either build.
 - `node tests/run-headless.mjs`: 124/139, with no new failures versus the 122/138 baseline (`tfloor_context` now passes). `tborrowing_review.mjs` needs a baseline path argument; it passes 16/16 when given a d84fb59 checkout path.
 
+## Owner iPhone playtest (2026-10-25)
+
+Run by the owner on a physical iPhone in Safari, against a private preview of exactly `3e9a1ca` (hosted `index.html`, `js/main.js` and `js/ui.js` hash-matched to the commit). Owner-reported result: all five checks pass.
+
+1. Credit triple tap on Confirm: one draw, no second review.
+2. Term-loan double tap on Confirm: one loan.
+3. Bank-request triple tap on Confirm: one draw, no map zoom.
+4. HUD "today" does not jump by the borrowed amount.
+5. Settle window does not feel like ignored input.
+
 ## Not verified
 
-Physical iPhone / Safari touch behavior, including iOS double-tap zoom heuristics and real-world settle timing.
+- One device only; iPhone model and iOS version not recorded.
+- No broader device or Android coverage.
+- The map-zoom variant was never reproduced in the rendered harness, so its fix rests on owner check 3.
