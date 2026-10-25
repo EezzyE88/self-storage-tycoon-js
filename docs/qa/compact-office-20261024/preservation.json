@@ -1,0 +1,45 @@
+{
+  "parent": "d6abaa382c5f495203e6efab6eaacf416e84c301",
+  "verified_unchanged": [
+    {
+      "path": "js/sim.js",
+      "sha256": "db031dff86503ef15d7b8d6280a8bdf78592f64e05521e24046db513218db0ed",
+      "matches_parent": true
+    },
+    {
+      "path": "js/data.js",
+      "sha256": "0cc0985de5ddacfc1a7d7fe462c1c4cdc89f07dbc26a1868020d742fd9477e66",
+      "matches_parent": true
+    },
+    {
+      "path": "js/economics.js",
+      "sha256": "029c9d767b0a3871617ce07ed961a87fa389577df89fce60dc4cf41bde393c6b",
+      "matches_parent": true
+    },
+    {
+      "path": "js/finance.js",
+      "sha256": "fc53b3d54969aedc4d36ac3cb2e9e9640de5b235d89ad04defea49088af831e9",
+      "matches_parent": true
+    },
+    {
+      "path": "js/main.js",
+      "sha256": "1b6af0e30f37889a125921bd98c39714719a1fd0e4eab7c069ca7504a7fe73e1",
+      "matches_parent": true
+    },
+    {
+      "path": "js/localsave.js",
+      "sha256": "fe3915174398f314eadc84a28831322fc09e4b830c15b76a20c73706465b7873",
+      "matches_parent": true
+    },
+    {
+      "path": "js/savearchive.js",
+      "sha256": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
+      "matches_parent": true
+    },
+    {
+      "path": "js/render.js",
+      "sha256": "9d0ee9474d385b4dd5a541ecb132ff9d46f096916805ddfaafd05b4d54c20ae2",
+      "matches_parent": true
+    }
+  ]
+}

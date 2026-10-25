@@ -1,3 +1,4 @@
+import { officePanelState } from './officepanel.js';
 import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';
 import { demandEvidenceText, paybackText } from './economics.js';
 import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
@@ -264,6 +265,7 @@ export class UI {
       case 'workingNext': this.setTab(v, true); this.jumpSection(v === 'growth' ? 'Growth Readiness' : v === 'business' ? 'Your market' : 'Work queue'); break;
       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
       case 'staffHelp': this.hireRoleFocus = ROLES[v] ? v : null; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); this.sfx('click'); break;
+      case 'officeSection': this.select(null); this.setTab(v, true); this.jumpSection(el.dataset.section); this.sfx('click'); break;
       case 'sectionMenu': this.sectionMenuKey = this.tab; this.sheetTall = true; this.renderSheet(true); this.sfx('click'); break;
       case 'sectionMenuClose': this.closeSectionMenu(); this.sfx('click'); break;
       case 'section': this.sectionMenuKey = null; this.sheetTall = true; this.renderSheet(true); this.jumpSection(v); this.sfx('click'); break;
@@ -514,7 +516,7 @@ export class UI {
     const o = typeof id === 'number' && this.sim.s.objects[id];
     if (o && o.type === 'corral') this.do({ type: 'tutFlag', flag: 'corralInspected' });
     this.renderSheet(true);
-    if (id != null) requestAnimationFrame(() => this.keepSelVisible());
+    if (id != null && o?.type !== 'office') requestAnimationFrame(() => this.keepSelVisible());
   }
   renderSheet(force = false) {
     this.syncFeedbackProperty();
@@ -561,7 +563,7 @@ export class UI {
   }
   sheet(title, sub, body, extra = '') {
     if (title === 'Operate') extra += '<button class="btn" data-a="feedback">Customer feedback</button>';
-    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Overlays', 'Overlays'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Your next improvement', 'My yard'], ['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
+    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Manager log', 'Log'], ['Overlays', 'Overlays'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Your next improvement', 'My yard'], ['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
     if (sections) {
       const jumps = [];
       body = body.replace(/<h3>(.*?)<\/h3>/g, (html, text) => {
@@ -577,10 +579,10 @@ export class UI {
       if (menuOpen) extra += `<nav id="section-menu" class="section-menu" data-section-menu="true" aria-label="Choose ${title.toLowerCase()} section"><div class="section-menu-head"><b>Choose section</b><button class="btn sm" data-a="sectionMenuClose" aria-label="Close section menu">Close</button></div><div class="section-menu-options">${jumps.join('')}</div></nav>`;
       extra += `<nav class="section-shortcuts" aria-label="${title} sections">${jumps.join('')}${title==='Operate'?'<button data-a="feedback">Feedback</button>':''}</nav>`;
     }
-    const build=title==='Build';
+    const build=title==='Build', office=title==='Office';
     // Keep completion and work assignment controls outside the collapsible information body.
     const actions = [];
-    if (this.sel != null) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
+    if (this.sel != null && !office) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
       const cmd = button.match(/data-cmd='([^']*)'/);
       if (!cmd) { if (/data-a="(?:staffHelp|verticalReview)"/.test(button)) { actions.push(button); return ''; } return button; }
       let type; try { type = JSON.parse(cmd[1]).type; } catch { return button; }
@@ -588,7 +590,7 @@ export class UI {
       actions.push(button); return '';
     });
     const actionRail = actions.length ? `<div class="dock-actions" aria-label="Task actions">${actions.join('')}</div>` : '';
-    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}${actionRail}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
+    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}${office?' office-panel':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}${actionRail}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
   }
 
   dockSummary(title,sub) {
@@ -1052,7 +1054,7 @@ export class UI {
       ? this.cmdBtn(`Delegate to ${name}`, action, 'pri')
       : d.status === 'missing' ? `<button class="btn pri" data-a="staffHelp" data-v="${d.role}">Review ${name} hire · ${money(ROLES[d.role].wage, true)}/day</button>` : '');
   }
-  jobWait(t) {
+  jobWait(t, available = null) {
     if (t.vendor) { const h = Math.max(0, Math.ceil((t.vendor - this.sim.s.t) / 60)); return h ? `Vendor booked: response time ~${h}h; the repair is completed on arrival (no staff work hours).` : 'Vendor arriving now; the repair completes on arrival.'; }
     const st = this.sim.s.staff.find(x => x.id === t.assigned);
     if (!st) return 'Assigned worker is unavailable; review staffing.';
@@ -1060,8 +1062,9 @@ export class UI {
     if (!t.queued) return t.prog ? 'Work in progress; assignment stays with this worker.' : 'Travelling to the job; assignment stays with this worker.';
     if (st.role !== 'owner' && !this.sim.onShift()) return 'Queued for the next 7 AM staff shift.';
     const booked = t.workBooked === st.id && t.workBookedDay === this.sim.day;
-    if (!booked && this.sim.workRemaining(st) < this.sim.taskHours(t)) return 'Queued; insufficient capacity today. Waiting for the daily reset.';
-    return `Queued behind this worker’s current jobs; ${this.sim.workRemaining(st)}h available today${t.ownerOverride ? ' · explicit Owner choice' : ''}.`;
+    const left = available ?? this.sim.workRemaining(st);
+    if (!booked && left < this.sim.taskHours(t)) return 'Queued; insufficient capacity today. Waiting for the daily reset.';
+    return `Queued behind this worker’s current jobs; ${left}h available today${t.ownerOverride ? ' · explicit Owner choice' : ''}.`;
   }
   officeCoverageHtml() {
     const sim = this.sim, s = sim.s;
@@ -1070,6 +1073,40 @@ export class UI {
     const clerk = s.staff.some(st => st.role === 'clerk');
     const message = servers.length ? `Office covered by ${servers.map(a => ROLES[a.role].name).join(' + ')} · ${s.officeQ.length} waiting.` : `Office uncovered · ${s.officeQ.length} waiting. ${clerk ? 'Clerk coverage is 8 AM–6 PM.' : 'The Owner is away or lacks office capacity.'}`;
     return `<p class="note"><b>${esc(message)}</b>${clerk ? ' Clerk coverage is 8 AM–6 PM.' : ' A Clerk covers 8 AM–6 PM for ' + money(ROLES.clerk.wage) + '/day.'}</p>` + (clerk ? '' : '<button class="btn sm" data-a="staffHelp" data-v="clerk">Review office coverage</button>');
+  }
+  officePanelHtml() {
+    const sim = this.sim, s = sim.s, p = officePanelState(sim);
+    const jump = (label, tab, section) => `<button class="btn sm" data-a="officeSection" data-v="${tab}" data-section="${section}">${label}</button>`;
+    const first = p.decisions[0];
+    const reason = first?.sev === 'critical' ? 'Critical' : first?.ownerReview === 'failed' ? 'Staff response failed' :
+      first?.ownerReview === 'coverage' ? 'Staff coverage ended' : first?.ownerReview === 'owner' ? 'You took over' : p.manual ? 'Manual review' : 'Owner decision';
+    const pending = first ? `${reason} · ${first.who || 'Tenant'}: ${first.text}` : 'No decisions waiting for you.';
+    const requestWait = p.delegatedRequests.filter(r => r.waiting).length;
+    const blocked = p.delegatedJobs.filter(t => t.unreachable != null && !t.vendor).length;
+    const queued = p.delegatedJobs.filter(t => t.queued && t.unreachable == null && !t.vendor).length;
+    const vendor = p.delegatedJobs.filter(t => t.vendor).length;
+    const blocker = p.delegatedJobs.find(t => t.unreachable != null || t.queued || t.vendor);
+    const worker = blocker && s.staff.find(st => st.id === blocker.assigned);
+    const workerLeft = worker ? Math.max(0, (ROLES[worker.role]?.workHours || 0) - (worker.workDay === sim.day ? worker.workUsed || 0 : 0)) : 0;
+    const ownerDoing = !p.owner ? 'No Owner available' : !p.ownerAgent ? 'Owner needs an office' : p.ownerTask ? p.ownerTask.label :
+      p.ownerAgent.st === 'office' ? 'At the office' : p.ownerAgent.st === 'home' ? 'Returning to office' : 'Between jobs';
+    const authorityAlert = p.manager ? '<p class="office-authority-alert"><b>Manager authority active:</b> automatic asking-rent changes, vendor/cart spending and lien notices. Manual request review does not stop these.</p>' : '';
+    return `${authorityAlert}<div class="office-rows">
+      <section class="office-row" aria-label="Counter coverage"><b>Counter · ${esc(p.counter)}</b><small>8 AM–6 PM · ${p.waiting} waiting · ${p.serving} being served</small><button class="btn sm" data-a="staffHelp" data-v="clerk">Review coverage</button></section>
+      <section class="office-row" aria-label="Owner capacity"><b>Owner · ${p.remaining}h of ${p.capacity}h available today</b><small>Office charged ${p.officeCharged}h · Property charged/reserved ${p.propertyCharged}h</small><small>${esc(ownerDoing)} · ${p.ownerQueued} queued · ${p.completedJobs} property jobs recorded complete today</small><div class="row wrap">${jump('Work queue', 'operate', 'Work queue')}<button class="btn sm" data-a="policy" data-v="ownerChores" aria-pressed="${!!s.policies.ownerChores}">Owner chores: ${s.policies.ownerChores ? 'On' : 'Off'}</button></div></section>
+      <section class="office-row" aria-label="Owner decisions"><b>Your decisions · ${p.decisions.length}</b><small class="office-preview">${esc(pending)}</small><button class="btn sm" data-a="requests" ${p.decisions.length ? '' : 'disabled'}>Review decisions</button></section>
+      <section class="office-row" aria-label="Delegated work"><b>Delegated · ${p.delegatedRequests.length} requests · ${p.delegatedJobs.length} property jobs</b><small>Requests: ${p.delegatedRequests.length - requestWait} handling · ${requestWait} waiting for hours/staff. Jobs: ${p.delegatedJobs.length - queued - vendor - blocked} active · ${queued} queued · ${vendor} vendor booked${blocked ? ` · ${blocked} access blocked` : ''}.</small>${blocker ? `<small>${esc(blocker.label)}: ${esc(this.jobWait(blocker, workerLeft))}</small>` : ''}<div class="row wrap"><button class="btn sm" data-a="requests" data-v="settings">Requests &amp; responses</button>${jump('Work queue', 'operate', 'Work queue')}</div></section>
+    </div>
+    <details class="office-authority" data-yard-detail="office-authority"><summary>Staff &amp; authority · ${money(p.payroll, true)}/day payroll</summary>
+      <p>Capacity is charged or reserved when work is assigned; it is not elapsed labor or completed work. The completed count records finished property jobs only; office service and travel are excluded.</p>
+      <p><b>Clerk ${money(ROLES.clerk.wage, true)}/day:</b> counter coverage 8 AM–6 PM, first before the Owner, plus eligible requests. Each customer served by the Owner charges 0.5h. <b>Porter ${money(ROLES.porter.wage, true)}/day:</b> make-ready, cleaning and permitted cart recovery. <b>Tech ${money(ROLES.tech.wage, true)}/day:</b> repairs and enabled preventive maintenance. Owner, Porter and Tech each have 8 daily capacity hours.</p>
+      <p><b>Manager ${money(ROLES.manager.wage, true)}/day:</b> does not serve the counter. Automatically commissions ready units, books qualifying delayed/urgent vendors ($250 simple / $650 complex), and buys $${CART_COST} carts for qualifying empty corrals (at most one per corral per game day). Vendor/cart purchases check available cash after bills and recommended reserve; there is no separate approval or daily spending budget.</p>
+      <p>Every 30 game days, the Manager adjusts eligible asking rents at high/low occupancy, approximately +3% / −3% with rounding and market bounds. Existing lease rents are not raised by this automation. Retention is <b>${s.policies.retention ? 'On' : 'Off'}</b>: eligible staff may offer 10% off to price-driven move-outs; acceptance changes that tenant’s lease rent.</p>
+      <p>Request mode: <b>${p.manual ? 'Owner reviews every request' : 'Staff handle eligible requests'}</b>. Critical requests and explicit Owner takeovers stay with you. Manual review controls requests only; it does not turn off Manager pricing, purchases or lien notices. Those Manager powers have no separate switches.</p>
+      <p>Automatic lien notices: <b>${s.policies.autoNotice ? 'On' : 'Off'}</b>; a Manager sends them anyway. An unresolved lien-eligible account also advances to notice after 14 days. Late fee: <b>${money(s.policies.lateFee || 0)}</b>, once after 5 days late; 15-day overlock: <b>${s.policies.overlock ? 'On' : 'Off'}</b>. Resolution: <b>${s.policies.resolution === 'auction' ? 'Auction' : 'Clean-out/donation'}</b>. Scheduled resolution can charge $80 haul-away for a junk auction lot or $120 for clean-out/donation, without another approval. Payroll accrues at 7 AM; operating bills settle weekly and scheduled debt payments debit automatically.</p>
+      ${p.lastAction ? `<p><b>Latest logged action · Day ${dayOf(p.lastAction.t)} ${fmtTime(p.lastAction.t)}:</b> ${esc(p.lastAction.msg)}</p>` : '<p>No staff actions logged yet.</p>'}
+      <div class="row wrap">${jump('Staff', 'operate', 'Staff')}${jump('Policies', 'operate', 'Policies')}${jump('Asking rents', 'business', 'Asking rents')}${jump('Collections', 'business', 'Collections')}${p.manager || p.lastAction ? jump('Manager log', 'operate', 'Manager log') : ''}</div>
+    </details>`;
   }
   taskActions(o) {
     const s = this.sim.s; const t = s.tasks.find((x) => x.obj === o.id);
@@ -1202,10 +1239,7 @@ export class UI {
           <div class="row wrap" style="margin-top:10px"><button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'buyCarts', corral: o.id, n: 1 })}'>Buy 1 cart (${money(CART_COST)})</button><button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'buyCarts', corral: o.id, n: 2 })}'>Buy 2 (${money(CART_COST * 2)})</button></div>
           <p class="note">Interior customers park at loading, take a cart here, go through the wide door and down the hallway. Empty corral = waiting or carrying by hand.</p>`);
       }
-      case 'office': {
-        const staff = esc(s.staff.map((st) => ROLES[st.role].name + ' ' + st.name).join(', '));
-        return this.sheet('Office', `Open ${OFFICE_HOURS[0]} AM - ${OFFICE_HOURS[1] - 12} PM`, `<div class="kv"><span>Waiting customers</span><span>${s.officeQ.length}</span><span>Staff</span><span>${esc(staff)}</span><span>Service quality</span><span>${pct(s.exp.service)}</span></div><p class="note">Walk-in prospects need someone at the office. The Owner serves when not out on a task; a Clerk covers office hours.</p>`);
-      }
+      case 'office': return this.sheet('Office', 'Counter, capacity & decisions', this.officePanelHtml());
       case 'shell': {
         const units = sim.objs('unit').filter((u) => D.shellAt[u.y * s.W + u.x] === o.id);
         const hv = D.hvac[o.id];

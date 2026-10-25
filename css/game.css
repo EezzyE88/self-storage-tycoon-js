@@ -729,6 +729,19 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .sheet .x { min-width:44px; min-height:44px; }
 #ui .sheet .body { padding:8px 10px; flex:1; }
 #ui .sheet.compact:not(.build-dock) .detail-content { display:none; }
+/* Office is actionable in its compact inspector; details remain local and scrollable. */
+#ui .sheet.office-panel.compact { max-height:min(48dvh, calc(100dvh - var(--controls-bottom, 170px) - 80px - var(--safe-b))); }
+#ui .sheet.office-panel .dock-summary { display:none; }
+#ui .sheet.office-panel.compact .detail-content { display:block; }
+#ui .sheet.office-panel.compact:not(.build-dock) .body { flex:0 1 auto; }
+#ui .office-row { display:grid; gap:4px; padding:8px 0; border-bottom:1px solid var(--line); }
+#ui .office-row b { font-size:14px; overflow-wrap:anywhere; }
+#ui .office-row small { display:block; color:var(--muted); font-size:12px; line-height:1.35; overflow-wrap:anywhere; }
+#ui .office-row .btn { min-height:44px; justify-self:start; }
+#ui .office-preview { display:-webkit-box !important; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+#ui .office-authority-alert { padding:8px; background:#fff0cf; border-radius:8px; font-size:12px; line-height:1.4; }
+#ui .office-authority summary { min-height:44px; padding:12px 0; font-weight:700; cursor:pointer; }
+#ui .office-authority p { font-size:13px; line-height:1.45; overflow-wrap:anywhere; }
 #ui .sheet.tall .dock-summary, #ui .build-dock .dock-summary { display:none; }
 #ui .dock-metrics { display:flex; gap:12px; justify-content:space-between; }
 #ui .dock-metrics > div { min-width:0; flex:1; }
