@@ -1,0 +1,100 @@
+{
+  "base_commit": "d84fb59171152e670a5d3d2940830310fd7cc1d9",
+  "branch": "candidate/borrowing-review-20261025",
+  "production_changes": [
+    "js/ui.js"
+  ],
+  "test_environment": "Node v24.22.1; actual production UI/Sim methods with DOM/renderer doubles and disposable seeded state",
+  "results": [
+    {
+      "test": "borrowing-review",
+      "groups_or_checks": 16,
+      "status": "PASS",
+      "log": "borrowing-review.log"
+    },
+    {
+      "test": "tpause_policy",
+      "groups_or_checks": 13,
+      "status": "PASS",
+      "log": "tpause_policy.log"
+    },
+    {
+      "test": "toffice_panel",
+      "groups_or_checks": 9,
+      "status": "PASS",
+      "log": "toffice_panel.log"
+    },
+    {
+      "test": "tc24_requests",
+      "groups_or_checks": 53,
+      "status": "PASS",
+      "log": "tc24_requests.log"
+    },
+    {
+      "test": "tentrance_preview",
+      "groups_or_checks": 11,
+      "status": "PASS",
+      "log": "tentrance_preview.log"
+    },
+    {
+      "test": "tfinancial_trust",
+      "groups_or_checks": 5,
+      "status": "PASS",
+      "log": "tfinancial_trust.log"
+    },
+    {
+      "test": "tbplus",
+      "groups_or_checks": 21,
+      "status": "PASS",
+      "log": "tbplus.log"
+    },
+    {
+      "test": "tbuildability_save",
+      "groups_or_checks": 1,
+      "status": "PASS",
+      "log": "tbuildability_save.log"
+    }
+  ],
+  "syntax": "PASS",
+  "diff_whitespace": "PASS",
+  "browser_layout_touch_physical_Safari": "NOT TESTED",
+  "ordinary_saves_used": false,
+  "new_saved_fields": false,
+  "prior_evidence": "Existing tracked evidence unchanged. New evidence lives only in this directory.",
+  "attempts": [
+    {
+      "log": "borrowing-review-attempt1.log",
+      "result": "Fixture error: Maple has no sb object; fixed disposable Free Build setup."
+    },
+    {
+      "log": "borrowing-review-attempt2.log",
+      "result": "Fixture error: DOM double missing dataset; added dataset. Incorrect save.js preservation path also corrected before the passing run."
+    },
+    {
+      "log": "borrowing-review-attempt3.log",
+      "result": "15 groups passed before adding construction-context parity and final label/markup assertions."
+    }
+  ],
+  "boundaries": {
+    "push": false,
+    "publication": false,
+    "merge": false,
+    "normal_save_access": false
+  },
+  "sha256": {
+    "borrowing-review-attempt1.log": "74d00002299d588e5d008b942d369e3996edfb8299c29c7cbf3e1c97878764c4",
+    "borrowing-review-attempt2.log": "7c6c4f4c3a34745a572a257d8dd22b24775ca50d024a3ea1577f4c47b18f9e2f",
+    "borrowing-review-attempt3.log": "0492e3e98973fab73cff1efc6d93a12bc97c100b549f4dd0ecbb2370961d6c70",
+    "borrowing-review.log": "b4c2036777e9c541e7b74a573c7d776ad8aebfe6678e2d0daac95c285e63bfb7",
+    "diff-check.log": "9783e98677846f3b2ab0556b2a173bf205249612fcbab028769b45cf911538ca",
+    "preservation.json": "878bc42711e1f77e35ad8514abb4507700195b292ffedba7ea3dbbc79f47b019",
+    "syntax.log": "8f9525aa163346acf03adea2823dad05371ce75b2fc7d60f8cf3c1d3ad4bd974",
+    "tbplus.log": "0ab7172c8fba3f65b91334124c2977bbdea593f217ed161283ae2796c5e0ae9d",
+    "tbuildability_save.log": "5f6caa3e283ce16eaa665fa228a18603125afe8a22792fb0b0d83a4459294014",
+    "tc24_requests.log": "35274220ada5038102d3b27557f336d5723ae40812adca7cb98a4819d750958c",
+    "tentrance_preview.log": "f97778127778a6e88034784a6386f6e3147f930f94e857048afd3c5908c6b678",
+    "tfinancial_trust.log": "76ec4c4372dad0c61ff22d18fcb8e12a489202c4cf9d5e7eb03a4cece1347f89",
+    "toffice_panel.log": "0b53550d2d1de855a9154f14c950c771059816c9eb66d7a719ab64c54d687414",
+    "tpause_policy.log": "d66ca0705a1e9187c950ed78120de1c01b882abe6a37b54c336db7b346d8d6f1"
+  }
+}

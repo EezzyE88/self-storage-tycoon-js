@@ -1,6 +1,6 @@
 # Project overview and finish target
 
-Reconciled October 24, 2026, America/Los_Angeles. Exact source and evidence: [CURRENT-STATUS.md](CURRENT-STATUS.md).
+Reconciled October 25, 2026, America/Los_Angeles. Exact source and evidence: [CURRENT-STATUS.md](CURRENT-STATUS.md).
 
 ## Goal
 
@@ -10,13 +10,13 @@ A satisfying self-storage ownership game for iPhone Safari. The property is the 
 
 The JavaScript/Three.js game includes scenarios and Sandbox, construction and four-way placement, three playable floors, leasing and bills, finance/reserves and investment guidance, staff and Owner work capacity, restoration, career/portfolio systems and local save/Continue/recovery. Open House work improved the existing foundation. Scoped earlier iPhone acceptances remain valid for the states and builds actually tested; they do not certify every successor.
 
-## Latest candidate work
+## Latest integrated candidate work
 
-After current master ee39e09, candidates added explicit fast reserve waiting and Sandbox repairs, light-service and request fixes, automatic Sandbox readiness, optional lighting/security upgrades and their review/rotation repairs. Published private review currently maps to d6abaa3 through retained source evidence. The compact Office successor explains counter coverage, Owner workload, decisions and delegated work with existing controls and financial-authority disclosure. Its focused script checks passed; browser and physical Safari remain untested.
+Exact 137909c follows the Office panel, waiting-count repair and entrance-route preview repair. It requires review and explicit confirmation for expansion loans and bank-conversation draws using existing financial terms and commands. Runtime source remains exact while Office planning/docs are reconciled. Proposals for priorities, observable delegation and new authority controls remain unimplemented.
 
 ## Current priority
 
-Reconcile and preserve existing work before more changes. Review the implemented Office candidate before expanding it. Proposed improvements are one actionable operating priority, observable completed delegation and clearer Manager authority before hiring. These are design proposals, not approved features or a new authority system. See the [Office brief](design/office/Office-Design-Brief-20261024.md).
+Finish the already-authorized source integration responsibly. The required native gate is red (67 PASS, 10 FAIL, 18 ERROR); master merge is held pending triage. Preserve earlier scoped passes, inspect complete captured output and repair confirmed issues without retuning economics or weakening tests. Claude's ongoing browser work and public-host access diagnosis remain separate; neither is a completed acceptance result.
 
 ## Product evidence and limits
 

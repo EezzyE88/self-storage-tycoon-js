@@ -1,0 +1,17 @@
+PASS all offered expansion amounts open review; legacy command cannot bypass it
+PASS term quote is pure and uses authoritative rate, limit, payment, due day and reserve
+PASS Back and repeated confirmation cannot borrow; confirmed term loan matches parent command exactly
+PASS changed term terms, cash, existing debt, date or eligibility require a fresh confirmation
+PASS tutorial, Free Build, too-small and excessive term loans retain existing ineligibility
+PASS bank Draw opens existing projection without borrowing, answering or allowing request repaint
+PASS bank confirmation dispatches original request once and matches parent economics
+PASS bank draw ignores stale construction context and does not buy construction
+PASS changed bank quote or reduced credit room cannot borrow on old confirmation
+PASS removed or replaced bank response cannot be confirmed through a stale review
+PASS Not now keeps the original nonborrowing behavior
+PASS manual Pause and other panel or request blocks survive both confirmations
+PASS property switches invalidate both reviews without touching either property
+PASS ordinary credit review, Back, confirm and repayment retain exact parent state and markup
+PASS construction funding context and its existing projections remain exact parent behavior
+PASS no production simulation, finance, Office model, entrance, CSS or save implementation changed
+16 borrowing-review groups passed

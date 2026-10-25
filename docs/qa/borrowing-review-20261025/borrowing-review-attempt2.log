@@ -1,0 +1,17 @@
+PASS all offered expansion amounts open review; legacy command cannot bypass it
+PASS term quote is pure and uses authoritative rate, limit, payment, due day and reserve
+PASS Back and repeated confirmation cannot borrow; confirmed term loan matches parent command exactly
+PASS changed term terms, cash, existing debt, date or eligibility require a fresh confirmation
+PASS tutorial, Free Build, too-small and excessive term loans retain existing ineligibility
+file:///workspace/scratch/40d3cb6a92ec/borrowing-review/js/ui.js:1776
+    if(ownerCount) { const b=document.createElement('button'); b.className='convo inbox-chip';b.dataset.a='requests';b.textContent=`${ownerCount} owner request${ownerCount===1?'':'s'} · paused · Review`;frag.appendChild(b); }
+                                                                                                         ^
+
+TypeError: Cannot set properties of undefined (setting 'a')
+    at UI.renderFeed (file:///workspace/scratch/40d3cb6a92ec/borrowing-review/js/ui.js:1776:106)
+    at bank (file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:35:68)
+    at file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:84:24
+    at test (file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:38:31)
+    at file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:83:1
+
+Node.js v24.22.1

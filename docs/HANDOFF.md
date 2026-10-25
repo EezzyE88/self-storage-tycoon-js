@@ -1,31 +1,15 @@
-# Project continuation handoff
+# Start here — borrowing integration
 
-Updated October 24, 2026, America/Los_Angeles.
+Updated October 25, 2026, America/Los_Angeles.
 
-1. Read [CURRENT-STATUS.md](CURRENT-STATUS.md), then [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-2. Reverify live master, the Office snapshot and documentation branch. The records here are a checkpoint, not a substitute for current refs.
-3. Use [RECOVERY-INDEX.md](RECOVERY-INDEX.md) and the original full handoff for exact recovery and the adopted runtime. Keep the runtime DOCX unchanged and apply it subject to higher-priority instructions.
+Read CURRENT-STATUS.md, checkpoints/20261025-borrowing/CHECKPOINT.md and its INVENTORY.json first. Exact game source is 137909c1fe88b90d14af725854672d87c2ec2acd on d84fb59171152e670a5d3d2940830310fd7cc1d9. The integration retains fef20fca0405d6f20dfd2bab05e41c5e4160acee Office planning/docs with identical candidate runtime.
 
-## Source to carry forward
+Eddie authorized update, merge and push. The required current native gate completed with 67 PASS, 10 FAIL and 18 ERROR, so master remains at freshly verified ee39e0986718ce33fb84018a2c108249f793e3f8. Isolated integration is synchronized for repair; do not misreport it as a completed master merge. Diagnose the recorded gate output before changing source or assertions. The original 129 focused checks and repeated 16 borrowing groups remain scoped evidence, not proof of a green full gate.
 
-Original Office `17f49f9d677931460e39ac18aff0db356ae49e45` has parent `d6abaa382c5f495203e6efab6eaacf416e84c301` and tree `e01001568901f3554163e5d5919ff9a678a629d2`. GitHub snapshot `b7092e08d89fcd882c5d2d82db6ac1eb7631af42` reproduces that complete tree and parent. Keep both identities explicit. The exact original remains in the incremental bundle under `checkpoints/20261024-sync/`; it is not claimed to be the remote snapshot commit.
+Native Git CLI push is unavailable; connector synchronization creates a different commit identity. Exact original 137909c/repair history remains in checkpoints/20261025-borrowing/borrowing-repairs-exact.bundle, requiring b7092e0. The earlier exact Office bundle and all candidate/proposal docs remain intact. Older orientation files are preserved verbatim in history/before-borrowing-sync-20261025/.
 
-This documentation checkpoint is a successor of the snapshot on `maintenance/project-sync-20261024`. It adds no game behavior. Master was observed at `ee39e0986718ce33fb84018a2c108249f793e3f8` and remains outside this cleanup's changes.
+Public borrowing Site V1 is active/public with exact runtime provenance, but external access is not verified: anonymous HEAD 403, cloud Chrome WebGL failure and collaborator proxy refusal remain distinct. Current Site controls do not identify or expose the blocking edge/proxy policy. Do not repeat blocked attempts, alter game code to compensate, or replace access verification with native QA.
 
-## Next unfinished unit
+Claude's local exact-source browser QA is reportedly running after bundle recovery; finished results have not been provided. Preserve that work and avoid duplicating it. The large handoff has a confirmed size/ZIP-integrity discrepancy; the smaller runtime/QA package passes checks. See CURRENT-STATUS for details.
 
-Complete focused browser review of the existing Office source using disposable state at 375×667 and 390×844. Preserve the five existing passing script results; current tree equality supports retaining them. Verify scrolling and close access, existing action destinations, waiting versus served customers, reserved capacity versus completed work, Manager authority, camera and manual Pause. Report PASS, FAIL or NOT TESTED with evidence. No supported browser was run in this cleanup.
-
-Later Office proposals are in `design/office/`. Do not implement them merely because they are now backed up. Existing d6abaa3 collaborator assignments remain separate; preserve their completed evidence when available rather than repeating unaffected work.
-
-## Release and coordination
-
-Pushing source, publishing a playable version, owner acceptance and merging master are separate. The latest request authorized project reconciliation and synchronization. It does not establish Office gameplay acceptance or authorize all future design ideas. The three deployment versions and their access were checked; no new deployment or merge occurred. Current source details and release limits are in CURRENT-STATUS.
-
-Use only EezzyE88/self-storage-tycoon-js. No force-push, branch deletion, silent promotion, save replacement or rejected Coastal revival. Maintain manual Pause, camera position, simulation and economics. Do not open normal company storage for source housekeeping. Original source history and company saves are different recovery concerns.
-
-The prior failed direct push lacked credentials; the snapshot is the supported synchronization result, not a claim that original commit upload succeeded. The earlier unauthorized-push rejection remains historical and must not be confused with this later explicitly authorized operation.
-
-## Evidence and history
-
-The original large handoff and runtime remain unchanged. This checkpoint supplies current status and Office companion proposals without rebuilding that package. Prior orientation files are preserved verbatim in `history/before-project-sync-20261024/`. Original dated candidate notes, five logs and preservation hashes are retained. No new game tests or physical device acceptance were performed.
+Use only EezzyE88/self-storage-tycoon-js. Preserve manual Pause, camera, terms/eligibility, simulation, economics, original commits/refs, source evidence, normal saves and existing deployments. No force-push, branch deletion, rejected Coastal revival or inclusion of draft PR #2. No new Site deployment is part of GitHub synchronization. Resolve the native gate, then complete the already-authorized master merge and verify it; record actual browser/device results separately.

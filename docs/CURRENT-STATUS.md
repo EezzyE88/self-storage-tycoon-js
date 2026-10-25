@@ -1,70 +1,49 @@
 # Current project status
 
-October 24, 2026, America/Los_Angeles. This reconciliation supersedes older current-state summaries on this branch. Dated evidence retains its original scope.
+October 25, 2026, America/Los_Angeles. Current integration and evidence reconciliation; dated original evidence remains unchanged.
 
-## Source and authority
+## Source and merge state
 
-| Role | Exact identity | Disposition |
-| --- | --- | --- |
-| Live default branch | `master` at `ee39e0986718ce33fb84018a2c108249f793e3f8` | Preserve; not changed by this cleanup |
-| Intended upstream candidate | `candidate/unit-upgrade-growth-rotation-20261024` at `d6abaa382c5f495203e6efab6eaacf416e84c301` | Existing published review candidate |
-| Original Office implementation | `17f49f9d677931460e39ac18aff0db356ae49e45` | Original local Git object retained in recovery bundle |
-| GitHub Office snapshot | `snapshot/compact-office-panel-17f49f9-20261024` at `b7092e08d89fcd882c5d2d82db6ac1eb7631af42` | Exact same full source tree and parent as original Office |
-| Office full source tree | `e01001568901f3554163e5d5919ff9a678a629d2` | Independently reproduced by GitHub tree creation |
-| Current documentation checkpoint | `maintenance/project-sync-20261024` | Documentation and recovery additions only over the Office snapshot |
+- Verified remote master before this operation: **ee39e0986718ce33fb84018a2c108249f793e3f8**. It remains unchanged because the required native gate is red.
+- Latest intended game source: exact **137909c1fe88b90d14af725854672d87c2ec2acd**, parent **d84fb59171152e670a5d3d2940830310fd7cc1d9**. Its runtime includes the Office waiting-count repair, interior entrance disclosure and explicit borrowing reviews.
+- Office documentation/planning checkpoint **fef20fca0405d6f20dfd2bab05e41c5e4160acee** is combined with that game source on isolated integration/borrowing-sync-20261025. Its planning documents remain proposals, not new authority/features.
+- Eddie authorized update, merge and push. Update/synchronization can proceed; master merge is held for a failed required native gate. This does not erase that authorization or establish browser/device acceptance.
+- Native Git push lacks credentials. Connector synchronization creates a new labelled integration commit. Exact original 137909c and its two repair ancestors are retained in the incremental recovery bundle. Do not claim the connector SHA is the original candidate SHA.
 
-Eddie requested that project affairs be reconciled and everything updated and pushed before more potential changes. That authorizes this synchronization. It does not implement the later Office proposals or establish gameplay acceptance. Implementation, source synchronization, deployment, owner acceptance and master merge remain distinct states.
+See [checkpoint and complete failure evidence](checkpoints/20261025-borrowing/CHECKPOINT.md).
 
-Direct Git push failed with missing GitHub credentials. The connected GitHub API therefore created the explicitly labelled source-identical snapshot above. The original 17f49f9 commit was not altered or impersonated and is not claimed as a remote branch head. Earlier automatic rejection of an unauthorized Office push remains historical evidence; the current explicit synchronization request supplies the authorization that was previously missing.
+## Incorporated candidate chain
 
-## Current candidate chain
+Master ee39e09 → explicit fast reserve and Sandbox waiting/hardening → light/request fixes and automatic Sandbox readiness → optional unit lighting/security plus review/obstruction fixes → d6abaa3 Growth-return rotation → original Office 17f49f9 / identical b7092e0 snapshot → **84fe72c** waiting vs served counts → **d84fb59** interior entrance-route preview → **137909c** borrowing review.
 
-`ee39e09` doorway-jamb repair → `3c92a5e` fast reserve → `38c4db3` Sandbox reserve → `6d7b51e` hardening and annual-playtest source → `c0cb562` light-service/request/commissioning guidance repairs → `b89d711` automatic Sandbox readiness → `6e278d6` lighting/security upgrades → `1774b0f` review/deselection/obstruction fixes → `d6abaa3` Growth-return rotation → original Office `17f49f9` / source-identical snapshot `b7092e0`.
+The exact source/checkpoint preserves prior candidate work. Office counter coverage, Owner charged/reserved capacity, recorded completions, decisions, delegated work and Manager authority disclosures remain present. Expansion loans and bank-conversation draws now require review and explicit confirmation; they reuse original financial commands/projections. Loan terms, eligibility and economics were not changed by borrowing review.
 
-Later candidate changes are not automatically accepted master changes. The intentional costs and maintenance behavior of the upgrades are upstream work; Office preservation is measured against d6abaa3, not against every older master.
-
-## Office delivered and verified scope
-
-Four compact rows show actual counter coverage, Owner charged/reserved capacity and separate recorded property-job completions, pending Owner decisions and delegated work. Waiting and served customers are separate. A Manager never counts as a counter server. Existing controls provide coverage/hire review, Work queue, request decisions/settings, Owner chores, Staff, Policies, Asking rents, Collections and Manager log. Manager financial authority is disclosed prominently.
-
-Existing production edits are limited to `js/ui.js` and `css/game.css`; `js/officepanel.js` is a new read-only derived view. No new authority rules, scheduling, prices, wages, RNG, economics coefficients or save schema were added. Simulation, data, finance, economics, main loop, save modules and renderer match the exact parent. Original test logs and the preservation record are unchanged.
+## Evidence and current merge blocker
 
 | Evidence | Result | Boundary |
 | --- | --- | --- |
-| Office focused script | 9 groups PASS | Retained implementation-session result |
-| Pause policy | 13 checks PASS | Retained result |
-| Property UI | 22 checks PASS | Retained result |
-| Traffic and delegation | 20 groups PASS | Retained result |
-| Save recovery | 14 checks PASS | Disposable fixtures/autosave double; not device storage |
-| Current synchronization | Full snapshot tree equality, documentation diff checks and recovery-artifact hashes | No new game tests |
-| Office browser layout, touch and physical Safari | NOT TESTED | No gameplay or owner-acceptance claim |
+| Borrowing-focused implementation validation | 129 native checks/groups retained | Includes borrowing 16, Pause 13, Office 9, requests 53, entrance 11, financial trust 5, B+ 21 and save/load 1 |
+| Subsequent borrowing regression and portable-package validation | 16 groups passed again | Native methods/DOM doubles; not a browser pass |
+| Required current native gate on unchanged candidate runtime | **67 PASS / 10 FAIL / 18 ERROR**, all 95 attempted | Full outputs retained; master merge held |
+| External Claude exact-source browser QA | Reported ongoing at both sizes | Screenshot reports recovery and local Chromium setup; completed result artifacts not supplied here |
+| Public-deployment/browser/physical Safari acceptance | **NOT TESTED / blocked** | No replacement by native evidence or publication status |
 
-Chromium was missing during implementation; attempted browser downloads were invalid/truncated. That failure evidence is retained. This housekeeping task does not repeat the failed installation path or certify rendering, WebGL, performance or touch.
+Some current-gate errors name a CPU renderer-loader import of unitupgrades.js. Other failed checks concern finance/cancellation amounts, commissioning, menu markup, numbering parity, payback and infill finances. These require triage; no test expectation was weakened and no game coefficient was changed. The earlier narrow passing checks were never whole-gate certification. Avoid repeating unaffected annual simulations; finish this registered gate and the existing external QA.
 
-## Deployments and source relationships
+## Hosting and external access
 
-All three Site/version/deployment records were freshly checked and report succeeded. No deployment, audience or Site content was changed. No live served assets were downloaded in this cleanup.
+A separate borrowing Site was published at [137909c playtest](https://sst-borrowing-137909c-playtest.rainy-ash-3714.chatgpt.site/), version 1, hosting source **856ed90cc7fb9110553fc0d10327017e27a7cc13**. Control-plane state is active/public. Initial retained verification reported 49 runtime hashes matched; this environment's browser reached the page but WebGL startup failed. A fresh anonymous HEAD received **403**, cf-ray **a500db1fc8b0f85d-ORD**. No fresh anonymous served-body comparison or external Claude/Perplexity access pass is claimed. Available app logs were empty; the source of the rejection (hosting edge/origin versus retrieval proxy) remains unresolved. There is no exposed edge-security control to repair it, and no custom domain is configured. Do not call the link externally verified.
 
-| Role | Version and access | Hosting commit | Game source relationship |
-| --- | --- | --- | --- |
-| [Fast-reserve review](https://sst-fast-reserve-3c92a5e-review.rainy-ash-3714.chatgpt.site) | V4; custom owner-only access; zero external visitors | `d5225a9db467f697538c00049dc214881720a494` | Retained playtest-package evidence maps 48 runtime files to d6abaa3 |
-| [Open House review](https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site) | V6; public | `d4338597aac5433f3c8afd99e1172f0a14131228` | Earlier publication record identifies game integration 70a4e318f78f2a528a9241186341209ff7eeb3bf |
-| [Protected original](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site) | V62; public | `fbb046d32978d59d44954e30858c4e901b70986a` | Historical pre-Open-House V62 snapshot 0385af2 / original b2c55a6 |
+The older private fast-reserve V4, public Open House V6 and protected original V62 retain their October 24 recorded identities. They were not republished by integration. URL slugs and inherited in-game build labels are not source identities.
 
-Metadata success is not fresh served-byte or rendering verification. Site descriptions and URL slugs are historical. Office is not on these deployments.
+## Artifacts and recovery
 
-## Proposals and pending evidence
+The large borrowing handoff's stored copy was observed at **31,015,735 bytes**, whereas its packaging receipt recorded **37,277,223**. The matching local copy failed ZIP validation. Claude reported 508 missing source files and recovery from its bundled Git history; exact recovery/browser results are collaborator-reported, not independently supplied artifacts. The truncation stage is unknown. Preserve failure evidence and do not advertise that large archive as intact.
 
-- [Office brainstorming](design/office/Office-Brainstorming-20261024.md) and [one-page brief](design/office/Office-Design-Brief-20261024.md) are synchronized design records, not implementation approval. The new recommendations are one operating priority, recorded delegation outcomes and Manager authority before hiring. New permissions, spending caps and persistent activity tracking remain separate future scope.
-- The original broad office conversation was not recovered; the brainstorming document does not claim to reproduce it.
-- Existing Claude/Grok assignments target d6abaa3 lighting/security, Growth-return rotation and Pause. No completed follow-up results were present in the material reviewed here; this is not proof that none exist elsewhere.
-- Year-one/year-two and Director/year-three observations concern older 6d7b51e, with collaborator emulation limits. The recovery reports record the extra year-three evidence. Later repairs must be considered before treating an older finding as a current defect. Helper-selected financial answers are not proof of autonomous staff choices.
-- Coastal is rejected. Stylized comparison 20db0f4 is historical unaccepted work. PR #2 was freshly read as open, draft and unmerged; it remains excluded. Do not combine it with Office.
+The smaller **969,561-byte** Grok runtime/QA package passed all 145 manifest entries and 110 candidate/parent Git-object proofs. It omits full history and historical screenshots while retaining the complete runtime. [Small QA package](https://chatgpt.com/library?file_id=libfile_d9e987e31d5c819187f7d79d8c994729&account_id=personal). No package substitutes for verified public access.
 
-## Release readiness and unfinished work
+[Recovery index](RECOVERY-INDEX.md) and [checkpoint inventory](checkpoints/20261025-borrowing/INVENTORY.json) preserve source IDs, failure evidence and exact-history recovery. Earlier orientations are copied verbatim under history/before-borrowing-sync-20261025/.
 
-Source and document preservation can be completed independently of release acceptance. Office needs focused real-browser review at 375×667 and 390×844: internal scrolling/close access, direct destinations, queue and capacity labels, disclosure, camera retention and manual Pause, using disposable state. Physical Safari remains a separate untested result. Do not repeat unaffected annual simulations or already-passing checks merely for documentation changes.
+## Next unfinished unit
 
-No new Office feature work is authorized by this cleanup. No master merge or replacement of a protected playable deployment has been performed. Preserve accepted evidence, existing deployments, 2096ef6 and V60/V62 recovery anchors and all normal saves.
-
-See [handoff](HANDOFF.md), [recovery index](RECOVERY-INDEX.md) and [checkpoint inventory](checkpoints/20261024-sync/INVENTORY.json).
+Resolve the required native-gate failures without weakening checks or changing intended economics/authority; rerun affected checks and the registered gate, then complete the already-authorized master merge and verify remote refs/tree. Preserve Claude's current run, all prior evidence and normal saves. Public access diagnosis remains separate. Coastal remains rejected; PR #2 remains excluded; Office design recommendations remain proposals.

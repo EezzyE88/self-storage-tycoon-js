@@ -15,7 +15,7 @@ import { climateSuggestionText } from './climateavailability.js';
 import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget, reviewRemedy } from './complaints.js';
 import { complaintCopy, requestCopy } from './feedbackcopy.js';
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
-import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK } from './data.js';
+import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK, BILLING_CYCLE_DAYS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
@@ -311,11 +311,13 @@ export class UI {
       case 'complaintReview': this.select(null); this.setTab(v); break;
       case 'close': { const back = this.returnToRequests && this.tab === 'feedback'; this.returnToRequests = false; this.select(null); this.setTab(null); if (back && this.sim.s.convos.length) this.showRequests(); break; }
       case 'cmd': { const act = JSON.parse(el.dataset.cmd);
+        if (act.type === 'borrow') { this.showTermLoanReview(act.amt); break; }
+        if (act.type === 'loan') { this.showCreditReview(act.amt); break; }
         if (act.type === 'cancelOrder' && !el.dataset.confirmed) { this.confirmCancelOrder(act.id); break; }
         if (act.type === 'cancelOrder') this.closeModal(); // the confirmed tap closes its dialog, restoring the previous speed
         const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'delegateTask', 'delegateTaskFor', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
-      case 'convo': this.do({ type: 'convo', id: +el.dataset.id, i: +el.dataset.i }, true); this.renderFeed(true); if (!this.sim.s.convos.length) this.resumePopup('convo'); break;
+      case 'convo': this.answerConversation(+el.dataset.id, +el.dataset.i); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
       case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = true; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
@@ -373,7 +375,9 @@ export class UI {
       case 'rescuePricingReview': this.showRescuePricing(v); break;
       case 'rescuePricingConfirm': { const p=this.pricingReview; if(p?.sim!==this.sim)break; const r=this.do({type:'rescuePricing',approach:p.approach,expectedAsk:p.ask},true); if(r.ok){this.pricingReview=null;this.closeModal();this.renderSheet(true);}else this.showRescuePricing(p.approach); break; }
       case 'creditReview': this.showCreditReview(+v); break;
-      case 'creditConfirm': { const r=this.creditReview; if(r?.sim!==this.sim)break; const q=creditProjection(this.sim,r.amount,this.creditContext()||{}); if(!q.ok){this.toast('Credit availability changed. Review funding again.','bad');this.showCreditReview(r.amount);break;} if(this.do({type:'loan',amt:r.amount},true).ok){if(this.sim.s.lesson?.id==='financing'){this.do({type:'tutFlag',flag:'finAck'});this.sim.poll();}this.creditReview=null;this.closeModal();this.renderSheet(true);this.renderActionBar();} break; }
+      case 'creditConfirm': this.confirmCreditReview(); break;
+      case 'termLoanReview': this.showTermLoanReview(+v); break;
+      case 'termLoanConfirm': this.confirmTermLoanReview(); break;
       case 'fundingReview': this.fundingContext=this.plan?.args?{sim:this.sim,args:structuredClone(this.plan.args)}:null; this.showCreditReview(0); break;
       case 'financingHelp': this.closeModal(); this.do({type:'lesson',op:'start',id:'financing'},true); this.renderTut(true); break;
       case 'projectPreview': this.previewProject(v); break;
@@ -474,7 +478,7 @@ export class UI {
     this.toasts = [];
     this.growthProposal = null; this.growthPlanArgs = null;
     this.projectProposal = null;
-    this.pricingReview = null; this.creditReview = null; this.fundingContext = null;
+    this.pricingReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null;
     this.yardGuide = null;
     this.floorBuilding = null;
     this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
@@ -767,10 +771,66 @@ export class UI {
     const amounts=[...new Set([500,1000,1500,Math.min(room,5000),...(needed>0?[needed]:[])])].filter(n=>n>0&&n<=room);
     return `<div class="row wrap">${amounts.map(n=>`<button class="btn sm" data-a="creditReview" data-v="${n}">Review ${money(n)}${context&&n===needed?' · cover quote &amp; reserve':''}</button>`).join('')}</div>${context?`<p class="note">Current construction quote ${money(context.spend)}. ${needed===0?'Current funds already cover this quote and reserve.':needed==null?'Available credit cannot cover this quote with the recommended reserve.':'The indicated draw includes incremental credit interest in the reserve estimate.'} Borrowing and purchasing are separate decisions.</p>`:''}`;
   }
-  showCreditReview(amount) {
-    const context=this.creditContext(),q=amount>0?creditProjection(this.sim,amount,context||{}):null;
-    this.creditReview=q?.ok?{sim:this.sim,amount:q.amount}:null;this.pauseForPopup('modal');
-    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review credit line</h2>${this.creditChoicesHtml()}${q?.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Credit debt after draw</span><b>${money(q.debt,true)}</b><span>Added interest</span><b>${money(q.dailyInterest,true)}/day · ~${money(q.dailyInterest*30,true)}/30 days</b><span>Cash after draw</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b>${context?`<span>Cash after separate purchase</span><b>${money(q.purchase.cash,true)}</b><span>Available after purchase &amp; reserve</span><b>${money(q.purchase.available,true)}</b>`:''}</div><p class="note">Debt must be repaid. Borrowing creates no profit and does not purchase construction. Quotes hold current obligations constant; future rent is not guaranteed.</p>`:amount>0?'<p class="note">That amount is no longer available. Select a current credit quote.</p>':''}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q?.ok?`<button class="btn pri" data-a="creditConfirm">Confirm ${money(q.amount)} draw</button>`:''}${lessonAllowed(this.sim,lessonById('financing'))?'<button class="btn sm" data-a="financingHelp">Learn about financing</button>':''}</div></div></div>`;
+  answerConversation(id, i) {
+    const c=this.sim.s.convos.find(c=>c.id===id), response=c?.actions[i];
+    if(response?.action?.type==='loan') {
+      if(this.sim.requestActionDisabled(response))return;
+      this.showCreditReview(response.action.amt,{id,i,action:structuredClone(response.action)});
+      return;
+    }
+    this.do({type:'convo',id,i},true);this.renderFeed(true);
+    if(!this.sim.s.convos.length)this.resumePopup('convo');
+  }
+  showCreditReview(amount, bank=null) {
+    const context=bank?null:this.creditContext(),q=amount>0?creditProjection(this.sim,amount,context||{}):null;
+    this.termLoanReview=null;
+    this.creditReview=q?.ok?{sim:this.sim,amount:q.amount,bank,quote:q}:null;
+    // The request remains pending, but must not repaint over its borrowing review.
+    this.requestPanel=false;this.pauseForPopup('modal');
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review credit line</h2>${bank?'<p class="note">Bank request remains pending until you confirm this draw. Back leaves it unanswered.</p>':this.creditChoicesHtml()}${q?.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Credit debt after draw</span><b>${money(q.debt,true)}</b><span>Added interest</span><b>${money(q.dailyInterest,true)}/day · ~${money(q.dailyInterest*30,true)}/30 days</b><span>Cash after draw</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b>${context?`<span>Cash after separate purchase</span><b>${money(q.purchase.cash,true)}</b><span>Available after purchase &amp; reserve</span><b>${money(q.purchase.available,true)}</b>`:''}</div><p class="note">Debt must be repaid. Borrowing creates no profit and does not purchase construction. Quotes hold current obligations constant; future rent is not guaranteed.</p>`:amount>0?`<p class="note">That amount is no longer available. ${bank?'Back leaves the bank request unanswered.':'Select a current credit quote.'}</p>`:''}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q?.ok?`<button class="btn pri" data-a="creditConfirm">Confirm ${money(q.amount)} draw</button>`:''}${!bank&&lessonAllowed(this.sim,lessonById('financing'))?'<button class="btn sm" data-a="financingHelp">Learn about financing</button>':''}</div></div></div>`;
+  }
+  confirmCreditReview() {
+    const r=this.creditReview;if(r?.sim!==this.sim)return;
+    if(r.bank) {
+      const response=this.sim.s.convos.find(c=>c.id===r.bank.id)?.actions[r.bank.i];
+      if(!response||this.sim.requestActionDisabled(response)||JSON.stringify(response.action)!==JSON.stringify(r.bank.action)) {
+        this.toast('Bank response changed. Review the current request.','bad');this.closeModal();return;
+      }
+    }
+    const q=creditProjection(this.sim,r.amount,r.bank?{}:this.creditContext()||{});
+    if(!q.ok||(r.bank&&JSON.stringify(q)!==JSON.stringify(r.quote))) {
+      this.toast('Credit quote changed. Review funding again.','bad');this.showCreditReview(r.amount,r.bank);return;
+    }
+    const action=r.bank?{type:'convo',id:r.bank.id,i:r.bank.i}:{type:'loan',amt:r.amount};
+    if(!this.do(action,true).ok)return;
+    if(this.sim.s.lesson?.id==='financing'){this.do({type:'tutFlag',flag:'finAck'});this.sim.poll();}
+    this.closeModal();this.renderSheet(true);this.renderActionBar();
+    if(r.bank){this.renderFeed(true);if(!this.sim.s.convos.length)this.resumePopup('convo');}
+  }
+  termLoanQuote(amount) {
+    const sim=this.sim;amount=Math.floor(Number(amount));
+    const limit=sim.loanLimit();
+    if(!Number.isFinite(amount)||amount<5000||amount>limit)return {ok:false,limit};
+    const {rate,months}=sim.loanTerms(),payment=sim.loanPmt(amount,rate,months);
+    return {ok:true,amount,limit,rate,months,payment,firstDay:sim.day+BILLING_CYCLE_DAYS,
+      monthlyPayments:sim.s.debt.reduce((sum,d)=>sum+d.pmt,0)+payment,
+      draw:sim.financialPosition({spend:-amount})};
+  }
+  showTermLoanReview(amount) {
+    const q=this.termLoanQuote(amount);
+    this.creditReview=null;this.termLoanReview=q.ok?{sim:this.sim,quote:q}:null;
+    this.requestPanel=false;this.pauseForPopup('modal');
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review expansion loan</h2>${q.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Annual interest rate</span><b>${(q.rate*100).toFixed(1)}%</b><span>Term</span><b>${q.months} months</b><span>New monthly payment</span><b>${money(q.payment,true)}</b><span>First payment</span><b>Day ${q.firstDay}</b><span>Total term-loan payments</span><b>${money(q.monthlyPayments,true)}/month</b><span>Cash after borrowing</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b></div><p class="note">Debt must be repaid. Borrowing creates no profit and buys no expansion. The existing 14-day reserve estimate excludes this new loan's first payment, due on Day ${q.firstDay}. Future rent is not guaranteed.</p>`:'<p class="note">That amount is no longer approved. Return to Financing to review current options.</p>'}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="termLoanConfirm">Confirm ${money(q.amount)} loan</button>`:''}</div></div></div>`;
+  }
+  confirmTermLoanReview() {
+    const r=this.termLoanReview;if(r?.sim!==this.sim)return;
+    const q=this.termLoanQuote(r.quote.amount);
+    if(!q.ok||JSON.stringify(q)!==JSON.stringify(r.quote)) {
+      this.toast('Loan quote changed. Review before confirming.','bad');this.showTermLoanReview(r.quote.amount);return;
+    }
+    if(!this.do({type:'borrow',amt:q.amount},true).ok)return;
+    if(this.sim.s.lesson?.id==='financing'){this.do({type:'tutFlag',flag:'finAck'});this.sim.poll();this.renderTut(true);}
+    this.closeModal();this.renderSheet(true);this.renderActionBar();
   }
   previewProject(key) {
     const c = projectOffers(this.sim).find(p => p.key === key);
@@ -1071,7 +1131,9 @@ export class UI {
     if (!s.open || (s.tut?.on && !s.tut.done)) return '';
     const servers = sim.officeServerAgents();
     const clerk = s.staff.some(st => st.role === 'clerk');
-    const message = servers.length ? `Office covered by ${servers.map(a => ROLES[a.role].name).join(' + ')} · ${s.officeQ.length} waiting.` : `Office uncovered · ${s.officeQ.length} waiting. ${clerk ? 'Clerk coverage is 8 AM–6 PM.' : 'The Owner is away or lacks office capacity.'}`;
+    const serving = s.officeQ.filter(id => s.agents.some(a => a.id === id && a.serveT > 0)).length;
+    const queue = `${Math.max(0, s.officeQ.length - serving)} waiting · ${serving} being served`;
+    const message = servers.length ? `Office covered by ${servers.map(a => ROLES[a.role].name).join(' + ')} · ${queue}.` : `Office uncovered · ${queue}. ${clerk ? 'Clerk coverage is 8 AM–6 PM.' : 'The Owner is away or lacks office capacity.'}`;
     return `<p class="note"><b>${esc(message)}</b>${clerk ? ' Clerk coverage is 8 AM–6 PM.' : ' A Clerk covers 8 AM–6 PM for ' + money(ROLES.clerk.wage) + '/day.'}</p>` + (clerk ? '' : '<button class="btn sm" data-a="staffHelp" data-v="clerk">Review office coverage</button>');
   }
   officePanelHtml() {
@@ -1518,7 +1580,7 @@ export class UI {
     const tut = s.mode === 'tutorial' && !s.tut.done;
     const opts = [10000, 25000, 50000, 100000].filter((v) => v <= lim);
     h += `<div class="item"><div class="grow"><b>Expansion loan</b><small>${tut ? 'Opens after the tutorial: early growth is cash-funded.' : lim ? `Approved up to ${money(lim)} · ${(rate * 100).toFixed(1)}% · ${months} months. Payments are capped at 45% of your rent roll.` : 'Your rent roll is too small to support loan payments yet.'}</small></div></div>`;
-    if (opts.length) h += `<div class="loanopts">${opts.map((v) => { const pm = sim.loanPmt(v, rate, months); return `<button class="loanopt" data-a="cmd" data-cmd='${JSON.stringify({ type: 'borrow', amt: v })}'><b>${money(v)}</b><small>${money(pm)}/mo · cash after ${money(s.cash + v)}</small></button>`; }).join('')}</div>`;
+    if (opts.length) h += `<div class="loanopts">${opts.map((v) => { const pm = sim.loanPmt(v, rate, months); return `<button class="loanopt" data-a="termLoanReview" data-v="${v}"><b>Review ${money(v)}</b><small>${money(pm)}/mo · cash after ${money(s.cash + v)}</small></button>`; }).join('')}</div>`;
     const room = sim.creditLimit() - s.loan.bal;
     h += `<div class="item credit-line"><div class="grow"><b>Credit line · ${s.loan.bal > 0 ? money(s.loan.bal) + ' owed' : 'not in use'}</b><small>${money(room)} available · ~1.2%/month · for short cash gaps${burn > 0 ? ` · cash covers ~${Math.max(0, Math.floor(s.cash / burn))} days of costs` : ''}</small></div>
       ${this.creditChoicesHtml()}
@@ -1707,7 +1769,7 @@ export class UI {
       const calm = c.staffHandling ? 'Pause or choose manual review whenever you want to intervene.' : c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. Time stays paused while you review.` : 'No rush. Time stays paused until you choose.';
       const advice=diagnoseRequest(this.sim,c);
       const handling = c.staffHandling ? `${c.staffHandling} ${c.staffWaiting ? (!officeOpen ? "will handle this when the office opens" : "will handle this when staff are available") : "handling this"} · ${c.actions[c.auto].label}` : c.ownerReview === 'coverage' ? 'Staff coverage ended. Waiting for your decision.' : c.ownerReview === 'failed' ? 'Staff could not complete this. Waiting for your decision.' : 'Waiting for your decision · no rush';
-      el.innerHTML = `<p class="note request-status">${esc(handling)}</p>${c.staffHandling ? `<button class="btn sm" data-a="requestReview" data-id="${c.id}">I’ll handle this</button>` : ''}<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div>${this.sim.requestOfferStatus(c) ? `<p class="note">${esc(this.sim.requestOfferStatus(c))}</p>` : ''}<div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}" ${this.sim.requestActionDisabled(a) ? 'disabled aria-disabled="true"' : ''}>${esc(this.sim.requestActionDisabled(a) ? 'Retention unavailable' : a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
+      el.innerHTML = `<p class="note request-status">${esc(handling)}</p>${c.staffHandling ? `<button class="btn sm" data-a="requestReview" data-id="${c.id}">I’ll handle this</button>` : ''}<div class="who"><span class="sev">${c.sev === 'critical' ? 'Critical' : 'Attention'}</span>${esc(c.who || 'Tenant')}</div><div class="tx">"${esc(c.text)}"</div>${this.sim.requestOfferStatus(c) ? `<p class="note">${esc(this.sim.requestOfferStatus(c))}</p>` : ''}<div class="acts">${(c.actions || []).map((a, i) => `<button class="btn sm ${i === 0 ? 'pri' : ''}" data-a="convo" data-id="${c.id}" data-i="${i}" ${this.sim.requestActionDisabled(a) ? 'disabled aria-disabled="true"' : ''}>${esc(this.sim.requestActionDisabled(a) ? 'Retention unavailable' : a.action?.type==='loan' ? 'Review '+a.label : a.label)}</button>`).join('')}${c.obj && this.sim.s.objects[c.obj] ? `<button class="btn sm" data-a="focus" data-x="${this.sim.s.objects[c.obj].x}" data-y="${this.sim.s.objects[c.obj].y}" data-f="${this.sim.s.objects[c.obj].f||0}">View</button>` : ''}${c.overlay ? `<button class="btn sm" data-a="overlay" data-v="${c.overlay}">Show ${c.overlay} map</button>` : ''}</div>${advice ? `<button class="btn sm" data-a="requestHelp" data-id="${c.id}">Cause &amp; remedy</button>` : ''}${calm ? `<small class="calm">${esc(calm)}</small>` : ''}`;
       this.requestCards.push(el.outerHTML);
       if (!c.staffHandling) this.ownerRequestCards.push(el.outerHTML);
     }
@@ -2709,7 +2771,7 @@ export class UI {
     return `<div class="actionbar vpreview"><div class="top"><div class="nm">Proposed F${R.f+1} · Building ${R.shell}<small>Preview only — not built, not commissioned · ${money(R.cost)} complete package</small></div></div><div class="bot"><button class="btn" data-a="verticalBack" data-qa="vp-back">Back to review</button><button class="btn pri" data-a="verticalConfirm" data-qa="vp-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button><button class="btn" data-a="verticalCancel" data-qa="vp-discard">Discard preview</button></div></div>`;
   }
   modalOpen() { return !!this.$('modal').firstChild; }
-  closeModal() { this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
+  closeModal() { this.creditReview=null; this.termLoanReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>

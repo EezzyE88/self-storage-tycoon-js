@@ -416,13 +416,8 @@ export class Sim {
         if (!fc) { u.missing = ['Unit door faces the property edge']; u.blocked = u.cstate === 'operating'; if (u.cstate === 'ready') u.cstate = 'built'; continue; }
         const n = this.node(f, fc.x, fc.y);
         const shell = s.objects[D.shellAt[this.idx(u.x, u.y)]];
-        if (s.hall[f][this.idx(fc.x, fc.y)] !== 1) miss.push('Unit door needs hallway frontage');
-        else if (!dAccess.has(n)) {
-          const els = this.objs('elevator').filter((e) => e.cstate === 'operating' && D.shellAt[this.idx(e.x, e.y)] === shell.id);
-          if (f > 0 && !els.length) miss.push('Floor '+(f+1)+' has no elevator connection');
-          else if (f > 0 && !els.some((e) => this.works(e))) miss.push(els.some((e) => e.unpowered) ? 'Elevator has no power' : 'Elevator is out of service');
-          else miss.push('Hallway has no route to a building entrance');
-        }
+        const routeIssue = this.interiorRouteIssue(u, fc, dAccess);
+        if (routeIssue) miss.push(routeIssue);
         if (D.lit[f][this.idx(fc.x, fc.y)] < 0.5 && u.cstate !== 'operating') miss.push('Hallway is dark - add a light');
         if (u.env === 'climate') {
           const hv = D.hvac[shell.id];
@@ -448,6 +443,17 @@ export class Sim {
     if (newlyBlocked.length && s.t > 0) this.emit('access_lost', { n: newlyBlocked.length, unit: newlyBlocked[0].id, name: newlyBlocked[0].name, x: newlyBlocked[0].x, y: newlyBlocked[0].y, f: newlyBlocked[0].f || 0, why: newlyBlocked[0].missing[0] });
   }
   unitLit(u) { const fc = this.unitFront(u)[0]; if (!fc) return 1; if (u.access === 'drive') return this.isDaylight() ? 1 : Math.max(0.35, this.D.lit[0][this.idx(fc.x, fc.y)]); return this.D.lit[u.f || 0][this.idx(fc.x, fc.y)]; }
+  // Read-only access reason shared by readiness and the purchase preview.
+  interiorRouteIssue(u, fc, dAccess = this.D.dAccess) {
+    const s = this.s, D = this.D, f = u.f || 0;
+    if (s.hall[f][this.idx(fc.x, fc.y)] !== 1) return 'Unit door needs hallway frontage';
+    if (dAccess.has(this.node(f, fc.x, fc.y))) return null;
+    const sh = D.shellAt[this.idx(u.x, u.y)];
+    const els = this.objs('elevator').filter(e => e.cstate === 'operating' && D.shellAt[this.idx(e.x, e.y)] === sh);
+    if (f > 0 && !els.length) return 'Floor '+(f+1)+' has no elevator connection';
+    if (f > 0 && !els.some(e => this.works(e))) return els.some(e => e.unpowered) ? 'Elevator has no power' : 'Elevator is out of service';
+    return 'Hallway has no route to a building entrance';
+  }
   unitSecurity(u) {
     const fc = this.unitFront(u)[0]; const f = u.f || 0; const i = fc ? this.idx(fc.x, fc.y) : this.idx(u.x, u.y);
     let sc = 0.35 + (this.D.gate ? 0.15 : 0) + (this.D.cam[f][i] ? 0.3 : 0) + Math.min(1, this.unitLit(u)) * 0.12;
@@ -823,6 +829,12 @@ export class Sim {
     if (!anyBad && T.access === 'interior') {
       const sh = D.shellAt[this.idx(units[0].x, units[0].y)];
       if (f > 0 && !this.objs('elevator').some((e) => D.shellAt[this.idx(e.x, e.y)] === sh)) inc('Floor '+(f+1)+' has no elevator connection');
+      for (const u of units) {
+        const fronts = this.unitFront(u);
+        const fc = fronts.find(c => s.hall[f][this.idx(c.x, c.y)] === 1) || fronts[0];
+        const routeIssue = fc && this.interiorRouteIssue(u, fc);
+        if (routeIssue) inc(routeIssue);
+      }
       const dark = units.some((u) => { const c = this.unitFront(u).find((c) => s.hall[f][this.idx(c.x, c.y)] === 1); return c && D.lit[f][this.idx(c.x, c.y)] < 0.5; });
       if (dark) inc('Hallway is dark - add a light');
       if (climate) { const hv = D.hvac[sh]; const need = units.length * sz.sqft / 25; if (!hv || hv.cap <= 0) inc('Climate zone has no HVAC capacity'); else if (hv.load + need > hv.cap) inc('HVAC capacity would be exceeded'); }

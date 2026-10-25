@@ -1,0 +1,97 @@
+NOT PASS
+{"BLOCKED": 0, "ERROR": 18, "FAIL": 10, "NOT_RUN": 0, "OBSERVATION": 0, "PASS": 67, "TIMEOUT": 0}
+tads: PASS — process, output and completion checks passed
+tambient39: PASS — process, output and completion checks passed
+tart_design: ERROR — process exit 1
+taudio38: PASS — process, output and completion checks passed
+tblueprint: PASS — process, output and completion checks passed
+tbplus: PASS — process, output and completion checks passed
+tbplus_payback: FAIL — process exit 1
+tbplus_scenarios: PASS — process, output and completion checks passed
+tbugs: FAIL — process exit 1
+tbuildability: PASS — process, output and completion checks passed
+tbuildability_save: PASS — process, output and completion checks passed
+tc23_crash_repairs: FAIL — process exit 1
+tc24_requests: PASS — process, output and completion checks passed
+tc27_availability: PASS — process, output and completion checks passed
+tc29_climate_bubbles: PASS — process, output and completion checks passed
+tcalm: PASS — process, output and completion checks passed
+tcancellation: FAIL — process exit 1
+tcapacity: PASS — process, output and completion checks passed
+tcareer37: PASS — process, output and completion checks passed
+tcareer_hud: PASS — process, output and completion checks passed
+tclock24: PASS — process, output and completion checks passed
+tcoach_floor_selection: PASS — process, output and completion checks passed
+tcomeback36: ERROR — process exit 1
+tcomeback36_save: PASS — process, output and completion checks passed
+tcomplaint_capacity: PASS — process, output and completion checks passed
+tcomplaint_hardening: PASS — process, output and completion checks passed
+tcomplaints: PASS — process, output and completion checks passed
+tcontrol_access: ERROR — process exit 1
+tdelegation: PASS — process, output and completion checks passed
+tdisplay_repair: PASS — process, output and completion checks passed
+tfeedback35: PASS — process, output and completion checks passed
+tfeedback_interactions: PASS — process, output and completion checks passed
+tfin: PASS — process, output and completion checks passed
+tfinal_repairs: PASS — process, output and completion checks passed
+tfinancial_trust: PASS — process, output and completion checks passed
+tfloor_context: ERROR — process exit 1
+tfloor_view: ERROR — process exit 1
+tfollowup_repairs: PASS — process, output and completion checks passed
+tgestures: ERROR — process exit 1
+tguidance_banner: PASS — process, output and completion checks passed
+tinvestment_guidance: PASS — process, output and completion checks passed
+tlayout_hierarchy: ERROR — process exit 1
+tmanagement: PASS — process, output and completion checks passed
+tmenu_touch: FAIL — process exit 1
+toccupancy_proposal_polish: PASS — process, output and completion checks passed
+topenhouse: ERROR — process exit 1
+topenhouse_qa: ERROR — process exit 1
+towner_auto_repairs: PASS — process, output and completion checks passed
+tpause_policy: PASS — process, output and completion checks passed
+tperformance: ERROR — process exit 1
+tproperty_projects_save: PASS — process, output and completion checks passed
+tproperty_projects_ui: PASS — process, output and completion checks passed
+treporting34: PASS — process, output and completion checks passed
+trescue_operation_save: PASS — process, output and completion checks passed
+treserve_wait: PASS — process, output and completion checks passed
+treserve_wait_action_css: PASS — process, output and completion checks passed
+treserve_wait_continuity: PASS — process, output and completion checks passed
+treview_space: PASS — process, output and completion checks passed
+tsandbox: PASS — process, output and completion checks passed
+tsandbox_build_pause: PASS — process, output and completion checks passed
+tsave_recovery: PASS — process, output and completion checks passed
+tsection32: PASS — process, output and completion checks passed
+tsoft_audio: PASS — process, output and completion checks passed
+tstafffirst: PASS — process, output and completion checks passed
+tstaffing_compare: PASS — process, output and completion checks passed
+tstartup_graphics: PASS — process, output and completion checks passed
+tstatus_hierarchy: ERROR — process exit 1
+tsystems: PASS — process, output and completion checks passed
+tthreefloor: PASS — process, output and completion checks passed
+tthreefloor_hardening: ERROR — process exit 1
+tthreefloor_journeys: FAIL — process exit 1
+tthreefloor_save: ERROR — process exit 1
+ttraffic_delegation: PASS — process, output and completion checks passed
+ttraffic_delegation_save: PASS — process, output and completion checks passed
+ttutorial_guidance: PASS — process, output and completion checks passed
+tunitnumbering: PASS — process, output and completion checks passed
+tunitnumbering_parity: FAIL — process exit 1
+tunitnumbering_vertical_legacy: PASS — process, output and completion checks passed
+tvisual30: ERROR — process exit 1
+tvisual31: ERROR — process exit 1
+twhole_game_art: ERROR — process exit 1
+tworking_yard_save: PASS — process, output and completion checks passed
+tyard41: PASS — process, output and completion checks passed
+tyard_loop_repairs: PASS — process, output and completion checks passed
+tart_refinement: ERROR — process exit 1
+tcandidate22: FAIL — process exit 1
+tclimate33: PASS — process, output and completion checks passed
+tproperty_ui: PASS — process, output and completion checks passed
+treview_repairs: FAIL — process exit 1
+tyard40: FAIL — process exit 1
+tfix: PASS — process, output and completion checks passed
+tcurrent_runner: PASS — process, output and completion checks passed
+tdoorway_jambs: ERROR — process exit 1
+treserve_wait_fast: PASS — process, output and completion checks passed
+tsandbox_reserve_fast: PASS — process, output and completion checks passed

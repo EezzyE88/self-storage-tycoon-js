@@ -1,0 +1,68 @@
+{
+  "parent": "b7092e08d89fcd882c5d2d82db6ac1eb7631af42",
+  "branch": "candidate/office-coverage-counts-20261024",
+  "scope": "UI.officeCoverageHtml waiting/being-served display only",
+  "probe": {
+    "kind": "fresh ad-hoc native execution outside repository tests",
+    "fixture": "seeded disposable Maple state; no normal save access",
+    "cases": [
+      "empty queue: 0 waiting, 0 serving",
+      "waiting only: 2 waiting, 0 serving",
+      "served only: 0 waiting, 2 serving",
+      "mixed queue: 1 waiting, 1 serving"
+    ],
+    "coverage": [
+      "Owner",
+      "Clerk",
+      "uncovered"
+    ],
+    "speeds": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "combinations": 48,
+    "assertions": [
+      "existing coverage label and hire control preserved",
+      "counts agree with Office state",
+      "full serialized simulation state unchanged",
+      "event queue unchanged",
+      "Pause/run speed unchanged",
+      "closed-business and unfinished-tutorial visibility guards preserved"
+    ],
+    "exit_code": 0,
+    "stdout": "PASS Owner, speed 0: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS Owner, speed 1: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS Owner, speed 2: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS Owner, speed 4: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS Clerk, speed 0: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS Clerk, speed 1: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS Clerk, speed 2: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS Clerk, speed 4: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS uncovered, speed 0: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS uncovered, speed 1: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS uncovered, speed 2: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS uncovered, speed 4: empty, waiting-only, served-only and mixed; Office agreement, existing control and full-state preservation\nPASS existing closed-business and unfinished-tutorial visibility guards\n48 queue/coverage/speed combinations passed; browser and physical Safari NOT TESTED\n"
+  },
+  "checks": [
+    {
+      "name": "existing Office script",
+      "exit_code": 0,
+      "stdout": "PASS counter matches actual server eligibility, excludes Manager, and separates service from waiting\nPASS reserved property capacity is distinct from recorded completions; stale days are read without mutation\nPASS critical, manual, takeover and failed requests are owner decisions; eligible routine requests stay delegated\nPASS after-hours retention shows delegated waiting rather than a new owner decision\nPASS property delegation excludes unassigned and Owner work and includes staff/vendor jobs once\nPASS Office inspector retains four actionable rows, escapes request text, and discloses current authority without purchases\nPASS Office section buttons navigate to existing destinations without dispatch or camera movement\nPASS Office coverage, chores and request actions reach existing handlers and never start manual Pause\nPASS selecting Office never schedules camera recentering, preserves Pause, and keeps other inspector framing\n9 focused Office checks passed; physical Safari NOT TESTED\n"
+    },
+    {
+      "name": "existing Pause script",
+      "exit_code": 0,
+      "stdout": "PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)\nPASS nested and interleaved pauses restore the speed from before the first one\nPASS manual Pause during a temporary pause is preserved by button and keyboard\nPASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored\nPASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice\nPASS panel closure: Details → Back to map and close restore the previous speed, including Pause\nPASS actions: commissioning, owner make-ready and build placement never start a paused clock\nPASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed\nPASS requests: answering the last request, and navigating from Requests, keep the player speed\nPASS property switch never applies another property’s saved speed; loads stay paused\nPASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause\nPASS tutorial wording no longer promises a 1x resume\nPASS the policy is UI-only: no simulation or save field is added\n13 pause-policy checks passed\n"
+    },
+    {
+      "name": "UI syntax",
+      "exit_code": 0,
+      "stdout": ""
+    },
+    {
+      "name": "diff whitespace",
+      "exit_code": 0,
+      "stdout": ""
+    },
+    {
+      "name": "source preservation",
+      "exit_code": 0,
+      "stdout": "{\"parent\": \"b7092e08d89fcd882c5d2d82db6ac1eb7631af42\", \"unchanged_existing_files\": 976, \"only_changed_production_method\": \"UI.officeCoverageHtml\", \"all_other_UI_methods_identical\": true, \"original_evidence_untouched\": true, \"simulation_economics_and_save_modules_unchanged\": true}\n"
+    }
+  ],
+  "browser": "NOT TESTED; prior browser connectivity and file-protocol security restriction remain unresolved; no blocked route retried",
+  "physical_safari": "NOT TESTED",
+  "publication": "none",
+  "merge": "none"
+}
