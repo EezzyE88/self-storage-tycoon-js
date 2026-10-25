@@ -608,7 +608,7 @@ export class UI {
     else if(title==='Business') {const o=sim.occupancy();pairs=[['Cash',money(s.cash)],['Occupied',`${o.occ}/${o.n}`],['Vacant ready',sim.objs('unit').filter(u=>u.cstate==='operating'&&u.commercial==='ready'&&!u.blocked).length]];}
     else if(title==='Growth') pairs=[['Reputation',pct(sim.reputation())],['Properties',this.g.company?.props.length||1]];
     else if(title==='Customer feedback') pairs=[['Recent reports',s.thoughts.filter(t=>t.kind==='bad').length],['Requests',s.convos.length]];
-    else {const o=typeof this.sel==='number'&&s.objects[this.sel];pairs=o?.type==='unit'?[['Status',UNIT_STATUS[unitStatus(o)].label],['Size',o.access==='drive'?o.size:`${o.size} · ${floorName(o.f)}`]]:[['Selected',sub||title]];}
+    else {const o=typeof this.sel==='number'&&s.objects[this.sel];const status=o?.cstate==='built'?'Built · not ready':o?.cstate==='ready'?'Opening automatically':o?.type==='unit'?UNIT_STATUS[unitStatus(o)].label:null;pairs=o?.type==='unit'?[['Status',status],['Size',o.access==='drive'?o.size:`${o.size} · ${floorName(o.f)}`]]:[['Selected',sub||title]];}
     return `<div class="dock-metrics">${pairs.map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(String(v))}</b></div>`).join('')}</div>`;
   }
   // ------------------------------------------------------------ BUILD
