@@ -98,6 +98,14 @@ const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control'
 export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion commissioned', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate', first_retention: 'Kept a tenant from leaving', first_auction: 'First lien auction', first_loan: 'Financed growth' };
 const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanliness', security: 'Security', climate: 'Climate', service: 'Service', value: 'Value', comfort: 'Comfort' };
 
+// Borrowing tap settle: after a borrowing review opens, re-quotes or resolves, a short
+// input shield swallows follow-up taps so a fast double/triple tap cannot fall through to
+// the Financing panel (a second review/draw) or to the map (double-tap zoom).
+export const BORROW_SETTLE_MS = 450, BORROW_SETTLE_EXTEND_MS = 450, BORROW_SETTLE_CAP_MS = 1500;
+export const BORROW_SETTLE_EVENTS = ['pointerdown', 'mousedown', 'click'];
+// HUD "today" shows operating cash only: borrowing proceeds and principal repayments are financing, not income.
+export const HUD_FINANCING_CATS = ['loan', 'debt'];
+
 export class UI {
   constructor(game) {
     this.g = game; this.root = document.getElementById('ui'); this.bubRoot = document.getElementById('bubbles');
@@ -137,6 +145,7 @@ export class UI {
       </nav>
       <div id="modal"></div>`;
     this.$ = (id) => document.getElementById(id);
+    for (const ev of BORROW_SETTLE_EVENTS) window.addEventListener(ev, (e) => this.borrowSettleSwallow(e), { capture: true, passive: false });
     this.root.addEventListener('click', (e) => this.onClick(e));
     // Let native button activation handle Enter/Space without invoking the game clock/build shortcuts.
     this.$('careerGoal').addEventListener('keydown', e => this.careerGoalKeydown(e));
@@ -786,7 +795,7 @@ export class UI {
     this.termLoanReview=null;
     this.creditReview=q?.ok?{sim:this.sim,amount:q.amount,bank,quote:q}:null;
     // The request remains pending, but must not repaint over its borrowing review.
-    this.requestPanel=false;this.pauseForPopup('modal');
+    this.requestPanel=false;this.pauseForPopup('modal');this.armBorrowSettle();
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review credit line</h2>${bank?'<p class="note">Bank request remains pending until you confirm this draw. Back leaves it unanswered.</p>':this.creditChoicesHtml()}${q?.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Credit debt after draw</span><b>${money(q.debt,true)}</b><span>Added interest</span><b>${money(q.dailyInterest,true)}/day · ~${money(q.dailyInterest*30,true)}/30 days</b><span>Cash after draw</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b>${context?`<span>Cash after separate purchase</span><b>${money(q.purchase.cash,true)}</b><span>Available after purchase &amp; reserve</span><b>${money(q.purchase.available,true)}</b>`:''}</div><p class="note">Debt must be repaid. Borrowing creates no profit and does not purchase construction. Quotes hold current obligations constant; future rent is not guaranteed.</p>`:amount>0?`<p class="note">That amount is no longer available. ${bank?'Back leaves the bank request unanswered.':'Select a current credit quote.'}</p>`:''}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q?.ok?`<button class="btn pri" data-a="creditConfirm">Confirm ${money(q.amount)} draw</button>`:''}${!bank&&lessonAllowed(this.sim,lessonById('financing'))?'<button class="btn sm" data-a="financingHelp">Learn about financing</button>':''}</div></div></div>`;
   }
   confirmCreditReview() {
@@ -794,7 +803,7 @@ export class UI {
     if(r.bank) {
       const response=this.sim.s.convos.find(c=>c.id===r.bank.id)?.actions[r.bank.i];
       if(!response||this.sim.requestActionDisabled(response)||JSON.stringify(response.action)!==JSON.stringify(r.bank.action)) {
-        this.toast('Bank response changed. Review the current request.','bad');this.closeModal();return;
+        this.toast('Bank response changed. Review the current request.','bad');this.closeModal();this.armBorrowSettle();return;
       }
     }
     const q=creditProjection(this.sim,r.amount,r.bank?{}:this.creditContext()||{});
@@ -804,8 +813,27 @@ export class UI {
     const action=r.bank?{type:'convo',id:r.bank.id,i:r.bank.i}:{type:'loan',amt:r.amount};
     if(!this.do(action,true).ok)return;
     if(this.sim.s.lesson?.id==='financing'){this.do({type:'tutFlag',flag:'finAck'});this.sim.poll();}
-    this.closeModal();this.renderSheet(true);this.renderActionBar();
+    this.closeModal();this.renderSheet(true);this.renderActionBar();this.armBorrowSettle();
     if(r.bank){this.renderFeed(true);if(!this.sim.s.convos.length)this.resumePopup('convo');}
+  }
+  armBorrowSettle(now = performance.now()) {
+    const g = this.borrowSettle = { until: now + BORROW_SETTLE_MS, cap: now + BORROW_SETTLE_CAP_MS };
+    // Re-base on the first painted frame: taps made before the player could see the change never count,
+    // even when a long render delays the paint past the original window.
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (this.borrowSettle !== g) return; const p = performance.now();
+      g.until = Math.max(g.until, p + BORROW_SETTLE_MS); g.cap = Math.max(g.cap, p + BORROW_SETTLE_CAP_MS);
+    }));
+  }
+  // Capture-phase guard; returns true when the event was swallowed. Judged by when the tap was made
+  // (event timeStamp), not when a busy main thread delivered it. Releases are never swallowed.
+  borrowSettleSwallow(e, now = performance.now()) {
+    const g = this.borrowSettle; if (!g) return false;
+    const ts = e.timeStamp, t = ts > 0 && ts <= now + 1 ? ts : now;
+    if (t >= g.until) { if (now >= g.until) this.borrowSettle = null; return false; }
+    if (e.type === 'pointerdown') g.until = Math.min(g.cap, Math.max(g.until, t + BORROW_SETTLE_EXTEND_MS));
+    if (e.cancelable !== false) e.preventDefault?.(); e.stopImmediatePropagation?.(); e.stopPropagation?.();
+    return true;
   }
   termLoanQuote(amount) {
     const sim=this.sim;amount=Math.floor(Number(amount));
@@ -819,7 +847,7 @@ export class UI {
   showTermLoanReview(amount) {
     const q=this.termLoanQuote(amount);
     this.creditReview=null;this.termLoanReview=q.ok?{sim:this.sim,quote:q}:null;
-    this.requestPanel=false;this.pauseForPopup('modal');
+    this.requestPanel=false;this.pauseForPopup('modal');this.armBorrowSettle();
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review expansion loan</h2>${q.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Annual interest rate</span><b>${(q.rate*100).toFixed(1)}%</b><span>Term</span><b>${q.months} months</b><span>New monthly payment</span><b>${money(q.payment,true)}</b><span>First payment</span><b>Day ${q.firstDay}</b><span>Total term-loan payments</span><b>${money(q.monthlyPayments,true)}/month</b><span>Cash after borrowing</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b></div><p class="note">Debt must be repaid. Borrowing creates no profit and buys no expansion. The existing 14-day reserve estimate excludes this new loan's first payment, due on Day ${q.firstDay}. Future rent is not guaranteed.</p>`:'<p class="note">That amount is no longer approved. Return to Financing to review current options.</p>'}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="termLoanConfirm">Confirm ${money(q.amount)} loan</button>`:''}</div></div></div>`;
   }
   confirmTermLoanReview() {
@@ -830,7 +858,7 @@ export class UI {
     }
     if(!this.do({type:'borrow',amt:q.amount},true).ok)return;
     if(this.sim.s.lesson?.id==='financing'){this.do({type:'tutFlag',flag:'finAck'});this.sim.poll();this.renderTut(true);}
-    this.closeModal();this.renderSheet(true);this.renderActionBar();
+    this.closeModal();this.renderSheet(true);this.renderActionBar();this.armBorrowSettle();
   }
   previewProject(key) {
     const c = projectOffers(this.sim).find(p => p.key === key);
@@ -2450,7 +2478,7 @@ export class UI {
   slowHud() {
     const sim = this.sim, s = sim.s; const oc = sim.occupancy();
     if (!oc.n || s.creative) { this.cashSub = null; return; }
-    const actual = sim.cashWindow(1), n = Math.round(actual.net);
+    const actual = sim.cashWindow(1), financing = HUD_FINANCING_CATS.reduce((a, c) => a + (actual.categories[c] || 0), 0), n = Math.round(actual.net - financing);
     this.cashSub = `${oc.occ}/${oc.n} · today${actual.complete ? '' : ' (partial)'} ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;
   }
   ownerStatus() {
