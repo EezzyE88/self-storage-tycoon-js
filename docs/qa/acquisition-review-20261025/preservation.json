@@ -1,0 +1,23 @@
+{
+  "base": "74a6322b218ec0b5ad3c5577691dd266f59bdabe",
+  "implementation_commit": "6066ff380fa842a9abde3138cea1e702c016bacc",
+  "production_files_changed": [
+    "js/ui.js"
+  ],
+  "unchanged_parent_files_verified": 1574,
+  "unexpected_differences": [],
+  "retained_native_files_verified": 192,
+  "original_native_source": "f9315b9a7a528bd0245dadfabf204cfb8d0c1a35",
+  "original_native_result": "95/95 PASS \u2014 historical evidence only, not rerun for successor",
+  "final_focused_groups": {
+    "acquisition-final": 14,
+    "borrowing": 16,
+    "pause": 13,
+    "career-save": 18
+  },
+  "focused_total": 61,
+  "source_hashes": {
+    "js/ui.js": "08b8d3379d4f77e8d84a24eda11383001bbe733a8f7680fab52b93aae5cb2e6b",
+    "tests/headless/tacquisition_review.mjs": "ba10225f40d672ca20811c4fe09e38b567610daaca1ce82cd7c99ac597f49dd8"
+  }
+}

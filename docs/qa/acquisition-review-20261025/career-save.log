@@ -1,0 +1,19 @@
+PASS eligibility matrix and pure reads
+PASS unacknowledged win excluded and acknowledgement changes only acknowledgement
+PASS historical win survives deterioration, deletion and reload
+PASS malformed completion is excluded and normalized safely
+PASS empty eligible portfolio cannot promote
+PASS all five thresholds and eligible property counts
+PASS selected active scenario cannot block or receive normal-property promotion
+PASS excluded legacy tier cannot propagate; stored tier is preserved
+PASS earned tier persists and eligible acquired property inherits it once
+PASS complete company hour snapshot is selection independent
+PASS generic lessons allowed only after handoff, Maple lessons still excluded
+PASS sandbox tier overrides and options untouched
+PASS acquisition and transfers preserve books and clock
+PASS raw and compressed portfolio saves preserve complete state without load-time promotion
+PASS completion markup and navigation reuse existing sections without spending
+PASS career markup shows earned perks after roll falls, excludes active challenge card
+PASS stale Maple-only lesson cannot tick on completed Comeback
+PASS generic lesson renders instead of rescue panel and returns to history
+18 career integration test groups passed
