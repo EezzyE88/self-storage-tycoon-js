@@ -1,0 +1,94 @@
+{
+  "parent": "6e278d65d5ed5de6a5bf24e5daa36df857f0dda6",
+  "scope": "Only independent fixture deselections, Growth upgrade restoration and existing mounted coverage under proposed geometry",
+  "parent_reproduction": {
+    "command": [
+      "node",
+      "tests/headless/tunit_upgrade_review_fixes.mjs"
+    ],
+    "exit": 1,
+    "stdout": "PASS unobstructed mounted coverage still shares; standalone coverage keeps existing rules\n",
+    "stderr": "FAIL construction camera/light controls preserve independent deselections, including off/on\nAssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert.ok(ui.upgradeOptions.excludedFixtures.includes(light))\n\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:26:50\n    at test (file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:10:28)\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:22:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\nFAIL retrofit camera/light controls preserve independent deselections without purchase\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:34:95\n    at test (file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:10:28)\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:31:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\nFAIL actual Growth navigation restores lighting, cameras and exclusions before requoting\nAssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   excludedFixtures: [],\n+   lighting: 'none',\n+   outsideCameras: false\n-   excludedFixtures: [\n-     'light:1'\n-   ],\n-   lighting: 'both',\n-   outsideCameras: true\n  }\n\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:41:54\n    at test (file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:10:28)\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:38:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\nFAIL new footprint cannot reuse mounted coverage that it will obstruct\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:54:77\n    at test (file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:10:28)\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-repair-candidate/tests/headless/tunit_upgrade_review_fixes.mjs:52:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n4 review regression groups failed\n",
+    "stdout_sha256": "0081c50ca8db9dac50d6a157de38228a11e23fc74ef08b417625d8588494a65b",
+    "stderr_sha256": "350060f7bb48e1f91c974b3d1d3db0a613258faa92fcd7f75834a9aebd56f6e5"
+  },
+  "results": [
+    {
+      "command": [
+        "node",
+        "tests/headless/tunit_upgrade_review_fixes.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS construction camera/light controls preserve independent deselections, including off/on\nPASS retrofit camera/light controls preserve independent deselections without purchase\nPASS actual Growth navigation restores lighting, cameras and exclusions before requoting\nPASS new footprint cannot reuse mounted coverage that it will obstruct\nPASS unobstructed mounted coverage still shares; standalone coverage keeps existing rules\nALL PASS: three reviewed paths; native checks only\n",
+      "stderr": "",
+      "stdout_sha256": "d42855ed8596f8d42f15a9da13977ea6b20e87378e049fb324b597769217e36d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tunit_upgrades.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.775,
+      "stdout": "PASS all eight lighting/camera combinations, shared suggestions, exact charges and host IDs\nPASS stable deselection, stale-quote refusal, paused load/poll, combined full and partial refunds\nPASS real construction, shared security, wall/corner masks, maintenance outcomes, load shedding and demolition cleanup\nPASS retrofit rental hold, charge-once, save/load, cancel/refund, completion and no duplicate or occupied installation\nPASS standalone affordability, unchanged camera wear, reserve selection identity and teaching/legacy guards\nPASS actual UI retrofit review/options/preview and manual Pause preservation\nPASS mounted hallway light satisfies real readiness, private light does not, working/pending coverage avoids duplicate purchase\nALL PASS: unit upgrades (native simulation/UI methods; no browser or Safari claim)\n",
+      "stderr": "",
+      "stdout_sha256": "ba2b0e2553c8bbf8b7628045f40b520794bd8090600a34996f6c03dc9b0df248",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tunit_upgrade_render_save.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.593,
+      "stdout": "PASS actual Three.js CPU meshes, fixture positions, clipped preview masks and private inspection lighting\nPASS production save sanitization/validation for attachments and unchanged legacy save compatibility\nPASS existing split renovation preserves attachment ownership without disabling renovation\n",
+      "stderr": "",
+      "stdout_sha256": "ade9eaa38cb43352f65629b333a1063d8be43a8cdcde84971859ccc68a4fd321",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tsandbox_reserve_fast.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.818,
+      "stdout": "PASS native Sandbox quote, visible build-review action, actual click arming and reachable Stop; no purchase\nPASS Sandbox burst bound and complete ordinary simulation parity at equal time\nPASS owner decision interrupts exact minute; resolving stays paused; explicit Resume preserves original deadline\nPASS manual Pause cancels Sandbox waiting without further simulation\nPASS funded target pauses without buying; original rotated geometry restored; actual Confirm alone purchases and stays paused\nPASS funded, unlimited Free Build, invalid, demolition, lesson and scenario contexts cannot arm inappropriate Sandbox waits\nPASS unrelated modal and outstanding owner decision block arming without dismissing or advancing\nPASS nested review stays paused; changed quote and original seven-day deadline block Resume\nPASS Rush quote matches actual purchase charge; orientation is part of retained investment identity\nPASS production save serializer stores ordinary Sandbox state only; fresh session has no armed wait\nPASS completion purchase clears obsolete target-preview controls\nPASS another selected investment is retained when an interrupted target rejects replacement\nPASS other-property owner decision blocks Start before closing the selected review\nPASS other-property owner decision blocks explicit Resume without an armed frame\nPASS live reserve card preserves an in-progress tap until pointer release\nPASS interrupted wait exposes an actionable explanation while another build review is open\nSandbox fast reserve: 16 groups passed; rendered browser and physical Safari NOT TESTED\n",
+      "stderr": "",
+      "stdout_sha256": "a0a2d73105efe439f4e8341a11a5938d91b3cdb407784ef699518232669662ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tpause_policy.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.664,
+      "stdout": "PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)\nPASS nested and interleaved pauses restore the speed from before the first one\nPASS manual Pause during a temporary pause is preserved by button and keyboard\nPASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored\nPASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice\nPASS panel closure: Details \u2192 Back to map and close restore the previous speed, including Pause\nPASS actions: commissioning, owner make-ready and build placement never start a paused clock\nPASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed\nPASS requests: answering the last request, and navigating from Requests, keep the player speed\nPASS property switch never applies another property\u2019s saved speed; loads stay paused\nPASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause\nPASS tutorial wording no longer promises a 1x resume\nPASS the policy is UI-only: no simulation or save field is added\n13 pause-policy checks passed\n",
+      "stderr": "",
+      "stdout_sha256": "d66ca0705a1e9187c950ed78120de1c01b882abe6a37b54c336db7b346d8d6f1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tautomatic_opening.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.463,
+      "stdout": "PASS purchase unchanged, paused poll, advancing-minute opening, grouped event and no replay\nPASS rental readiness never opens the property\nPASS connected-access blocker and visible reason; later infrastructure recovery opens units\nPASS tutorials, lessons, scenarios and Free Build retain manual commissioning\nPASS old ready saves remain paused until simulation resumes\nPASS shared manual/automatic commissioning path rechecks capacity between units\nPASS purchase disclosure and actual grouped UI notification\nPASS real running construction opens a whole eligible batch with one event and unchanged purchase charge\nPASS background company minutes open inventory; non-advancing calls remain inert\nALL PASS: automatic opening; native simulation/UI methods only\n",
+      "stderr": "",
+      "stdout_sha256": "18948d2b0c6d59b4180d9712940ea37d61a26cc1a1e0b20f25000e876b4706cc",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "new_regression_sha256": "bcca5d1fd4190ef34a419eb0db7a673f07063a1b2f11851c5c493aa18bc9a369",
+  "notes": [
+    "Parent reproduction ran before production changes and failed the four affected groups; the no-change coverage control passed.",
+    "After reproduction, the Growth array-copy assertion was strengthened to check the actual saved proposal. No failing assertion was removed.",
+    "Native simulation/UI methods and existing CPU renderer/save checks only. No browser, physical Safari, deployment or merge."
+  ]
+}

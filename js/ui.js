@@ -622,6 +622,7 @@ export class UI {
     this.pauseForPopup('review');
     this.setTab(null); this.setView(this.validView(saved.view ?? a.f));
     this.pickTool(a.tool);
+    this.upgradeOptions = { lighting: a.lighting || 'none', outsideCameras: !!a.outsideCameras, excludedFixtures: [...(a.excludedFixtures || [])] };
     this.flip = !!a.flip; this.climate = !!a.climate; this.rush = !!a.rush;
     this.planArgs = { a: { ...a.a }, b: { ...a.b }, axis: a.axis, dir: a.dir };
     this.projectProposal = saved.projectKey ? { sim: this.sim, key: saved.projectKey } : null;
@@ -900,8 +901,8 @@ export class UI {
     this.renderActionBar();
   }
   changeUpgrade(key,value) {
-    if(this.retrofitReview){this.retrofitReview.args[key]=value;if(key!=='excludedFixtures')this.retrofitReview.args.excludedFixtures=[];this.refreshRetrofit();}
-    else {this.upgradeOptions||={lighting:'none',outsideCameras:false,excludedFixtures:[]};this.upgradeOptions[key]=value;if(key!=='excludedFixtures')this.upgradeOptions.excludedFixtures=[];this.replan();}
+    if(this.retrofitReview){this.retrofitReview.args[key]=value;this.refreshRetrofit();}
+    else {this.upgradeOptions||={lighting:'none',outsideCameras:false,excludedFixtures:[]};this.upgradeOptions[key]=value;this.replan();}
   }
   beginRetrofit(id) {
     if(!retrofitEligible(this.sim,this.sim.s.objects[id]))return;

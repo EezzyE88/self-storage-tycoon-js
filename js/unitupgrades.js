@@ -51,6 +51,27 @@ export function attachmentCoverage(sim, fixture, proposed = []) {
 export function upgradeStamp(R) {
   return JSON.stringify([R.cost,R.dur,R.opex,R.creates.map(o=>[o.type,o.x,o.y,o.f,o.mount?.host,o.mount?.dir]),R.upgrades?.options.map(o=>[o.key,o.selected,o.cells.map(c=>[c.x,c.y,c.v])]),R.warn||[]]);
 }
+function existingCoverage(sim,type,targets,proposed) {
+  const map=type==='light'?sim.D.lit:sim.D.cam,threshold=type==='light'?.5:1,key=c=>`${c.f}:${c.x}:${c.y}`;
+  if(!proposed.length)return new Set(targets.filter(c=>map[c.f][sim.idx(c.x,c.y)]>=threshold).map(key));
+  const covered=new Set();
+  for(const o of sim.objs(type)){
+    if(!sim.works(o))continue;
+    if(o.mount){
+      for(const c of attachmentCoverage(sim,o,proposed))if(c.v>=threshold)covered.add(key(c));
+    }else{
+      // Standalone fixtures retain their existing radial coverage, without new wall rules.
+      const r=TOOLS[type].radius,sh=sim.D.shellAt[sim.idx(o.x,o.y)];
+      for(const c of targets){
+        if(c.f!==(o.f||0)||sim.D.shellAt[sim.idx(c.x,c.y)]!==sh)continue;
+        const d=Math.hypot(c.x-o.x,c.y-o.y);if(d>r)continue;
+        const value=type==='camera'?1:(d<r*.7?1:1-(d-r*.7)/(r*.3)*.5)*(o.cond<.45?.75:1);
+        if(value>=threshold)covered.add(key(c));
+      }
+    }
+  }
+  return covered;
+}
 export function addUpgrades(sim, a, R, units, retrofit=false) {
   units=units.map((u,k)=>({...R.creates.filter(o=>o.type==='unit')[k],...u}));
   const mode=LIGHTING.includes(a.lighting)?a.lighting:'none';
@@ -67,8 +88,8 @@ export function addUpgrades(sim, a, R, units, retrofit=false) {
   });
   for(const type of ['light','camera']){
     if(type==='light'?!['outside','both'].includes(mode):!a.outsideCameras)continue;
-    const map=type==='light'?sim.D.lit:sim.D.cam, threshold=type==='light'?.5:1;
-    const covered=new Set(targets.filter(c=>map[c.f][sim.idx(c.x,c.y)]>=threshold).map(c=>`${c.f}:${c.x}:${c.y}`));
+    const threshold=type==='light'?.5:1;
+    const covered=existingCoverage(sim,type,targets,proposed);
     // Pending mounts are disclosed, never considered working or charged twice.
     const pendingCells=new Set();
     for(const o of sim.objs(type).filter(o=>o.cstate==='construction')){
