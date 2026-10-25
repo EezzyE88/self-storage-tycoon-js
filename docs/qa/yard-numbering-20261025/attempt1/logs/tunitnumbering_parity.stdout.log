@@ -1,0 +1,7 @@
+PASS parent/new/migrated exact daily gameplay parity: seed 7, 30 days
+PASS parent/new/migrated exact daily gameplay parity: seed 99, 30 days
+PASS parent/new/migrated exact daily gameplay parity: seed 9711, 30 days
+PASS actual parent scenario start/migration parity: comeback
+PASS actual parent scenario start/migration parity: turnaround
+PASS actual parent scenario start/migration parity: vertical
+PASS actual parent scenario start/migration parity: climate

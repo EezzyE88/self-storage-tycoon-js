@@ -1,0 +1,12 @@
+PASS marked overflow parking succeeds silently
+PASS asphalt overflow succeeds silently when marked parking also fills
+PASS true shortage retains existing loading destination and precise cause
+PASS same visitor cannot spam same shortage or inflate grouped count
+PASS different visitors still count real repeated shortages
+PASS per-visitor suppression survives save reload
+PASS new location and distinct failure remain reportable for same visitor
+PASS historical overflow reports explain successful fallback honestly
+PASS cart stock differentiates busy, displaced and damaged local carts read-only
+PASS restroom cleaning guidance identifies staffing gap without doing work
+PASS all negative property review dimensions have remedies without invented locations
+11 capacity regression checks passed

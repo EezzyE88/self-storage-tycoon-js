@@ -1,0 +1,8 @@
+PASS upstairs quote adds required hvac pad without throwing or changing cash
+PASS upstairs quote adds required power pad without throwing or changing cash
+PASS pad-free quote retains its exact price
+PASS cart return abort after a missing corral clears walking state before the next tick
+PASS orphan walk task=null recovers after reload
+PASS orphan walk task=999999 recovers after reload
+PASS orphan work task=null recovers after reload
+PASS orphan work task=999999 recovers after reload

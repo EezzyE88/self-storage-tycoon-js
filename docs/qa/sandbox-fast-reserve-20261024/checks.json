@@ -1,0 +1,139 @@
+{
+  "parent": "3c92a5eb6a8d906264e9019e26fa24a100bffb31",
+  "commands": "node tests/headless/<id>.mjs",
+  "scope": "12 scoped Node scripts; CPU/UI method execution only",
+  "results": [
+    {
+      "id": "tsandbox_reserve_fast",
+      "exit": 0,
+      "seconds": 0.411,
+      "stdout": "PASS native Sandbox quote, visible build-review action, actual click arming and reachable Stop; no purchase\nPASS Sandbox burst bound and complete ordinary simulation parity at equal time\nPASS owner decision interrupts exact minute; resolving stays paused; explicit Resume preserves original deadline\nPASS manual Pause cancels Sandbox waiting without further simulation\nPASS funded target pauses without buying; original rotated geometry restored; actual Confirm alone purchases and stays paused\nPASS funded, unlimited Free Build, invalid, demolition, lesson and scenario contexts cannot arm inappropriate Sandbox waits\nPASS unrelated modal and outstanding owner decision block arming without dismissing or advancing\nPASS nested review stays paused; changed quote and original seven-day deadline block Resume\nPASS Rush quote matches actual purchase charge; orientation is part of retained investment identity\nPASS production save serializer stores ordinary Sandbox state only; fresh session has no armed wait\nSandbox fast reserve: 10 groups passed; rendered browser and physical Safari NOT TESTED\n",
+      "stdout_sha256": "b981191a65f6320482ad17ef3702d14681d2e8ff9033c06ea6fd483fe86f2d45",
+      "stdout_bytes": 1096,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "treserve_wait_fast",
+      "exit": 0,
+      "seconds": 0.535,
+      "stdout": "PASS 240-minute cap and full-state/RNG/economics parity with ordinary simulation\nPASS six-millisecond cooperative budget returns control between bounded bursts\nPASS owner decision stops at its exact minute; answering never resumes automatically\nPASS reserve completion pauses immediately without constructing or purchasing\nPASS real manual Pause cancels fast waiting and cannot advance paused or another property\nPASS existing owner decision on another property prevents any advance\nPASS new owner decision on another property interrupts the same simulation minute\nPASS production frame fast-forwards only explicit waiting; ordinary 4x and Pause retain timing\nPASS original seven-day deadline checked before another minute\nFast reserve prototype: 9 groups passed; CPU simulation only, physical responsiveness NOT TESTED\n",
+      "stdout_sha256": "61373585924517c8db493f8be1ad09484d69c63ac4536d3c75984cb8468e255c",
+      "stdout_bytes": 820,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "treserve_wait",
+      "exit": 0,
+      "seconds": 0.718,
+      "stdout": "PASS stable build specification, live quote and ranking independence; no save metadata\nPASS actual production batch stops at first funded minute; full ordinary simulation parity; no automatic purchase\nPASS actionable interruptions, delegated work, quote/demand/placement invalidation, seven-day boundary, explicit speeds, nested pauses and actual background/foreground handler\nPASS production UI arming, exact-target completion preview, already-funded/stale offers, blockers, blur and pagehide\nPASS real staff-classified request continues; loss of coverage pauses before next minute; production property switch cancels before speed transfer\nPASS natural reserve-wait / ordinary-play full-state parity {\"minutes\":396,\"reason\":\"An operating change needs review.\",\"cash\":1100}\nPASS policy/agent/operating-office blockers at start and mid-batch; real offshift/capacity/busy coverage continues; refused waits and follow-up pauses preserve state\n",
+      "stdout_sha256": "1e4de8fd45d7210eb1a78626bb1fbe6bd1b01aaa38a3a39315bcf905fed70ee9",
+      "stdout_bytes": 940,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "treserve_wait_continuity",
+      "exit": 0,
+      "seconds": 0.757,
+      "stdout": "PASS actual navigation, inspection and nested review retain the exact target; one-tap UI Resume uses the original start time\nPASS new owner decision suspends within the production batch; blocked Resume is inert; resolving it allows explicit Resume\nPASS explicit speeds, Stop/Pause, background/foreground and the original seven-day deadline across repeated resumes\nPASS live financial completion, original-spec preview, vacancy explanation, all Resume revalidation, state parity and wrapping controls; physical Safari acceptance pending\n",
+      "stdout_sha256": "94e7fc3c286261f83cfa77d348b4d02158e2c865bb3530ac6e1a3941b12b9d6f",
+      "stdout_bytes": 536,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "treserve_wait_action_css",
+      "exit": 0,
+      "seconds": 0.349,
+      "stdout": "PASS scoped wait action display wins the minimized-panel CSS cascade; ordinary minimized rows remain hidden\n",
+      "stdout_sha256": "e23a8cc25d0699a65ef32b0453c106cbcff21e8c125aa600e0274d62ce2ce121",
+      "stdout_bytes": 108,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "tpause_policy",
+      "exit": 0,
+      "seconds": 0.331,
+      "stdout": "PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)\nPASS nested and interleaved pauses restore the speed from before the first one\nPASS manual Pause during a temporary pause is preserved by button and keyboard\nPASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored\nPASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice\nPASS panel closure: Details \u2192 Back to map and close restore the previous speed, including Pause\nPASS actions: commissioning, owner make-ready and build placement never start a paused clock\nPASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed\nPASS requests: answering the last request, and navigating from Requests, keep the player speed\nPASS property switch never applies another property\u2019s saved speed; loads stay paused\nPASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause\nPASS tutorial wording no longer promises a 1x resume\nPASS the policy is UI-only: no simulation or save field is added\n13 pause-policy checks passed\n",
+      "stdout_sha256": "d66ca0705a1e9187c950ed78120de1c01b882abe6a37b54c336db7b346d8d6f1",
+      "stdout_bytes": 1151,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "tsandbox_build_pause",
+      "exit": 0,
+      "seconds": 0.181,
+      "stdout": "PASS business, instant=false, paused: placement and real Confirm\nPASS business, instant=false, expanded: placement and real Confirm\nPASS business, instant=false, running: placement and real Confirm\nPASS business, instant=false, pauseDuringReview: placement and real Confirm\nPASS business, instant=true, paused: placement and real Confirm\nPASS business, instant=true, expanded: placement and real Confirm\nPASS business, instant=true, running: placement and real Confirm\nPASS business, instant=true, pauseDuringReview: placement and real Confirm\nPASS free, instant=false, paused: placement and real Confirm\nPASS free, instant=false, expanded: placement and real Confirm\nPASS free, instant=false, running: placement and real Confirm\nPASS free, instant=false, pauseDuringReview: placement and real Confirm\nPASS free, instant=true, paused: placement and real Confirm\nPASS free, instant=true, expanded: placement and real Confirm\nPASS free, instant=true, running: placement and real Confirm\nPASS free, instant=true, pauseDuringReview: placement and real Confirm\n",
+      "stdout_sha256": "6efbc0683a9c3a09df072020beb7e580abad3e3a6d1dae25ee26f317811f71f8",
+      "stdout_bytes": 1056,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "tbuildability_save",
+      "exit": 0,
+      "seconds": 0.347,
+      "stdout": "PASS production raw/compressed saves preserve all four unit directions and rotated office geometry, pending construction, cash, time and Pause across repeated loads\n",
+      "stdout_sha256": "5f6caa3e283ce16eaa665fa228a18603125afe8a22792fb0b0d83a4459294014",
+      "stdout_bytes": 165,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "tthreefloor_save",
+      "exit": 0,
+      "seconds": 0.911,
+      "stdout": "PASS legacy elevator at F2, priced F3 package, no mandatory stairs\nPASS complete package charged exactly once; stale quote and duplicate refused\nPASS occupied legacy IDs/leases survive staged expansion; commissioning explicit\nPASS deterministic construction reload with no second charge\nPASS cart/person slot capacity, mixed directions, eventual pickup and save midflight\nPASS freight failure blocks F3 rental; cart cannot substitute stairs; repair retains riders\nPASS actual outbound/return cart path uses F3 elevator and ground wide door\nPASS cancellation does not strand a completed floor\nPASS migration waits for an occupied legacy cab, retaining passenger and queue identities\nPASS actual customer claims a cart, visits F3, returns cart and departs\nPASS multiple working shafts choose congestion then ID and rebalance waiting freight after failure\nPASS duplicate join preserves original waiting tick; stale callers do not survive\nALL PASS: 12 three-floor gameplay checks\nPASS actual SST0/SST1 export/load preserves F2/F3 objects, layers, charges and paused load\nPASS actual save/load retains construction phase, elapsed ticks and paid package\nPASS malformed height/version/layers/floors rejected atomically across portfolio\nPASS popup closure restores the previous speed (Pause, 1x, 4x)\nPASS three-floor cutaway/selected-floor plane under renderer stubs; Safari visual acceptance pending\nPASS reordered stages, inconsistent package totals, runaway elapsed time, unfinished completed phase and orphan passengers rejected atomically\nPASS production compressed save/reload across all five expansion stages, completion and no repeated charge\n",
+      "stdout_sha256": "7bfedfcaaa58d57a7b5744dd39bae5e92aa68d64a3a89750ef4028f6bdc0dc13",
+      "stdout_bytes": 1643,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "tsave_recovery",
+      "exit": 0,
+      "seconds": 2.401,
+      "stdout": "PASS import / keep current, 0 archived: every write position, transient and persistent, reload and retry\nPASS import / keep current, 3 archived: every write position, transient and persistent, reload and retry\nPASS import / keep current, 5 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 0 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 3 archived: every write position, transient and persistent, reload and retry\nPASS Restore previous game, 5 archived: every write position, transient and persistent, reload and retry\nPASS archive restore (index 1), 3 archived: every write position, transient and persistent, reload and retry\nPASS archive restore (index 1), 5 archived: every write position, transient and persistent, reload and retry\nPASS a full archive keeps every game through a persistent failure at each step, and the next keep discloses every drop\nPASS read failures are explicit: nothing is written and the message says the games could not be read\nPASS an unreadable archive or kept slot is copied aside before anything overwrites it\nPASS a restore keeps the restored game listed until it has been saved, then removes only that copy\nPASS reviewer's sequence: 5 archived, restore index 2, the third and every later write fails\nPASS unchanged archive report covers archive/previous slots, not unrelated autosave writes\n14 save-recovery checks passed; autosave=original double; delay=0ms\n",
+      "stdout_sha256": "50cd44729e8660e1120a03697923e08c3f1de56c5a9e4a6cd40a62793ab5f306",
+      "stdout_bytes": 1505,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "tfinancial_trust",
+      "exit": 0,
+      "seconds": 0.124,
+      "stdout": "PASS cash delta reconciles to ledger movement \u00b7 -76 vs -76\nPASS normalized operating estimate is finite \u00b7 7\nPASS scenario exposes authoritative deadline for calendar\nPASS leases expose billing dates for calendar\nPASS today cash movement is ledger-derived \u00b7 -76\nALL PASS\n",
+      "stdout_sha256": "03c507d7051adabe7ce271e9a2ead60557b4fe5b42bcfa631c6afd23005e175f",
+      "stdout_bytes": 273,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "id": "tstartup_graphics",
+      "exit": 0,
+      "seconds": 0.154,
+      "stdout": "PASS successful renderer returned unchanged; no fallback UI\nPASS accessible static error, no error HTML injection, manual reload only\nPASS actual main boot failure stops before game UI, clock, handlers, cloud or save setup\n",
+      "stdout_sha256": "edc7973d63d0e3f64518473a21ebff7544d7421bb2407b58d8e382119d104fa1",
+      "stdout_bytes": 223,
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ]
+}

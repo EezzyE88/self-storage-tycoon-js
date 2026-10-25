@@ -1,3 +1,4 @@
+import {nameUnit,validateNumbering} from '../../js/unitnumbering.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {makeMaple} from '../../js/maple.js';
@@ -34,7 +35,7 @@ test('wrong-size stock and climate noSize keep original outcome category',()=>{
  const {sim,u}=setup();Object.assign(u,{env:'climate',commercial:'ready'});const size='unknown-size',th=lose(sim,size);assert.equal(th.complaint,'noSize');assert.equal(sim.s.lost.noSize,1);assert.equal(th.climateAvailability.total,0);assert.match(diagnoseComplaint(sim,th).remedy,/No matching-size/);
 });
 test('report stays historical after current stock and prerequisites change; save/reload retains snapshot',()=>{
- const {sim,u}=setup();Object.assign(u,{env:'climate',commercial:'ready',blocked:true,f:1,missing:['Disconnected freight entrance']});const th=lose(sim,u.size),before=JSON.stringify(th);
+ const {sim,u}=setup();Object.assign(u,{env:'climate',commercial:'ready',blocked:true,f:1,missing:['Disconnected freight entrance']});nameUnit(sim.s,u);assert.ok(validateNumbering(sim.s));const th=lose(sim,u.size),before=JSON.stringify(th);
  Object.assign(u,{commercial:'ready',blocked:false,missing:[]});const r=diagnoseComplaint(sim,th);assert.equal(r.climate.historical.counts.blocked,1);assert.equal(r.climate.current.counts.eligible,1);assert.equal(JSON.stringify(th),before);
  const loaded=new Sim(JSON.parse(JSON.stringify(sim.s)));assert.deepEqual(loaded.s.thoughts.at(-1).climateAvailability,th.climateAvailability);assert.match(diagnoseComplaint(loaded,loaded.s.thoughts.at(-1)).cause,/At report time/);
 });

@@ -1,0 +1,63 @@
+{
+  "parent": "84fe72cb645941465e369cff57715fe38b2f8294",
+  "remote_default": "master",
+  "remote_master": "ee39e0986718ce33fb84018a2c108249f793e3f8",
+  "remote_office_snapshot": "b7092e08d89fcd882c5d2d82db6ac1eb7631af42",
+  "parent_origin": "Exact original Git object recovered from SST_Office_Browser_QA_84fe72c_20261024.zip; GitHub returned 404 for 84fe72c and live branch listing did not include it.",
+  "recovery_package": {
+    "library_file_id": "libfile_51f090fd23108191bbeadd611ca9d6ac",
+    "verified_files": 999,
+    "source_blobs": 979
+  },
+  "focused": {
+    "script": "tests/headless/tentrance_preview.mjs",
+    "exit_code": 0,
+    "groups": 11,
+    "scope": "Connected/disconnected/dark/pending frontages and connections; mixed row; upper-floor freight; complete state read purity at 0/1/2/4x; unchanged quotes; existing preview UI and Confirm while paused; camera-method guard; state reload."
+  },
+  "parent_parity": {
+    "parent_source": "Preserved QA package exact 84fe72c source",
+    "fixtures": 24,
+    "advancing_minutes_each": 120,
+    "full_state_and_events": "equal after constructor and every step",
+    "scope": "Ground/upper floor \u00d7 no/construction/broken/working elevator \u00d7 missing/ready/pending hallway cell"
+  },
+  "harness_failure": {
+    "first_attempt": "The ad-hoc parity fixture moved an existing unit upstairs without reallocating its floor-specific display number. Parent construction rejected it: Duplicate or wrong-floor unit number.",
+    "cause": "Invalid disposable fixture, before candidate comparison; not a game defect.",
+    "correction": "Use production nameUnit after moving the fixture unit upstairs; corrected parity run passed."
+  },
+  "checks": {
+    "tpause_policy": {
+      "exit_code": 0,
+      "output": "PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)\nPASS nested and interleaved pauses restore the speed from before the first one\nPASS manual Pause during a temporary pause is preserved by button and keyboard\nPASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored\nPASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice\nPASS panel closure: Details \u2192 Back to map and close restore the previous speed, including Pause\nPASS actions: commissioning, owner make-ready and build placement never start a paused clock\nPASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed\nPASS requests: answering the last request, and navigating from Requests, keep the player speed\nPASS property switch never applies another property\u2019s saved speed; loads stay paused\nPASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause\nPASS tutorial wording no longer promises a 1x resume\nPASS the policy is UI-only: no simulation or save field is added\n13 pause-policy checks passed\n"
+    },
+    "tbuildability": {
+      "exit_code": 0,
+      "output": "PASS du5x5 single corner orientation 0\nPASS du5x5 single corner orientation 1\nPASS du5x5 single corner orientation 2\nPASS du5x5 single corner orientation 3\nPASS du5x10 single corner orientation 0\nPASS du5x10 single corner orientation 1\nPASS du5x10 single corner orientation 2\nPASS du5x10 single corner orientation 3\nPASS du10x10 single corner orientation 0\nPASS du10x10 single corner orientation 1\nPASS du10x10 single corner orientation 2\nPASS du10x10 single corner orientation 3\nPASS du10x20 single corner orientation 0\nPASS du10x20 single corner orientation 1\nPASS du10x20 single corner orientation 2\nPASS du10x20 single corner orientation 3\nPASS interior orientation 0 preserves hallway requirement\nPASS interior orientation 1 preserves hallway requirement\nPASS interior orientation 2 preserves hallway requirement\nPASS interior orientation 3 preserves hallway requirement\nPASS du5x5 four rotations preserve row count, cost, time and state\nPASS iu5x5 four rotations preserve row count, cost, time and state\nPASS du5x10 four rotations preserve row count, cost, time and state\nPASS iu5x10 four rotations preserve row count, cost, time and state\nPASS du10x10 four rotations preserve row count, cost, time and state\nPASS iu10x10 four rotations preserve row count, cost, time and state\nPASS du10x20 four rotations preserve row count, cost, time and state\nPASS iu10x20 four rotations preserve row count, cost, time and state\nPASS aisle rectangle rotation swaps footprint without buying\nPASS loading rectangle rotation swaps footprint without buying\nPASS parking rectangle rotation swaps footprint without buying\nPASS walk rectangle rotation swaps footprint without buying\nPASS canopy rectangle rotation swaps footprint without buying\nPASS shell1 rectangle rotation swaps footprint without buying\nPASS shell2 rectangle rotation swaps footprint without buying\nPASS hall rectangle rotation swaps footprint without buying\nPASS office 0 footprint and explicit access side survive build/save\nPASS office 1 footprint and explicit access side survive build/save\nPASS office 2 footprint and explicit access side survive build/save\nPASS office 3 footprint and explicit access side survive build/save\nPASS occupied footprint blocks each rotation and failed build spends nothing\n41 buildability groups passed\n"
+    },
+    "tautomatic_opening": {
+      "exit_code": 0,
+      "output": "PASS purchase unchanged, paused poll, advancing-minute opening, grouped event and no replay\nPASS rental readiness never opens the property\nPASS connected-access blocker and visible reason; later infrastructure recovery opens units\nPASS tutorials, lessons, scenarios and Free Build retain manual commissioning\nPASS old ready saves remain paused until simulation resumes\nPASS shared manual/automatic commissioning path rechecks capacity between units\nPASS purchase disclosure and actual grouped UI notification\nPASS real running construction opens a whole eligible batch with one event and unchanged purchase charge\nPASS background company minutes open inventory; non-advancing calls remain inert\nALL PASS: automatic opening; native simulation/UI methods only\n"
+    },
+    "tbuildability_save": {
+      "exit_code": 0,
+      "output": "PASS production raw/compressed saves preserve all four unit directions and rotated office geometry, pending construction, cash, time and Pause across repeated loads\n"
+    }
+  },
+  "browser": "NOT TESTED",
+  "physical_safari": "NOT TESTED",
+  "no_normal_save_access": true,
+  "no_push": true,
+  "no_publication": true,
+  "no_merge": true,
+  "preservation": {
+    "existing_files": 979,
+    "existing_files_unchanged": 978,
+    "changed_existing_files": [
+      "js/sim.js"
+    ],
+    "ui_sha256": "33fa4b6f6b457fa0a67557045cb3353f6bf9e67be82d7fb8037fb34202c2924d",
+    "original_office_evidence_unchanged": true
+  }
+}

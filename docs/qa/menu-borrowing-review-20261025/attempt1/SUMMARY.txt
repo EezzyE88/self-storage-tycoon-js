@@ -1,0 +1,14 @@
+ERROR tmenu_touch — process exit 1
+file:///tmp/sst-menu-borrowing-py_kt4a6/source/tests/headless/tmenu_touch.mjs:21
+  assert.equal(sim.s.cash, cash); assert.equal(sim.s.debt.length, 0); assert.equal(sim.s.lesson.id, 'financing'); assert.ok(!sim.s.lessonsDone.financing);
+                                                                                                                                               ^
+
+TypeError: Cannot read properties of undefined (reading 'financing')
+    at file:///tmp/sst-menu-borrowing-py_kt4a6/source/tests/headless/tmenu_touch.mjs:21:144
+    at test (file:///tmp/sst-menu-borrowing-py_kt4a6/source/tests/headless/tmenu_touch.mjs:7:30)
+    at file:///tmp/sst-menu-borrowing-py_kt4a6/source/tests/headless/tmenu_touch.mjs:16:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.1

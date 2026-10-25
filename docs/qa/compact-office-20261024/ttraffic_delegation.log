@@ -1,0 +1,21 @@
+PASS clerk retention queues after hours at 0x, then handles next shift
+PASS clerk retention queues after hours at 1x, then handles next shift
+PASS clerk retention queues after hours at 2x, then handles next shift
+PASS clerk retention queues after hours at 4x, then handles next shift
+PASS manager retention queues after hours at 0x, then handles next shift
+PASS manager retention queues after hours at 1x, then handles next shift
+PASS manager retention queues after hours at 2x, then handles next shift
+PASS manager retention queues after hours at 4x, then handles next shift
+PASS temporary Clerk gap queues without an owner card, then returns to normal handling
+PASS closing and reopening retains the authorized queue
+PASS saved legacy coverage flag recovers only for authorized retention
+PASS genuine manual exception remains owner-held
+PASS genuine owner exception remains owner-held
+PASS genuine failed exception remains owner-held
+PASS genuine critical exception remains owner-held
+PASS genuine noStaff exception remains owner-held
+PASS switching retention off at 10:00 prevents pending discount
+PASS switching retention off at 19:00 prevents pending discount
+PASS decline completes once, no extra discount or repeat owner request
+PASS policy switched off during a Clerk gap queues move-out instructions instead of applying discount
+20 traffic/delegation behavior groups passed

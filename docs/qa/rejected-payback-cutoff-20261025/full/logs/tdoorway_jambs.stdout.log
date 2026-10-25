@@ -1,0 +1,3 @@
+PASS injected geometry: 24 distinct jambs, four directions, three floors, dimensions and exclusions
+PASS seeded Maple scene: 18 jamb positions and unchanged complete simulation/save state
+Doorway jamb geometry complete; rendered appearance remains NOT TESTED

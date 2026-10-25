@@ -1,0 +1,12 @@
+PASS connected lit frontage remains valid without a route warning
+PASS disconnected lit frontage reports the same entrance failure as finished readiness
+PASS darkness and route are separate prerequisites; lighting does not imply connectivity
+PASS pending connecting hall orders retain the warning until their actual completion
+PASS pending frontage uses the existing readiness reason and remains buildable
+PASS a mixed row reports every distinct access prerequisite once
+PASS previewing repeatedly preserves complete state, capacity, money, RNG and time at every speed
+PASS disclosure does not change quote geometry, cost, duration or operating burden
+PASS existing preview UI shows the reason and allows Confirm without moving camera or starting Pause
+PASS ordinary state reload preserves pending construction and route disclosure without new fields
+PASS upper floors reuse freight readiness rather than treating a stair route as sufficient
+11 entrance-preview groups passed; native fixtures, browser and physical Safari NOT TESTED

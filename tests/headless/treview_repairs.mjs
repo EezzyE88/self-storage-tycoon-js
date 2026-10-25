@@ -50,7 +50,13 @@ await test('#2 Freeze: Space cannot run time while frozen; Unfreeze and exiting 
 
 // ---------- #3 / #4 labels and visible instructions
 await test('#3 ring labels avoid blueprint captions, and no blueprint caption is drawn twice',()=>{
-  const u=readFileSync('js/ui.js','utf8');assert.match(u,/\.actionbar \.status, #blueprint text'\)/);
+  // Exercise actual updateGuide with selector-aware controlled rectangles, not source spelling.
+  const model=makeMaple(3),probe=Object.create(UI.prototype),classes=new Set(),rect=(left,top,width,height)=>({left,top,width,height,right:left+width,bottom:top+height});
+  const label={textContent:'',style:{},getBoundingClientRect:()=>rect(0,0,88,28)},guide={hidden:true,style:{},lastChild:label,classList:{remove:k=>classes.delete(k),toggle:(k,on)=>on?classes.add(k):classes.delete(k)}};
+  probe.g={sim:model};probe.title=true;probe.$=()=>guide;probe.guideTarget=()=>({el:{getBoundingClientRect:()=>rect(160,280,44,44),closest:()=>null},lbl:'Tap'});
+  globalThis.innerWidth=390;globalThis.innerHeight=844;let blocked=false;const checked=new Set(),before=JSON.stringify(model.s);
+  probe.root={querySelectorAll:selectors=>{const list=selectors.split(',').map(x=>x.trim());for(const expected of ['.actionbar','#blueprint text'])if(list.includes(expected))checked.add(expected);return blocked?list.filter(x=>['.actionbar','#blueprint text'].includes(x)).map((x,i)=>({getBoundingClientRect:()=>i?rect(0,324,390,50):rect(0,230,390,50)})):[];}};
+  probe.updateGuide();assert.ok(!classes.has('nolabel'));blocked=true;probe.updateGuide();assert.ok(classes.has('nolabel'),'caption hidden when actionbar and blueprint occupy both placements');assert.equal(guide.hidden,false,'target ring remains');assert.deepEqual([...checked].sort(),['#blueprint text','.actionbar']);assert.equal(JSON.stringify(model.s),before);
   const s=makeMaple(20260929);s.s.tut={on:false,done:true,flags:{}};s.s.lesson={id:'up',idMark:s.s.nextId,built:[],flags:{},entered:true};s.s.creative=true;
   for(const k of ['aisle','shell2','hall','doorWide','loading','hall2'])assert.ok(s.dispatch({type:'build',...verticalLayout(s).plans[k]}).ok,k);
   const ui=Object.create(UI.prototype),box={innerHTML:'',setAttribute(){}};ui.g={sim:s,rend:{view:0,project:(x,y)=>({x:x*12,y:y*9,vis:true})}};ui.$=()=>box;ui.modalOpen=()=>false;globalThis.innerWidth=800;globalThis.innerHeight=600;
@@ -59,7 +65,7 @@ await test('#3 ring labels avoid blueprint captions, and no blueprint caption is
 await test('#4 the docked instruction strip keeps the how-to line visible',()=>{
   const {ui,sim}=fixture(0),box={innerHTML:''};ui.$=()=>box;ui.rend.setFocus=()=>{};ui.currentBlueprintPlan=()=>null;delete ui.renderTut;sim.s.tut.beat=BEATS.findIndex(b=>b.id==='makeready');ui.tutMin=true;UI.prototype.renderTut.call(ui,true);
   assert.match(box.innerHTML,/<span class="how-line">In the unit panel that opened|<span class="how-line">It.s on the drive-up row/);
-  const css=readFileSync('css/game.css','utf8');assert.match(css,/#ui\.has-sheet \.tut:not\(\.offer\):not\(\.scen\) \.how-line, #ui:has\(\.actionbar\) \.tut:not\(\.offer\):not\(\.scen\) \.how-line \{ display:-webkit-box/);assert.match(css,/#ui \.tut \.how-line \{ display:none; \}/);});
+  const css=readFileSync('css/game.css','utf8');assert.match(css,/#ui\.has-sheet \.tut:not\(\.offer\):not\(\.scen\) \.how-line, #ui:has\(\.actionbar\) \.tut:not\(\.offer\):not\(\.scen\) \.how-line \{ display:block; max-height:min\(24dvh, 180px\); overflow-y:auto/);assert.match(css,/#ui \.tut \.how-line \{ display:none; \}/);assert.match(css,/touch-action:pan-y; white-space:normal; overflow-wrap:anywhere/);});
 
 // ---------- #5 hallway: missing / ordered / built, with a working route to time and no auto-resume
 function upLesson(){const s=makeMaple(20260929);s.s.tut={on:false,done:true,flags:{}};s.s.lesson={id:'up',idMark:s.s.nextId,built:[],flags:{},entered:true};s.s.cash=1e6;s.s.open=false;return s;}
@@ -141,13 +147,13 @@ await test('#9 building commissioning offers this order first; the property-wide
 // ---------- #10 information-only ledger facts
 await test('#10 cancellation records penalty, work-in-progress and retained-prerequisite facts without moving cash',()=>{
   const sim=makeMaple(3);sim.s.cash=1e6;const SH=sim.objs('shell')[0].id;const R=sim.verticalPlan(SH);sim.dispatch({type:'verticalUpgrade',...R});let o=sim.s.orders.at(-1);for(let i=0;i<20;i++){sim.s.t++;tickVertical(sim,o);}
-  let fin=JSON.stringify(sim.s.finance),cash=sim.s.cash;sim.dispatch({type:'cancelOrder',id:o.id});assert.equal(sim.s.cash-cash,17810);
+  let fin=JSON.stringify(sim.s.finance),cash=sim.s.cash;sim.dispatch({type:'cancelOrder',id:o.id});assert.equal(sim.s.cash-cash,17660);
   assert.match(sim.s.ledger.at(-1).note,/Full undo within the grace period: no penalty, nothing retained/);assert.equal(sim.s.ledger.at(-1).amt,0);
   sim.dispatch({type:'verticalUpgrade',...sim.verticalPlan(SH)});o=sim.s.orders.at(-1);while(o.vertical.phase<1){sim.s.t++;tickVertical(sim,o);}for(let i=0;i<100;i++){sim.s.t++;tickVertical(sim,o);}
   const finBefore=JSON.parse(JSON.stringify(sim.s.finance));cash=sim.s.cash;const n0=sim.s.ledger.length;sim.dispatch({type:'cancelOrder',id:o.id});
-  const rows=sim.s.ledger.slice(n0);assert.deepEqual(rows.map(r=>[r.cat,r.amt]),[['capex',10371],['info',0],['info',0],['info',0]]);assert.ok(rows.slice(1).every(r=>r.info===true));
-  assert.match(rows[1].note,/Cancellation penalty, not refunded: \$6,913\.39/);assert.match(rows[2].note,/Work in progress not refunded: \$129\.61/);assert.match(rows[3].note,/Retained with the building: reinforcement \$396; the next F2 quote omits it/);
-  assert.equal(sim.s.cash-cash,10371,'only the refund moves cash');
+  const rows=sim.s.ledger.slice(n0);assert.deepEqual(rows.map(r=>[r.cat,r.amt]),[['capex',10281],['info',0],['info',0],['info',0]]);assert.ok(rows.slice(1).every(r=>r.info===true));
+  assert.match(rows[1].note,/Cancellation penalty, not refunded: \$6,853\.39/);assert.match(rows[2].note,/Work in progress not refunded: \$129\.61/);assert.match(rows[3].note,/Retained with the building: reinforcement \$396; the next F2 quote omits it/);
+  assert.equal(sim.s.cash-cash,10281,'only the refund moves cash');
   const delta=(a,b)=>JSON.stringify(a.cashDays.map(d=>[d.day,d.incoming,d.outgoing,d.categories]))!==JSON.stringify(b.cashDays.map(d=>[d.day,d.incoming,d.outgoing,d.categories]));
   const day=sim.s.finance.cashDays.at(-1);assert.equal(day.categories.info,undefined,'no info category in cash accounting');assert.ok(delta(finBefore,sim.s.finance));
   const w=sim.cashWindow(30);const sum=sim.s.ledger.filter(r=>!r.info&&r.t>sim.s.t-30*1440).reduce((a,r)=>a+r.amt,0);assert.ok(Math.abs(w.net-sum)<0.01||w.complete===false,'cash window equals non-info ledger');

@@ -1,0 +1,63 @@
+{
+  "parent": "1774b0fddbefb0491bf220603fdf8a99bcb197fe",
+  "scope": "Restore saved construction rotation before Growth-return requote; one production line",
+  "parent_reproduction": {
+    "command": [
+      "node",
+      "tests/headless/tgrowth_rotation_roundtrip.mjs"
+    ],
+    "exit": 1,
+    "stdout": "PASS older/unrotated proposal without rotation retains the existing null-rotation behavior\n",
+    "stderr": "FAIL rotation 0\nAssertionError [ERR_ASSERTION]: F0: none, cameras false: exact proposal must round-trip\n+ actual - expected\n... Skipped lines\n\n  {\n+   argsRotation: null,\n-   argsRotation: 0,\n    cost: 2480,\n    counts: {\n      camera: 0,\n      light: 0,\n      unitLight: 0\n...\n    },\n+   rotation: null,\n-   rotation: 0,\n    stamp: '[2480,680,1,[[\"unit\",12,12,0,null,null],[\"unit\",13,12,0,null,null],[\"unit\",14,12,0,null,null],[\"unit\",15,12,0,null,null]],[],[]]',\n    status: 'incomplete',\n    suggestions: [],\n    units: [\n      {\n\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-rotation-candidate/tests/headless/tgrowth_rotation_roundtrip.mjs:38:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\nFAIL rotation 1\nAssertionError [ERR_ASSERTION]: F1: none, cameras false: exact proposal must round-trip\n+ actual - expected\n... Skipped lines\n\n  {\n+   argsRotation: null,\n-   argsRotation: 1,\n    cost: 2480,\n    counts: {\n      camera: 0,\n      light: 0,\n      unitLight: 0\n...\n    },\n+   rotation: null,\n-   rotation: 1,\n    stamp: '[2480,680,1,[[\"unit\",12,12,0,null,null],[\"unit\",12,13,0,null,null],[\"unit\",12,14,0,null,null],[\"unit\",12,15,0,null,null]],[],[]]',\n    status: 'incomplete',\n    suggestions: [],\n    units: [\n      {\n        dir: [\n+         -1,\n-         1,\n          0\n        ],\n        f: 0,\n        h: 1,\n        w: 2,\n...\n        dir: [\n+         -1,\n-         1,\n          0\n        ],\n        f: 0,\n        h: 1,\n        w: 2,\n...\n        dir: [\n+         -1,\n-         1,\n          0\n        ],\n        f: 0,\n        h: 1,\n        w: 2,\n...\n        dir: [\n+         -1,\n-         1,\n          0\n        ],\n        f: 0,\n        h: 1,\n        w: 2,\n\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-rotation-candidate/tests/headless/tgrowth_rotation_roundtrip.mjs:38:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\nFAIL rotation 2\nAssertionError [ERR_ASSERTION]: F2: none, cameras false: exact proposal must round-trip\n+ actual - expected\n... Skipped lines\n\n  {\n+   argsRotation: null,\n-   argsRotation: 2,\n    cost: 2480,\n    counts: {\n      camera: 0,\n      light: 0,\n      unitLight: 0\n...\n    },\n+   rotation: null,\n-   rotation: 2,\n    stamp: '[2480,680,1,[[\"unit\",12,12,0,null,null],[\"unit\",13,12,0,null,null],[\"unit\",14,12,0,null,null],[\"unit\",15,12,0,null,null]],[],[]]',\n    status: 'incomplete',\n    suggestions: [],\n    units: [\n      {\n        dir: [\n          0,\n+         -1\n-         1\n        ],\n        f: 0,\n        h: 2,\n        w: 1,\n        x: 12,\n...\n          0,\n+         -1\n-         1\n        ],\n        f: 0,\n        h: 2,\n        w: 1,\n        x: 13,\n...\n          0,\n+         -1\n-         1\n        ],\n        f: 0,\n        h: 2,\n        w: 1,\n        x: 14,\n...\n          0,\n+         -1\n-         1\n        ],\n        f: 0,\n        h: 2,\n        w: 1,\n        x: 15,\n\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-rotation-candidate/tests/headless/tgrowth_rotation_roundtrip.mjs:38:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\nFAIL rotation 3\nAssertionError [ERR_ASSERTION]: F3: none, cameras false: exact proposal must round-trip\n+ actual - expected\n... Skipped lines\n\n  {\n+   argsRotation: null,\n-   argsRotation: 3,\n    cost: 2480,\n    counts: {\n      camera: 0,\n      light: 0,\n      unitLight: 0\n...\n    },\n+   rotation: null,\n-   rotation: 3,\n    stamp: '[2480,680,1,[[\"unit\",12,12,0,null,null],[\"unit\",12,13,0,null,null],[\"unit\",12,14,0,null,null],[\"unit\",12,15,0,null,null]],[],[]]',\n    status: 'incomplete',\n    suggestions: [],\n    units: [\n      {\n\n    at file:///workspace/scratch/0fb8c3c742f4/unit-upgrade-rotation-candidate/tests/headless/tgrowth_rotation_roundtrip.mjs:38:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n4 rotation groups failed\n",
+    "stdout_sha256": "6f988e3d745c2e8ffb44165a9b583b533439af30bc4b54c73a712e7ac5f28671",
+    "stderr_sha256": "94dd529c568237337e49f9341a3a0705ecff458c6c8e8396f567efc00696e87f"
+  },
+  "results": [
+    {
+      "command": [
+        "node",
+        "tests/headless/tgrowth_rotation_roundtrip.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS rotation 0: 8 lighting/camera combinations preserve footprints, doors, fixture selections, costs and quote; Pause/closed property/save state unchanged\nPASS rotation 1: 8 lighting/camera combinations preserve footprints, doors, fixture selections, costs and quote; Pause/closed property/save state unchanged\nPASS rotation 2: 8 lighting/camera combinations preserve footprints, doors, fixture selections, costs and quote; Pause/closed property/save state unchanged\nPASS rotation 3: 8 lighting/camera combinations preserve footprints, doors, fixture selections, costs and quote; Pause/closed property/save state unchanged\nPASS older/unrotated proposal without rotation retains the existing null-rotation behavior\nALL PASS: Growth rotation round-trip; native UI methods only\n",
+      "stderr": "",
+      "stdout_sha256": "57966d9a297136fe3b65a84086f0dcbb56685346b2d83bc8472431e8f763a1a9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tunit_upgrade_review_fixes.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS construction camera/light controls preserve independent deselections, including off/on\nPASS retrofit camera/light controls preserve independent deselections without purchase\nPASS actual Growth navigation restores lighting, cameras and exclusions before requoting\nPASS new footprint cannot reuse mounted coverage that it will obstruct\nPASS unobstructed mounted coverage still shares; standalone coverage keeps existing rules\nALL PASS: three reviewed paths; native checks only\n",
+      "stderr": "",
+      "stdout_sha256": "d42855ed8596f8d42f15a9da13977ea6b20e87378e049fb324b597769217e36d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tsandbox_reserve_fast.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS native Sandbox quote, visible build-review action, actual click arming and reachable Stop; no purchase\nPASS Sandbox burst bound and complete ordinary simulation parity at equal time\nPASS owner decision interrupts exact minute; resolving stays paused; explicit Resume preserves original deadline\nPASS manual Pause cancels Sandbox waiting without further simulation\nPASS funded target pauses without buying; original rotated geometry restored; actual Confirm alone purchases and stays paused\nPASS funded, unlimited Free Build, invalid, demolition, lesson and scenario contexts cannot arm inappropriate Sandbox waits\nPASS unrelated modal and outstanding owner decision block arming without dismissing or advancing\nPASS nested review stays paused; changed quote and original seven-day deadline block Resume\nPASS Rush quote matches actual purchase charge; orientation is part of retained investment identity\nPASS production save serializer stores ordinary Sandbox state only; fresh session has no armed wait\nPASS completion purchase clears obsolete target-preview controls\nPASS another selected investment is retained when an interrupted target rejects replacement\nPASS other-property owner decision blocks Start before closing the selected review\nPASS other-property owner decision blocks explicit Resume without an armed frame\nPASS live reserve card preserves an in-progress tap until pointer release\nPASS interrupted wait exposes an actionable explanation while another build review is open\nSandbox fast reserve: 16 groups passed; rendered browser and physical Safari NOT TESTED\n",
+      "stderr": "",
+      "stdout_sha256": "a0a2d73105efe439f4e8341a11a5938d91b3cdb407784ef699518232669662ef",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "tests/headless/tpause_policy.mjs"
+      ],
+      "exit": 0,
+      "stdout": "PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)\nPASS nested and interleaved pauses restore the speed from before the first one\nPASS manual Pause during a temporary pause is preserved by button and keyboard\nPASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored\nPASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice\nPASS panel closure: Details \u2192 Back to map and close restore the previous speed, including Pause\nPASS actions: commissioning, owner make-ready and build placement never start a paused clock\nPASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed\nPASS requests: answering the last request, and navigating from Requests, keep the player speed\nPASS property switch never applies another property\u2019s saved speed; loads stay paused\nPASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause\nPASS tutorial wording no longer promises a 1x resume\nPASS the policy is UI-only: no simulation or save field is added\n13 pause-policy checks passed\n",
+      "stderr": "",
+      "stdout_sha256": "d66ca0705a1e9187c950ed78120de1c01b882abe6a37b54c336db7b346d8d6f1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "new_test_sha256": "9e61478814579ee1eb543c30f7b990a667922cf2bf799e3e200a1da9cfe27d6c",
+  "limits": "Native UI-method checks. No browser, touch or physical Safari acceptance. No deployment or merge."
+}

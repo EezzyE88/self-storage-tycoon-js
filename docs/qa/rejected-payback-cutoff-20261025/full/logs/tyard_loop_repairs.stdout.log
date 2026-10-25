@@ -1,0 +1,4 @@
+PASS disconnected pavement skipped, connected alternative found, quotes read-only, actual construction and commissioning serviceable
+PASS legacy untracked reservations remain distinct from physical occupancy in real production markup
+PASS actual inspection handler: drive-up EXT, ground interior F1, upper interior correct floor
+PASS two overlapping ordinary builds retain original leases, independently celebrate once, survive save/reload, migrate old tracker, reject malformed optional groups

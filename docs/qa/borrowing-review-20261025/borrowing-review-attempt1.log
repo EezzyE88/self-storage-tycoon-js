@@ -1,0 +1,15 @@
+PASS all offered expansion amounts open review; legacy command cannot bypass it
+PASS term quote is pure and uses authoritative rate, limit, payment, due day and reserve
+PASS Back and repeated confirmation cannot borrow; confirmed term loan matches parent command exactly
+PASS changed term terms, cash, existing debt, date or eligibility require a fresh confirmation
+file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:78
+  for(const setup of [f=>{f.sim.s.mode='tutorial';f.sim.s.tut.done=false;},f=>f.sim.s.sb.unlimited=true]) {
+                                                                                                  ^
+
+TypeError: Cannot set properties of undefined (setting 'unlimited')
+    at file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:78:99
+    at file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:79:23
+    at test (file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:38:31)
+    at file:///workspace/scratch/40d3cb6a92ec/borrowing-review/tests/headless/tborrowing_review.mjs:77:1
+
+Node.js v24.22.1

@@ -1,0 +1,11 @@
+PASS failed handoff retains Owner queue and exact booking, without double refund
+PASS queued Owner override survives hire, rebalancing and old-format JSON resume
+PASS active Owner work stays assigned when staff hired
+PASS busy staff route failure does not reserve hours or silently send Owner
+PASS next-day exhausted queued worker retains assignment until capacity becomes available
+PASS route change after queueing refunds worker once and releases blocked job
+PASS Manager and Clerk cannot take Porter/Tech jobs
+PASS work board explains queued capacity, shifts and current office coverage
+PASS diagnostic windows isolate idle/battery and include every skipped callback CPU
+PASS diagnostic panel lives inside scrolling menu rather than a fixed overlay
+10 management/diagnostic regressions passed

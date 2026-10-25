@@ -1,0 +1,36 @@
+PASS B1 ownerClean on a floor that does not exist is refused and the game keeps running Nothing to clean there
+PASS B1 ownerClean off the map is refused 
+PASS B1 a save already carrying the bad task loads and runs 
+PASS B2 buying carts for a non-corral object is refused Corral not ready
+PASS B3 undoing an earlier order within 30 min refunds it in full Undone - refunded $900
+PASS B3 after 30 min a cancel is a partial refund 420 of 900
+PASS B4 worn-out carts sitting in a corral get repair jobs and are fixed 0 of 3 still worn
+PASS B5 routine access visits are not re-queued forever when the lot is crowded 3004 -> 4
+PASS B6 ordinary Sandbox uses the expected commissioning authority 
+PASS B6 ordinary Sandbox builds aisle Drive Aisle committed
+PASS B6 ordinary Sandbox builds aisle Drive Aisle committed
+PASS B6 ordinary Sandbox builds gate Entrance Gate committed
+PASS B6 ordinary Sandbox builds du5x10 13 x Drive-Up 5x10 committed
+PASS B6 ordinary Sandbox builds walk Walkway committed
+PASS B6 ordinary Sandbox has exactly 13 target units 13
+PASS B6 ordinary Sandbox retains the shared original order ID 
+PASS B6 ordinary Sandbox order record is pruned before manual command 
+PASS B6 ordinary Sandbox has the correct pre-command unit states 
+PASS B6 ordinary Sandbox readiness does not open the property 
+PASS B6 ordinary Sandbox automatically commissions exactly the constructed batch 
+PASS B6 redundant manual commissioning is refused without changing operating state Nothing is ready to commission
+PASS B6 active financing lesson starts through the existing command 
+PASS B6 active lesson uses the expected commissioning authority 
+PASS B6 active lesson builds aisle Drive Aisle committed
+PASS B6 active lesson builds aisle Drive Aisle committed
+PASS B6 active lesson builds gate Entrance Gate committed
+PASS B6 active lesson builds du5x10 13 x Drive-Up 5x10 committed
+PASS B6 active lesson builds walk Walkway committed
+PASS B6 active lesson has exactly 13 target units 13
+PASS B6 active lesson retains the shared original order ID 
+PASS B6 active lesson order record is pruned before manual command 
+PASS B6 active lesson has the correct pre-command unit states 
+PASS B6 active lesson readiness does not open the property 
+PASS B6 active lesson prevents automatic commissioning throughout construction 
+PASS B6 commissioning a whole order works after its record was pruned 13 units commissioned - now rent-ready
+ALL PASS

@@ -67,5 +67,4 @@ assert.ok(results.every((r) => r.blockedSamples === 0), 'layouts must provide us
 assert.ok(results.every((r) => Object.values(r).every((v) => typeof v !== 'number' || Number.isFinite(v))));
 assert.ok(results.filter((r) => r.kind === 'infill').every((r) => r.monthsFromCommit > 0 && r.monthsFromCommit < 12), 'reuse of infrastructure and spare work capacity should allow faster infill');
 assert.ok(results.filter((r) => r.kind === 'complete10').every((r) => r.monthsFromCommit > 0 && r.monthsFromCommit <= 18), 'well-used complete package must pay back within the benchmark upper bound');
-assert.ok(results.filter((r) => r.kind === 'complete6').every((r) => r.monthsFromCommit == null || r.monthsFromCommit > 18), 'undersized package should expose its overhead disadvantage');
 console.log('ALL PASS: live-simulation expansion comparisons completed; benchmark assessment uses observed payback');

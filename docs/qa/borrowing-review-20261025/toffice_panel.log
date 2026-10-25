@@ -1,0 +1,10 @@
+PASS counter matches actual server eligibility, excludes Manager, and separates service from waiting
+PASS reserved property capacity is distinct from recorded completions; stale days are read without mutation
+PASS critical, manual, takeover and failed requests are owner decisions; eligible routine requests stay delegated
+PASS after-hours retention shows delegated waiting rather than a new owner decision
+PASS property delegation excludes unassigned and Owner work and includes staff/vendor jobs once
+PASS Office inspector retains four actionable rows, escapes request text, and discloses current authority without purchases
+PASS Office section buttons navigate to existing destinations without dispatch or camera movement
+PASS Office coverage, chores and request actions reach existing handlers and never start manual Pause
+PASS selecting Office never schedules camera recentering, preserves Pause, and keeps other inspector framing
+9 focused Office checks passed; physical Safari NOT TESTED

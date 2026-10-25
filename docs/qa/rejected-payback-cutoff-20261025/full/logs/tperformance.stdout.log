@@ -1,0 +1,12 @@
+PASS disabled diagnostics allocate no samples
+PASS bounded window percentiles and latest renderer counts
+PASS throttled redraws explicitly labeled
+PASS customer recycling resets appearance/carry/pose and fresh snap
+PASS recycling bounds retained meshes without capping active customers
+PASS property switch cleanup disposes retained private materials, preserves shared skin
+PASS staff meshes never enter customer cache
+PASS mobile tiny prop shadows disabled; geometry and selection tags retained
+PASS 95% occupancy identifies rent-ready vacancy and pricing action
+PASS near-full turnover cannot be presented as a rentable vacancy
+PASS only 100% operating occupancy says all operating units leased
+11 performance/UI regressions passed

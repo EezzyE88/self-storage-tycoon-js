@@ -1,3 +1,4 @@
+import { addUpgrades, attachmentCoverage, upgradeStamp, upgradePower, retrofitPlan, mountedOn, mountFor } from './unitupgrades.js';
 import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';
 import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';
 import { normalizeYardLoop, yardFocus, yardLease, updateYardLoop } from './yardloop.js';
@@ -220,6 +221,7 @@ export class Sim {
     // lighting + camera coverage
     for (const L of this.objs('light')) {
       if (!this.works(L)) continue;
+      if(L.mount){for(const c of attachmentCoverage(this,L))D.lit[c.f][c.i]=Math.max(D.lit[c.f][c.i],c.v);continue;}
       const r = TOOLS.light.radius, f = L.f || 0, sh = D.shellAt[this.idx(L.x, L.y)];
       for (let y = Math.floor(L.y - r); y <= L.y + r; y++) for (let x = Math.floor(L.x - r); x <= L.x + r; x++) {
         if (!this.inb(x, y)) continue; const i = this.idx(x, y);
@@ -231,6 +233,7 @@ export class Sim {
     }
     for (const C of this.objs('camera')) {
       if (!this.works(C)) continue;
+      if(C.mount){for(const c of attachmentCoverage(this,C))D.cam[c.f][c.i]=1;continue;}
       const r = TOOLS.camera.radius, f = C.f || 0, sh = D.shellAt[this.idx(C.x, C.y)];
       for (let y = Math.floor(C.y - r); y <= C.y + r; y++) for (let x = Math.floor(C.x - r); x <= C.x + r; x++) {
         if (!this.inb(x, y)) continue; const i = this.idx(x, y);
@@ -261,6 +264,7 @@ export class Sim {
   }
   works(o) { return !!o && o.cstate === 'operating' && (o.cond ?? 1) >= 0.2 && !o.unpowered; }
   powerKey(o) {
+    if (o.type === 'unitLight') return 'light';
     if (o.type === 'door') return o.kind === 'auto' ? 'doorAuto' : null;
     return POWER.load[o.type] != null ? o.type : null;
   }
@@ -271,7 +275,7 @@ export class Sim {
     for (const o of Object.values(s.objects)) {
       if (o.cstate !== 'operating') continue;
       const k = this.powerKey(o);
-      if (k) loads.push({ o, k, kw: POWER.load[k] });
+      if (k) loads.push({ o, k, kw: o.type==='unitLight' ? 0.02 : POWER.load[k] });
       if (o.type === 'door' && o.keypad === 'operating') loads.push({ o: null, k: 'keypad', kw: POWER.load.keypad });
     }
     const pr = (k) => POWER.priority.indexOf(k);
@@ -412,13 +416,8 @@ export class Sim {
         if (!fc) { u.missing = ['Unit door faces the property edge']; u.blocked = u.cstate === 'operating'; if (u.cstate === 'ready') u.cstate = 'built'; continue; }
         const n = this.node(f, fc.x, fc.y);
         const shell = s.objects[D.shellAt[this.idx(u.x, u.y)]];
-        if (s.hall[f][this.idx(fc.x, fc.y)] !== 1) miss.push('Unit door needs hallway frontage');
-        else if (!dAccess.has(n)) {
-          const els = this.objs('elevator').filter((e) => e.cstate === 'operating' && D.shellAt[this.idx(e.x, e.y)] === shell.id);
-          if (f > 0 && !els.length) miss.push('Floor '+(f+1)+' has no elevator connection');
-          else if (f > 0 && !els.some((e) => this.works(e))) miss.push(els.some((e) => e.unpowered) ? 'Elevator has no power' : 'Elevator is out of service');
-          else miss.push('Hallway has no route to a building entrance');
-        }
+        const routeIssue = this.interiorRouteIssue(u, fc, dAccess);
+        if (routeIssue) miss.push(routeIssue);
         if (D.lit[f][this.idx(fc.x, fc.y)] < 0.5 && u.cstate !== 'operating') miss.push('Hallway is dark - add a light');
         if (u.env === 'climate') {
           const hv = D.hvac[shell.id];
@@ -434,6 +433,8 @@ export class Sim {
       if (u.cstate === 'built' || u.cstate === 'ready') u.cstate = miss.length ? 'built' : 'ready';
       // operating units keep their status, but lose access when their route or frontage breaks
       const wasBlocked = !!u.blocked && !u.accessHold;
+      if(u.retrofitOrder)miss.push('Unit lighting/security installation in progress');
+      u.missing=miss;
       u.blocked = u.cstate === 'operating' && miss.some((m) => !/dark|HVAC/.test(m));
       const hold = u.blocked && (u.f || 0) > 0 && u.access !== 'drive' && handover.get(D.shellAt[this.idx(u.x, u.y)]);
       if (hold) u.accessHold = hold; // reported only if still disconnected after the handover
@@ -442,6 +443,17 @@ export class Sim {
     if (newlyBlocked.length && s.t > 0) this.emit('access_lost', { n: newlyBlocked.length, unit: newlyBlocked[0].id, name: newlyBlocked[0].name, x: newlyBlocked[0].x, y: newlyBlocked[0].y, f: newlyBlocked[0].f || 0, why: newlyBlocked[0].missing[0] });
   }
   unitLit(u) { const fc = this.unitFront(u)[0]; if (!fc) return 1; if (u.access === 'drive') return this.isDaylight() ? 1 : Math.max(0.35, this.D.lit[0][this.idx(fc.x, fc.y)]); return this.D.lit[u.f || 0][this.idx(fc.x, fc.y)]; }
+  // Read-only access reason shared by readiness and the purchase preview.
+  interiorRouteIssue(u, fc, dAccess = this.D.dAccess) {
+    const s = this.s, D = this.D, f = u.f || 0;
+    if (s.hall[f][this.idx(fc.x, fc.y)] !== 1) return 'Unit door needs hallway frontage';
+    if (dAccess.has(this.node(f, fc.x, fc.y))) return null;
+    const sh = D.shellAt[this.idx(u.x, u.y)];
+    const els = this.objs('elevator').filter(e => e.cstate === 'operating' && D.shellAt[this.idx(e.x, e.y)] === sh);
+    if (f > 0 && !els.length) return 'Floor '+(f+1)+' has no elevator connection';
+    if (f > 0 && !els.some(e => this.works(e))) return els.some(e => e.unpowered) ? 'Elevator has no power' : 'Elevator is out of service';
+    return 'Hallway has no route to a building entrance';
+  }
   unitSecurity(u) {
     const fc = this.unitFront(u)[0]; const f = u.f || 0; const i = fc ? this.idx(fc.x, fc.y) : this.idx(u.x, u.y);
     let sc = 0.35 + (this.D.gate ? 0.15 : 0) + (this.D.cam[f][i] ? 0.3 : 0) + Math.min(1, this.unitLit(u)) * 0.12;
@@ -457,17 +469,18 @@ export class Sim {
     return !at.some((id) => { const t = this.s.objects[id].type; return t === 'hvac' || t === 'office' || t === 'unit'; });
   }
   plan(a) { // wraps planCore with utility-capacity consequences (GDD §22, §63.5)
-    const R = this.planCore(a);
+    const R = a.tool==='unitRetrofit' ? retrofitPlan(this,a) : this.planCore(a);
     if (!R || R.status === 'invalid' || !this.D.power) return R;
     const P = this.D.power, n = R.count || 1;
     if (a.tool === 'power') { R.power = { cap: P.cap + TOOLS.power.kw, demand: P.demand }; return R; }
-    let add = this.powerAdd(a.tool === 'units' ? '' : a.tool, n);
+    let add = this.powerAdd(a.tool === 'units' ? '' : a.tool, n) + upgradePower(R);
     if (a.tool === 'units' && R.climate) add = 0;
-    if (!add) return R;
+    if (!add) { if(R.upgrades)R.upgradeStamp=upgradeStamp(R);return R; }
     const after = P.demand + add; R.power = { cap: P.cap, demand: after, add };
     R.warn = R.warn || [];
     if (after > P.cap + 1e-9) R.warn.push(`Power: ${after.toFixed(1)} of ${P.cap} kW - over capacity, lowest-priority equipment will shut off. Add an Electrical Service Upgrade.`);
     else if (after > P.cap * 0.85) R.warn.push(`Power near limit: ${after.toFixed(1)} of ${P.cap} kW`);
+    if(R.upgrades)R.upgradeStamp=upgradeStamp(R);
     return R;
   }
   planCore(a) {
@@ -721,13 +734,15 @@ export class Sim {
       }
       case 'demolish': {
         const small = { light: 0, camera: 0, sign: 0, corral: 1, hvac: 1, amenity: 1, door: 2, unit: 5 };
-        const cand = atHere.filter((o) => o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));
+        const cand = atHere.filter((o) => o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office' && o.type !== 'unitLight').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));
         let o = cand[0];
         if (!o && D.elevAt[i]) o = s.objects[D.elevAt[i]];
         if (!o && D.stairAt[i]) o = s.objects[D.stairAt[i]];
         if (!o) { const dd = this.objs('door').find((d) => d.x === x && d.y === y); if (dd) o = dd; }
         if (!o) { failItem('Nothing removable here'); return R; }
         R.target = o.id; R.label = 'Demolish ' + this.objName(o);
+        const attached=mountedOn(this,o.id);if(attached.length)R.warn=[`Removes ${attached.length} attached fixtures; neighboring shared lighting and security coverage may be lost.`];
+        if(o.retrofitOrder){failItem('Cancel this unit’s upgrade installation before demolition');return R;}
         if (o.type === 'unit' && (o.lease || o.commercial === 'reserved')) { failItem('Occupied - the lease must end before demolition'); return R; }
         if (o.type === 'elevator' && this.objs('unit').some((u) => u.f > 0 && u.cstate === 'operating' && D.shellAt[this.idx(u.x, u.y)] === D.shellAt[i])) { failItem('Upper-floor units depend on this elevator'); return R; }
         if (s.agents.some((ag) => ag.unit === o.id)) { failItem('A customer is using this right now'); return R; }
@@ -814,12 +829,19 @@ export class Sim {
     if (!anyBad && T.access === 'interior') {
       const sh = D.shellAt[this.idx(units[0].x, units[0].y)];
       if (f > 0 && !this.objs('elevator').some((e) => D.shellAt[this.idx(e.x, e.y)] === sh)) inc('Floor '+(f+1)+' has no elevator connection');
+      for (const u of units) {
+        const fronts = this.unitFront(u);
+        const fc = fronts.find(c => s.hall[f][this.idx(c.x, c.y)] === 1) || fronts[0];
+        const routeIssue = fc && this.interiorRouteIssue(u, fc);
+        if (routeIssue) inc(routeIssue);
+      }
       const dark = units.some((u) => { const c = this.unitFront(u).find((c) => s.hall[f][this.idx(c.x, c.y)] === 1); return c && D.lit[f][this.idx(c.x, c.y)] < 0.5; });
       if (dark) inc('Hallway is dark - add a light');
       if (climate) { const hv = D.hvac[sh]; const need = units.length * sz.sqft / 25; if (!hv || hv.cap <= 0) inc('Climate zone has no HVAC capacity'); else if (hv.load + need > hv.cap) inc('HVAC capacity would be exceeded'); }
       if (!this.objs('door').some((d) => D.shellAt[this.idx(d.x, d.y)] === sh)) inc('Building has no entrance door');
     }
     for (const u of units) R.creates.push({ type: 'unit', x: u.x, y: u.y, w: u.w, h: u.h, dir: u.dir, f, size: T.size, access: T.access, env: climate ? 'climate' : 'std' });
+    addUpgrades(this,a,R,units);
     return R;
   }
 
@@ -852,6 +874,7 @@ export class Sim {
     if (a.projectKey && (!matchesProject(a, a.projectKey) || !projectOffers(this).some(p => p.key === a.projectKey))) return { ok: false, msg: 'That project has changed. Review the yard again.' };
     const s = this.s, R = this.plan(a);
     if (R.status === 'invalid') { this.emit('refuse'); return { ok: false, msg: R.reasons[0] }; }
+    if(R.upgrades && (a.lighting&&a.lighting!=='none'||a.outsideCameras) && a.upgradeStamp!==R.upgradeStamp)return {ok:false,msg:'Fixture package changed. Review positions and cost before confirming.'};
     if (a.tool === 'demolish') return this.demolish(R);
     const rush = !!a.rush && (s.coTier || 1) >= 2 && !this.instantOn(); if (rush) { R.cost = Math.round(R.cost * 1.25); R.dur = R.dur * 0.5; }
     if (!this.unlimited() && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }
@@ -860,10 +883,13 @@ export class Sim {
     const ord = { id: this.id(), label: R.label, tool: a.tool, cost: R.cost, dur: Math.max(30, Math.round(R.dur)), prog: 0, st: 'construction', objs: [], tiles: R.tiles, t0: s.t, cells: R.items.filter((it) => !it.skip).map((it) => ({ x: it.x, y: it.y, f: it.f })) };
     if (!s.creative) this.money(-R.cost, 'capex', R.label);
     if (R.waitShell) ord.waitShell = R.waitShell;
+    const hostIds=[];
     for (const c of R.creates) {
       if (c.type === 'keypadUpgrade') { const d = s.objects[c.door]; d.keypad = 'pending'; d.keypadOrder = ord.id; ord.keypadDoor = d.id; continue; }
       const o = { id: this.id(), ...c, cstate: 'construction', order: ord.id, cond: c.cond ?? 1 };
+      if(o.mount)o.mount={...o.mount,host:hostIds[o.mount.host]};
       if (o.type === 'unit') {
+        hostIds.push(o.id);
         o.commercial = 'none'; o.lease = null;
         nameUnit(s,o,c.unitNumber);
       }
@@ -892,7 +918,9 @@ export class Sim {
     this.money(-R.cost, 'capex', 'Demolition: ' + this.objName(o));
     if (o.type === 'corral') for (const c of s.carts) if (c.corral === o.id && c.st === 'corral') { c.st = 'stranded'; c.corral = null; c.f = o.f; c.x = o.x; c.y = o.y; c.since = s.t; }
     if (o.type === 'door' && o.keypad) { /* keypad removed with door */ }
-    s.tasks = s.tasks.filter((t) => t.obj !== o.id);
+    const removed=new Set([o.id,...mountedOn(this,o.id).map(f=>f.id)]);
+    for(const q of [...s.orders])if(q.retrofit===o.id&&q.st==='construction')this.act_cancelOrder({id:q.id});
+    this.removeEquipment(removed);
     delete s.objects[o.id];
     this.markDirty(); this.emit('demolish', { x: o.x, y: o.y, f: o.f || 0 });
     return { ok: true, msg: 'Demolished' };
@@ -905,7 +933,8 @@ export class Sim {
     const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     const refund = undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6);
     if (!s.creative) this.money(refund, 'capex', (undo ? 'Undo: ' : 'Cancelled: ') + ord.label);
-    for (const id of ord.objs) delete s.objects[id];
+    this.removeEquipment(new Set(ord.objs));
+    if(ord.retrofit && s.objects[ord.retrofit]?.retrofitOrder===ord.id)delete s.objects[ord.retrofit].retrofitOrder;
     if (ord.keypadDoor) { const d = s.objects[ord.keypadDoor]; if (d) { d.keypad = null; } }
     for (const tl of ord.tiles) if (tl.k === 'hall' && s.hall[tl.f][tl.i] === 2) s.hall[tl.f][tl.i] = 0;
     s.orders = s.orders.filter((o) => o !== ord);
@@ -946,6 +975,7 @@ export class Sim {
     const s = this.s;
     if(ord.vertical)return;
     ord.st = 'done'; ord.prog = 1;
+    if(ord.retrofit && s.objects[ord.retrofit]?.retrofitOrder===ord.id)delete s.objects[ord.retrofit].retrofitOrder;
     for (const tl of ord.tiles) {
       if (tl.k === 'ground') s.ground[tl.i] = tl.v;
       else if (tl.k === 'hall') s.hall[tl.f][tl.i] = 1;
@@ -964,18 +994,34 @@ export class Sim {
     if (ord.tool === 'hall' || ord.tool === 'aisle') { /* infra */ }
     s.orders = s.orders.filter((o) => o.st === 'construction' || s.t - o.t0 < 3 * MIN_PER_DAY);
   }
+  autoOpenEnabled() {
+    const s=this.s;
+    return s.mode==='sandbox'&&!s.scenario&&!s.lesson&&!s.tut?.on&&!this.unlimited();
+  }
+  autoOpenReadyUnits(advancingMinute = false) {
+    // Called only from ordinary advancing minutes, never load/rebuild/poll.
+    if(!this.autoOpenEnabled()||!advancingMinute)return;
+    this.ensure();
+    if(this.objs('unit').some(u=>u.cstate==='ready'))this.act_commission({all:true,automatic:true});
+  }
   act_commission(a) {
     const s = this.s; this.ensure();
     let targets = [];
     if (a.order) { const ord = s.orders.find((o) => o.id === a.order); targets = ord ? ord.objs.map((id) => s.objects[id]).filter(Boolean) : []; if (!targets.length) targets = this.objs('unit').filter((u) => u.order === a.order); } // finished orders are pruned after 3 days; the units keep their order id
     else if (a.unit) targets = [s.objects[a.unit]];
     else if (a.all) targets = this.objs('unit');
-    targets = targets.filter((u) => u && u.type === 'unit' && u.cstate === 'ready');
-    if (!targets.length) { this.emit('refuse'); return { ok: false, msg: 'Nothing is ready to commission' }; }
-    for (const u of targets) { u.cstate = 'operating'; u.commercial = 'ready'; }
-    this.markDirty(); this.rebuild();
+    const candidates=targets.filter(u=>u&&u.type==='unit'&&u.cstate==='ready').sort((a,b)=>a.id-b.id);
+    targets=[];
+    for(const u of candidates){
+      // Opening changes HVAC load: refresh readiness before each subsequent unit.
+      this.ensure();
+      if(u.cstate!=='ready'||u.missing?.length)continue;
+      u.cstate='operating';u.commercial='ready';targets.push(u);
+      this.markDirty();this.rebuild();
+    }
+    if(!targets.length){this.emit('refuse');return {ok:false,msg:'Nothing is ready to commission'};}
     reconcileProject(this);
-    this.emit('commissioned', { n: targets.length, x: targets[0].x, y: targets[0].y, f: targets[0].f || 0 });
+    this.emit('commissioned', { automatic:!!a.automatic, propertyOpen:!!s.open, n: targets.length, x: targets[0].x, y: targets[0].y, f: targets[0].f || 0 });
     this.milestone('first_expansion');
     if (targets.some((u) => u.env === 'climate')) this.milestone('first_climate');
     if (targets.some((u) => u.f > 0)) this.milestone('first_upper');
@@ -1093,6 +1139,7 @@ export class Sim {
     if (t.vendor) return { ok: false, msg: 'A vendor is already booked for this' };
     if (t.assigned && t.assigned !== owner.id) return { ok: false, msg: 'Already assigned to someone else' };
     if (ag.task === t.id) return { ok: false, msg: 'Owner is already on it' };
+    if (this.s.objects[t.obj]?.type === 'light') t.unreachable = null;
     const delegated = a.forceOwner ? null : this.assignStaffFirst(t);
     if (delegated) {
       this.emit('task_assigned');
@@ -1185,13 +1232,35 @@ export class Sim {
     const s = this.s, c = s.convos.find((x) => x.id === a.id); if (!c) return { ok: false };
     const act = c.actions[a.i];
     if (!act || this.requestActionDisabled(act)) return { ok: false, msg: 'That response is no longer available. Choose a remaining response.' };
+    if (act.action) {
+      const result=this.dispatch(act.action);
+      if(!result.ok)return result;
+      s.convos=s.convos.filter(x=>x!==c);
+      return result;
+    }
     s.convos = s.convos.filter((x) => x !== c);
-    if (act.action) return this.dispatch(act.action);
     return { ok: true };
+  }
+  removeEquipment(ids) {
+    const taskIds=new Set(this.s.tasks.filter(t=>ids.has(t.obj)).map(t=>t.id));
+    for(const ag of this.s.agents){if(taskIds.has(ag.task)){ag.task=null;ag.st='idle';}if(ag.queue)ag.queue=ag.queue.filter(id=>!taskIds.has(id));}
+    for(const t of this.s.tasks.filter(t=>taskIds.has(t.id)))if(t.workBooked)this.refundTaskWork(this.s.staff.find(st=>st.id===t.workBooked),t);
+    this.s.tasks=this.s.tasks.filter(t=>!taskIds.has(t.id));this.s.convos=this.s.convos.filter(c=>!ids.has(c.obj));
+    for(const id of ids)delete this.s.objects[id];
+  }
+  act_unitRetrofit(a) {
+    const R=this.plan({...a,tool:'unitRetrofit'});
+    if(R.status==='invalid')return {ok:false,msg:R.reasons[0]};
+    if(a.upgradeStamp!==R.upgradeStamp)return {ok:false,msg:'Fixture package changed. Review before confirming.'};
+    if(!this.unlimited()&&this.s.cash<R.cost)return {ok:false,msg:'Not enough cash'};
+    const u=this.s.objects[a.unit],ord={id:this.id(),label:R.label,tool:'unitRetrofit',cost:R.cost,dur:Math.max(30,R.dur),prog:0,st:'construction',objs:[],tiles:[],cells:[],t0:this.s.t,retrofit:u.id};
+    for(const c of R.creates){const o={...c,mount:{...c.mount},id:this.id(),order:ord.id,cstate:'construction'};this.s.objects[o.id]=o;ord.objs.push(o.id);}
+    u.retrofitOrder=ord.id;this.s.orders.push(ord);if(!this.s.creative)this.money(-R.cost,'capex',R.label);this.markDirty();
+    if(this.instantOn())this.completeOrder(ord);return {ok:true,order:ord.id,msg:'Upgrade installation confirmed'};
   }
   renovateOptions(u) { // what a vacant unit can be turned into (after the tutorial)
     const s = this.s, out = [];
-    if (!u || u.type !== 'unit' || u.cstate !== 'operating' || u.lease || u.commercial === 'reserved' || s.scenario && s.scenario.noReno || (s.tut && s.tut.on)) return out;
+    if (!u || u.type !== 'unit' || u.cstate !== 'operating' || u.lease || u.commercial === 'reserved' || u.retrofitOrder || s.scenario && s.scenario.noReno || (s.tut && s.tut.on)) return out;
     if (u.access === 'interior' && u.env === 'std') {
       const hv = this.D.hvac[this.D.shellAt[this.idx(u.x, u.y)]], need = SIZES[u.size].sqft / 25;
       out.push({ kind: 'climate', label: 'Convert to climate', cost: 300 + SIZES[u.size].sqft * 6, ok: !!hv && hv.cap - hv.load >= need, why: !hv ? 'Needs an HVAC plant serving this building' : 'HVAC is at capacity; add another plant' });
@@ -1211,8 +1280,13 @@ export class Sim {
     if (a.kind === 'climate') { u.env = 'climate'; ready(u); }
     else {
       const dx = u.dir && u.dir[0] !== 0; const parts = dx ? [{ x: u.x, y: u.y, w: 2, h: 1 }, { x: u.x, y: u.y + 1, w: 2, h: 1 }] : [{ x: u.x, y: u.y, w: 1, h: 2 }, { x: u.x + 1, y: u.y, w: 1, h: 2 }];
+      const fixtures=mountedOn(this,u.id),replacements=[];
       delete s.objects[u.id];
-      parts.forEach((p, k) => { const o = { ...u, ...p, id: this.id(), size: '5x10', lease: null }; if (k) nameUnit(s,o); s.objects[o.id] = o; ready(o); });
+      parts.forEach((p, k) => { const o = { ...u, ...p, id: this.id(), size: '5x10', lease: null }; if (k) nameUnit(s,o); s.objects[o.id] = o; replacements.push(o); ready(o); });
+      for(const fixture of fixtures){const host=[...replacements].sort((a,b)=>Math.hypot(a.x+a.w/2-fixture.mount.x,a.y+a.h/2-fixture.mount.y)-Math.hypot(b.x+b.w/2-fixture.mount.x,b.y+b.h/2-fixture.mount.y))[0];
+        if(fixture.type==='unitLight'){fixture.x=host.x;fixture.y=host.y;fixture.mount={...fixture.mount,host:host.id,x:host.x+host.w/2,y:host.y+host.h/2};}
+        else {const updated=mountFor(this,host,host.id,fixture.type);if(updated){fixture.x=updated.x;fixture.y=updated.y;fixture.mount=updated.mount;}else fixture.mount.host=host.id;}
+      }
     }
     this.markDirty(); this.emit('renovated', { unit: u.id, kind: a.kind });
     return { ok: true, msg: `${op.label}: done. Make-ready queued.` };
@@ -1288,6 +1362,7 @@ export class Sim {
     // tutorial hooks run in tutorial module via sim.onTick
     if (this.onTick) this.onTick(this);
     if (this.dirty) this.rebuild();
+    this.autoOpenReadyUnits(true);
     checkComeback(this);
     reconcileProject(this);
     updateYardLoop(this);
@@ -1330,7 +1405,7 @@ export class Sim {
     if (s.open) this.genProspects(day, 1);
     // equipment wear
     for (const o of Object.values(s.objects)) if (o.cstate === 'operating') {
-      const w = { light: 0.006, camera: 0.004, hvac: 0.009, elevator: 0.004, door: o.kind === 'auto' ? 0.004 : 0.001, gate: 0.003, fountain: 0.007 }[o.type];
+      const w = { light: 0.003, camera: 0.004, hvac: 0.009, elevator: 0.004, door: o.kind === 'auto' ? 0.004 : 0.001, gate: 0.003, fountain: 0.007 }[o.type];
       if (w) this.wear(o, w * (0.5 + this.rnd()));
     }
     for (const L of this.objs('loading')) { /* none */ }
@@ -1455,6 +1530,7 @@ export class Sim {
       if (x.cstate !== 'operating') continue;
       if (x.type === 'unit') o.units += OPEX.perUnit;
       else if (x.type === 'light') o.lights += OPEX.light;
+      else if (x.type === 'unitLight') o.lights += 0.03;
       else if (x.type === 'camera') o.security += OPEX.camera;
       else if (x.type === 'gate') o.security += OPEX.gate + OPEX.keypad;
       else if (x.type === 'door') { if (x.kind === 'auto') o.doors += OPEX.doorAuto; if (x.keypad === 'operating') o.security += OPEX.keypad; }
@@ -2107,6 +2183,8 @@ export class Sim {
   }
   availabilityReport(size) {
     const all = this.objs('unit'), units = all.filter(u => u.size === size);
+    const ready=units.filter(u=>u.cstate==='operating'&&!u.blocked&&u.commercial==='ready');
+    if(ready.length)return {text:`${ready.length} ${size} unit${ready.length===1?' is':'s are'} ready to rent.`,availability:'ready'};
     const full = all.length > 0 && all.every(u => u.commercial === 'occupied' || u.commercial === 'reserved');
     const reason = full ? 'full' : units.some(u => !u.lease && u.commercial === 'unready') ? 'makeReady' : units.some(u => u.blocked) ? 'access' : units.some(u => u.cstate !== 'operating') ? 'construction' : 'sizeFull';
     const text = {full:'All units occupied or reserved.', makeReady:`Vacant ${size} units need make-ready.`, access:`${size} rental access is blocked.`, construction:`New ${size} units are not open yet.`, sizeFull:`No ${size} units ready to rent.`}[reason];
@@ -2714,9 +2792,9 @@ export class Sim {
       if (s.tasks.some((t) => t.type === 'clean' && t.f === f && Math.abs(t.x - x) + Math.abs(t.y - y) < 6)) continue;
       this.addTask({ type: 'clean', need: 'clean', obj: null, f, x, y, label: 'Clean ' + (D.shellAt[i] ? (f > 0 ? `Floor ${f+1} hallway` : 'hallway') : 'loading area'), work: WORK.clean });
     }
-    for (const t of s.tasks) if (t.unreachable && s.t - t.unreachable > 120) t.unreachable = null;
+    for (const t of s.tasks) if (t.unreachable != null && (s.objects[t.obj]?.type === 'light' || s.t - t.unreachable > 120)) t.unreachable = null;
   }
-  taskCell(t) {
+  taskCell(t, worker = null) {
     const s = this.s, D = this.D;
     const walkNear = (f, x, y) => {
       if (this.inb(x, y) && D.walk[f][this.idx(x, y)]) return { f, x, y };
@@ -2733,6 +2811,21 @@ export class Sim {
       return home ? walkNear(home.f || 0, home.x, home.y) : null;
     }
     const o = s.objects[t.obj]; if (!o) return null;
+    if (o.type === 'light' || o.type === 'camera' && o.mount) {
+      // Light placement must not create permanently unserviceable equipment.
+      // Work at the nearest reachable service point; other assets keep local access rules.
+      const office=this.objs('office').find(o=>o.cstate==='operating');
+      const origin=worker&&!worker.hidden?worker:office?{f:0,x:office.door.x,y:office.door.y}:worker;
+      if(!origin)return null;
+      const reach=this.distField([this.node(origin.f||0,Math.floor(origin.x),Math.floor(origin.y))],n=>this.pedNbr(n));
+      let best=null,score=Infinity;
+      for(const n of reach.keys()){
+        const c=this.unnode(n);if(!D.walk[c.f]?.[c.i])continue;
+        const value=(c.x-o.x)**2+(c.y-o.y)**2+Math.abs(c.f-(o.f||0))*(s.W*s.W+s.H*s.H+1);
+        if(value<score){best={f:c.f,x:c.x,y:c.y};score=value;}
+      }
+      return best;
+    }
     if (o.type === 'gate') return walkNear(0, o.x, o.y);
     if (o.type === 'hvac') { for (const [dx, dy] of DIRS) { const r = walkNear(0, o.x + dx, o.y + dy); if (r) return r; } return null; }
     if (o.type === 'elevator') return walkNear(0, o.x, o.y);
@@ -2742,7 +2835,7 @@ export class Sim {
   startTask(ag, t) {
     const st = this.staffOf(ag);
     if (!this.reserveTaskWork(st, t)) return false;
-    const c = this.taskCell(t);
+    const c = this.taskCell(t, ag);
     if (ag.hidden) { const office = this.objs('office')[0]; if (office) { ag.f = 0; ag.x = office.door.x + 0.5; ag.y = office.door.y + 0.5; } }
     if (!c || !this.goTo(ag, c.f, c.x, c.y)) { this.refundTaskWork(st, t); t.unreachable = this.s.t; t.assigned = null; t.queued = false; ag.task = null; this.emit('refuse'); return false; }
     ag.task = t.id; t.assigned = ag.sid; ag.st = 'walk'; ag.hidden = false;
@@ -2788,8 +2881,9 @@ export class Sim {
     if (!t || t.assigned || t.vendor) return null;
     const row = this.staffForTask(t); if (!row) return null;
     const { st, ag } = row;
-    const cell = this.taskCell(t), probe = { ...ag };
+    const probe = { ...ag };
     if (probe.hidden) { const office = this.objs('office')[0]; if (office) { probe.f = 0; probe.x = office.door.x + .5; probe.y = office.door.y + .5; } }
+    const cell=this.taskCell(t,probe);
     if (!cell || !this.goTo(probe, cell.f, cell.x, cell.y)) { t.unreachable = this.s.t; return null; }
     if (ag.task || (ag.queue && ag.queue.length)) {
       if (!this.reserveTaskWork(st, t)) return null;

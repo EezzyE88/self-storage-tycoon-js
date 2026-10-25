@@ -1,0 +1,181 @@
+{
+  "date": "2026-10-25 America/Los_Angeles",
+  "preintegration_master": "ee39e0986718ce33fb84018a2c108249f793e3f8",
+  "original_candidate": "137909c1fe88b90d14af725854672d87c2ec2acd",
+  "original_parent": "d84fb59171152e670a5d3d2940830310fd7cc1d9",
+  "documentation_branch": "fef20fca0405d6f20dfd2bab05e41c5e4160acee",
+  "original_candidate_tree": "0a382fcb532b4b0cf338e58872ff70cfc975128d",
+  "tested_local_integration": "d6168be9e18b069befa5d150a6a71e56f500c69b",
+  "production_source": "exact 137909c; no runtime changes while integrating documentation",
+  "native_gate_counts": {
+    "PASS": 67,
+    "ERROR": 18,
+    "FAIL": 10
+  },
+  "native_gate_failures": [
+    {
+      "id": "tart_design",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tbplus_payback",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tbugs",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tc23_crash_repairs",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tcancellation",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tcomeback36",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tcontrol_access",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tfloor_context",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tfloor_view",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tgestures",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tlayout_hierarchy",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tmenu_touch",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "topenhouse",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "topenhouse_qa",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tperformance",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tstatus_hierarchy",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tthreefloor_hardening",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tthreefloor_journeys",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tthreefloor_save",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tunitnumbering_parity",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tvisual30",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tvisual31",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "twhole_game_art",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tart_refinement",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tcandidate22",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "treview_repairs",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tyard40",
+      "status": "FAIL",
+      "reason": "process exit 1"
+    },
+    {
+      "id": "tdoorway_jambs",
+      "status": "ERROR",
+      "reason": "process exit 1"
+    }
+  ],
+  "merge_disposition": "HOLD; user authorized merge, but required current gate failed. Master not moved. Integration source and complete output are synchronized for repair.",
+  "preserved_bundle_prerequisite": "b7092e08d89fcd882c5d2d82db6ac1eb7631af42",
+  "browser_and_physical_Safari": "NOT TESTED; external Claude run reported ongoing, no completed artifacts supplied",
+  "public_playtest": {
+    "url": "https://sst-borrowing-137909c-playtest.rainy-ash-3714.chatgpt.site/",
+    "hosting_commit": "856ed90cc7fb9110553fc0d10327017e27a7cc13",
+    "public_policy": "verified",
+    "external_access": "not verified; anonymous HEAD returned 403, cf-ray a500db1fc8b0f85d-ORD",
+    "native_host_controls": "no identified audience misconfiguration; edge/proxy policy and originating rule unresolved"
+  },
+  "artifacts": {
+    "native-gate-evidence.tar.gz": {
+      "bytes": 1031977,
+      "sha256": "d06dd7a57c8d7ea71908113b278e87de62dea2c5ee5a760c0c3a3737445e45e2"
+    },
+    "borrowing-repairs-exact.bundle": {
+      "bytes": 29675,
+      "sha256": "28916b34b9eba36c3f706fd62ddaaa3f59a53939ca2c23499710fbaa6c72915e"
+    },
+    "NATIVE-GATE-SUMMARY.txt": {
+      "bytes": 5967,
+      "sha256": "8ff2f07a0805aed3d4922dc9fd29ed78e643bf193825e99de10515068beb0cc0"
+    }
+  }
+}

@@ -85,8 +85,12 @@ const counts=()=>[r.contextG.children.length,r.contextG.children.reduce((n,g)=>n
 const count=counts();r.rebuildStatic();assert.deepEqual(counts(),count,'context does not accumulate');
 assert.equal(JSON.stringify(sim.s),saved);
 assert.ok(r.contextG.children.length <= 5,'mixed fixture uses at most ten instanced context draws, independent of unit count');
-// Keep floor-numbering/save/simulation source byte-identical to parent.
+// Keep unchanged floor-numbering/save/visual source byte-identical to the numbering parent.
+// Simulation includes intentional maintenance, automatic opening, upgrades and entrance-route changes through d84fb59.
 import {execFileSync} from 'node:child_process';
-for(const file of ['js/sim.js','js/unitnumbering.js','js/main.js','js/vertical.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
+for(const file of ['js/unitnumbering.js','js/vertical.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
+assert.equal(readFileSync('js/sim.js','utf8'),execFileSync('git',['show','d84fb59171152e670a5d3d2940830310fd7cc1d9:js/sim.js'],{encoding:'utf8'}));
+// Fast-reserve intentionally changed main's clock dispatch. Preserve its exact verified implementation.
+assert.equal(readFileSync('js/main.js','utf8'),execFileSync('git',['show','3c92a5eb6a8d906264e9019e26fa24a100bffb31:js/main.js'],{encoding:'utf8'}));
 console.log('PASS mixed-height context across Exterior/F1/F2/F3, four rotations, active-floor picking/inspection, camera preservation, repeated rebuild and byte-identical complete state');
 console.log('LIMIT: CPU scene graph + UI handler checks; WebGL pixels, Safari and physical iPhone not tested.');

@@ -1,0 +1,2 @@
+PASS empty F2: actual chooser action, F1 → F2 → F1 → Exterior, light visibility, exact state preservation
+PASS fitted-out F2: actual chooser action, F1 → F2 → F1 → Exterior, light visibility, exact state preservation

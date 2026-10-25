@@ -1,0 +1,6 @@
+{"PASS": 5, "FAIL": 0, "ERROR": 0, "BLOCKED": 0, "TIMEOUT": 0}
+tc23_crash_repairs: PASS — process, output and completion checks passed
+tcancellation: PASS — process, output and completion checks passed
+tthreefloor_journeys: PASS — process, output and completion checks passed
+tcandidate22: PASS — process, output and completion checks passed
+treview_repairs: PASS — process, output and completion checks passed

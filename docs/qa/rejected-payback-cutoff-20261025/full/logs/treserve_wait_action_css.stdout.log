@@ -1,0 +1,1 @@
+PASS scoped wait action display wins the minimized-panel CSS cascade; ordinary minimized rows remain hidden

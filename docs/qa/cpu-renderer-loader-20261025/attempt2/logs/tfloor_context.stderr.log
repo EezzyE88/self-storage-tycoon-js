@@ -1,0 +1,322 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+... Skipped lines
+
++ "import { addUpgrades, attachmentCoverage, upgradeStamp, upgradePower, retrofitPlan, mountedOn, mountFor } from './unitupgrades.js';\n" +
++   "import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';\n" +
+- "import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';\n" +
+    "import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';\n" +
+    "import { normalizeYardLoop, yardFocus, yardLease, updateYardLoop } from './yardloop.js';\n" +
+    "import { normalizeProjects, projectOffers, matchesProject, startProject, reconcileProject, projectLease } from './propertyprojects.js';\n" +
+    "import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';\n" +
+    "import { lessonAllowed, lessonById } from './tutorial.js';\n" +
+...
+    "    else if (cat === 'capex') d.capex -= amt; else if (cat === 'anc') d.anc = (d.anc || 0) + amt; else if (cat === 'service') d.service = (d.service || 0) - amt; else if (cat === 'marketing') d.marketing = (d.marketing || 0) - amt;\n" +
++   "    else if (cat === 'debt') d.debt = (d.debt || 0) - amt; else if (cat === 'interest') d.interest = (d.interest || 0) - amt; else if (cat === 'loan') d.fin"... 209828 more characters
+-   "    else if (cat === 'debt') d.debt = (d.debt || 0) - amt; else if (cat === 'interest') d.interest = (d.interest || 0) - amt; else if (cat === 'loan') d.fin = (d.fin || 0) + amt;\n" +
+-   "    else if (cat === 'inject' || cat === 'subsidy') d.inject = (d.inject || 0) + amt; // sandbox money: never"... 203174 more characters
+
+    at file:///tmp/sst-renderer-subset-it2rwbic/source/tests/headless/tfloor_context.mjs:90:97 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: "import { addUpgrades, attachmentCoverage, upgradeStamp, upgradePower, retrofitPlan, mountedOn, mountFor } from './unitupgrades.js';\n" +
+    "import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';\n" +
+    "import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';\n" +
+    "import { normalizeYardLoop, yardFocus, yardLease, updateYardLoop } from './yardloop.js';\n" +
+    "import { normalizeProjects, projectOffers, matchesProject, startProject, reconcileProject, projectLease } from './propertyprojects.js';\n" +
+    "import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';\n" +
+    "import { lessonAllowed, lessonById } from './tutorial.js';\n" +
+    "import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';\n" +
+    "import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';\n" +
+    "import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';\n" +
+    "import { complaintContext, complaintKey } from './complaints.js';\n" +
+    '// AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.\n' +
+    '// Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.\n' +
+    '// All mutations go through sim.dispatch(action). Deterministic given seed + action script.\n' +
+    'import {\n' +
+    '  MIN_PER_DAY, ROUTINE_VISIT_CHANCE, BILLING_CYCLE_DAYS, OFFICE_HOURS, ACCESS_HOURS, G, VEH_GROUND, PED_GROUND,\n' +
+    '  SIZES, TOOLS, MARKETS, CART_COST, CLIMATE_COST_MULT, ROLES, OPEX, WORK, NAMES_FIRST, NAMES_LAST, POWER,\n' +
+    "} from './data.js';\n" +
+    '\n' +
+    "import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, outlook, recordCash, cashWindow, firstFinancialDay } from './finance.js';\n" +
+    "import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';\n" +
+    "import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';\n" +
+    '\n' +
+    'const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];\n' +
+    'const clamp = (v, a, b) => Math.max(a, Math.min(b, v));\n' +
+    'export const productKey = (size, env) => `${size}|${env}`;\n' +
+    'export const fmtTime = (t) => {\n' +
+    '  const m = t % MIN_PER_DAY, h = Math.floor(m / 60), mm = m % 60;\n' +
+    "  const ap = h >= 12 ? 'PM' : 'AM'; const hh = ((h + 11) % 12) + 1;\n" +
+    "  return `${hh}:${String(mm).padStart(2, '0')} ${ap}`;\n" +
+    '};\n' +
+    'export const dayOf = (t) => Math.floor(t / MIN_PER_DAY) + 1;\n' +
+    '\n' +
+    '// ---------------------------------------------------------------- state factory\n' +
+    "export function newState({ mode = 'tutorial', creative = false, seed = 1234, market = 'maple', W = 44, H = 34 } = {}) {\n" +
+    '  const WH = W * H;\n' +
+    '  const s = {\n' +
+    '    v: 1, mode, creative, seed, rngS: seed >>> 0, W, H,\n' +
+    '    parcel: { x0: 2, y0: 2, x1: W - 3, y1: H - 5 },\n' +
+    '    t: 7 * 60, speed: 0,\n' +
+    "    cash: mode === 'tutorial' ? 26000 : 60000,\n" +
+    '    ground: new Array(WH).fill(G.GRASS),\n' +
+    '    hall: [new Array(WH).fill(0), new Array(WH).fill(0)], // 0 none, 1 built, 2 under construction\n' +
+    '    dirt: [new Array(WH).fill(0), new Array(WH).fill(0)],\n' +
+    '    objects: {}, orders: [], leases: {}, tenants: {}, carts: [], vehicles: [], agents: [], staff: [], tasks: [],\n' +
+    '    visits: [], gateQ: [], officeQ: [],\n' +
+    '    market: { id: market, ask: {} },\n' +
+    '    ledger: [], days: [], today: null, finance: financeState(),\n' +
+    '    exp: { access: 0.85, convenience: 0.8, cleanliness: 0.85, security: 0.7, climate: 0.9, service: 0.85, value: 0.8, comfort: 0.8 },\n' +
+    '    powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, debt: [], auction: null, mgrLog: [],\n' +
+    '    thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [], ad: null, adHistory: [] },\n' +
+    "    milestones: {}, tut: { on: mode === 'tutorial', beat: 0, flags: {}, done: false },\n" +
+    "    open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true },\n" +
+    "    weather: 'fair', nextId: 1, structV: 1, unitNumbering: freshNumbering(), unitRoles: {},\n" +
+    '    lastCommit: null,\n' +
+    '  };\n' +
+    '  const M = MARKETS[market];\n' +
+    '  for (const sz of Object.keys(M.rent)) {\n' +
+    "    s.market.ask[productKey(sz, 'std')] = M.rent[sz];\n" +
+    "    s.market.ask[productKey(sz, 'climate')] = Math.round(M.rent[sz] * M.climatePremium / 5) * 5;\n" +
+    '  }\n' +
+    '  // street + sidewalks outside the front fence\n' +
+    '  const { y1 } = s.parcel;\n' +
+    '  for (let x = 0; x < W; x++) {\n' +
+    '    s.ground[(y1 + 1) * W + x] = G.SIDEWALK;\n' +
+    '    s.ground[(y1 + 2) * W + x] = G.STREET;\n' +
+    '    s.ground[(y1 + 3) * W + x] = G.STREET;\n' +
+    '    if (y1 + 4 < H) s.ground[(y1 + 4) * W + x] = G.SIDEWALK;\n' +
+    '  }\n' +
+    '  s.today = blankDay(1);\n' +
+    '  return s;\n' +
+    '}\n' +
+    "const COMP_NAMES = ['StorQuik Self Storage', 'Carlsbad Box & Lock', 'SecureSpace on 5th', 'Coastline Storage Co.', 'Depot Self Storage'];\n" +
+    'const M_open_comps = (sim) => sim.openComps().length > 0;\n' +
+    'function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, marketing: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }\n' +
+    '\n' +
+    '// ---------------------------------------------------------------- Sim\n' +
+    'export class Sim {\n' +
+    '  constructor(state) {\n' +
+    '    this.s = state; this.events = []; this.D = null; this.dirty = true;\n' +
+    '    // forward-compatible defaults for older saves\n' +
+    '    state.policies ||= {}; if (state.policies.ownerChores === undefined) state.policies.ownerChores = true;\n' +
+    '    state.loan ||= { bal: 0, warnT: -1e9 };\n' +
+    '    if (state.powerBase == null) state.powerBase = POWER.base[state.market && state.market.id] ?? 30;\n' +
+    '    if (state.exp && state.exp.comfort == null) state.exp.comfort = 0.8;\n' +
+    '    state.mgrLog ||= []; state.debt ||= []; if (state.auction === undefined) state.auction = null;\n' +
+    "    const P = state.policies; if (P.lateFee == null) P.lateFee = 20; if (P.autoNotice == null) P.autoNotice = false; if (!P.resolution) P.resolution = 'auction'; if (P.retention == null) P.retention = true; if (P.overlock == null) P.overlock = true;\n" +
+    '    for (const L of Object.values(state.leases || {})) { if (L.fees == null) L.fees = 0; }\n' +
+    '    // saves from before Round 11 (no market state) used the 12-part tutorial; move them to the matching part of the 8-part one\n' +
+    '    if (!state.mkt && state.tut && state.tut.on && !state.tut.done && state.tut.beat > 4) {\n' +
+    '      state.tut.beat = [0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 7][Math.min(11, state.tut.beat)] ?? 7; state.tut.entered = false; state.tut.migrated = 11;\n' +
+    '    }\n' +
+    '    if (Array.isArray(state.tasks) && Array.isArray(state.dirt)) state.tasks = state.tasks.filter((t) => t.f == null || (Number.isInteger(t.f) && t.f >= 0 && t.f < state.dirt.length)); // heal saves hit by the old ownerClean bug\n' +
+    '    state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; state.mkt.adHistory ||= []; if (state.mkt.ad === undefined) state.mkt.ad = null; if (state.coTier == null) state.coTier = 1;\n' +
+    '    // Legacy expenses and billing already ran at midnight. Do not run that day again.\n' +
+    '    if (!state.finance) {\n' +
+    '      state.finance = financeState(dayOf(state.t));\n' +
+    '      // Information-only rows never count as cash movement, nor toward the old 250-row cap or the first cash row.\n' +
+    '      const cashRows = state.ledger.filter((row) => !row.info);\n' +
+    '      const truncated = cashRows.length >= 250;\n' +
+    '      state.finance.cashCompleteFrom = truncated && cashRows.length ? dayOf(cashRows[0].t) + 1 : 1;\n' +
+    '      for (const row of cashRows) {\n' +
+    '        const d = dayOf(row.t); let bucket = state.finance.cashDays.find((x) => x.day === d);\n' +
+    '        if (!bucket) { bucket = { day: d, incoming: 0, outgoing: 0, categories: {}, complete: d >= state.finance.cashCompleteFrom }; state.finance.cashDays.push(bucket); }\n' +
+    '        if (row.amt >= 0) bucket.incoming = cents(bucket.incoming + row.amt); else bucket.outgoing = cents(bucket.outgoing - row.amt);\n' +
+    '        bucket.categories[row.cat] = cents((bucket.categories[row.cat] || 0) + row.amt);\n' +
+    '      }\n' +
+    '    }\n' +
+    '    normalizeNumbering(state);\n' +
+    '    ensureFloors(state,floorCount(state));\n' +
+    '    normalizeComeback(state);\n' +
+    '    ensureWorkReport(state);\n' +
+    '    normalizeProjects(state);\n' +
+    '    normalizeRescueOperation(state);\n' +
+    '    normalizeYardLoop(state);\n' +
+    "    if (state.lessonOffer === 'financing') state.lessonOffer = null;\n" +
+    '    this.rebuild();\n' +
+    '  }\n' +
+    '  // deterministic rng (mulberry32) stored in state\n' +
+    '  rnd() {\n' +
+    '    let t = (this.s.rngS = (this.s.rngS + 0x6D2B79F5) >>> 0);\n' +
+    '    t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);\n' +
+    '    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n' +
+    '  }\n' +
+    '  pick(arr) { return arr[Math.floor(this.rnd() * arr.length)]; }\n' +
+    '  id() { return this.s.nextId++; }\n' +
+    '  emit(type, data = {}) { this.events.push({ type, t: this.s.t, ...data }); }\n' +
+    '  get day() { return dayOf(this.s.t); }\n' +
+    '  get mod() { return this.s.t % MIN_PER_DAY; }\n' +
+    '  get hour() { return this.mod / 60; }\n' +
+    '  idx(x, y) { return y * this.s.W + x; }\n' +
+    '  inb(x, y) { return x >= 0 && y >= 0 && x < this.s.W && y < this.s.H; }\n' +
+    '  inParcel(x, y) { const p = this.s.parcel; return x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1; }\n' +
+    '  objs(type) { return (this.D && this.D.byType[type]) || []; }\n' +
+    '  obj(id) { return this.s.objects[id]; }\n' +
+    '  isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }\n' +
+    '\n' +
+    '  money(amt, cat, note) {\n' +
+    '    const s = this.s; s.cash += amt;\n' +
+    '    s.ledger.push({ t: s.t, amt: Math.round(amt * 100) / 100, cat, note });\n' +
+    '    recordCash(this, amt, cat);\n' +
+    '    if (s.ledger.length > 2000) s.ledger.splice(0, s.ledger.length - 2000);\n' +
+    '    const d = s.today;\n' +
+    "    if (cat === 'rent') d.rent += amt; else if (cat === 'opex') d.opex -= amt; else if (cat === 'payroll') d.payroll -= amt;\n" +
+    "    else if (cat === 'capex') d.capex -= amt; else if (cat === 'anc') d.anc = (d.anc || 0) + amt; else if (cat === 'service') d.service = (d.service || 0) - amt; else if (cat === 'marketing') d.marketing = (d.marketing || 0) - amt;\n" +
+    "    else if (cat === 'debt') d.debt = (d.debt || 0) - amt; else if (cat === 'interest') d.interest = (d.interest || 0) - amt; else if (cat === 'loan') d.fin"... 209828 more characters,
+  expected: "import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';\n" +
+    "import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';\n" +
+    "import { normalizeYardLoop, yardFocus, yardLease, updateYardLoop } from './yardloop.js';\n" +
+    "import { normalizeProjects, projectOffers, matchesProject, startProject, reconcileProject, projectLease } from './propertyprojects.js';\n" +
+    "import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';\n" +
+    "import { lessonAllowed, lessonById } from './tutorial.js';\n" +
+    "import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';\n" +
+    "import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';\n" +
+    "import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';\n" +
+    "import { complaintContext, complaintKey } from './complaints.js';\n" +
+    '// AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.\n' +
+    '// Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.\n' +
+    '// All mutations go through sim.dispatch(action). Deterministic given seed + action script.\n' +
+    'import {\n' +
+    '  MIN_PER_DAY, ROUTINE_VISIT_CHANCE, BILLING_CYCLE_DAYS, OFFICE_HOURS, ACCESS_HOURS, G, VEH_GROUND, PED_GROUND,\n' +
+    '  SIZES, TOOLS, MARKETS, CART_COST, CLIMATE_COST_MULT, ROLES, OPEX, WORK, NAMES_FIRST, NAMES_LAST, POWER,\n' +
+    "} from './data.js';\n" +
+    '\n' +
+    "import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, outlook, recordCash, cashWindow, firstFinancialDay } from './finance.js';\n" +
+    "import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';\n" +
+    "import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';\n" +
+    '\n' +
+    'const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];\n' +
+    'const clamp = (v, a, b) => Math.max(a, Math.min(b, v));\n' +
+    'export const productKey = (size, env) => `${size}|${env}`;\n' +
+    'export const fmtTime = (t) => {\n' +
+    '  const m = t % MIN_PER_DAY, h = Math.floor(m / 60), mm = m % 60;\n' +
+    "  const ap = h >= 12 ? 'PM' : 'AM'; const hh = ((h + 11) % 12) + 1;\n" +
+    "  return `${hh}:${String(mm).padStart(2, '0')} ${ap}`;\n" +
+    '};\n' +
+    'export const dayOf = (t) => Math.floor(t / MIN_PER_DAY) + 1;\n' +
+    '\n' +
+    '// ---------------------------------------------------------------- state factory\n' +
+    "export function newState({ mode = 'tutorial', creative = false, seed = 1234, market = 'maple', W = 44, H = 34 } = {}) {\n" +
+    '  const WH = W * H;\n' +
+    '  const s = {\n' +
+    '    v: 1, mode, creative, seed, rngS: seed >>> 0, W, H,\n' +
+    '    parcel: { x0: 2, y0: 2, x1: W - 3, y1: H - 5 },\n' +
+    '    t: 7 * 60, speed: 0,\n' +
+    "    cash: mode === 'tutorial' ? 26000 : 60000,\n" +
+    '    ground: new Array(WH).fill(G.GRASS),\n' +
+    '    hall: [new Array(WH).fill(0), new Array(WH).fill(0)], // 0 none, 1 built, 2 under construction\n' +
+    '    dirt: [new Array(WH).fill(0), new Array(WH).fill(0)],\n' +
+    '    objects: {}, orders: [], leases: {}, tenants: {}, carts: [], vehicles: [], agents: [], staff: [], tasks: [],\n' +
+    '    visits: [], gateQ: [], officeQ: [],\n' +
+    '    market: { id: market, ask: {} },\n' +
+    '    ledger: [], days: [], today: null, finance: financeState(),\n' +
+    '    exp: { access: 0.85, convenience: 0.8, cleanliness: 0.85, security: 0.7, climate: 0.9, service: 0.85, value: 0.8, comfort: 0.8 },\n' +
+    '    powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, debt: [], auction: null, mgrLog: [],\n' +
+    '    thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [], ad: null, adHistory: [] },\n' +
+    "    milestones: {}, tut: { on: mode === 'tutorial', beat: 0, flags: {}, done: false },\n" +
+    "    open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true },\n" +
+    "    weather: 'fair', nextId: 1, structV: 1, unitNumbering: freshNumbering(), unitRoles: {},\n" +
+    '    lastCommit: null,\n' +
+    '  };\n' +
+    '  const M = MARKETS[market];\n' +
+    '  for (const sz of Object.keys(M.rent)) {\n' +
+    "    s.market.ask[productKey(sz, 'std')] = M.rent[sz];\n" +
+    "    s.market.ask[productKey(sz, 'climate')] = Math.round(M.rent[sz] * M.climatePremium / 5) * 5;\n" +
+    '  }\n' +
+    '  // street + sidewalks outside the front fence\n' +
+    '  const { y1 } = s.parcel;\n' +
+    '  for (let x = 0; x < W; x++) {\n' +
+    '    s.ground[(y1 + 1) * W + x] = G.SIDEWALK;\n' +
+    '    s.ground[(y1 + 2) * W + x] = G.STREET;\n' +
+    '    s.ground[(y1 + 3) * W + x] = G.STREET;\n' +
+    '    if (y1 + 4 < H) s.ground[(y1 + 4) * W + x] = G.SIDEWALK;\n' +
+    '  }\n' +
+    '  s.today = blankDay(1);\n' +
+    '  return s;\n' +
+    '}\n' +
+    "const COMP_NAMES = ['StorQuik Self Storage', 'Carlsbad Box & Lock', 'SecureSpace on 5th', 'Coastline Storage Co.', 'Depot Self Storage'];\n" +
+    'const M_open_comps = (sim) => sim.openComps().length > 0;\n' +
+    'function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, marketing: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }\n' +
+    '\n' +
+    '// ---------------------------------------------------------------- Sim\n' +
+    'export class Sim {\n' +
+    '  constructor(state) {\n' +
+    '    this.s = state; this.events = []; this.D = null; this.dirty = true;\n' +
+    '    // forward-compatible defaults for older saves\n' +
+    '    state.policies ||= {}; if (state.policies.ownerChores === undefined) state.policies.ownerChores = true;\n' +
+    '    state.loan ||= { bal: 0, warnT: -1e9 };\n' +
+    '    if (state.powerBase == null) state.powerBase = POWER.base[state.market && state.market.id] ?? 30;\n' +
+    '    if (state.exp && state.exp.comfort == null) state.exp.comfort = 0.8;\n' +
+    '    state.mgrLog ||= []; state.debt ||= []; if (state.auction === undefined) state.auction = null;\n' +
+    "    const P = state.policies; if (P.lateFee == null) P.lateFee = 20; if (P.autoNotice == null) P.autoNotice = false; if (!P.resolution) P.resolution = 'auction'; if (P.retention == null) P.retention = true; if (P.overlock == null) P.overlock = true;\n" +
+    '    for (const L of Object.values(state.leases || {})) { if (L.fees == null) L.fees = 0; }\n' +
+    '    // saves from before Round 11 (no market state) used the 12-part tutorial; move them to the matching part of the 8-part one\n' +
+    '    if (!state.mkt && state.tut && state.tut.on && !state.tut.done && state.tut.beat > 4) {\n' +
+    '      state.tut.beat = [0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 7][Math.min(11, state.tut.beat)] ?? 7; state.tut.entered = false; state.tut.migrated = 11;\n' +
+    '    }\n' +
+    '    if (Array.isArray(state.tasks) && Array.isArray(state.dirt)) state.tasks = state.tasks.filter((t) => t.f == null || (Number.isInteger(t.f) && t.f >= 0 && t.f < state.dirt.length)); // heal saves hit by the old ownerClean bug\n' +
+    '    state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; state.mkt.adHistory ||= []; if (state.mkt.ad === undefined) state.mkt.ad = null; if (state.coTier == null) state.coTier = 1;\n' +
+    '    // Legacy expenses and billing already ran at midnight. Do not run that day again.\n' +
+    '    if (!state.finance) {\n' +
+    '      state.finance = financeState(dayOf(state.t));\n' +
+    '      // Information-only rows never count as cash movement, nor toward the old 250-row cap or the first cash row.\n' +
+    '      const cashRows = state.ledger.filter((row) => !row.info);\n' +
+    '      const truncated = cashRows.length >= 250;\n' +
+    '      state.finance.cashCompleteFrom = truncated && cashRows.length ? dayOf(cashRows[0].t) + 1 : 1;\n' +
+    '      for (const row of cashRows) {\n' +
+    '        const d = dayOf(row.t); let bucket = state.finance.cashDays.find((x) => x.day === d);\n' +
+    '        if (!bucket) { bucket = { day: d, incoming: 0, outgoing: 0, categories: {}, complete: d >= state.finance.cashCompleteFrom }; state.finance.cashDays.push(bucket); }\n' +
+    '        if (row.amt >= 0) bucket.incoming = cents(bucket.incoming + row.amt); else bucket.outgoing = cents(bucket.outgoing - row.amt);\n' +
+    '        bucket.categories[row.cat] = cents((bucket.categories[row.cat] || 0) + row.amt);\n' +
+    '      }\n' +
+    '    }\n' +
+    '    normalizeNumbering(state);\n' +
+    '    ensureFloors(state,floorCount(state));\n' +
+    '    normalizeComeback(state);\n' +
+    '    ensureWorkReport(state);\n' +
+    '    normalizeProjects(state);\n' +
+    '    normalizeRescueOperation(state);\n' +
+    '    normalizeYardLoop(state);\n' +
+    "    if (state.lessonOffer === 'financing') state.lessonOffer = null;\n" +
+    '    this.rebuild();\n' +
+    '  }\n' +
+    '  // deterministic rng (mulberry32) stored in state\n' +
+    '  rnd() {\n' +
+    '    let t = (this.s.rngS = (this.s.rngS + 0x6D2B79F5) >>> 0);\n' +
+    '    t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);\n' +
+    '    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n' +
+    '  }\n' +
+    '  pick(arr) { return arr[Math.floor(this.rnd() * arr.length)]; }\n' +
+    '  id() { return this.s.nextId++; }\n' +
+    '  emit(type, data = {}) { this.events.push({ type, t: this.s.t, ...data }); }\n' +
+    '  get day() { return dayOf(this.s.t); }\n' +
+    '  get mod() { return this.s.t % MIN_PER_DAY; }\n' +
+    '  get hour() { return this.mod / 60; }\n' +
+    '  idx(x, y) { return y * this.s.W + x; }\n' +
+    '  inb(x, y) { return x >= 0 && y >= 0 && x < this.s.W && y < this.s.H; }\n' +
+    '  inParcel(x, y) { const p = this.s.parcel; return x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1; }\n' +
+    '  objs(type) { return (this.D && this.D.byType[type]) || []; }\n' +
+    '  obj(id) { return this.s.objects[id]; }\n' +
+    '  isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }\n' +
+    '\n' +
+    '  money(amt, cat, note) {\n' +
+    '    const s = this.s; s.cash += amt;\n' +
+    '    s.ledger.push({ t: s.t, amt: Math.round(amt * 100) / 100, cat, note });\n' +
+    '    recordCash(this, amt, cat);\n' +
+    '    if (s.ledger.length > 2000) s.ledger.splice(0, s.ledger.length - 2000);\n' +
+    '    const d = s.today;\n' +
+    "    if (cat === 'rent') d.rent += amt; else if (cat === 'opex') d.opex -= amt; else if (cat === 'payroll') d.payroll -= amt;\n" +
+    "    else if (cat === 'capex') d.capex -= amt; else if (cat === 'anc') d.anc = (d.anc || 0) + amt; else if (cat === 'service') d.service = (d.service || 0) - amt; else if (cat === 'marketing') d.marketing = (d.marketing || 0) - amt;\n" +
+    "    else if (cat === 'debt') d.debt = (d.debt || 0) - amt; else if (cat === 'interest') d.interest = (d.interest || 0) - amt; else if (cat === 'loan') d.fin = (d.fin || 0) + amt;\n" +
+    "    else if (cat === 'inject' || cat === 'subsidy') d.inject = (d.inject || 0) + amt; // sandbox money: never"... 203174 more characters,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.22.1

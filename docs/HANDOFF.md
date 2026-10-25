@@ -1,33 +1,17 @@
-# Start here — accepted Open House checkpoint
-Updated October 23, 2026, America/Los_Angeles.
+# Start here — consolidated native-pass successor
 
-1. Read [CURRENT-STATUS.md](CURRENT-STATUS.md) for current authority and evidence.
-2. Read [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) for product direction.
-3. Read [RECOVERY-INDEX.md](RECOVERY-INDEX.md) before any recovery operation.
-4. Use [checkpoint inventory](checkpoints/20261023/INVENTORY.json) for observed refs, sites and package hashes.
+Updated October 25, 2026, America/Los_Angeles.
 
-## Starting state
-Master observed at preparation: `5298f6edcd4ae3329de61007ac382c527d62d4cc`, the adopted documentation checkpoint. Accepted game source remains `7d9bce5dfe431974112391a8e7fe39c2e0552744`; all non-documentation files are unchanged. Reverify the live master before work.
+Read [CURRENT-STATUS.md](CURRENT-STATUS.md), [INTEGRATION-SUMMARY.md](INTEGRATION-SUMMARY.md) and [RECOVERY-INDEX.md](RECOVERY-INDEX.md).
 
-The authorized 7d9bce5 → 5298f6e fast-forward is complete. The maintenance branch remains preserved; it is no longer pending adoption. Later documentation successors must be distinguished from the accepted game-source identity. Do not infer a future correction branch’s adoption from this record.
+Passing assessed source: **0d5dd499ffa6edd720d6e8d7cc4ee5460ee1395c**, tree **c6c2bf295bb9fa0599c44fc4c2a5697bdd410d05**. Focused payback passed, then all **95 current native entries passed**, exit 0, with no errors, blocked checks or timeouts. Evidence successor **1778a2ae304d0710dcf33e9cc2bab09ddd760293** adds documentation only. This record update follows that successor on repair/rejected-payback-cutoff-20261025; it changes no game/test bytes.
 
-- [Accepted Open House game / public review, V5](https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site): prior served-file verification matches 7d9bce5.
-- [Protected original V62 preview](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site): separate pre-Open-House baseline, unchanged.
+Production runtime remains exact borrowing candidate **137909c1fe88b90d14af725854672d87c2ec2acd**, parent **d84fb59171152e670a5d3d2940830310fd7cc1d9**. Office/entrance work, loan terms, eligibility, economics, Pause and saves were not changed by test maintenance. Original 67/10/18 and later 94/1 gate results remain historical evidence. Eddie explicitly rejected the six-unit >18-month minimum; only that assertion was removed. All twelve payback observations remain identical to the prior run. Never describe this as a game-economic repair or an unexplained waived failure.
 
-No deployment accompanied adoption. Later audit asset requests were blocked with HTTP 403, so this correction does not claim new served-byte or rendered verification.
+Last remote verification this session: master ee39e0986718ce33fb84018a2c108249f793e3f8; integration/borrowing-sync-20261025 c2296834fa05dfb0e3097a78b638eb42c875e9d2. Local repairs/evidence are not synchronized remotely. Earlier merge/push authorization remains recorded, but this operation explicitly permits documentation only: no push, merge or deployment. Reverify refs and exact tree identity before any later authorized synchronization. Connector snapshot identities differ from original commits; preserve original history.
 
-## Work coordination
-The glow prototype is paused. No one should independently implement a second fix while another collaborator evaluates it. Record exact parent, candidate SHA, changed files, actual evidence and next requested action when handing off. A diagnosis, prototype, publication, acceptance and merge are distinct outcomes.
-Claude v2 diagnosis is evidence for a narrow presentation experiment, not an implemented fix. Earlier v1 dirt attribution is superseded by the mature-company v2 evidence.
-The operating playtest and scoped interface acceptance are completed. Do not restart them or the rejected Coastal direction by default. PR #2 stays excluded.
+Public borrowing Site V1 was reported active/public, but no signed-out playability proof exists. Retained anonymous HEAD returned 403; cloud Chrome reached the page but WebGL startup failed. Claude/Perplexity retrieval failures are separate from browser capabilities. No supported exposed edge/proxy control established a repair. Do not reclassify these limits as passing because native checks passed, repeat blocked paths unchanged, or substitute another package for the requested link.
 
-## Preservation
-Use only EezzyE88/self-storage-tycoon-js. New work starts in an isolated candidate. Preserve master unless explicitly authorized otherwise, original candidates/packages, accepted V62, current review deployment, all saves and manual Pause. Status cleanup does not require opening any normal company storage. Source backups are not company-save backups.
-No force-push, branch deletion, retroactive evidence rewriting, unrequested deployment or merge. Historical documents are evidence, not current task authorization.
+Claude reported recovering missing archive files and preparing local browser QA; completed evidence was not supplied. Preserve that work; do not infer current execution status. The large handoff remains affected by a confirmed size/ZIP-integrity discrepancy. The verified smaller package is scoped source/QA support, not a full-history or public-access substitute.
 
-## Validation
-Use relevant checks for changed behavior. Attribute Claude/browser and Eddie/iPhone results separately. Label injected fixtures, fallback fonts and software WebGL. Do not claim Safari, VoiceOver, motion or performance checks that were unavailable.
-The four focused script suites already passed on accepted 7d9bce5; documentation-only changes need diff/content verification, not another gameplay playtest.
-
-## History
-Earlier orientation versions are retained verbatim under history/checkpoint-before-20261023/. The exact README, status, handoff and recovery files from adopted 5298f6e are additionally preserved under [history/before-post-adoption-20261023/](history/before-post-adoption-20261023/). Dated candidate notes and original external packages remain unchanged.
+Use only EezzyE88/self-storage-tycoon-js. Preserve original commits, historical failures, normal saves and deployments. No force-push, branch deletion, rejected Coastal revival or draft PR #2 inclusion. Original repair bundle remains under checkpoints/20261025-borrowing/ and requires b7092e0; later local repairs require the consolidated Git history, not that older bundle alone. Previous orientation records are archived verbatim under history/before-native-pass-records-20261025/.

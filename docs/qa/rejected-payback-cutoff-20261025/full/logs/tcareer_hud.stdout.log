@@ -1,0 +1,7 @@
+PASS property-count bottleneck explains an unchanged 50% bar
+PASS rent-roll bottleneck, simultaneous shortfalls and cents near threshold
+PASS pending promotion, all earned tiers and highest tier
+PASS production HUD update is read-only and hides in excluded modes/title
+PASS native career activation cannot trigger global Pause or build confirmation shortcuts
+PASS career and Finance actions stay separate, preserve Pause and company data
+6 career HUD test groups passed

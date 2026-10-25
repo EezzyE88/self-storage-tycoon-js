@@ -1,0 +1,10 @@
+PASS comeback 0x: full reservations, natural move-ins, once-only banner, exact speed/manual Pause, attach/load, preserved rents/goals
+PASS comeback 1x: full reservations, natural move-ins, once-only banner, exact speed/manual Pause, attach/load, preserved rents/goals
+PASS comeback 2x: full reservations, natural move-ins, once-only banner, exact speed/manual Pause, attach/load, preserved rents/goals
+PASS comeback 4x: full reservations, natural move-ins, once-only banner, exact speed/manual Pause, attach/load, preserved rents/goals
+PASS sandbox 0x: full reservations, natural move-ins, once-only banner, exact speed/manual Pause, attach/load, preserved rents/goals
+PASS sandbox 1x: full reservations, natural move-ins, once-only banner, exact speed/manual Pause, attach/load, preserved rents/goals
+PASS sandbox 2x: full reservations, natural move-ins, once-only banner, exact speed/manual Pause, attach/load, preserved rents/goals
+PASS sandbox 4x: full reservations, natural move-ins, once-only banner, exact speed/manual Pause, attach/load, preserved rents/goals
+PASS empty property never celebrates full occupancy
+PASS separated proposal fields, honest negative/positive buffer, original preview action, read-only render and wrapping layout contract

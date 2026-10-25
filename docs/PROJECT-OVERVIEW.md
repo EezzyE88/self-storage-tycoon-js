@@ -1,33 +1,29 @@
 # Project overview and finish target
-Reconciled October 23, 2026, America/Los_Angeles. Exact authority: [CURRENT-STATUS.md](CURRENT-STATUS.md).
+
+Reconciled October 25, 2026, America/Los_Angeles. Exact source and evidence: [CURRENT-STATUS.md](CURRENT-STATUS.md).
 
 ## Goal
-A satisfying touch-first self-storage ownership game on iPhone Safari: understand the facility, choose a worthwhile action, delegate routine work, invest deliberately and see a visible payoff. Preserve the accepted JavaScript/Three.js V62 foundation.
 
-## Established capabilities
-Construction and four-way access-aware placement; leasing and billing; finance/reserves and investment guidance; staff/Owner capacity and delegation; restoration/scenarios; floors and unit numbering; career/portfolio growth; local saves and continuation; Open House architecture/materials/day-night presentation.
-These exist in source and have scoped evidence. They are not a blanket certification of every device or game state.
+A satisfying self-storage ownership game for iPhone Safari. The property is the game board: build useful capacity, operate it, understand economics and grow through deliberate investments with visible payoff. Meaningful choices and useful delegation should replace repetitive interruptions and empty waiting. Manual Pause, 1x, 2x and 4x remain essential.
 
-## Recent accepted work
-- Open House adapted to the existing foundation, rather than replacing game rules.
-- F2 building context while selection remains on the active floor; coach floor selection and numbering corrections.
-- Opening tutorial wording/pointer/instruction access; build-review financial scrolling and Confirm access.
-- Readable next career tier and actual limiting requirement; separate Career/Finance actions.
-- Career explanation hides/restores with expanded panels and camera controls; camera has separate space and long requirement text wraps.
-- Completed authorized fast-forward: ea65f43 → 7d9bce5. No deployment accompanied it.
+## Existing foundation
 
-## What feedback establishes
-Eddie already completed the expansion playtest. He wants to build and expand, likes seeing the payoff, and finds prolonged days/weeks of waiting tedious. This supports improving comprehension or decision pacing where demonstrated, not automatically changing economics, adding a wait control or prescribing purchases.
-The latest iPhone check accepts current map space and control separation. A HUD overhaul is not an established next requirement.
+The JavaScript/Three.js game includes scenarios and Sandbox, construction and four-way placement, three playable floors, leasing and bills, finance/reserves and investment guidance, staff and Owner work capacity, restoration, career/portfolio systems and local save/Continue/recovery. Open House work improved the existing foundation. Scoped earlier iPhone acceptances remain valid for the states and builds actually tested; they do not certify every successor.
 
-## Current focus
-Consolidate the accepted baseline and evidence. Claude's mature-company isolation points to lamp glows as the dominant contributor to mottled night pavement. A minimal presentation prototype is a possible next task, currently paused; no exact repair or physical-Safari improvement has been established.
-Do not bundle geometry, palette, status-tag, camera, animation or economics changes into that narrow experiment.
+## Latest integrated candidate work
 
-## Still unproven
-Sustained dense-yard iPhone performance, broad device/accessibility coverage, long-term balance and a complete novice experience remain incomplete. These are release questions, not automatic blockers to every isolated presentation change.
-The rejected Coastal direction and parked milestone-wait proposal are not active milestones.
+Exact 137909c follows the Office panel, waiting-count repair and entrance-route preview repair. It requires review and explicit confirmation for expansion loans and bank-conversation draws using existing financial terms and commands. Runtime source remains exact while Office planning/docs are reconciled. Proposals for priorities, observable delegation and new authority controls remain unimplemented.
+
+## Current priority
+
+Finish the already-authorized source integration responsibly. The required native gate is red (67 PASS, 10 FAIL, 18 ERROR); master merge is held pending triage. Preserve earlier scoped passes, inspect complete captured output and repair confirmed issues without retuning economics or weakening tests. Claude's ongoing browser work and public-host access diagnosis remain separate; neither is a completed acceptance result.
+
+## Product evidence and limits
+
+Eddie enjoys building/expanding and visible payoff while extended waiting drags. Preserve that completed feedback; documentation changes do not justify repeating the whole playtest. Annual collaborator reports apply to their older named source, with later repairs considered separately. Avoid inventing a new economics rule, mandatory hire or arbitrary Office upgrade to manufacture progress.
+
+Sustained dense-yard device performance, broad accessibility, novice comprehension and long-term balance still require evidence. Office layout/touch review remains open. Coastal is rejected; the stylized comparison and PR #2 are unaccepted/excluded. Do not restart parked visual experiments as part of this cleanup.
 
 ## Finish target
-A clear beginning; understandable operating decisions; comfortable placement/navigation; trustworthy finance, Pause and saves; visible work and investment benefit; stable sustained iPhone play; a satisfying reason to return.
-No launch date, completion percentage or whole-game release certification is claimed.
+
+A clear beginning, understandable operating choices, comfortable placement/navigation, trustworthy finance/Pause/saves, visible work and investment benefit, stable sustained iPhone play and a satisfying reason to return. No launch date, completion percentage or blanket release certification is established.

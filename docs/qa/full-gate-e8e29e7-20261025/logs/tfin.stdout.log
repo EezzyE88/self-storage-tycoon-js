@@ -1,0 +1,6 @@
+PASS cash change equals ledger total (no money appears outside the ledger) cash 7000 -> 16597, ledger 9597
+PASS rent roll = paying + past due, every day for 120 days 
+PASS owed to you = sum of positive account balances (and it was exercised) peak owed $630, peak past-due rent roll $295
+PASS billing a behind tenant adds to their balance, not to cash 4/4
+PASS daily estimate uses paying tenants only est 71 vs all-leases 71
+ALL PASS

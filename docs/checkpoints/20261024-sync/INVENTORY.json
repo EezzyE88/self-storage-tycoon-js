@@ -1,0 +1,476 @@
+{
+  "date": "2026-10-24",
+  "timezone": "America/Los_Angeles",
+  "repository": "EezzyE88/self-storage-tycoon-js",
+  "default_branch": "master",
+  "master": "ee39e0986718ce33fb84018a2c108249f793e3f8",
+  "parent": "d6abaa382c5f495203e6efab6eaacf416e84c301",
+  "office_original": "17f49f9d677931460e39ac18aff0db356ae49e45",
+  "office_tree": "e01001568901f3554163e5d5919ff9a678a629d2",
+  "office_snapshot": "b7092e08d89fcd882c5d2d82db6ac1eb7631af42",
+  "office_snapshot_branch": "snapshot/compact-office-panel-17f49f9-20261024",
+  "documentation_branch": "maintenance/project-sync-20261024",
+  "remote_heads_before": [
+    {
+      "ref": "refs/heads/backup/master-before-candidate-23-20261007",
+      "sha": "2812abf8d268f9a225e5786d173f95efcbd6223d"
+    },
+    {
+      "ref": "refs/heads/candidate/24-second-days-20261007",
+      "sha": "055d2a871945c565c3affbda89ecd46be7a4cfac"
+    },
+    {
+      "ref": "refs/heads/candidate/ambient-lifecycle-20261010",
+      "sha": "a94e5a550a958db3f487b482afb5a53c7d4825de"
+    },
+    {
+      "ref": "refs/heads/candidate/art-design-20261005",
+      "sha": "f2f31b05519f831e5f13783de7fabe83afc4a4cf"
+    },
+    {
+      "ref": "refs/heads/candidate/automatic-sandbox-opening-20261024",
+      "sha": "b89d711c9a89ce49229fae5888c1d94b7b1666d4"
+    },
+    {
+      "ref": "refs/heads/candidate/career-bar-clarity-20261023",
+      "sha": "df7dd680abfc5e3791f52d71d22ceef70bbe9fb1"
+    },
+    {
+      "ref": "refs/heads/candidate/career-camera-clearance-20261023",
+      "sha": "7d9bce5dfe431974112391a8e7fe39c2e0552744"
+    },
+    {
+      "ref": "refs/heads/candidate/career-panel-clearance-20261023",
+      "sha": "16c74b4788976813984196a9524abb790e9192a7"
+    },
+    {
+      "ref": "refs/heads/candidate/climate-availability-diagnostics-20261007",
+      "sha": "24b5c35502388cbb2e292139fd15fb0965499333"
+    },
+    {
+      "ref": "refs/heads/candidate/climate-bubble-grouping-20261007",
+      "sha": "e0137369d255640d9edde443b1a6e289bc20c8c7"
+    },
+    {
+      "ref": "refs/heads/candidate/climate-diagnostics-20261008",
+      "sha": "3bdba09dfff381dbb8bf881632028903a4f5b43a"
+    },
+    {
+      "ref": "refs/heads/candidate/comeback-career-20261009",
+      "sha": "162c4cf0d21a9862d3f3931a634fa0b841b263b0"
+    },
+    {
+      "ref": "refs/heads/candidate/comeback-projects-20261011",
+      "sha": "17da5376082deb0308a76ed344d9752428b821f9"
+    },
+    {
+      "ref": "refs/heads/candidate/comeback-yard-20261008",
+      "sha": "0c8ffcacc8ceb974c890d97d2a9c611b89f6ea24"
+    },
+    {
+      "ref": "refs/heads/candidate/complaint-audit-20261005",
+      "sha": "a5141eac1fb9537a91d92e9aa797ff79a724e893"
+    },
+    {
+      "ref": "refs/heads/candidate/complaint-hardening-20261004",
+      "sha": "1281a08f79227323a4dfc1a4ad9a9b2772137dff"
+    },
+    {
+      "ref": "refs/heads/candidate/concise-feedback-20261008",
+      "sha": "e3a737011627ebb27db34a9104a8283e9d895b18"
+    },
+    {
+      "ref": "refs/heads/candidate/customer-complaint-guidance-20261004",
+      "sha": "b740c2fb65e630fb3a27ba5c4146176131917a25"
+    },
+    {
+      "ref": "refs/heads/candidate/dollhouse-detail-20261007",
+      "sha": "dbc895cc2d471d3bcd13c36a624da9859e9878a1"
+    },
+    {
+      "ref": "refs/heads/candidate/dollhouse-visuals-20261007",
+      "sha": "8a344eea7c799b8a6a169e54e72f21f70136e663"
+    },
+    {
+      "ref": "refs/heads/candidate/doorway-jambs-20261023",
+      "sha": "ee39e0986718ce33fb84018a2c108249f793e3f8"
+    },
+    {
+      "ref": "refs/heads/candidate/double-tap-zoom-20261004",
+      "sha": "44df37b84f95db33b52971e912a22ef31cc3d4fc"
+    },
+    {
+      "ref": "refs/heads/candidate/f2-building-context-20261022",
+      "sha": "4f2929ab85c3ae01f379e9115e19dae2831911ee"
+    },
+    {
+      "ref": "refs/heads/candidate/f2-coach-selection-20261022",
+      "sha": "a8be9d03c2b6cc9322acc8f74178dd6f0f241dcf"
+    },
+    {
+      "ref": "refs/heads/candidate/fast-reserve-wait-20261024",
+      "sha": "3c92a5eb6a8d906264e9019e26fa24a100bffb31"
+    },
+    {
+      "ref": "refs/heads/candidate/feedback-interactions-20261004",
+      "sha": "b01773b37629cd5c556095e3e86e8849060110af"
+    },
+    {
+      "ref": "refs/heads/candidate/five-floor-spec-20261005",
+      "sha": "633984bf7c896a3adf1f895b42158711659e937f"
+    },
+    {
+      "ref": "refs/heads/candidate/floor-unit-numbering-20261022",
+      "sha": "1339648652cf61bfce23a96a60cbb54a7006c32a"
+    },
+    {
+      "ref": "refs/heads/candidate/full-game-qa-20261004",
+      "sha": "f0068df3f7a08efb2e5d51e5148fd04c4ce560e8"
+    },
+    {
+      "ref": "refs/heads/candidate/iphone-blueprint-20261004",
+      "sha": "f3e57de69f1328f90462c03890fba3aaf566b616"
+    },
+    {
+      "ref": "refs/heads/candidate/iphone-performance-20261004",
+      "sha": "ffacd17db565cdaf43aee20c15b54d1dc343ce06"
+    },
+    {
+      "ref": "refs/heads/candidate/lamp-lightmap-20261023",
+      "sha": "52eb1e193a43c6ea6bd4f0fcb47b289c57f88a29"
+    },
+    {
+      "ref": "refs/heads/candidate/layout-hierarchy-20261005",
+      "sha": "da4c72a339345fa89a5375014daa2ae17158ef28"
+    },
+    {
+      "ref": "refs/heads/candidate/lightmap-jamb-integration-20261023",
+      "sha": "70a4e318f78f2a528a9241186341209ff7eeb3bf"
+    },
+    {
+      "ref": "refs/heads/candidate/management-integration-20261004",
+      "sha": "7fafaebb8b1efd29deb133941f65975c1f31cd86"
+    },
+    {
+      "ref": "refs/heads/candidate/menu-touch-20261004",
+      "sha": "276b524c1312f79995594d6afe5c4dade3e2001c"
+    },
+    {
+      "ref": "refs/heads/candidate/open-house-integrated-20261022",
+      "sha": "58d11b1e3498165865553805282c91bcbd6bde51"
+    },
+    {
+      "ref": "refs/heads/candidate/persistent-section-menu-20261007",
+      "sha": "24b5c35502388cbb2e292139fd15fb0965499333"
+    },
+    {
+      "ref": "refs/heads/candidate/professional-interface-20261021",
+      "sha": "ca37888d454892b9d646fb37a66e3b006d351bb4"
+    },
+    {
+      "ref": "refs/heads/candidate/property-first-ui-20261005",
+      "sha": "592906023bfd18662930fb0561b3ef63e9f20cad"
+    },
+    {
+      "ref": "refs/heads/candidate/reporting-period-guidance-20261008",
+      "sha": "b8858040bb4465362c761f4b683cc5ca3d37849d"
+    },
+    {
+      "ref": "refs/heads/candidate/request-outcome-fix-20261007",
+      "sha": "799d87d3a605b704f2946f884d1d449734dff0d5"
+    },
+    {
+      "ref": "refs/heads/candidate/request-pause-control-20261007",
+      "sha": "b5b07c7941ccfdd3990842ec0ccfc3b820cdccb1"
+    },
+    {
+      "ref": "refs/heads/candidate/request-window-fix-20261007",
+      "sha": "7a417c008fa7e30202cde7fa65763b0ae6911484"
+    },
+    {
+      "ref": "refs/heads/candidate/rescue-operation-20261011",
+      "sha": "bd164a83432ad3c9209f1cc7b0fd29c23fd46396"
+    },
+    {
+      "ref": "refs/heads/candidate/review-space-20261022",
+      "sha": "ea65f43570d01e74de4e21fd3756705a70408aac"
+    },
+    {
+      "ref": "refs/heads/candidate/safe-resume-1x-20261005",
+      "sha": "cf6e6195da66ddbbe7a18137e7fbb0632529fe78"
+    },
+    {
+      "ref": "refs/heads/candidate/sandbox-fast-reserve-20261024",
+      "sha": "38c4db35d1214644a0b1f5eb7ade3868c2df9e67"
+    },
+    {
+      "ref": "refs/heads/candidate/sandbox-fast-reserve-bugfix-20261024",
+      "sha": "6d7b51ea61a396ca944bd6a8656806178e3c3cdb"
+    },
+    {
+      "ref": "refs/heads/candidate/session-proposal-audio-20261009",
+      "sha": "5e9181c2c322ae217fa574885e29829399a2c3e7"
+    },
+    {
+      "ref": "refs/heads/candidate/soft-audio-20261007",
+      "sha": "9c166b50ab61d2a77a82fd0e4044f5527d2b37b7"
+    },
+    {
+      "ref": "refs/heads/candidate/staff-delegation-20261004",
+      "sha": "69932d0dba33a0cf5913d02a191f2efc3799e3aa"
+    },
+    {
+      "ref": "refs/heads/candidate/staff-first-owner-fallback-20261004",
+      "sha": "af86244d4fd93d017456e7085b16ef7c9fa92dc5"
+    },
+    {
+      "ref": "refs/heads/candidate/staff-request-handling-20261007",
+      "sha": "a8e10ecb35164963edc03d3d5ab3f8af255166b3"
+    },
+    {
+      "ref": "refs/heads/candidate/startup-graphics-guard-20261012",
+      "sha": "efb8349609daccf3ceecd0cc6a4fbdf5e6129ee3"
+    },
+    {
+      "ref": "refs/heads/candidate/status-hierarchy-20261004",
+      "sha": "ad57e1300856b01264d8bc0596038ad6e75f5468"
+    },
+    {
+      "ref": "refs/heads/candidate/stress-hardening-20261005",
+      "sha": "b126ddcb8675dd71bd01ec546294175cdaa7d5b4"
+    },
+    {
+      "ref": "refs/heads/candidate/system-bplus-causal-20261003",
+      "sha": "fa0615659077931c8a02dd6f3792b39f9bffb2ff"
+    },
+    {
+      "ref": "refs/heads/candidate/systems-review-20261004",
+      "sha": "43b9eed594b40b2d52f52ddfd858917716812037"
+    },
+    {
+      "ref": "refs/heads/candidate/test-gate-lightmap-20261023",
+      "sha": "3aaf045c3d27e397e3c1e81e257d2ca958052f46"
+    },
+    {
+      "ref": "refs/heads/candidate/test-maintenance-20261023",
+      "sha": "0526ab8c1e256e851f22bb59ca626f74b65338fd"
+    },
+    {
+      "ref": "refs/heads/candidate/three-floor-20261005",
+      "sha": "b2d0b12a80087421dff240107c0d63ff22ea2955"
+    },
+    {
+      "ref": "refs/heads/candidate/three-floor-repair-20261005",
+      "sha": "c7d9e8f0be3cb3557f34889c5a3f695464d462e4"
+    },
+    {
+      "ref": "refs/heads/candidate/three-floor-repair-claude-20261005",
+      "sha": "f93554691fb8c1c7cb3bfac0167f12ed444e208d"
+    },
+    {
+      "ref": "refs/heads/candidate/tutorial-guidance-20261022",
+      "sha": "1c4f15e3d3533254b7aa022c49af07f1c500bd3b"
+    },
+    {
+      "ref": "refs/heads/candidate/tutorial-placement-20261004",
+      "sha": "248e7c3f1f5798fd9335b2bdee496d60384223b7"
+    },
+    {
+      "ref": "refs/heads/candidate/unit-lighting-security-20261024",
+      "sha": "6e278d65d5ed5de6a5bf24e5daa36df857f0dda6"
+    },
+    {
+      "ref": "refs/heads/candidate/unit-upgrade-growth-rotation-20261024",
+      "sha": "d6abaa382c5f495203e6efab6eaacf416e84c301"
+    },
+    {
+      "ref": "refs/heads/candidate/unit-upgrade-review-fixes-20261024",
+      "sha": "1774b0fddbefb0491bf220603fdf8a99bcb197fe"
+    },
+    {
+      "ref": "refs/heads/candidate/v62-open-house-20261022",
+      "sha": "9700d9d4475555e1a4907d1702cb8d81d31ded55"
+    },
+    {
+      "ref": "refs/heads/candidate/visible-actions-zoom-cycle-20261005",
+      "sha": "b7ad970d4015d8166ab53420739e2901d7839b4d"
+    },
+    {
+      "ref": "refs/heads/candidate/whole-game-art-20261010",
+      "sha": "8cd99b3313afe05ec9785d07db8f7f2717cf515d"
+    },
+    {
+      "ref": "refs/heads/candidate/working-yard-publication-20261011",
+      "sha": "1e4e13c157e250a2732556c81f3233a947e5ed58"
+    },
+    {
+      "ref": "refs/heads/candidate/yard-infill-20261010",
+      "sha": "25b7cfbb496c3799e3bbcf77b52a7b901de4c02d"
+    },
+    {
+      "ref": "refs/heads/candidate/yard-view-20261010",
+      "sha": "b2faa4baa8da8d470e142480ef9229485a73b46b"
+    },
+    {
+      "ref": "refs/heads/candidate/year1-light-service-repairs-20261024",
+      "sha": "c0cb562cbaba1b06706de3fc5192ce304bf234f3"
+    },
+    {
+      "ref": "refs/heads/claude/rotate-review-58d11b1",
+      "sha": "eeaf6fbd90c20a9c343a6c7cba88d498207c92b4"
+    },
+    {
+      "ref": "refs/heads/evidence/climate-diagnostics-20261008",
+      "sha": "8b528b0bea78d15af7357cd9ecde18409979ce19"
+    },
+    {
+      "ref": "refs/heads/maintenance/post-adoption-docs-20261023",
+      "sha": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "ref": "refs/heads/maintenance/project-checkpoint-20261023",
+      "sha": "5298f6edcd4ae3329de61007ac382c527d62d4cc"
+    },
+    {
+      "ref": "refs/heads/maintenance/project-status-20261021",
+      "sha": "0d9371cee5e225915f5c02bdd50ae72a78e43e45"
+    },
+    {
+      "ref": "refs/heads/master",
+      "sha": "ee39e0986718ce33fb84018a2c108249f793e3f8"
+    },
+    {
+      "ref": "refs/heads/preview-perplexity-js-5cf47d4",
+      "sha": "5cf47d4fcc28179bbaae3c9261e6c15e629a1917"
+    },
+    {
+      "ref": "refs/heads/review/technical-director-20261004",
+      "sha": "7de5cbf6d017df0c1ce1243c614783e72537cd7d"
+    },
+    {
+      "ref": "refs/heads/snapshot/display-repair-b2c55a6-20261020",
+      "sha": "0385af259c35058da69ed7d6cbb29e2ab7619abb"
+    },
+    {
+      "ref": "refs/heads/snapshot/version60-20261019",
+      "sha": "cea7061be2d7b32863c895afc26f2bd8f4d58429"
+    },
+    {
+      "ref": "refs/heads/validation/menu-save-harness-20261008",
+      "sha": "49b10cff9b5dfb0b6e1703b839c7d943c581221b"
+    },
+    {
+      "ref": "refs/heads/work/build-hold-drag",
+      "sha": "649af0f2464891649844d05c5f3369c6c45c8c93"
+    },
+    {
+      "ref": "refs/heads/work/finance-calendar-popup-audio",
+      "sha": "2812abf8d268f9a225e5786d173f95efcbd6223d"
+    },
+    {
+      "ref": "refs/heads/work/iphone-thought-clutter",
+      "sha": "5f466c77f52bbd4533edb7f8d9d75b803090b456"
+    },
+    {
+      "ref": "refs/heads/work/iphone-visible-rotate",
+      "sha": "9f628f09dc048893ddd1019311a90b9216fbaadf"
+    },
+    {
+      "ref": "refs/heads/work/owner-capacity-staff-balance",
+      "sha": "71a0eaabeff119369d085a26ac281097b2efb396"
+    },
+    {
+      "ref": "refs/heads/work/perplexity-vercel-preview",
+      "sha": "5cf47d4fcc28179bbaae3c9261e6c15e629a1917"
+    },
+    {
+      "ref": "refs/heads/work/tutorial-valid-expansion",
+      "sha": "7b6403bfa37c1808cfb7e712b38e36aeb5601209"
+    },
+    {
+      "ref": "refs/heads/work/weather-ad-campaigns",
+      "sha": "84e75074d8dbc11cea91aa5f4d3cc4b8833f3f85"
+    }
+  ],
+  "sites": [
+    {
+      "project_id": "appgprj_6adca26c52bc8191bc408b643fab2f3a",
+      "title": "Self Storage Tycoon \u2014 faster reserve waiting prototype",
+      "url": "https://sst-fast-reserve-3c92a5e-review.rainy-ash-3714.chatgpt.site",
+      "version": 4,
+      "version_id": "appgprj_6adca26c52bc8191bc408b643fab2f3a~appgver_22dc9a4bee08819198ec56861648ee1f",
+      "hosting_commit": "d5225a9db467f697538c00049dc214881720a494",
+      "deployment_id": "appgdep_6add6a53a8d4819193c76fd2c2757a37",
+      "deployment_status": "succeeded",
+      "access_mode": "custom",
+      "external_visitor_count": 0
+    },
+    {
+      "project_id": "appgprj_6ada185948a88191a1444dfd2158a84a",
+      "title": "Self Storage Tycoon \u2014 V62 Open House review",
+      "url": "https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site",
+      "version": 6,
+      "version_id": "appgprj_6ada185948a88191a1444dfd2158a84a~appgver_4fc9abc91dbc8191ad38651716870edd",
+      "hosting_commit": "d4338597aac5433f3c8afd99e1172f0a14131228",
+      "deployment_id": "appgdep_6adbec7bd67081919f7a8787da2b790a",
+      "deployment_status": "succeeded",
+      "access_mode": "public",
+      "external_visitor_count": 0
+    },
+    {
+      "project_id": "appgprj_6ac1995912248191b1c0a51153e182a3",
+      "title": "Self Storage Tycoon \u00b7 B+ iPhone Preview",
+      "url": "https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site",
+      "version": 62,
+      "version_id": "appgprj_6ac1995912248191b1c0a51153e182a3~appgver_a8df22e4a3348191a0abf9d5479f6e74",
+      "hosting_commit": "fbb046d32978d59d44954e30858c4e901b70986a",
+      "deployment_id": "appgdep_6ad85cc740f881918481eab39ad74183",
+      "deployment_status": "succeeded",
+      "access_mode": "public",
+      "external_visitor_count": 0
+    }
+  ],
+  "pr2": {
+    "state": "open",
+    "draft": true,
+    "merged": false,
+    "disposition": "excluded"
+  },
+  "verification_scope": "Fresh ref, tree and metadata checks; previous game test evidence retained; no new game tests or served-byte validation.",
+  "captured_at_utc": "2026-10-25T06:13:57.298669+00:00",
+  "artifacts": [
+    {
+      "path": "docs/design/office/SST_Office_Brainstorming_20261024.docx",
+      "size": 42827,
+      "sha256": "ea9360e5ded278bebbc0edbc8fe66108ff80d0e88b61c09d31aaec7d86a802a9",
+      "library_file_id": "libfile_137d78520468819192696f115462db63",
+      "url": "https://chatgpt.com/library?file_id=libfile_137d78520468819192696f115462db63&account_id=personal",
+      "status": "proposal only"
+    },
+    {
+      "path": "docs/design/office/SST_Office_Design_Brief_20261024.docx",
+      "size": 38442,
+      "sha256": "c99494fea5bc6557d2db8587167d52acc32504e69157061609b2444590f5f8ff",
+      "library_file_id": "libfile_b4f37c0965948191ad737d0139b9aab2",
+      "url": "https://chatgpt.com/library?file_id=libfile_b4f37c0965948191ad737d0139b9aab2&account_id=personal",
+      "status": "proposal only"
+    },
+    {
+      "path": "docs/checkpoints/20261024-sync/SST_Office_17f49f9.bundle",
+      "size": 14250,
+      "sha256": "b476d493d65d28c765982e3f0661ed62c487ebad6092ab2577d18cca9c626b49"
+    },
+    {
+      "path": "docs/checkpoints/20261024-sync/SST_Office_17f49f9.patch",
+      "size": 47260,
+      "sha256": "71b4ee180889e0689417ea34d39d6e401387fcb3a7d4ff1e9e6a0c8ad00b5d9c"
+    }
+  ],
+  "full_handoff": {
+    "filename": "SST_Project_Handoff_17f49f9_20261024.zip",
+    "library_file_id": "libfile_812d5ddabf948191b219d443b3a7fb25",
+    "size": 93939499,
+    "sha256": "bd71b80721bf4f3a785e071355a4524d72b49818a093af7c6a6995ae2c1ffbda",
+    "status": "original unchanged; use with this current checkpoint"
+  }
+}

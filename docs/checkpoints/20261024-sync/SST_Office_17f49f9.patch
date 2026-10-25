@@ -1,0 +1,611 @@
+From 17f49f9d677931460e39ac18aff0db356ae49e45 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sun, 25 Oct 2026 04:21:53 +0000
+Subject: [PATCH] feat: add compact actionable Office management panel
+
+Derive counter coverage, Owner charged/reserved capacity and recorded completions, owner decisions and delegated work from existing state. Link existing controls and disclose current Manager pricing/spending/collections authority. Keep Office selection from recentering the camera. No simulation, economics, save or authority-system changes. Five scoped scripts pass; browser layout and physical Safari remain not tested because Chromium is unavailable. No deployment or merge.
+---
+ css/game.css                                  |  13 ++
+ .../compact-office-panel-20261024.md          |  43 +++++
+ .../compact-office-20261024/preservation.json |  45 +++++
+ .../compact-office-20261024/toffice_panel.log |  10 ++
+ .../compact-office-20261024/tpause_policy.log |  14 ++
+ .../compact-office-20261024/tproperty_ui.log  |  23 +++
+ .../tsave_recovery.log                        |  15 ++
+ .../ttraffic_delegation.log                   |  21 +++
+ js/officepanel.js                             |  40 +++++
+ js/ui.js                                      |  58 +++++--
+ tests/headless/toffice_panel.mjs              | 159 ++++++++++++++++++
+ 11 files changed, 429 insertions(+), 12 deletions(-)
+ create mode 100644 docs/candidates/compact-office-panel-20261024.md
+ create mode 100644 docs/qa/compact-office-20261024/preservation.json
+ create mode 100644 docs/qa/compact-office-20261024/toffice_panel.log
+ create mode 100644 docs/qa/compact-office-20261024/tpause_policy.log
+ create mode 100644 docs/qa/compact-office-20261024/tproperty_ui.log
+ create mode 100644 docs/qa/compact-office-20261024/tsave_recovery.log
+ create mode 100644 docs/qa/compact-office-20261024/ttraffic_delegation.log
+ create mode 100644 js/officepanel.js
+ create mode 100644 tests/headless/toffice_panel.mjs
+
+diff --git a/css/game.css b/css/game.css
+index 8598790..0b2cd5e 100644
+--- a/css/game.css
++++ b/css/game.css
+@@ -729,6 +729,19 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
+ #ui .sheet .x { min-width:44px; min-height:44px; }
+ #ui .sheet .body { padding:8px 10px; flex:1; }
+ #ui .sheet.compact:not(.build-dock) .detail-content { display:none; }
++/* Office is actionable in its compact inspector; details remain local and scrollable. */
++#ui .sheet.office-panel.compact { max-height:min(48dvh, calc(100dvh - var(--controls-bottom, 170px) - 80px - var(--safe-b))); }
++#ui .sheet.office-panel .dock-summary { display:none; }
++#ui .sheet.office-panel.compact .detail-content { display:block; }
++#ui .sheet.office-panel.compact:not(.build-dock) .body { flex:0 1 auto; }
++#ui .office-row { display:grid; gap:4px; padding:8px 0; border-bottom:1px solid var(--line); }
++#ui .office-row b { font-size:14px; overflow-wrap:anywhere; }
++#ui .office-row small { display:block; color:var(--muted); font-size:12px; line-height:1.35; overflow-wrap:anywhere; }
++#ui .office-row .btn { min-height:44px; justify-self:start; }
++#ui .office-preview { display:-webkit-box !important; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
++#ui .office-authority-alert { padding:8px; background:#fff0cf; border-radius:8px; font-size:12px; line-height:1.4; }
++#ui .office-authority summary { min-height:44px; padding:12px 0; font-weight:700; cursor:pointer; }
++#ui .office-authority p { font-size:13px; line-height:1.45; overflow-wrap:anywhere; }
+ #ui .sheet.tall .dock-summary, #ui .build-dock .dock-summary { display:none; }
+ #ui .dock-metrics { display:flex; gap:12px; justify-content:space-between; }
+ #ui .dock-metrics > div { min-width:0; flex:1; }
+diff --git a/docs/candidates/compact-office-panel-20261024.md b/docs/candidates/compact-office-panel-20261024.md
+new file mode 100644
+index 0000000..ddd0bc5
+--- /dev/null
++++ b/docs/candidates/compact-office-panel-20261024.md
+@@ -0,0 +1,43 @@
++# Compact Office panel — October 24, 2026
++
++## Source and acceptance
++
++- Repository: EezzyE88/self-storage-tycoon-js; actual default branch: master.
++- Intended parent reverified live: candidate/unit-upgrade-growth-rotation-20261024 at `d6abaa382c5f495203e6efab6eaacf416e84c301`.
++- Master observed at task start: `ee39e0986718ce33fb84018a2c108249f793e3f8`.
++- Isolated implementation: candidate/compact-office-panel-20261024. The commit containing this note is the candidate source; this file does not claim acceptance or a served version.
++- Status: implemented, focused headless checks PASS; browser layout and physical Safari NOT TESTED. No Site publication, deployment or merge.
++
++## Delivered behavior
++
++Tapping an operating Office opens four compact, scrollable rows: actual counter coverage with separate waiting/being-served counts; Owner office/property charged or reserved capacity and separately recorded completed property jobs; Owner decisions; and delegated requests/property jobs with handling, queued, vendor and blocked status. Direct buttons use the existing coverage review, work queue, request windows and Owner chores policy.
++
++The expandable staff/authority disclosure shows payroll run rate, role limits, retention/request/collections policy state, automatic Manager asking-rent changes and vendor/cart purchases, lien notices, collections charges and bill/debt settlement. An employed Manager's authority warning appears before the four rows. Manual request review is explicitly not a switch for Manager pricing, spending or notices. No authority or spending-control system was added.
++
++Office selection no longer schedules automatic recentering; other inspectors retain their existing framing. Ordinary compact/expanded panel and request pause mechanisms are reused. Existing Manager log receives a section anchor for its Office shortcut. Authority expansion uses the existing transient detail-open preservation mechanism, without new save fields.
++
++## Preservation
++
++Among existing runtime files, only `js/ui.js` and `css/game.css` change. `js/officepanel.js` is a new read-only derived view. It uses existing state, role constants and request eligibility; it does not schedule work, dispatch decisions, reset daily capacity, draw RNG or change money. Office supplies the existing job-status formatter with read-only remaining capacity, avoiding its ordinary lazy bookkeeping reset during this new read path.
++
++Simulation, role/cost data, economics, finance, main loop, renderer and save implementation bytes match the exact parent. See [preservation hashes](../qa/compact-office-20261024/preservation.json). Existing tests are unchanged. No player save was used; all check state was disposable fixture data.
++
++## Executed checks
++
++All five scripts exit 0; logs are retained in [the evidence directory](../qa/compact-office-20261024/).
++
++| Script | Result |
++| --- | --- |
++| toffice_panel.mjs | 9 groups PASS: counter/Manager exclusion, queue split, capacity versus completions, stale-day read purity, owner/delegated request classification, after-hours retention, job classification, controls/authority/escaping, navigation and camera/Pause preservation |
++| tpause_policy.mjs | 13 checks PASS |
++| tproperty_ui.mjs | 22 checks PASS |
++| ttraffic_delegation.mjs | 20 groups PASS |
++| tsave_recovery.mjs | 14 checks PASS; original autosave double, not physical device persistence |
++
++JavaScript syntax checks and git diff whitespace validation pass. An initial focused read-purity assertion exposed the existing job-status formatter's lazy capacity reset; the new Office call now supplies read-only capacity and the assertion passes.
++
++## Material limits and next action
++
++Chromium is absent in this executor. A launch attempt failed for missing executable. Installation attempts for the installed Playwright version and the npm-selected version returned invalid/truncated browser archives. This is an environment limitation; no browser rendering, touch-layout, scrolling or screenshot PASS is claimed. Physical iPhone Safari and gameplay acceptance remain NOT TESTED. The Office retains the existing game build label; use the exact candidate commit for source identity.
++
++Next: review this exact candidate, then execute a focused browser layout/interaction check at 375×667 and 390×844 in a supported Chromium environment. Check Office scrolling, direct destinations, disclosure expansion, camera retention and manual Pause using disposable state. No publication or merge is authorized by this note.
+diff --git a/docs/qa/compact-office-20261024/preservation.json b/docs/qa/compact-office-20261024/preservation.json
+new file mode 100644
+index 0000000..3515126
+--- /dev/null
++++ b/docs/qa/compact-office-20261024/preservation.json
+@@ -0,0 +1,45 @@
++{
++  "parent": "d6abaa382c5f495203e6efab6eaacf416e84c301",
++  "verified_unchanged": [
++    {
++      "path": "js/sim.js",
++      "sha256": "db031dff86503ef15d7b8d6280a8bdf78592f64e05521e24046db513218db0ed",
++      "matches_parent": true
++    },
++    {
++      "path": "js/data.js",
++      "sha256": "0cc0985de5ddacfc1a7d7fe462c1c4cdc89f07dbc26a1868020d742fd9477e66",
++      "matches_parent": true
++    },
++    {
++      "path": "js/economics.js",
++      "sha256": "029c9d767b0a3871617ce07ed961a87fa389577df89fce60dc4cf41bde393c6b",
++      "matches_parent": true
++    },
++    {
++      "path": "js/finance.js",
++      "sha256": "fc53b3d54969aedc4d36ac3cb2e9e9640de5b235d89ad04defea49088af831e9",
++      "matches_parent": true
++    },
++    {
++      "path": "js/main.js",
++      "sha256": "1b6af0e30f37889a125921bd98c39714719a1fd0e4eab7c069ca7504a7fe73e1",
++      "matches_parent": true
++    },
++    {
++      "path": "js/localsave.js",
++      "sha256": "fe3915174398f314eadc84a28831322fc09e4b830c15b76a20c73706465b7873",
++      "matches_parent": true
++    },
++    {
++      "path": "js/savearchive.js",
++      "sha256": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
++      "matches_parent": true
++    },
++    {
++      "path": "js/render.js",
++      "sha256": "9d0ee9474d385b4dd5a541ecb132ff9d46f096916805ddfaafd05b4d54c20ae2",
++      "matches_parent": true
++    }
++  ]
++}
+diff --git a/docs/qa/compact-office-20261024/toffice_panel.log b/docs/qa/compact-office-20261024/toffice_panel.log
+new file mode 100644
+index 0000000..8ec6ffc
+--- /dev/null
++++ b/docs/qa/compact-office-20261024/toffice_panel.log
+@@ -0,0 +1,10 @@
++PASS counter matches actual server eligibility, excludes Manager, and separates service from waiting
++PASS reserved property capacity is distinct from recorded completions; stale days are read without mutation
++PASS critical, manual, takeover and failed requests are owner decisions; eligible routine requests stay delegated
++PASS after-hours retention shows delegated waiting rather than a new owner decision
++PASS property delegation excludes unassigned and Owner work and includes staff/vendor jobs once
++PASS Office inspector retains four actionable rows, escapes request text, and discloses current authority without purchases
++PASS Office section buttons navigate to existing destinations without dispatch or camera movement
++PASS Office coverage, chores and request actions reach existing handlers and never start manual Pause
++PASS selecting Office never schedules camera recentering, preserves Pause, and keeps other inspector framing
++9 focused Office checks passed; physical Safari NOT TESTED
+diff --git a/docs/qa/compact-office-20261024/tpause_policy.log b/docs/qa/compact-office-20261024/tpause_policy.log
+new file mode 100644
+index 0000000..1cfb804
+--- /dev/null
++++ b/docs/qa/compact-office-20261024/tpause_policy.log
+@@ -0,0 +1,14 @@
++PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)
++PASS nested and interleaved pauses restore the speed from before the first one
++PASS manual Pause during a temporary pause is preserved by button and keyboard
++PASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored
++PASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice
++PASS panel closure: Details → Back to map and close restore the previous speed, including Pause
++PASS actions: commissioning, owner make-ready and build placement never start a paused clock
++PASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed
++PASS requests: answering the last request, and navigating from Requests, keep the player speed
++PASS property switch never applies another property’s saved speed; loads stay paused
++PASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause
++PASS tutorial wording no longer promises a 1x resume
++PASS the policy is UI-only: no simulation or save field is added
++13 pause-policy checks passed
+diff --git a/docs/qa/compact-office-20261024/tproperty_ui.log b/docs/qa/compact-office-20261024/tproperty_ui.log
+new file mode 100644
+index 0000000..57d7e7c
+--- /dev/null
++++ b/docs/qa/compact-office-20261024/tproperty_ui.log
+@@ -0,0 +1,23 @@
++PASS nested overlays restore the previous speed 0
++PASS nested overlays restore the previous speed 1
++PASS nested overlays restore the previous speed 2
++PASS nested overlays restore the previous speed 4
++PASS a Pause tapped during a popup is preserved when it closes
++PASS run speed cannot defeat a blocking panel
++PASS duplicate blockers restore the previous speed once
++PASS property change never applies stale previous-property run speed
++PASS compact panels show concise metrics without performing management actions
++PASS expanded panel explicitly communicates pause and collapse
++PASS inspector compact status uses authoritative occupied state
++PASS section navigation expands before jumping to controls
++PASS construction release pauses review; clearing preview restores the previous speed
++PASS inbox preserves original response buttons without creating purchases
++PASS expanded sheet pauses immediately and collapsing restores the previous speed
++PASS commission actions stay outside collapsed details and are never duplicated
++PASS off-floor inspection is refused without removing same-floor commissioning
++PASS cleaning action stays available without expanding its information
++PASS tutorial clock instruction can dismiss tutorial details and start 1x
++PASS tutorial clock action cannot bypass a pending customer request
++PASS money lesson renders Got it in the compact completion row and advances
++PASS landscape overview retains left playfield with a right-side dock
++22 executed checks passed; physical Safari acceptance pending
+diff --git a/docs/qa/compact-office-20261024/tsave_recovery.log b/docs/qa/compact-office-20261024/tsave_recovery.log
+new file mode 100644
+index 0000000..28598cb
+--- /dev/null
++++ b/docs/qa/compact-office-20261024/tsave_recovery.log
+@@ -0,0 +1,15 @@
++PASS import / keep current, 0 archived: every write position, transient and persistent, reload and retry
++PASS import / keep current, 3 archived: every write position, transient and persistent, reload and retry
++PASS import / keep current, 5 archived: every write position, transient and persistent, reload and retry
++PASS Restore previous game, 0 archived: every write position, transient and persistent, reload and retry
++PASS Restore previous game, 3 archived: every write position, transient and persistent, reload and retry
++PASS Restore previous game, 5 archived: every write position, transient and persistent, reload and retry
++PASS archive restore (index 1), 3 archived: every write position, transient and persistent, reload and retry
++PASS archive restore (index 1), 5 archived: every write position, transient and persistent, reload and retry
++PASS a full archive keeps every game through a persistent failure at each step, and the next keep discloses every drop
++PASS read failures are explicit: nothing is written and the message says the games could not be read
++PASS an unreadable archive or kept slot is copied aside before anything overwrites it
++PASS a restore keeps the restored game listed until it has been saved, then removes only that copy
++PASS reviewer's sequence: 5 archived, restore index 2, the third and every later write fails
++PASS unchanged archive report covers archive/previous slots, not unrelated autosave writes
++14 save-recovery checks passed; autosave=original double; delay=0ms
+diff --git a/docs/qa/compact-office-20261024/ttraffic_delegation.log b/docs/qa/compact-office-20261024/ttraffic_delegation.log
+new file mode 100644
+index 0000000..567e8d5
+--- /dev/null
++++ b/docs/qa/compact-office-20261024/ttraffic_delegation.log
+@@ -0,0 +1,21 @@
++PASS clerk retention queues after hours at 0x, then handles next shift
++PASS clerk retention queues after hours at 1x, then handles next shift
++PASS clerk retention queues after hours at 2x, then handles next shift
++PASS clerk retention queues after hours at 4x, then handles next shift
++PASS manager retention queues after hours at 0x, then handles next shift
++PASS manager retention queues after hours at 1x, then handles next shift
++PASS manager retention queues after hours at 2x, then handles next shift
++PASS manager retention queues after hours at 4x, then handles next shift
++PASS temporary Clerk gap queues without an owner card, then returns to normal handling
++PASS closing and reopening retains the authorized queue
++PASS saved legacy coverage flag recovers only for authorized retention
++PASS genuine manual exception remains owner-held
++PASS genuine owner exception remains owner-held
++PASS genuine failed exception remains owner-held
++PASS genuine critical exception remains owner-held
++PASS genuine noStaff exception remains owner-held
++PASS switching retention off at 10:00 prevents pending discount
++PASS switching retention off at 19:00 prevents pending discount
++PASS decline completes once, no extra discount or repeat owner request
++PASS policy switched off during a Clerk gap queues move-out instructions instead of applying discount
++20 traffic/delegation behavior groups passed
+diff --git a/js/officepanel.js b/js/officepanel.js
+new file mode 100644
+index 0000000..0b0b23a
+--- /dev/null
++++ b/js/officepanel.js
+@@ -0,0 +1,40 @@
++// Read-only presentation of existing state. No scheduling, money or authority changes.
++import { OFFICE_HOURS, ROLES } from './data.js';
++
++export function officePanelState(sim) {
++  const s = sim.s, day = sim.day;
++  const officeHours = sim.hour >= OFFICE_HOURS[0] && sim.hour < OFFICE_HOURS[1];
++  const owner = s.staff.find(st => st.role === 'owner');
++  const ownerAgent = owner && s.agents.find(a => a.kind === 'staff' && a.sid === owner.id);
++  const capacity = ROLES.owner.workHours;
++  const charged = owner?.workDay === day ? owner.workUsed || 0 : 0;
++  const officeCharged = owner?.workDay === day ? owner.officeUsed || 0 : 0;
++  const remaining = owner ? Math.max(0, capacity - charged) : 0;
++  // officeServerAgents eligibility, without resetting saved daily bookkeeping in a read.
++  const servers = s.agents.filter(a => a.kind === 'staff' && a.st === 'office' &&
++    (a.role === 'clerk' ? officeHours : a.role === 'owner' && owner && a.sid === owner.id && remaining >= 0.5));
++  const serving = s.officeQ.filter(id => s.agents.some(a => a.id === id && a.serveT > 0)).length;
++  const requests = s.convos.map(c => {
++    const handler = sim.requestHandler(c);
++    const waiting = !!handler && (!officeHours || (handler === 'Clerk' &&
++      !s.agents.some(a => a.kind === 'staff' && a.role === 'clerk' && a.st === 'office')));
++    return { request: c, handler, waiting };
++  });
++  const decisions = requests.filter(r => !r.handler).map(r => r.request)
++    .sort((a, b) => Number(b.sev === 'critical') - Number(a.sev === 'critical') || a.t - b.t);
++  const delegatedRequests = requests.filter(r => r.handler);
++  const delegatedJobs = s.tasks.filter(t => t.vendor || (t.assigned && t.assigned !== owner?.id));
++  const completed = s.workReport?.days?.find(d => d.day === day)?.roles?.owner;
++  return {
++    officeHours, counter: !s.open ? 'Business not open' : !officeHours ? 'Outside office hours' :
++      servers.length ? `Covered by ${servers.map(a => ROLES[a.role].name).join(' + ')}` : 'Counter uncovered',
++    waiting: Math.max(0, s.officeQ.length - serving), serving,
++    owner, ownerAgent, capacity, officeCharged, propertyCharged: Math.max(0, charged - officeCharged), remaining,
++    ownerTask: ownerAgent && s.tasks.find(t => t.id === ownerAgent.task),
++    ownerQueued: ownerAgent?.queue?.length || 0, completedJobs: completed?.jobs || 0,
++    decisions, delegatedRequests, delegatedJobs,
++    payroll: s.staff.reduce((sum, st) => sum + (st.wage || 0), 0),
++    manager: sim.hasManager(), manual: !!s.policies.manualRequests,
++    lastAction: s.mgrLog[0] || null,
++  };
++}
+diff --git a/js/ui.js b/js/ui.js
+index d7385c6..b2c5233 100644
+--- a/js/ui.js
++++ b/js/ui.js
+@@ -1,3 +1,4 @@
++import { officePanelState } from './officepanel.js';
+ import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';
+ import { demandEvidenceText, paybackText } from './economics.js';
+ import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
+@@ -264,6 +265,7 @@ export class UI {
+       case 'workingNext': this.setTab(v, true); this.jumpSection(v === 'growth' ? 'Growth Readiness' : v === 'business' ? 'Your market' : 'Work queue'); break;
+       case 'tab': this.setTab(this.tab === v ? null : v); this.sfx('tab'); break;
+       case 'staffHelp': this.hireRoleFocus = ROLES[v] ? v : null; this.select(null); this.setTab('operate'); this.jumpSection('Hire capacity'); this.sfx('click'); break;
++      case 'officeSection': this.select(null); this.setTab(v, true); this.jumpSection(el.dataset.section); this.sfx('click'); break;
+       case 'sectionMenu': this.sectionMenuKey = this.tab; this.sheetTall = true; this.renderSheet(true); this.sfx('click'); break;
+       case 'sectionMenuClose': this.closeSectionMenu(); this.sfx('click'); break;
+       case 'section': this.sectionMenuKey = null; this.sheetTall = true; this.renderSheet(true); this.jumpSection(v); this.sfx('click'); break;
+@@ -514,7 +516,7 @@ export class UI {
+     const o = typeof id === 'number' && this.sim.s.objects[id];
+     if (o && o.type === 'corral') this.do({ type: 'tutFlag', flag: 'corralInspected' });
+     this.renderSheet(true);
+-    if (id != null) requestAnimationFrame(() => this.keepSelVisible());
++    if (id != null && o?.type !== 'office') requestAnimationFrame(() => this.keepSelVisible());
+   }
+   renderSheet(force = false) {
+     this.syncFeedbackProperty();
+@@ -561,7 +563,7 @@ export class UI {
+   }
+   sheet(title, sub, body, extra = '') {
+     if (title === 'Operate') extra += '<button class="btn" data-a="feedback">Customer feedback</button>';
+-    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Overlays', 'Overlays'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Your next improvement', 'My yard'], ['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
++    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Manager log', 'Log'], ['Overlays', 'Overlays'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Your next improvement', 'My yard'], ['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
+     if (sections) {
+       const jumps = [];
+       body = body.replace(/<h3>(.*?)<\/h3>/g, (html, text) => {
+@@ -577,10 +579,10 @@ export class UI {
+       if (menuOpen) extra += `<nav id="section-menu" class="section-menu" data-section-menu="true" aria-label="Choose ${title.toLowerCase()} section"><div class="section-menu-head"><b>Choose section</b><button class="btn sm" data-a="sectionMenuClose" aria-label="Close section menu">Close</button></div><div class="section-menu-options">${jumps.join('')}</div></nav>`;
+       extra += `<nav class="section-shortcuts" aria-label="${title} sections">${jumps.join('')}${title==='Operate'?'<button data-a="feedback">Feedback</button>':''}</nav>`;
+     }
+-    const build=title==='Build';
++    const build=title==='Build', office=title==='Office';
+     // Keep completion and work assignment controls outside the collapsible information body.
+     const actions = [];
+-    if (this.sel != null) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
++    if (this.sel != null && !office) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
+       const cmd = button.match(/data-cmd='([^']*)'/);
+       if (!cmd) { if (/data-a="(?:staffHelp|verticalReview)"/.test(button)) { actions.push(button); return ''; } return button; }
+       let type; try { type = JSON.parse(cmd[1]).type; } catch { return button; }
+@@ -588,7 +590,7 @@ export class UI {
+       actions.push(button); return '';
+     });
+     const actionRail = actions.length ? `<div class="dock-actions" aria-label="Task actions">${actions.join('')}</div>` : '';
+-    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}${actionRail}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
++    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}${office?' office-panel':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}${actionRail}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
+   }
+ 
+   dockSummary(title,sub) {
+@@ -1052,7 +1054,7 @@ export class UI {
+       ? this.cmdBtn(`Delegate to ${name}`, action, 'pri')
+       : d.status === 'missing' ? `<button class="btn pri" data-a="staffHelp" data-v="${d.role}">Review ${name} hire · ${money(ROLES[d.role].wage, true)}/day</button>` : '');
+   }
+-  jobWait(t) {
++  jobWait(t, available = null) {
+     if (t.vendor) { const h = Math.max(0, Math.ceil((t.vendor - this.sim.s.t) / 60)); return h ? `Vendor booked: response time ~${h}h; the repair is completed on arrival (no staff work hours).` : 'Vendor arriving now; the repair completes on arrival.'; }
+     const st = this.sim.s.staff.find(x => x.id === t.assigned);
+     if (!st) return 'Assigned worker is unavailable; review staffing.';
+@@ -1060,8 +1062,9 @@ export class UI {
+     if (!t.queued) return t.prog ? 'Work in progress; assignment stays with this worker.' : 'Travelling to the job; assignment stays with this worker.';
+     if (st.role !== 'owner' && !this.sim.onShift()) return 'Queued for the next 7 AM staff shift.';
+     const booked = t.workBooked === st.id && t.workBookedDay === this.sim.day;
+-    if (!booked && this.sim.workRemaining(st) < this.sim.taskHours(t)) return 'Queued; insufficient capacity today. Waiting for the daily reset.';
+-    return `Queued behind this worker’s current jobs; ${this.sim.workRemaining(st)}h available today${t.ownerOverride ? ' · explicit Owner choice' : ''}.`;
++    const left = available ?? this.sim.workRemaining(st);
++    if (!booked && left < this.sim.taskHours(t)) return 'Queued; insufficient capacity today. Waiting for the daily reset.';
++    return `Queued behind this worker’s current jobs; ${left}h available today${t.ownerOverride ? ' · explicit Owner choice' : ''}.`;
+   }
+   officeCoverageHtml() {
+     const sim = this.sim, s = sim.s;
+@@ -1071,6 +1074,40 @@ export class UI {
+     const message = servers.length ? `Office covered by ${servers.map(a => ROLES[a.role].name).join(' + ')} · ${s.officeQ.length} waiting.` : `Office uncovered · ${s.officeQ.length} waiting. ${clerk ? 'Clerk coverage is 8 AM–6 PM.' : 'The Owner is away or lacks office capacity.'}`;
+     return `<p class="note"><b>${esc(message)}</b>${clerk ? ' Clerk coverage is 8 AM–6 PM.' : ' A Clerk covers 8 AM–6 PM for ' + money(ROLES.clerk.wage) + '/day.'}</p>` + (clerk ? '' : '<button class="btn sm" data-a="staffHelp" data-v="clerk">Review office coverage</button>');
+   }
++  officePanelHtml() {
++    const sim = this.sim, s = sim.s, p = officePanelState(sim);
++    const jump = (label, tab, section) => `<button class="btn sm" data-a="officeSection" data-v="${tab}" data-section="${section}">${label}</button>`;
++    const first = p.decisions[0];
++    const reason = first?.sev === 'critical' ? 'Critical' : first?.ownerReview === 'failed' ? 'Staff response failed' :
++      first?.ownerReview === 'coverage' ? 'Staff coverage ended' : first?.ownerReview === 'owner' ? 'You took over' : p.manual ? 'Manual review' : 'Owner decision';
++    const pending = first ? `${reason} · ${first.who || 'Tenant'}: ${first.text}` : 'No decisions waiting for you.';
++    const requestWait = p.delegatedRequests.filter(r => r.waiting).length;
++    const blocked = p.delegatedJobs.filter(t => t.unreachable != null && !t.vendor).length;
++    const queued = p.delegatedJobs.filter(t => t.queued && t.unreachable == null && !t.vendor).length;
++    const vendor = p.delegatedJobs.filter(t => t.vendor).length;
++    const blocker = p.delegatedJobs.find(t => t.unreachable != null || t.queued || t.vendor);
++    const worker = blocker && s.staff.find(st => st.id === blocker.assigned);
++    const workerLeft = worker ? Math.max(0, (ROLES[worker.role]?.workHours || 0) - (worker.workDay === sim.day ? worker.workUsed || 0 : 0)) : 0;
++    const ownerDoing = !p.owner ? 'No Owner available' : !p.ownerAgent ? 'Owner needs an office' : p.ownerTask ? p.ownerTask.label :
++      p.ownerAgent.st === 'office' ? 'At the office' : p.ownerAgent.st === 'home' ? 'Returning to office' : 'Between jobs';
++    const authorityAlert = p.manager ? '<p class="office-authority-alert"><b>Manager authority active:</b> automatic asking-rent changes, vendor/cart spending and lien notices. Manual request review does not stop these.</p>' : '';
++    return `${authorityAlert}<div class="office-rows">
++      <section class="office-row" aria-label="Counter coverage"><b>Counter · ${esc(p.counter)}</b><small>8 AM–6 PM · ${p.waiting} waiting · ${p.serving} being served</small><button class="btn sm" data-a="staffHelp" data-v="clerk">Review coverage</button></section>
++      <section class="office-row" aria-label="Owner capacity"><b>Owner · ${p.remaining}h of ${p.capacity}h available today</b><small>Office charged ${p.officeCharged}h · Property charged/reserved ${p.propertyCharged}h</small><small>${esc(ownerDoing)} · ${p.ownerQueued} queued · ${p.completedJobs} property jobs recorded complete today</small><div class="row wrap">${jump('Work queue', 'operate', 'Work queue')}<button class="btn sm" data-a="policy" data-v="ownerChores" aria-pressed="${!!s.policies.ownerChores}">Owner chores: ${s.policies.ownerChores ? 'On' : 'Off'}</button></div></section>
++      <section class="office-row" aria-label="Owner decisions"><b>Your decisions · ${p.decisions.length}</b><small class="office-preview">${esc(pending)}</small><button class="btn sm" data-a="requests" ${p.decisions.length ? '' : 'disabled'}>Review decisions</button></section>
++      <section class="office-row" aria-label="Delegated work"><b>Delegated · ${p.delegatedRequests.length} requests · ${p.delegatedJobs.length} property jobs</b><small>Requests: ${p.delegatedRequests.length - requestWait} handling · ${requestWait} waiting for hours/staff. Jobs: ${p.delegatedJobs.length - queued - vendor - blocked} active · ${queued} queued · ${vendor} vendor booked${blocked ? ` · ${blocked} access blocked` : ''}.</small>${blocker ? `<small>${esc(blocker.label)}: ${esc(this.jobWait(blocker, workerLeft))}</small>` : ''}<div class="row wrap"><button class="btn sm" data-a="requests" data-v="settings">Requests &amp; responses</button>${jump('Work queue', 'operate', 'Work queue')}</div></section>
++    </div>
++    <details class="office-authority" data-yard-detail="office-authority"><summary>Staff &amp; authority · ${money(p.payroll, true)}/day payroll</summary>
++      <p>Capacity is charged or reserved when work is assigned; it is not elapsed labor or completed work. The completed count records finished property jobs only; office service and travel are excluded.</p>
++      <p><b>Clerk ${money(ROLES.clerk.wage, true)}/day:</b> counter coverage 8 AM–6 PM, first before the Owner, plus eligible requests. Each customer served by the Owner charges 0.5h. <b>Porter ${money(ROLES.porter.wage, true)}/day:</b> make-ready, cleaning and permitted cart recovery. <b>Tech ${money(ROLES.tech.wage, true)}/day:</b> repairs and enabled preventive maintenance. Owner, Porter and Tech each have 8 daily capacity hours.</p>
++      <p><b>Manager ${money(ROLES.manager.wage, true)}/day:</b> does not serve the counter. Automatically commissions ready units, books qualifying delayed/urgent vendors ($250 simple / $650 complex), and buys $${CART_COST} carts for qualifying empty corrals (at most one per corral per game day). Vendor/cart purchases check available cash after bills and recommended reserve; there is no separate approval or daily spending budget.</p>
++      <p>Every 30 game days, the Manager adjusts eligible asking rents at high/low occupancy, approximately +3% / −3% with rounding and market bounds. Existing lease rents are not raised by this automation. Retention is <b>${s.policies.retention ? 'On' : 'Off'}</b>: eligible staff may offer 10% off to price-driven move-outs; acceptance changes that tenant’s lease rent.</p>
++      <p>Request mode: <b>${p.manual ? 'Owner reviews every request' : 'Staff handle eligible requests'}</b>. Critical requests and explicit Owner takeovers stay with you. Manual review controls requests only; it does not turn off Manager pricing, purchases or lien notices. Those Manager powers have no separate switches.</p>
++      <p>Automatic lien notices: <b>${s.policies.autoNotice ? 'On' : 'Off'}</b>; a Manager sends them anyway. An unresolved lien-eligible account also advances to notice after 14 days. Late fee: <b>${money(s.policies.lateFee || 0)}</b>, once after 5 days late; 15-day overlock: <b>${s.policies.overlock ? 'On' : 'Off'}</b>. Resolution: <b>${s.policies.resolution === 'auction' ? 'Auction' : 'Clean-out/donation'}</b>. Scheduled resolution can charge $80 haul-away for a junk auction lot or $120 for clean-out/donation, without another approval. Payroll accrues at 7 AM; operating bills settle weekly and scheduled debt payments debit automatically.</p>
++      ${p.lastAction ? `<p><b>Latest logged action · Day ${dayOf(p.lastAction.t)} ${fmtTime(p.lastAction.t)}:</b> ${esc(p.lastAction.msg)}</p>` : '<p>No staff actions logged yet.</p>'}
++      <div class="row wrap">${jump('Staff', 'operate', 'Staff')}${jump('Policies', 'operate', 'Policies')}${jump('Asking rents', 'business', 'Asking rents')}${jump('Collections', 'business', 'Collections')}${p.manager || p.lastAction ? jump('Manager log', 'operate', 'Manager log') : ''}</div>
++    </details>`;
++  }
+   taskActions(o) {
+     const s = this.sim.s; const t = s.tasks.find((x) => x.obj === o.id);
+     const ownerCan = t ? ROLES.owner.can.includes(t.need) : !(o.type === 'elevator' || o.type === 'hvac');
+@@ -1202,10 +1239,7 @@ export class UI {
+           <div class="row wrap" style="margin-top:10px"><button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'buyCarts', corral: o.id, n: 1 })}'>Buy 1 cart (${money(CART_COST)})</button><button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'buyCarts', corral: o.id, n: 2 })}'>Buy 2 (${money(CART_COST * 2)})</button></div>
+           <p class="note">Interior customers park at loading, take a cart here, go through the wide door and down the hallway. Empty corral = waiting or carrying by hand.</p>`);
+       }
+-      case 'office': {
+-        const staff = esc(s.staff.map((st) => ROLES[st.role].name + ' ' + st.name).join(', '));
+-        return this.sheet('Office', `Open ${OFFICE_HOURS[0]} AM - ${OFFICE_HOURS[1] - 12} PM`, `<div class="kv"><span>Waiting customers</span><span>${s.officeQ.length}</span><span>Staff</span><span>${esc(staff)}</span><span>Service quality</span><span>${pct(s.exp.service)}</span></div><p class="note">Walk-in prospects need someone at the office. The Owner serves when not out on a task; a Clerk covers office hours.</p>`);
+-      }
++      case 'office': return this.sheet('Office', 'Counter, capacity & decisions', this.officePanelHtml());
+       case 'shell': {
+         const units = sim.objs('unit').filter((u) => D.shellAt[u.y * s.W + u.x] === o.id);
+         const hv = D.hvac[o.id];
+diff --git a/tests/headless/toffice_panel.mjs b/tests/headless/toffice_panel.mjs
+new file mode 100644
+index 0000000..ffe5df8
+--- /dev/null
++++ b/tests/headless/toffice_panel.mjs
+@@ -0,0 +1,159 @@
++import assert from 'node:assert/strict';
++import { officePanelState } from '../../js/officepanel.js';
++import { UI } from '../../js/ui.js';
++import { makeMaple } from '../../js/maple.js';
++
++let passed = 0;
++const test = (name, run) => { run(); passed++; console.log('PASS ' + name); };
++function fixture() {
++  const sim = makeMaple(4242);
++  sim.s.t = 10 * 60; sim.s.speed = 0; sim.s.tut.on = false; sim.s.tut.done = true;
++  sim.s.convos = []; sim.s.officeQ = []; sim.s.tasks = [];
++  const owner = sim.s.staff.find(st => st.role === 'owner');
++  Object.assign(owner, { workDay: sim.day, workUsed: 0, officeUsed: 0 });
++  const ag = sim.s.agents.find(a => a.sid === owner.id);
++  Object.assign(ag, { st: 'office', task: null, queue: [] });
++  const ui = Object.create(UI.prototype);
++  ui.g = { sim, rend: { view: 'ext', setSelection() {} }, audio: { unlock() {} } };
++  ui.title = false; ui.sfx = () => {}; ui.renderSheet = () => {};
++  ui.root = { querySelectorAll: () => [] };
++  return { sim, owner, ag, ui };
++}
++function hire(sim, role) { assert.equal(sim.dispatch({ type: 'hire', role }).ok, true); }
++const click = (ui, dataset) => ui.onClick({ target: { closest: () => ({ dataset, closest: () => null }) } });
++
++test('counter matches actual server eligibility, excludes Manager, and separates service from waiting', () => {
++  const { sim, owner, ag } = fixture();
++  sim.s.agents.push({ id: 900001, kind: 'cust', serveT: 25 }, { id: 900002, kind: 'cust', serveT: 0 });
++  sim.s.officeQ = [900001, 900002];
++  let p = officePanelState(sim);
++  assert.deepEqual([p.waiting, p.serving, p.counter], [1, 1, 'Covered by Owner']);
++  assert.deepEqual(sim.officeServerAgents().map(a => a.role), ['owner']);
++  ag.st = 'work'; hire(sim, 'manager');
++  assert.equal(sim.officeServerAgents().length, 0);
++  assert.equal(officePanelState(sim).counter, 'Counter uncovered');
++  hire(sim, 'clerk');
++  assert.equal(officePanelState(sim).counter, 'Covered by Clerk');
++  assert.deepEqual(sim.officeServerAgents().map(a => a.role), ['clerk']);
++  ag.st = 'office'; owner.workUsed = 8;
++  assert.equal(officePanelState(sim).counter, 'Covered by Clerk');
++  sim.s.t = 19 * 60;
++  assert.equal(officePanelState(sim).counter, 'Outside office hours');
++  sim.s.open = false;
++  assert.equal(officePanelState(sim).counter, 'Business not open');
++});
++
++test('reserved property capacity is distinct from recorded completions; stale days are read without mutation', () => {
++  const { sim, owner, ag } = fixture();
++  Object.assign(owner, { workUsed: 5, officeUsed: 1 }); ag.queue = [700001, 700002];
++  sim.s.workReport = { v: 1, fromT: sim.s.t, days: [{ day: sim.day, payroll: 0, roles: { owner: { jobs: 1, hours: 2 } } }] };
++  const before = JSON.stringify(sim.s), p = officePanelState(sim);
++  assert.deepEqual([p.officeCharged, p.propertyCharged, p.remaining, p.ownerQueued, p.completedJobs], [1, 4, 3, 2, 1]);
++  assert.equal(JSON.stringify(sim.s), before);
++  owner.workDay = sim.day - 1;
++  const stale = JSON.stringify(sim.s), next = officePanelState(sim);
++  assert.deepEqual([next.officeCharged, next.propertyCharged, next.remaining], [0, 0, 8]);
++  assert.equal(JSON.stringify(sim.s), stale);
++});
++
++test('critical, manual, takeover and failed requests are owner decisions; eligible routine requests stay delegated', () => {
++  const { sim } = fixture(); hire(sim, 'clerk');
++  for (const extra of [{}, { sev: 'critical' }, { ownerReview: 'owner' }, { ownerReview: 'failed' }, { ownerReview: 'coverage' }]) {
++    sim.convo({ key: 'q' + sim.s.convos.length, who: 'Tenant', text: 'Question', auto: 0, actions: [{ label: 'Noted' }], ...extra });
++  }
++  const before = JSON.stringify(sim.s), p = officePanelState(sim);
++  assert.equal(p.decisions.length, 4); assert.equal(p.decisions[0].sev, 'critical');
++  assert.equal(p.delegatedRequests.length, 1);
++  assert.equal(JSON.stringify(sim.s), before);
++  sim.s.policies.manualRequests = true;
++  assert.equal(officePanelState(sim).decisions.length, 5);
++  assert.equal(officePanelState(sim).delegatedRequests.length, 0);
++});
++
++test('after-hours retention shows delegated waiting rather than a new owner decision', () => {
++  const { sim } = fixture(); hire(sim, 'clerk'); sim.s.t = 19 * 60;
++  const tn = Object.values(sim.s.tenants)[0], L = sim.s.leases[tn.lease];
++  tn.leaving = true; tn.retainTried = false;
++  sim.moveoutConvo(tn, L, sim.s.objects[L.unit], true);
++  const before = JSON.stringify(sim.s), p = officePanelState(sim);
++  assert.equal(p.decisions.length, 0); assert.equal(p.delegatedRequests.length, 1);
++  assert.equal(p.delegatedRequests[0].waiting, true);
++  assert.equal(JSON.stringify(sim.s), before);
++});
++
++test('property delegation excludes unassigned and Owner work and includes staff/vendor jobs once', () => {
++  const { sim, owner, ui } = fixture(); hire(sim, 'porter');
++  const porter = sim.s.staff.find(st => st.role === 'porter');
++  sim.s.tasks = [
++    { id: 1, label: 'Unassigned', assigned: null },
++    { id: 2, label: 'Owner work', assigned: owner.id },
++    { id: 3, label: 'Staff active', assigned: porter.id },
++    { id: 4, label: 'Staff queued', assigned: porter.id, queued: true },
++    { id: 5, label: 'Vendor booked', assigned: 'vendor', vendor: sim.s.t + 300 },
++  ];
++  const before = JSON.stringify(sim.s);
++  assert.equal(officePanelState(sim).delegatedJobs.length, 3);
++  assert.match(ui.officePanelHtml(), /Jobs: 1 active · 1 queued · 1 vendor booked/);
++  assert.equal(JSON.stringify(sim.s), before);
++});
++
++test('Office inspector retains four actionable rows, escapes request text, and discloses current authority without purchases', () => {
++  const { sim, ui } = fixture(); hire(sim, 'manager');
++  sim.s.policies.manualRequests = true;
++  sim.convo({ key: 'unsafe', who: '<img>', text: '<script>bad()</script>', sev: 'critical', actions: [{ label: 'Dismiss' }] });
++  ui.sel = sim.objs('office')[0].id;
++  const before = JSON.stringify(sim.s), html = ui.inspector();
++  assert.match(html, /sheet compact office-panel/);
++  assert.equal((html.match(/class="office-row"/g) || []).length, 4);
++  assert.match(html, /&lt;script&gt;/); assert.ok(!html.includes('<script>'));
++  for (const text of ['Manager authority active', 'does not serve the counter', '$250 simple / $650 complex', '$180 carts', 'approximately +3%', 'acceptance changes that tenant', 'does not turn off Manager', 'sends them anyway', '$80 haul-away', '$120 for clean-out']) assert.ok(html.includes(text), text);
++  assert.match(html, /property jobs recorded complete today/);
++  assert.ok(!html.includes('data-cmd='), 'no new purchase/authority command');
++  assert.equal(JSON.stringify(sim.s), before);
++});
++
++test('Office section buttons navigate to existing destinations without dispatch or camera movement', () => {
++  const { sim, ui } = fixture(); const calls = [];
++  ui.select = id => calls.push(['select', id]);
++  ui.setTab = (tab, expanded) => calls.push(['tab', tab, expanded]);
++  ui.jumpSection = section => calls.push(['section', section]);
++  const before = JSON.stringify(sim.s);
++  click(ui, { a: 'officeSection', v: 'operate', section: 'Work queue' });
++  assert.deepEqual(calls, [['select', null], ['tab', 'operate', true], ['section', 'Work queue']]);
++  assert.equal(JSON.stringify(sim.s), before);
++  const html = ui.sheet('Operate', '', '<h3>Manager log</h3>');
++  assert.match(html, /data-section="Manager log"/);
++});
++
++test('Office coverage, chores and request actions reach existing handlers and never start manual Pause', () => {
++  const { sim, ui } = fixture(), calls = [];
++  ui.toast = () => {};
++  ui.select = id => calls.push(['select', id]);
++  ui.setTab = tab => calls.push(['tab', tab]);
++  ui.jumpSection = section => calls.push(['section', section]);
++  ui.showRequests = settings => calls.push(['requests', settings]);
++  const before = structuredClone(sim.s), chores = sim.s.policies.ownerChores;
++  click(ui, { a: 'staffHelp', v: 'clerk' });
++  assert.equal(ui.hireRoleFocus, 'clerk');
++  assert.deepEqual(calls.splice(0), [['select', null], ['tab', 'operate'], ['section', 'Hire capacity']]);
++  click(ui, { a: 'requests' }); click(ui, { a: 'requests', v: 'settings' });
++  assert.deepEqual(calls.splice(0), [['requests', false], ['requests', true]]);
++  click(ui, { a: 'policy', v: 'ownerChores' });
++  assert.equal(sim.s.policies.ownerChores, !chores);
++  const expected = structuredClone(before); expected.policies.ownerChores = !chores;
++  assert.deepEqual(sim.s, expected, 'only the deliberately toggled existing policy changes');
++  assert.equal(sim.s.speed, 0);
++});
++
++test('selecting Office never schedules camera recentering, preserves Pause, and keeps other inspector framing', () => {
++  let frames = 0; globalThis.requestAnimationFrame = () => frames++;
++  for (const speed of [0, 1, 2, 4]) {
++    const { sim, ui } = fixture(); sim.s.speed = speed;
++    const before = JSON.stringify(sim.s);
++    ui.select(sim.objs('office')[0].id);
++    assert.equal(frames, 0); assert.equal(JSON.stringify(sim.s), before);
++  }
++  const { sim, ui } = fixture(); ui.select(sim.objs('unit')[0].id);
++  assert.equal(frames, 1);
++});
++console.log(`${passed} focused Office checks passed; physical Safari NOT TESTED`);
+-- 
+2.51.1
+

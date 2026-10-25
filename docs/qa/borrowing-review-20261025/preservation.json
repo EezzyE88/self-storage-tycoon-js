@@ -1,0 +1,24 @@
+{
+  "base": "d84fb59171152e670a5d3d2940830310fd7cc1d9",
+  "production_changes": [
+    "js/ui.js"
+  ],
+  "byte_identical_sha256": {
+    "js/sim.js": "10e74234f1728edeea73415ce7301839c4f24c9b176580db3455acc7162d5541",
+    "js/finance.js": "fc53b3d54969aedc4d36ac3cb2e9e9640de5b235d89ad04defea49088af831e9",
+    "js/officepanel.js": "ca0d85669fd8b58cd0ea4c31b0f9965179a0af49cb1c844211c2a5937c413b05",
+    "js/main.js": "1b6af0e30f37889a125921bd98c39714719a1fd0e4eab7c069ca7504a7fe73e1",
+    "js/localsave.js": "fe3915174398f314eadc84a28831322fc09e4b830c15b76a20c73706465b7873",
+    "js/savearchive.js": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
+    "js/data.js": "0cc0985de5ddacfc1a7d7fe462c1c4cdc89f07dbc26a1868020d742fd9477e66",
+    "css/game.css": "72ce5623dd77b2dde4f040beeaa3a349be9f94423b787921428a0ec0e7ef8112",
+    "UI.officeCoverageHtml": "3100fa2b91c0287639172e9c6ad1f903e8ddd9372e6d5c43ed4afe1b7ff99495",
+    "UI.officePanelHtml": "4ae9a3a233e3c7e33490e7fe197bc9b890cbcc31e643bc8fa300767584fe990f",
+    "UI.pauseForPopup": "e2b5d004e03045dacaeea290e76c6eb50b7e877ffb3652c38dd79225dc361c62",
+    "UI.resumePopup": "ae531cdad9d1af035d3842ba2ba612a9d98cce2f5125d9ea9d9799997c9524a5",
+    "UI.notePause": "0f21d0dd8bbcb64156797a9508a2ff6e305804f00e02fa062b90a6a7c6484224",
+    "UI.requestSpeed": "71cf64f04dfd016c7402c343423b869e9affd84271a04fdac22c3e73cbf2b13f",
+    "UI.select": "969a6df0c66eb9844385fb52c9dfe769e2a566b20aec866498490a2a9eac5c1a",
+    "UI.renderActionBar": "cf0c46a335c4574fdc0d52ec76f5b25b6d4087f05565b689f6cdff124ecdbc7f"
+  }
+}

@@ -30,7 +30,7 @@ function threeFloor(seed){
   const sim=makeMaple(seed);sim.s.cash=1e6;sim.s.open=true;const sh=sim.objs('shell')[0];const costs=[];
   for(let n=0;n<2;n++){const R=sim.verticalPlan(sh.id);assert.ok(R.ok,R.msg);const cash=sim.s.cash;assert.ok(sim.dispatch({type:'verticalUpgrade',...R}).ok);assert.equal(sim.s.cash,cash-R.cost);costs.push(R.cost);
     const ord=sim.s.orders.at(-1);for(let i=0;i<60000&&ord.st==='construction';i++){sim.step();sim.events.length=0;}assert.equal(ord.st,'done');assert.ok(sim.dispatch({type:'commission',order:ord.id}).ok);}
-  assert.deepEqual(costs,[17810,10210],'verified F2/F3 complete-package prices');
+  assert.deepEqual(costs,[17660,10060],'verified F2/F3 complete-package prices');
   for(const u of sim.objs('unit'))if(u.f!==2&&u.size==='5x10'&&u.commercial==='ready'&&!u.lease)u.commercial='unready';
   // Earlier ordinary traffic can leave carts stranded (Maple has no Porter); start as if the "Recover cart" chores were done.
   const cor=sim.objs('corral')[0];for(const c of sim.s.carts)if(c.st==='stranded'){Object.assign(c,{st:'corral',corral:cor.id,f:0,x:cor.x,y:cor.y});delete c.since;}

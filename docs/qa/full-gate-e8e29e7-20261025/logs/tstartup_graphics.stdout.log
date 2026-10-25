@@ -1,0 +1,3 @@
+PASS successful renderer returned unchanged; no fallback UI
+PASS accessible static error, no error HTML injection, manual reload only
+PASS actual main boot failure stops before game UI, clock, handlers, cloud or save setup

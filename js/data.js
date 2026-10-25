@@ -96,8 +96,8 @@ export const TOOLS = {
   elevator:{ cat: 'interior', name: 'Elevator', shape: 'tap', cost: 9500, desc: 'Freight elevator serving all floors. Carts consume capacity.' },
   stairs:  { cat: 'interior', name: 'Stairwell', shape: 'tap', cost: 2800, desc: 'Walk-up access between floors. People only - carts still need an elevator.' },
 
-  light:   { cat: 'security', name: 'Light', shape: 'tap', cost: 350, radius: 3.2, desc: 'Illuminates hallways and lots. Dark halls cannot open.' },
-  camera:  { cat: 'security', name: 'Camera', shape: 'tap', cost: 800, radius: 5.5, desc: 'Visible coverage improves security quality.' },
+  light:   { cat: 'security', name: 'Light', shape: 'tap', cost: 200, radius: 3.2, desc: 'Illuminates hallways and lots. Dark halls cannot open.' },
+  camera:  { cat: 'security', name: 'Camera', shape: 'tap', cost: 500, radius: 5.5, desc: 'Visible coverage improves security quality.' },
   keypad:  { cat: 'security', name: 'Door Keypad', shape: 'tap', cost: 900, desc: 'Controlled access at a building entrance.' },
 
   hvac:    { cat: 'utilities', name: 'HVAC Plant', shape: 'tap', cost: 4200, capacity: 60, desc: 'Serves the adjacent building. Capacity in climate cells.' },
@@ -142,7 +142,7 @@ export const POWER = {
 };
 
 export const OPEX = {
-  base: 18, perUnit: 0.25, light: 0.5, camera: 0.35, keypad: 0.4, doorAuto: 1.2,
+  base: 18, perUnit: 0.25, light: 0.35, camera: 0.35, keypad: 0.4, doorAuto: 1.2,
   elevator: 5, hvacPlant: 3, hvacPerClimateCell: 0.18, gate: 1.0, restroom: 1.5, fountain: 0.3, power: 1.0,
 };
 

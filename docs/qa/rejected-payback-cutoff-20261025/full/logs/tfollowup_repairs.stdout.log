@@ -1,0 +1,9 @@
+PASS 2. early elevator commitment is still allowed and charged once, but does not complete the elevator step
+PASS 2. after commitment the step waits with a usable route to time controls and never resumes a manual Pause
+PASS 2. one hallway finished, the other ordered: still waiting, naming the unfinished floor
+PASS 2. committed elevator with no hallway beside it on a floor: build that hallway, not wait
+PASS 2. the usual order (hallways finished first, then the elevator) completes the step as before
+PASS 3. 249 cash rows stay complete from day 1 with a leading or trailing information row
+PASS 3. 250 cash rows keep the established truncated-history boundary, with or without information rows
+PASS 3. a ledger with no information rows migrates exactly as before (genuine legacy saves)
+8 follow-up repair checks passed

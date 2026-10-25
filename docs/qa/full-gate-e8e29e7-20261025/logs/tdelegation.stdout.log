@@ -1,0 +1,14 @@
+PASS Tech repairs accessible equipment automatically without Owner action
+PASS explicit delegation uses existing role capacity and leaves Owner at office
+PASS Owner automatic chores yield to available Porter regardless of update order
+PASS Owner automatic chores wait for busy hired capacity, but fill exhausted capacity gaps
+PASS Owner may still explicitly choose a job when a Porter is available
+PASS no Tech produces an actionable hire recommendation, not a false assignment
+PASS off-shift, busy, exhausted and unreachable staff have distinct explanations
+PASS failed route refunds Tech capacity without altering Owner or cash
+PASS assigned and vendor jobs cannot be taken over or billed again
+PASS Owner quick fix stays temporary; inspector does not invite redundant Owner service
+PASS Tech can fully restore a temporary fix and delegateTaskFor cannot create work without staff
+PASS Clerk keeps office coverage while Owner repairs; wages unchanged
+PASS delegated work survives existing JSON save format and completes once
+13 delegation regressions passed

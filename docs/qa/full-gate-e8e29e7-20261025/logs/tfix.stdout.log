@@ -1,0 +1,12 @@
+PASS old save part 9 -> new part beat 7 grad
+PASS Round 11+ save untouched 
+PASS HVAC built and conversion allowed 
+PASS conversion succeeds and costs the exact quote 
+PASS actual make-ready queued 
+PASS make-ready actually completes 
+PASS unit identity and numbering retained 
+PASS converted unit is operating, ready, accessible and unleased 
+PASS production inventory reports converted unit eligible 
+PASS eligibility and asking-rent reads preserve complete state and RNG 
+PASS raw/compressed saves retain identity, eligibility, ask, cash, clock, RNG and Pause 
+ALL PASS: deterministic conversion/readiness/save checks; no leasing-time guarantee

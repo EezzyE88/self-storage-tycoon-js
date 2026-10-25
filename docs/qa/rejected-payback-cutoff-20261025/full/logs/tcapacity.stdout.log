@@ -1,0 +1,16 @@
+PASS Owner begins with 8 work hours · 8
+PASS 2.5h make-ready can be assigned
+PASS Owner capacity drops to 5.5h · 5.5
+PASS second 2.5h make-ready can queue
+PASS Queued work reserves capacity · 3
+PASS third 2.5h make-ready can queue
+PASS Owner now has 0.5h left · 0.5
+PASS work exceeding remaining Owner capacity is refused · Owner has 0.5h available today; this needs 2.5h. Wait for tomorrow, hire staff, or use a vendor.
+PASS Owner refreshes to 8h on new game day · 8
+PASS Porter wage supports first-facility hire
+PASS Tech wage supports first-facility hire
+PASS Clerk wage supports first-facility hire
+PASS Manager wage supports first-facility hire
+PASS Porter can be hired
+PASS Porter adds independent 8h task capacity · 8
+ALL PASS
