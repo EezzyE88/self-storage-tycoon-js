@@ -1,0 +1,19 @@
+{"PASS": 16, "FAIL": 1, "ERROR": 1, "BLOCKED": 0, "TIMEOUT": 0}
+tart_design: PASS — process, output and completion checks passed
+tcomeback36: PASS — process, output and completion checks passed
+tcontrol_access: PASS — process, output and completion checks passed
+tfloor_context: FAIL — process exit 1
+tfloor_view: PASS — process, output and completion checks passed
+tgestures: PASS — process, output and completion checks passed
+tlayout_hierarchy: PASS — process, output and completion checks passed
+topenhouse: PASS — process, output and completion checks passed
+topenhouse_qa: PASS — process, output and completion checks passed
+tperformance: ERROR — process exit 1
+tstatus_hierarchy: PASS — process, output and completion checks passed
+tthreefloor_hardening: PASS — process, output and completion checks passed
+tthreefloor_save: PASS — process, output and completion checks passed
+tvisual30: PASS — process, output and completion checks passed
+tvisual31: PASS — process, output and completion checks passed
+twhole_game_art: PASS — process, output and completion checks passed
+tart_refinement: PASS — process, output and completion checks passed
+tdoorway_jambs: PASS — process, output and completion checks passed

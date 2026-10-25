@@ -1,0 +1,11 @@
+PASS background refreshes retain the actual open buttons and scroll at prior 4x
+PASS all three panels offer reachable choices and an explicit Close
+PASS selection dismisses menu, jumps to requested heading and stays selected through refresh
+PASS repeated open taps do not rebuild menu; Close refreshes without releasing panel pause
+PASS manual Pause survives menu and panel closure
+PASS legitimate request hold does not remove the menu or resume underneath it
+PASS explicit panel navigation and property reset discard transient menu state
+PASS Back to map explicitly closes chooser and releases the expanded panel hold
+PASS save/reload contains no transient chooser fields and preserves policies
+SKIP exact Candidate 31 reproduction: opt in with SST_C31_HISTORY=1 in a history-bearing checkout
+9 stable section-menu checks passed (DOM fixture, not physical Safari)

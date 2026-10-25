@@ -1,0 +1,11 @@
+PASS architecture batches cover built units without per-part draws or simulation mutations
+PASS batched trim follows actual selected floor
+PASS instance GPU resources are disposed on rebuild, shared geometry survives
+PASS individual wheels exist on all five vehicle types
+PASS wheel rotation follows real rendered travel and stops at manual pause
+PASS separate legs stride oppositely; carrying remains driven by carry state
+PASS recycled people reset strides and retained private resources dispose once
+PASS rendering a running simulation retains exact state and RNG parity
+PASS routine occupied labels are compact; selection and exceptions stay explicit
+PASS selected label wins collision budget over routine labels
+10 second visual pass checks passed

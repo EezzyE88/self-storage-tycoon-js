@@ -186,7 +186,7 @@
           "@node",
           "tests/headless/tcancellation.mjs"
         ],
-        "completion": "PASS\\ F2\\ cancellation\\ arithmetic:\\ \\$17,810\\ commit,\\ full\\ undo\\ \\$17,810,\\ partial\\ refund\\ \\$10371\\ after\\ reinforcement\\ \\(retained\\ \\$396\\),\\ second\\ quote\\ \\$17,414\\ with\\ no\\ duplicated\\ reinforcement,\\ production\\ reload\\ without\\ a\\ second\\ charge;\\ net\\ spent\\ \\$24853",
+        "completion": "PASS\\ F2\\ cancellation\\ arithmetic:\\ \\$17,660\\ commit,\\ full\\ undo\\ \\$17,660,\\ partial\\ refund\\ \\$10281\\ after\\ reinforcement\\ \\(retained\\ \\$396\\),\\ second\\ quote\\ \\$17,264\\ with\\ no\\ duplicated\\ reinforcement,\\ production\\ reload\\ without\\ a\\ second\\ charge;\\ net\\ spent\\ \\$24643",
         "minimum_pass_lines": 1,
         "timeout": 180,
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
@@ -404,7 +404,8 @@
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
         "required_objects": [
           "1339648652cf61bfce23a96a60cbb54a7006c32a",
-          "3c92a5eb6a8d906264e9019e26fa24a100bffb31"
+          "3c92a5eb6a8d906264e9019e26fa24a100bffb31",
+          "d84fb59171152e670a5d3d2940830310fd7cc1d9"
         ],
         "allowed_notes": [
           "^LIMIT:.*"
@@ -867,12 +868,16 @@
         "command": [
           "@node",
           "tests/headless/tunitnumbering_parity.mjs",
-          "@export:9700d9d4475555e1a4907d1702cb8d81d31ded55"
+          "@export:9700d9d4475555e1a4907d1702cb8d81d31ded55",
+          "@export:1339648652cf61bfce23a96a60cbb54a7006c32a"
         ],
-        "completion": "PASS\\ actual\\ parent\\ scenario\\ start/migration\\ parity:\\ climate",
-        "minimum_pass_lines": 7,
+        "completion": "ALL PASS: historical numbering parity and current-engine legacy migration",
+        "minimum_pass_lines": 14,
         "timeout": 180,
-        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
+        "required_objects": [
+          "1339648652cf61bfce23a96a60cbb54a7006c32a"
+        ]
       },
       {
         "id": "tunitnumbering_vertical_legacy",

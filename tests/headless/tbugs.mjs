@@ -34,11 +34,36 @@ const career = () => { const m = makeMaple(); m.s.tut = { on: false, beat: 99, f
   const before = s.visits.length; try { for (let i = 0; i < 1440; i++) { sim.step(); sim.events.length = 0; } } catch (e) { /* synthetic agents may be removed */ }
   ok(s.visits.length < before / 10, 'B5 routine access visits are not re-queued forever when the lot is crowded', `${before} -> ${s.visits.length}`);
 }
-{ // B6 'Commission whole order' still works after the finished order record is pruned (3 days after it was placed)
-  const sim = makeSandbox({ kind: 'business' }); const B = (tool, a, b) => sim.dispatch({ type: 'build', tool, a, b: b || a, f: 0 });
+// B6 preserves both automatic Sandbox readiness and manual order-ID fallback after pruning.
+for (const manual of [false, true]) {
+  const label = manual ? 'active lesson' : 'ordinary Sandbox';
+  const sim = makeSandbox({ kind: 'business' });
+  if (manual) {
+    const lesson = sim.dispatch({ type: 'lesson', op: 'start', id: 'financing' });
+    ok(lesson.ok && sim.s.lesson?.id === 'financing', 'B6 active financing lesson starts through the existing command');
+  }
+  ok(sim.autoOpenEnabled() === !manual, `B6 ${label} uses the expected commissioning authority`);
+  const B = (tool, a, b) => { const r = sim.dispatch({ type: 'build', tool, a, b: b || a, f: 0 }); ok(r.ok, `B6 ${label} builds ${tool}`, r.msg); };
+  const commissioned = [];
+  const step = () => { sim.step(); commissioned.push(...sim.events.filter(e => e.type === 'commissioned')); sim.events.length = 0; };
   B('aisle', { x: 20, y: 29 }, { x: 20, y: 8 }); B('aisle', { x: 21, y: 29 }, { x: 21, y: 8 }); B('gate', { x: 20, y: 29 }); B('du5x10', { x: 19, y: 10 }, { x: 19, y: 22 });
-  for (let i = 0; i < 1440 * 4; i++) { sim.step(); sim.events.length = 0; } B('walk', { x: 18, y: 26 }); for (let i = 0; i < 600; i++) { sim.step(); sim.events.length = 0; }
-  const u = sim.objs('unit')[0]; const had = sim.s.orders.some((o) => o.id === u.order); const r = sim.dispatch({ type: 'commission', order: u.order });
-  ok(r.ok && sim.objs('unit').every((x) => x.cstate === 'operating'), 'B6 commissioning a whole order works after its record was pruned', `record kept: ${had}; ${r.msg}`);
+  for (let i = 0; i < 1440 * 4; i++) step(); B('walk', { x: 18, y: 26 }); for (let i = 0; i < 600; i++) step();
+  const units = sim.objs('unit');
+  ok(units.length === 13, `B6 ${label} has exactly 13 target units`, units.length);
+  if (!units.length) continue;
+  const order = units[0].order;
+  ok(!!order && units.every(u => u.order === order), `B6 ${label} retains the shared original order ID`);
+  ok(!sim.s.orders.some(o => o.id === order), `B6 ${label} order record is pruned before manual command`);
+  ok(units.every(u => u.cstate === (manual ? 'ready' : 'operating') && !u.missing?.length), `B6 ${label} has the correct pre-command unit states`);
+  ok(sim.s.open === false, `B6 ${label} readiness does not open the property`);
+  if (manual) {
+    ok(sim.s.lesson?.id === 'financing' && commissioned.length === 0, 'B6 active lesson prevents automatic commissioning throughout construction');
+    const r = sim.dispatch({ type: 'commission', order });
+    ok(r.ok && units.every(u => u.cstate === 'operating'), 'B6 commissioning a whole order works after its record was pruned', r.msg);
+  } else {
+    ok(commissioned.length === 1 && commissioned[0].automatic === true && commissioned[0].n === 13, 'B6 ordinary Sandbox automatically commissions exactly the constructed batch');
+    const before = JSON.stringify(sim.s), r = sim.dispatch({ type: 'commission', order });
+    ok(r.ok === false && r.msg === 'Nothing is ready to commission' && JSON.stringify(sim.s) === before && units.every(u => u.cstate === 'operating'), 'B6 redundant manual commissioning is refused without changing operating state', r.msg);
+  }
 }
 console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);

@@ -1,0 +1,5 @@
+PASS real raw/compressed save retention: pricing decision before leasing
+PASS real raw/compressed save retention: first lease acknowledged
+PASS real raw/compressed save retention: later pricing change
+PASS real raw/compressed save retention: small credit draw
+PASS legacy/corrupt optional fields retain company and earned rescue

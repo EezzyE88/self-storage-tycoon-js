@@ -1,0 +1,18 @@
+PASS contract: aggregate, selected, no-unit and empty proposal
+PASS 13 aggregate losses cannot substantiate three selected losses
+PASS exact window/date boundaries, future guard, climate normalization and empty interval
+PASS window, comparable and loss thresholds retain exact boundaries
+PASS ready, reserved, blocked, unfinished and unready stock stay distinct
+PASS unevidenced product never inherits another product confidence
+PASS supported mixed products use own occupancy and count burden once
+PASS missing evidence, non-positive margin and layout blockers coexist
+PASS office empty, serving-only, waiting-only and mixed share exact meanings
+PASS proposed roles cannot clear measured overload and identify relevant work
+PASS Growth sheet renders aggregate observations then scoped evidence without resuming Pause
+PASS authored project cards use shared product evidence and keep Preview
+PASS ordinary build details consume shared reasons and keep paused controls
+PASS vertical package details consume same reasons and lease-up allowance
+PASS two-loss opportunity still actionable with unsupported payback
+PASS repeated advice is read-only after normal initialization
+NOT TESTED baseline parity: supply exact baseline source root as first argument
+ALL PASS 16 groups

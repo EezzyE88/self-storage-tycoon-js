@@ -1,0 +1,20 @@
+PASS fresh valid property: six identified make-ready units, viable core, paused and normal costs
+PASS a hire or job assignment does not award a restoration or plan goal
+PASS successful owner work distinguishes target units; aborted and unrelated work give no credit
+PASS staff completion of one target job earns the plan without any owner restoration
+PASS goals can complete out of order, and no deadline or random rental is required
+PASS wing goal requires simultaneous serviceability, not six historical completions
+PASS valid occupied and reserved restored units count separately from ready inventory
+PASS deleting a target does not award it; explicit split maps full replacement footprint
+PASS replacement mapping rejects gaps, overlaps and wrong directions; partial rebuild can reconnect
+PASS save/load before, during and after work preserves cash, assignments, goals and acknowledgement
+PASS malformed scenario progress fails safely without resetting the property or awarding success
+PASS regular Maple, sandbox and other scenarios retain their ordinary mode and progress
+PASS both recovery paths complete across five seeds without cash injection, demand changes or loans
+PASS Comeback panel keeps current inventory distinct, costs honest and close controls accessible in markup
+PASS panel close restores prior speed and preserves manual Pause and other popup holds
+PASS completion keeps same property and acknowledgement suppresses automatic reopening on load
+PASS work and hire buttons open the existing relevant sections without hiring or replacing the game
+PASS existing new-game safeguards and map gesture handlers remain wired
+PASS restoration visibly changes only target bodies; existing door/status cues and RNG are preserved
+19 Comeback Yard checks passed

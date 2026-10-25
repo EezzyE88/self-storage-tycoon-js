@@ -1,0 +1,12 @@
+file:///tmp/sst-renderer-subset-uvd7c0l4/source/js/ui.js:2473
+    const waiting=sim.autoOpenEnabled()&&objs.filter(o=>o.type==='unit'&&o.cstate==='built'&&o.missing?.length);
+                      ^
+
+TypeError: sim.autoOpenEnabled is not a function
+    at UI.coachHint (file:///tmp/sst-renderer-subset-uvd7c0l4/source/js/ui.js:2473:23)
+    at coach (file:///tmp/sst-renderer-subset-uvd7c0l4/source/tests/headless/tperformance.mjs:18:252)
+    at file:///tmp/sst-renderer-subset-uvd7c0l4/source/tests/headless/tperformance.mjs:19:84
+    at test (file:///tmp/sst-renderer-subset-uvd7c0l4/source/tests/headless/tperformance.mjs:6:31)
+    at file:///tmp/sst-renderer-subset-uvd7c0l4/source/tests/headless/tperformance.mjs:19:1
+
+Node.js v24.22.1

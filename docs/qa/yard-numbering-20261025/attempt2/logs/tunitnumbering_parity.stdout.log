@@ -1,0 +1,18 @@
+PASS parent/new/migrated exact daily gameplay parity: seed 7, 30 days
+PASS parent/new/migrated exact daily gameplay parity: seed 99, 30 days
+PASS parent/new/migrated exact daily gameplay parity: seed 9711, 30 days
+PASS actual parent scenario start/migration parity: comeback
+PASS actual parent scenario start/migration parity: turnaround
+PASS actual parent scenario start/migration parity: vertical
+PASS actual parent scenario start/migration parity: climate
+PASS current-engine exact legacy migration and reload: fresh seed 7, 30 days
+PASS current-engine exact legacy migration and reload: aged seed 7, 30 days
+PASS current-engine exact legacy migration and reload: fresh seed 99, 30 days
+PASS current-engine exact legacy migration and reload: aged seed 99, 30 days
+PASS current-engine exact legacy migration and reload: fresh seed 9711, 30 days
+PASS current-engine exact legacy migration and reload: aged seed 9711, 30 days
+PASS current-engine exact legacy migration and reload: scenario comeback, 3 days
+PASS current-engine exact legacy migration and reload: scenario turnaround, 3 days
+PASS current-engine exact legacy migration and reload: scenario vertical, 3 days
+PASS current-engine exact legacy migration and reload: scenario climate, 3 days
+ALL PASS: historical numbering parity and current-engine legacy migration

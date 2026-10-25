@@ -1,0 +1,10 @@
+PASS 240-minute cap and full-state/RNG/economics parity with ordinary simulation
+PASS six-millisecond cooperative budget returns control between bounded bursts
+PASS owner decision stops at its exact minute; answering never resumes automatically
+PASS reserve completion pauses immediately without constructing or purchasing
+PASS real manual Pause cancels fast waiting and cannot advance paused or another property
+PASS existing owner decision on another property prevents any advance
+PASS new owner decision on another property interrupts the same simulation minute
+PASS production frame fast-forwards only explicit waiting; ordinary 4x and Pause retain timing
+PASS original seven-day deadline checked before another minute
+Fast reserve prototype: 9 groups passed; CPU simulation only, physical responsiveness NOT TESTED

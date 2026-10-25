@@ -1,0 +1,10 @@
+PASS authored starts and all five floors share unique property-local sequences
+PASS migration preserves IDs, money, RNG, relationships, custom names and history; refreshes linked active text
+PASS Comeback target IDs, footprint mappings, earned progress and missing-space anchors survive migration
+PASS production SST0/SST1 loads migrate every portfolio property once and leave input exports untouched
+PASS bad numbering rejects the entire load before replacing the current company
+PASS split keeps first child number, allocates second, and refuses exhaustion before money or IDs change
+PASS reservations survive reload, block collisions and retire cancelled numbers without reusing them
+PASS acquired property has its own sequence and does not renumber the original property
+PASS overflow legacy migration does not partially rewrite units; UI explains historical numbers
+ALL PASS: 9 numbering and migration groups; physical Safari NOT TESTED

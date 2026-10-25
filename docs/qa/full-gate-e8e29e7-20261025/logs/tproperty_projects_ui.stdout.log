@@ -1,0 +1,9 @@
+PASS actual preview switching, Growth return and manually paused Confirm: 0x/small
+PASS actual preview switching, Growth return and manually paused Confirm: 0x/large
+PASS actual preview switching, Growth return and manually paused Confirm: 1x/small
+PASS actual preview switching, Growth return and manually paused Confirm: 1x/large
+PASS actual preview switching, Growth return and manually paused Confirm: 2x/small
+PASS actual preview switching, Growth return and manually paused Confirm: 2x/large
+PASS actual preview switching, Growth return and manually paused Confirm: 4x/small
+PASS actual preview switching, Growth return and manually paused Confirm: 4x/large
+PASS discard preview spends nothing and preserves Pause

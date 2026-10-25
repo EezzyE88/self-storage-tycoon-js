@@ -1,0 +1,54 @@
+PASS clerk request runs at 1x and resolves exactly once after the existing delay
+PASS clerk request runs at 2x and resolves exactly once after the existing delay
+PASS clerk request runs at 4x and resolves exactly once after the existing delay
+PASS manager request runs at 1x and resolves exactly once after the existing delay
+PASS manager request runs at 2x and resolves exactly once after the existing delay
+PASS manager request runs at 4x and resolves exactly once after the existing delay
+PASS owner decisions block a 240-tick frame before any time or default advances
+PASS a new owner decision stops the same fast frame immediately after its creation
+PASS coverage loss escalates before expiry and remains an owner decision when staff return
+PASS firing the last handler hands the request back, while alternate coverage continues
+PASS missing staff leave an owner request rather than silently applying its default
+PASS request review and its closure preserve prior 0x
+PASS request review and its closure preserve prior 1x
+PASS request review and its closure preserve prior 2x
+PASS request review and its closure preserve prior 4x
+PASS manual Pause remains sticky through review, mode changes and answering
+PASS per-request owner intervention remains held after closing review
+PASS saved manual preference and pending escalation survive reload; old saves default to staff handling
+PASS existing retention policy controls the response without adding concessions or charges
+PASS a failed staff action is handed back once, without a retry or cash debit
+PASS history remains compact and Requests stays accessible without a pending card
+PASS stale or empty decision review does nothing at prior 0x
+PASS stale or empty decision review does nothing at prior 1x
+PASS stale or empty decision review does nothing at prior 2x
+PASS stale or empty decision review does nothing at prior 4x
+PASS answering the final owner decision dismisses it and restores prior 0x
+PASS answering the final owner decision dismisses it and restores prior 1x
+PASS answering the final owner decision dismisses it and restores prior 2x
+PASS answering the final owner decision dismisses it and restores prior 4x
+PASS staff-only progress stays passive and never opens a decision or pauses time
+PASS multiple owner decisions remain visible until the final response
+PASS mixed queues show only owner decisions and resume the remaining staff response
+PASS manual Pause selected during a decision survives automatic dismissal
+PASS a decision removed by the simulation closes its obsolete window
+PASS explicit Menu settings remain accessible when empty and retain the saved choice
+PASS an explicitly opened settings window remains open after its final request is answered
+PASS automatic decision dismissal preserves another panel pause
+PASS in-window Keep paused records manual Pause and prevents 1x restart
+PASS in-window Keep paused records manual Pause and prevents 2x restart
+PASS in-window Keep paused records manual Pause and prevents 4x restart
+PASS a decision opened from manual Pause already reports the correct stay-paused state
+PASS in-window Pause persists across multiple decisions and repeated taps
+PASS Keep paused does not change saved staff policy or create a permanent resume preference
+PASS stale Pause actions do nothing after dismissal or inside request settings
+PASS in-window Pause survives X, later response and other panel closure
+PASS old saved attempted offers disable repeat actions without losing valid move-out response
+PASS declined staff offer resolves once without a false owner failure or repeat discount
+PASS midnight routine move-out waits for manager office coverage across save/load
+PASS midnight routine move-out waits for clerk office coverage across save/load
+PASS midnight routine still requires owner if staff absent or manual review selected
+PASS firing deferred staff escalates; active routine coverage loss remains sticky
+PASS stale double taps and invalid indices cannot consume another pending decision
+PASS previously attempted price offer at midnight becomes routine staff steps
+53 request handling and window checks passed

@@ -1,0 +1,39 @@
+PASS cause and supported review for Loading bays are full.
+PASS cause and supported review for Gate line is backing up.
+PASS cause and supported review for My gate code isn't working.
+PASS cause and supported review for Nobody answered. I'm leaving.
+PASS cause and supported review for No one at the office.
+PASS cause and supported review for I can't get to my unit from here.
+PASS cause and supported review for I can't reach my unit.
+PASS cause and supported review for I can't find the office entrance.
+PASS cause and supported review for No carts at Corral A.
+PASS cause and supported review for Elevator is down - carrying it up the stairs.
+PASS cause and supported review for The hallway is dark.
+PASS cause and supported review for That restroom needs cleaning.
+PASS cause and supported review for No restroom in this building?
+PASS cause and supported review for The elevator has no power.
+PASS cause and supported review for The elevator is out of service.
+PASS cause and supported review for I've been waiting forever for the elevator.
+PASS cause and supported review for No 5x5 available.
+PASS cause and supported review for I need climate control.
+PASS cause and supported review for Too expensive for me.
+PASS cause and supported review for Not convenient enough.
+PASS cause and supported review for I'll keep shopping.
+PASS cause and supported review for The place down the road is cheaper.
+PASS cause and supported review for The reviews put me off.
+PASS cause and supported review for Nothing ready to rent today.
+PASS registry covers all audited families uniquely
+PASS different buildings or unit targets never merge complaints
+PASS same location groups repeats and retains original report time
+PASS diagnosis has no simulation, random, money or dispatch side effects
+PASS new context survives save resume after customer leaves
+PASS legacy thoughts use recorded location without guessing a target
+PASS positive and neutral thoughts do not become fault guidance
+PASS feedback HTML escapes text and provides only review/location actions
+PASS real lost-demand trigger captures requested product
+PASS read-only feature leaves deterministic simulation identical
+PASS occupied loading bays with reachable overflow produce no false complaint
+PASS a free loading bay does not produce a false congestion complaint
+PASS all customer request families retain existing choices and receive guidance
+PASS failed elevator request is an access failure rather than a capacity sale
+38 complaint regressions passed

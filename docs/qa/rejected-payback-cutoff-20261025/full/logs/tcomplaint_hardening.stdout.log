@@ -1,0 +1,34 @@
+PASS requested sizes remain separate at the same office
+PASS climate and standard requests remain separate at same office
+PASS negative and neutral reports cannot merge away a complaint
+PASS market inventory excludes irrelevant sizes and blocked ready stock
+PASS missing request target never invents map origin
+PASS old malformed thought cannot issue NaN camera navigation
+PASS expired thought cannot redirect a previously rendered View button
+PASS deleted object retains recorded camera position without selecting another object
+PASS invalid navigation data leaves camera and floor untouched
+PASS feedback View buttons hold target snapshots rather than mutable array offsets
+PASS removed building/target is still identified in saved feedback
+PASS partial moveout request remains readable without a text crash
+PASS valid bubble tap opens the tapped report rather than latest report
+PASS bubble drag cannot open feedback on the following click
+PASS bubble pinch cannot turn either release into a click
+PASS cancellation rejects delayed click but allows a subsequent clean tap
+PASS release beyond threshold rejects tap even when move was missed
+PASS bubble keyboard activation remains available
+PASS bubble activation is disabled during construction and title screen
+PASS old property bubble cannot open reports on another property
+PASS property change clears bubbles, cooldowns and focused reports
+PASS expired selected report stays first even when history reaches its cap
+PASS wrong property snapshot is rejected without touching selection
+PASS new report grouping survives JSON save and resume
+PASS malformed JSON target is ignored without crashing input handling
+PASS right click and click without pointer sequence do not open bubble help
+PASS a valid pointer click is consumed once
+PASS request-help opens its request first in the scrolling feedback sheet
+PASS feedback escapes customer text and object names containing markup
+PASS upper-floor report switches to a supported upper floor
+PASS removed upper floor safely falls back to ground view
+PASS routine bubble cooldown storage remains bounded under many locations
+PASS loading report for upstairs unit keeps camera on ground-floor bays
+33 hardening checks passed; 0 failed

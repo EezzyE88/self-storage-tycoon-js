@@ -1,0 +1,11 @@
+PASS targeted campaign starts
+PASS targeted campaign costs $250
+PASS targeted size gets 1.5x traffic
+PASS other sizes are unchanged
+PASS second campaign cannot overlap
+PASS campaign expires after day 30 window
+PASS expired campaign moves to history
+PASS local campaign starts after expiry
+PASS local campaign costs $500
+PASS local campaign adds 15% all-size traffic
+ALL PASS

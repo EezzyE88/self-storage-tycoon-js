@@ -1,0 +1,22 @@
+PASS 7:00 batch is idempotent, expenses accrue without moving cash
+PASS midnight resets capacity but bills wait until 7:00
+PASS seventh processed day settles once and never double-books expenses
+PASS one wage at 7:00; firing preserves it and late hiring waits until tomorrow
+PASS credit interest accrues, term debt is serviced at 7:00
+PASS reserve uses future costs and future loan payments, never accrued commitments
+PASS net liquidity and scenario failure count bills/debt but exclude reserve
+PASS forecast excludes every non-current status and uses monthly bill dates
+PASS forecast agrees with actual deterministic settlements and final commitments
+PASS new lease first month paid immediately, next bill 30 days later
+PASS legacy migration preserves finances/history exactly and skips already-paid current day
+PASS cash history reconciles even beyond transaction retention; legacy truncation is disclosed
+PASS spending and hiring previews include obligations without mutating money
+PASS causal diagnostics use inventory, access, demand and measured capacity evidence
+PASS growth checklist can pass on evidence and fails when turnover blocks the opportunity
+PASS UI financial and calendar surfaces use B+ truths and authoritative 7:00 dates
+PASS career thresholds adjusted proportionally; property requirements unchanged
+PASS deadline day remains eligible, meeting goals after it cannot win
+PASS midcycle B+ save/resume preserves commitments and identical future settlement
+PASS overdue schedule forecast matches one bill/payment per future financial batch
+PASS Business, Operate, Growth and modal HTML render without invalid numbers
+ALL PASS: 21 B+ tests

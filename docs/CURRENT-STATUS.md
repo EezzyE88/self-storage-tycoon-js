@@ -2,15 +2,17 @@
 
 October 25, 2026, America/Los_Angeles. Current integration and evidence reconciliation; dated original evidence remains unchanged.
 
-## Source and merge state
+## Source and integration state
 
-- Verified remote master before this operation: **ee39e0986718ce33fb84018a2c108249f793e3f8**. It remains unchanged because the required native gate is red.
-- Latest intended game source: exact **137909c1fe88b90d14af725854672d87c2ec2acd**, parent **d84fb59171152e670a5d3d2940830310fd7cc1d9**. Its runtime includes the Office waiting-count repair, interior entrance disclosure and explicit borrowing reviews.
-- Office documentation/planning checkpoint **fef20fca0405d6f20dfd2bab05e41c5e4160acee** is combined with that game source on isolated integration/borrowing-sync-20261025. Its planning documents remain proposals, not new authority/features.
-- Eddie authorized update, merge and push. Update/synchronization can proceed; master merge is held for a failed required native gate. This does not erase that authorization or establish browser/device acceptance.
-- Native Git push lacks credentials. Connector synchronization creates a new labelled integration commit. Exact original 137909c and its two repair ancestors are retained in the incremental recovery bundle. Do not claim the connector SHA is the original candidate SHA.
+- Verified passing native source: **0d5dd499ffa6edd720d6e8d7cc4ee5460ee1395c**, tree **c6c2bf295bb9fa0599c44fc4c2a5697bdd410d05**. Its full current gate completed **95 PASS / 0 FAIL / 0 ERROR**, all 95 attempted, exit 0.
+- Consolidated local evidence successor before this documentation update: **1778a2ae304d0710dcf33e9cc2bab09ddd760293**, branch `repair/rejected-payback-cutoff-20261025`. It adds only retained evidence over the assessed source; game and test bytes match 0d5dd49.
+- Production runtime remains byte-identical to exact borrowing candidate **137909c1fe88b90d14af725854672d87c2ec2acd**, parent **d84fb59171152e670a5d3d2940830310fd7cc1d9**. Subsequent corrections changed tests and records, not economics, Office, entrance or borrowing behavior.
+- Last live remote verification in this session: master **ee39e0986718ce33fb84018a2c108249f793e3f8**; integration/borrowing-sync-20261025 **c2296834fa05dfb0e3097a78b638eb42c875e9d2**. The local test/evidence successor is not pushed or merged. Reverify refs before a later synchronization.
+- Office planning/docs checkpoint **fef20fca0405d6f20dfd2bab05e41c5e4160acee** is retained. Its planning proposals are not new authority/features.
+- Earlier update/merge/push authorization is retained in history; the current operation authorizes documentation only and explicitly forbids push, merge and deployment. No such action is part of this update.
+- The prior CLI push attempt lacked credentials; connector synchronization previously created a distinct snapshot identity. Preserve original history and distinguish an exact commit from a source-equivalent connector snapshot.
 
-See [checkpoint and complete failure evidence](checkpoints/20261025-borrowing/CHECKPOINT.md).
+See [integration summary](INTEGRATION-SUMMARY.md), [passing gate evidence](qa/rejected-payback-cutoff-20261025/REVIEW.md) and the [original failed checkpoint](checkpoints/20261025-borrowing/CHECKPOINT.md).
 
 ## Incorporated candidate chain
 
@@ -18,21 +20,26 @@ Master ee39e09 → explicit fast reserve and Sandbox waiting/hardening → light
 
 The exact source/checkpoint preserves prior candidate work. Office counter coverage, Owner charged/reserved capacity, recorded completions, decisions, delegated work and Manager authority disclosures remain present. Expansion loans and bank-conversation draws now require review and explicit confirmation; they reuse original financial commands/projections. Loan terms, eligibility and economics were not changed by borrowing review.
 
-## Evidence and current merge blocker
+## Native verification and remaining limits
 
 | Evidence | Result | Boundary |
 | --- | --- | --- |
-| Borrowing-focused implementation validation | 129 native checks/groups retained | Includes borrowing 16, Pause 13, Office 9, requests 53, entrance 11, financial trust 5, B+ 21 and save/load 1 |
-| Subsequent borrowing regression and portable-package validation | 16 groups passed again | Native methods/DOM doubles; not a browser pass |
-| Required current native gate on unchanged candidate runtime | **67 PASS / 10 FAIL / 18 ERROR**, all 95 attempted | Full outputs retained; master merge held |
-| External Claude exact-source browser QA | Reported ongoing at both sizes | Screenshot reports recovery and local Chromium setup; completed result artifacts not supplied here |
-| Public-deployment/browser/physical Safari acceptance | **NOT TESTED / blocked** | No replacement by native evidence or publication status |
+| Original gate on candidate runtime | 67 PASS / 10 FAIL / 18 ERROR | Historical failure evidence retained unchanged |
+| Consolidated gate at e8e29e711d6ff676149f89cd19d8a0f22d459bea | 94 PASS / 1 FAIL | Sole failure was the six-unit >18-month requirement; retained unchanged |
+| Eddie's design decision | Six-unit >18-month minimum explicitly rejected | Only that assertion was removed; no replacement threshold or economics change |
+| Focused payback at 0d5dd49 | PASS | All 12 observations exactly match the prior failed run |
+| Full current gate at 0d5dd49 | **95 PASS**, zero failures/errors/blocked/timeouts | Complete native gate; production export unchanged; assessed logs and prior evidence hash-verified |
+| Claude exact-source browser QA | Last collaborator report described recovery/local Chromium setup | Completed results not supplied in this record; do not claim the run is still active or complete |
+| Rendered browser and physical Safari acceptance | Outstanding | Native CPU/synthetic-DOM evidence does not establish layout, touch, camera, Pause or device acceptance |
+| Signed-out public delivery and Claude/Perplexity tool access | Unverified / previously blocked | Separate capabilities; neither proves the other |
 
-Some current-gate errors name a CPU renderer-loader import of unitupgrades.js. Other failed checks concern finance/cancellation amounts, commissioning, menu markup, numbering parity, payback and infill finances. These require triage; no test expectation was weakened and no game coefficient was changed. The earlier narrow passing checks were never whole-gate certification. Avoid repeating unaffected annual simulations; finish this registered gate and the existing external QA.
+Resolved native blockers include renderer import resolution, the performance fixture, floor-context identity, financing-lesson confirmation, floor-price/refund expectations, manual/automatic commissioning coverage, yard reserve amounts and historical/current-engine numbering migration. Financial, condition and RNG values remain checked. Original historical numbering assertions run unchanged at their exact source pair. Current reload comparisons use complete JSON state; they are not a new certification of the production save envelope.
+
+No remaining failure was observed in the full native gate. Native PASS is not user acceptance, a master merge or public-release approval. Browser/public-access work remains separate.
 
 ## Hosting and external access
 
-A separate borrowing Site was published at [137909c playtest](https://sst-borrowing-137909c-playtest.rainy-ash-3714.chatgpt.site/), version 1, hosting source **856ed90cc7fb9110553fc0d10327017e27a7cc13**. Control-plane state is active/public. Initial retained verification reported 49 runtime hashes matched; this environment's browser reached the page but WebGL startup failed. A fresh anonymous HEAD received **403**, cf-ray **a500db1fc8b0f85d-ORD**. No fresh anonymous served-body comparison or external Claude/Perplexity access pass is claimed. Available app logs were empty; the source of the rejection (hosting edge/origin versus retrieval proxy) remains unresolved. There is no exposed edge-security control to repair it, and no custom domain is configured. Do not call the link externally verified.
+A separate borrowing Site was published at [137909c playtest](https://sst-borrowing-137909c-playtest.rainy-ash-3714.chatgpt.site/), version 1, hosting source **856ed90cc7fb9110553fc0d10327017e27a7cc13**. Retained control-plane verification reported active/public; hosting was not rechecked during this documentation update. Initial retained verification reported 49 runtime hashes matched; this environment's browser reached the page but WebGL startup failed. The retained anonymous HEAD received **403**, cf-ray **a500db1fc8b0f85d-ORD**. No fresh anonymous served-body comparison or external Claude/Perplexity access pass is claimed. Available app logs were empty; the source of the rejection (hosting edge/origin versus retrieval proxy) remains unresolved. There is no exposed edge-security control to repair it, and no custom domain is configured. Do not call the link externally verified.
 
 The older private fast-reserve V4, public Open House V6 and protected original V62 retain their October 24 recorded identities. They were not republished by integration. URL slugs and inherited in-game build labels are not source identities.
 
@@ -46,4 +53,4 @@ The smaller **969,561-byte** Grok runtime/QA package passed all 145 manifest ent
 
 ## Next unfinished unit
 
-Resolve the required native-gate failures without weakening checks or changing intended economics/authority; rerun affected checks and the registered gate, then complete the already-authorized master merge and verify remote refs/tree. Preserve Claude's current run, all prior evidence and normal saves. Public access diagnosis remains separate. Coastal remains rejected; PR #2 remains excluded; Office design recommendations remain proposals.
+Review and synchronize the exact consolidated successor when authorized for that operation, then separately decide/execute integration. The native-test hold is resolved; the remote integration still contains the earlier failure checkpoint. Verify remote source/tree identities and preserve originals rather than claiming a connector snapshot has the original SHA. Browser acceptance and signed-out public-link delivery remain unfinished; do not repeat blocked access paths without material new evidence or controls. Preserve Claude's reported work and request completed evidence without inventing its status. Coastal remains rejected; draft PR #2 remains excluded. No code repair, test run, publication or merge is implied by these records.

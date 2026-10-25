@@ -13,9 +13,14 @@ function fixture() {
   return { sim, ui, box };
 }
 const click = (ui, a, cmd) => ui.onClick({ target: { closest: () => ({ dataset: { a, cmd: JSON.stringify(cmd) } }) } });
-test('successful loan advances financing lesson', () => {
-  const { sim, ui } = fixture(); sim.dispatch({ type: 'lesson', op: 'start', id: 'financing' }); assert.equal(sim.s.lesson.id, 'financing');
-  click(ui, 'cmd', { type: 'borrow', amt: 10000 }); assert.ok(sim.s.debt.length); assert.equal(sim.s.lesson, null); assert.ok(sim.s.lessonsDone.financing);
+test('explicitly confirmed loan advances financing lesson', () => {
+  const { sim, ui, box } = fixture(); sim.dispatch({ type: 'lesson', op: 'start', id: 'financing' }); assert.equal(sim.s.lesson.id, 'financing');
+  const cash = sim.s.cash;
+  click(ui, 'cmd', { type: 'borrow', amt: 10000 });
+  assert.match(box.innerHTML, /Review expansion loan/); assert.match(box.innerHTML, /data-a="termLoanConfirm"/);
+  assert.equal(sim.s.cash, cash); assert.equal(sim.s.debt.length, 0); assert.equal(sim.s.lesson.id, 'financing'); assert.ok(!sim.s.lessonsDone?.financing);
+  click(ui, 'termLoanConfirm'); assert.equal(sim.s.cash, cash + 10000); assert.equal(sim.s.debt.length, 1);
+  assert.equal(sim.s.lesson, null); assert.ok(sim.s.lessonsDone.financing);
 });
 test('refused loan retains lesson and cash', () => {
   const { sim, ui } = fixture(); sim.dispatch({ type: 'lesson', op: 'start', id: 'financing' }); const cash = sim.s.cash;

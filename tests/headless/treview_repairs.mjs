@@ -147,13 +147,13 @@ await test('#9 building commissioning offers this order first; the property-wide
 // ---------- #10 information-only ledger facts
 await test('#10 cancellation records penalty, work-in-progress and retained-prerequisite facts without moving cash',()=>{
   const sim=makeMaple(3);sim.s.cash=1e6;const SH=sim.objs('shell')[0].id;const R=sim.verticalPlan(SH);sim.dispatch({type:'verticalUpgrade',...R});let o=sim.s.orders.at(-1);for(let i=0;i<20;i++){sim.s.t++;tickVertical(sim,o);}
-  let fin=JSON.stringify(sim.s.finance),cash=sim.s.cash;sim.dispatch({type:'cancelOrder',id:o.id});assert.equal(sim.s.cash-cash,17810);
+  let fin=JSON.stringify(sim.s.finance),cash=sim.s.cash;sim.dispatch({type:'cancelOrder',id:o.id});assert.equal(sim.s.cash-cash,17660);
   assert.match(sim.s.ledger.at(-1).note,/Full undo within the grace period: no penalty, nothing retained/);assert.equal(sim.s.ledger.at(-1).amt,0);
   sim.dispatch({type:'verticalUpgrade',...sim.verticalPlan(SH)});o=sim.s.orders.at(-1);while(o.vertical.phase<1){sim.s.t++;tickVertical(sim,o);}for(let i=0;i<100;i++){sim.s.t++;tickVertical(sim,o);}
   const finBefore=JSON.parse(JSON.stringify(sim.s.finance));cash=sim.s.cash;const n0=sim.s.ledger.length;sim.dispatch({type:'cancelOrder',id:o.id});
-  const rows=sim.s.ledger.slice(n0);assert.deepEqual(rows.map(r=>[r.cat,r.amt]),[['capex',10371],['info',0],['info',0],['info',0]]);assert.ok(rows.slice(1).every(r=>r.info===true));
-  assert.match(rows[1].note,/Cancellation penalty, not refunded: \$6,913\.39/);assert.match(rows[2].note,/Work in progress not refunded: \$129\.61/);assert.match(rows[3].note,/Retained with the building: reinforcement \$396; the next F2 quote omits it/);
-  assert.equal(sim.s.cash-cash,10371,'only the refund moves cash');
+  const rows=sim.s.ledger.slice(n0);assert.deepEqual(rows.map(r=>[r.cat,r.amt]),[['capex',10281],['info',0],['info',0],['info',0]]);assert.ok(rows.slice(1).every(r=>r.info===true));
+  assert.match(rows[1].note,/Cancellation penalty, not refunded: \$6,853\.39/);assert.match(rows[2].note,/Work in progress not refunded: \$129\.61/);assert.match(rows[3].note,/Retained with the building: reinforcement \$396; the next F2 quote omits it/);
+  assert.equal(sim.s.cash-cash,10281,'only the refund moves cash');
   const delta=(a,b)=>JSON.stringify(a.cashDays.map(d=>[d.day,d.incoming,d.outgoing,d.categories]))!==JSON.stringify(b.cashDays.map(d=>[d.day,d.incoming,d.outgoing,d.categories]));
   const day=sim.s.finance.cashDays.at(-1);assert.equal(day.categories.info,undefined,'no info category in cash accounting');assert.ok(delta(finBefore,sim.s.finance));
   const w=sim.cashWindow(30);const sum=sim.s.ledger.filter(r=>!r.info&&r.t>sim.s.t-30*1440).reduce((a,r)=>a+r.amt,0);assert.ok(Math.abs(w.net-sum)<0.01||w.complete===false,'cash window equals non-info ledger');

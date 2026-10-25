@@ -1,0 +1,34 @@
+PASS unavailable WebAudio and locked playback are harmless
+PASS gesture unlock creates one context and resumes it without rebuilding
+PASS master includes a low-pass and gentle dynamics control
+PASS wet reverb returns respect both effect and music volume buses
+PASS volume changes glide and reject invalid keys or values
+PASS click uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS tab uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS confirm uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS refuse uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS place uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS complete uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS rent uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS lease uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS gate uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS keypad uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS rollup uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS cart uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS chime uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS fault uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS repair uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS work uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS attention uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS milestone uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS flourish uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS shutter uses rounded envelopes, restrained peaks and no jagged waveforms
+PASS source stop occurs after silence and disconnected nodes are reclaimed
+PASS noise sources also stop silently and clean up filters
+PASS repeated taps at time zero cannot bypass cooldown
+PASS a burst of different routine property events schedules only one cue
+PASS routine activity cannot suppress an owner attention cue
+PASS musical catch-up is bounded after prolonged mute
+PASS music modes and rain transitions schedule finite, smoothed audio
+PASS hidden document neither resumes the context nor adds effects
+33 soft-audio checks passed

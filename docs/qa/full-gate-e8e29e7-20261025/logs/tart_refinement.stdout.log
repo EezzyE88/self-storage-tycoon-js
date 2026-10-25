@@ -1,0 +1,7 @@
+PASS drive-up piers and plinths use shared non-shadowing floor batches
+PASS shell piers cut down and hide with the actual selected floor
+PASS status bands clear the projecting bay headers
+PASS shell entry portals preserve door positions and exact save state
+PASS six restored target room finishes update individually and leave unrelated rooms alone
+PASS access failure or malformed target cannot invent turnover finish in Open House
+Refinement completion: 6 passed, 0 failed; device readability and FPS remain separate
