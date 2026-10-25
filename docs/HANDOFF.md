@@ -1,33 +1,31 @@
-# Start here — accepted Open House checkpoint
-Updated October 23, 2026, America/Los_Angeles.
+# Project continuation handoff
 
-1. Read [CURRENT-STATUS.md](CURRENT-STATUS.md) for current authority and evidence.
-2. Read [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) for product direction.
-3. Read [RECOVERY-INDEX.md](RECOVERY-INDEX.md) before any recovery operation.
-4. Use [checkpoint inventory](checkpoints/20261023/INVENTORY.json) for observed refs, sites and package hashes.
+Updated October 24, 2026, America/Los_Angeles.
 
-## Starting state
-Master observed at preparation: `5298f6edcd4ae3329de61007ac382c527d62d4cc`, the adopted documentation checkpoint. Accepted game source remains `7d9bce5dfe431974112391a8e7fe39c2e0552744`; all non-documentation files are unchanged. Reverify the live master before work.
+1. Read [CURRENT-STATUS.md](CURRENT-STATUS.md), then [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
+2. Reverify live master, the Office snapshot and documentation branch. The records here are a checkpoint, not a substitute for current refs.
+3. Use [RECOVERY-INDEX.md](RECOVERY-INDEX.md) and the original full handoff for exact recovery and the adopted runtime. Keep the runtime DOCX unchanged and apply it subject to higher-priority instructions.
 
-The authorized 7d9bce5 → 5298f6e fast-forward is complete. The maintenance branch remains preserved; it is no longer pending adoption. Later documentation successors must be distinguished from the accepted game-source identity. Do not infer a future correction branch’s adoption from this record.
+## Source to carry forward
 
-- [Accepted Open House game / public review, V5](https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site): prior served-file verification matches 7d9bce5.
-- [Protected original V62 preview](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site): separate pre-Open-House baseline, unchanged.
+Original Office `17f49f9d677931460e39ac18aff0db356ae49e45` has parent `d6abaa382c5f495203e6efab6eaacf416e84c301` and tree `e01001568901f3554163e5d5919ff9a678a629d2`. GitHub snapshot `b7092e08d89fcd882c5d2d82db6ac1eb7631af42` reproduces that complete tree and parent. Keep both identities explicit. The exact original remains in the incremental bundle under `checkpoints/20261024-sync/`; it is not claimed to be the remote snapshot commit.
 
-No deployment accompanied adoption. Later audit asset requests were blocked with HTTP 403, so this correction does not claim new served-byte or rendered verification.
+This documentation checkpoint is a successor of the snapshot on `maintenance/project-sync-20261024`. It adds no game behavior. Master was observed at `ee39e0986718ce33fb84018a2c108249f793e3f8` and remains outside this cleanup's changes.
 
-## Work coordination
-The glow prototype is paused. No one should independently implement a second fix while another collaborator evaluates it. Record exact parent, candidate SHA, changed files, actual evidence and next requested action when handing off. A diagnosis, prototype, publication, acceptance and merge are distinct outcomes.
-Claude v2 diagnosis is evidence for a narrow presentation experiment, not an implemented fix. Earlier v1 dirt attribution is superseded by the mature-company v2 evidence.
-The operating playtest and scoped interface acceptance are completed. Do not restart them or the rejected Coastal direction by default. PR #2 stays excluded.
+## Next unfinished unit
 
-## Preservation
-Use only EezzyE88/self-storage-tycoon-js. New work starts in an isolated candidate. Preserve master unless explicitly authorized otherwise, original candidates/packages, accepted V62, current review deployment, all saves and manual Pause. Status cleanup does not require opening any normal company storage. Source backups are not company-save backups.
-No force-push, branch deletion, retroactive evidence rewriting, unrequested deployment or merge. Historical documents are evidence, not current task authorization.
+Complete focused browser review of the existing Office source using disposable state at 375×667 and 390×844. Preserve the five existing passing script results; current tree equality supports retaining them. Verify scrolling and close access, existing action destinations, waiting versus served customers, reserved capacity versus completed work, Manager authority, camera and manual Pause. Report PASS, FAIL or NOT TESTED with evidence. No supported browser was run in this cleanup.
 
-## Validation
-Use relevant checks for changed behavior. Attribute Claude/browser and Eddie/iPhone results separately. Label injected fixtures, fallback fonts and software WebGL. Do not claim Safari, VoiceOver, motion or performance checks that were unavailable.
-The four focused script suites already passed on accepted 7d9bce5; documentation-only changes need diff/content verification, not another gameplay playtest.
+Later Office proposals are in `design/office/`. Do not implement them merely because they are now backed up. Existing d6abaa3 collaborator assignments remain separate; preserve their completed evidence when available rather than repeating unaffected work.
 
-## History
-Earlier orientation versions are retained verbatim under history/checkpoint-before-20261023/. The exact README, status, handoff and recovery files from adopted 5298f6e are additionally preserved under [history/before-post-adoption-20261023/](history/before-post-adoption-20261023/). Dated candidate notes and original external packages remain unchanged.
+## Release and coordination
+
+Pushing source, publishing a playable version, owner acceptance and merging master are separate. The latest request authorized project reconciliation and synchronization. It does not establish Office gameplay acceptance or authorize all future design ideas. The three deployment versions and their access were checked; no new deployment or merge occurred. Current source details and release limits are in CURRENT-STATUS.
+
+Use only EezzyE88/self-storage-tycoon-js. No force-push, branch deletion, silent promotion, save replacement or rejected Coastal revival. Maintain manual Pause, camera position, simulation and economics. Do not open normal company storage for source housekeeping. Original source history and company saves are different recovery concerns.
+
+The prior failed direct push lacked credentials; the snapshot is the supported synchronization result, not a claim that original commit upload succeeded. The earlier unauthorized-push rejection remains historical and must not be confused with this later explicitly authorized operation.
+
+## Evidence and history
+
+The original large handoff and runtime remain unchanged. This checkpoint supplies current status and Office companion proposals without rebuilding that package. Prior orientation files are preserved verbatim in `history/before-project-sync-20261024/`. Original dated candidate notes, five logs and preservation hashes are retained. No new game tests or physical device acceptance were performed.

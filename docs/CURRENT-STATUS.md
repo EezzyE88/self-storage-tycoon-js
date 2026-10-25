@@ -1,63 +1,70 @@
-# Current project status — October 23, 2026
-Repository: EezzyE88/self-storage-tycoon-js. Timezone: America/Los_Angeles.
-This supersedes older current-state summaries; dated evidence retains its original scope.
+# Current project status
 
-## Authority and release state
-- Remote master observed when this correction was prepared: `5298f6edcd4ae3329de61007ac382c527d62d4cc`, the adopted documentation checkpoint.
-- Accepted game source: `7d9bce5dfe431974112391a8e7fe39c2e0552744`. All non-documentation files in 5298f6e match it. Reverify the live master before a task; later documentation commits do not change this game-source identity by themselves.
-- Complete accepted game-source tree (later documentation commits have a different complete tree): `31b81acc56a7239ebd866f6a6b14b5369d6277f3`.
-- Build: `v62-career-camera-clearance-20261023`.
-- Authorized fast-forward from ea65f43570d01e74de4e21fd3756705a70408aac is complete. No new merge commit or recreated game source.
-- Documentation checkpoint 5298f6e, originally prepared on maintenance/project-checkpoint-20261023, was adopted into master by authorized fast-forward from 7d9bce5. The original branch remains preserved. This changed no runtime files, deployments or saves.
-- The current correction records that completed adoption; it does not authorize or predict adoption of any successor branch. Historical candidate notes and checkpoint inventories retain their dated status.
-- PR #2 remains an open draft, unmerged and excluded. Its historical body describes the state when written, not current master.
+October 24, 2026, America/Los_Angeles. This reconciliation supersedes older current-state summaries on this branch. Dated evidence retains its original scope.
 
-## Hosting — metadata freshly checked October 23
-| Role | Version | Source relationship | Access |
-| --- | --- | --- | --- |
-| Open House review Site | 5 | Exact accepted 7d9bce5; prior independent verification matched all 47 runtime files | Public |
-| Protected original game preview | 62 | Retained pre-Open-House accepted V62 snapshot 0385af2 / original tested b2c55a6 | Public |
+## Source and authority
 
-[Accepted Open House game / public review, V5](https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site)
-
-[Protected original V62 preview](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site)
-
-The review URL's 23a68ba slug is historical; it does not identify the current served build. Review metadata last changed 2026-10-23T13:27:11.817574Z; V62 metadata last changed 2026-10-21T06:33:54.527842Z. No publication occurred in this cleanup. The 47-file result is retained earlier verification, not a fresh download of every asset in this housekeeping task. Hosting source commits and game commits are different identities. The later audit received HTTP 403 for fresh asset requests from its environment; no renewed byte-verification PASS is claimed. That does not establish a player-facing outage.
-
-## Accepted scope and evidence
-| Area | Current evidence | Limits |
+| Role | Exact identity | Disposition |
 | --- | --- | --- |
-| Open House on existing V62 foundation; F2 context/active-floor selection and numbering; tutorial/build review repairs | Incorporated in ea65f43, subsequently incorporated in 7d9bce5; Eddie's scoped physical-iPhone acceptance retained | No blanket whole-game certification |
-| Build financial review and Confirm | Eddie's reported scoped PASS with screenshots; paused purchase and matching debit shown | Older acceptance, not a new full economics audit |
-| Career explanation and camera clearance | Eddie's scoped iPhone PASS: readable real starter text; separate Career/camera/Finance actions; panel hide/restore; manual Pause; comfortable map space | No physical-Safari long-cents or VoiceOver result |
-| Long-cents wrapping and target separation | Claude Chromium evidence at 375×667 and 390×844; injected presentation fixture explicitly labeled | Software rendering; fallback fonts; not earned progression |
-| Regression checks on exact 7d9bce5 | Career HUD 6 groups; career integration 18 groups; Pause 13 checks; financial trust 5 checks all passed during readiness review | No need to rerun for documentation-only edits |
-| Preservation from ea65f43 to 7d9bce5 | Core simulation, economics, career calculations, progression, placement, numbering and save implementations unchanged | Does not establish every possible gameplay/device state |
+| Live default branch | `master` at `ee39e0986718ce33fb84018a2c108249f793e3f8` | Preserve; not changed by this cleanup |
+| Intended upstream candidate | `candidate/unit-upgrade-growth-rotation-20261024` at `d6abaa382c5f495203e6efab6eaacf416e84c301` | Existing published review candidate |
+| Original Office implementation | `17f49f9d677931460e39ac18aff0db356ae49e45` | Original local Git object retained in recovery bundle |
+| GitHub Office snapshot | `snapshot/compact-office-panel-17f49f9-20261024` at `b7092e08d89fcd882c5d2d82db6ac1eb7631af42` | Exact same full source tree and parent as original Office |
+| Office full source tree | `e01001568901f3554163e5d5919ff9a678a629d2` | Independently reproduced by GitHub tree creation |
+| Current documentation checkpoint | `maintenance/project-sync-20261024` | Documentation and recovery additions only over the Office snapshot |
 
-Claude's 390-wide Space-key rerun was reported successful but its rerun output was not supplied. Physical touch acceptance and source/headless activation evidence remain separately scoped. Candidate notes originally saying NOT TESTED describe their creation dates; the table above reconciles later evidence without rewriting those notes.
+Eddie requested that project affairs be reconciled and everything updated and pushed before more potential changes. That authorizes this synchronization. It does not implement the later Office proposals or establish gameplay acceptance. Implementation, source synchronization, deployment, owner acceptance and master merge remain distinct states.
 
-## Product feedback already completed
-Eddie completed the operating-company playtest: build/expand is appealing, days/weeks of waiting drag, visible payoff satisfies, and he wants to continue. Company details beyond supplied evidence must not be invented. Do not require that playtest again simply because summaries were stale.
-The existing career calculations now have understandable iPhone presentation; no new ladder or economic rule was added.
+Direct Git push failed with missing GitHub credentials. The connected GitHub API therefore created the explicitly labelled source-identical snapshot above. The original 17f49f9 commit was not altered or impersonated and is not claimed as a remote branch head. Earlier automatic rejection of an unauthorized Office push remains historical evidence; the current explicit synchronization request supplies the authorization that was previously missing.
 
-## Disposition
-| Work | Status |
-| --- | --- |
-| Accepted 7d9bce5 and prior candidates | Retain unchanged |
-| Lamp-glow prototype | NOT STARTED; paused while this reconciliation is completed |
-| Night-pavement diagnosis | Claude v2 mature-company isolation reviewed; supports lamp-glow layer as dominant visual contributor in that scene |
-| Exact overlap/blending repair | Not selected or implemented; lowering brightness alone is not proven to improve presentation |
-| Milestone-wait control | Parked; no implementation |
-| Broader art/HUD/status/geometry proposals | Proposals only; not bundled into accepted work |
-| Coastal proof | Rejected; do not resume as the game direction; old separate hosting is historical, not freshly checked here |
-| Stylized comparison 20db0f4 | Historical unaccepted work; do not treat as current baseline |
-| PR #2 | Excluded; open draft left untouched |
+## Current candidate chain
 
-## Night evidence boundaries
-The v2 ZIP's 40 manifest entries verify. Recorded captures use Eddie's Day-699 save in disposable Chromium at 402×874; fair and injected rainy presentation; fixed F1 camera; HUD hidden. Reported Day-709 iPhone screenshot is a comparison, not an exact matched state. Lamp-glow removal changes appearance substantially; dirt/wetness/sun-shadow removal does not remove it.
-The preservation hash covers time, cash, objects, dirt and tenant count, not every simulation field. Exact served-source matching is collaborator-reported without its underlying comparison log. Original PNGs used for numerical analysis are absent; JPEGs support visual inspection. Blending/radius/opacity/overlap sub-factors remain inferred. No repair, physical-device repair acceptance, upper-floor/motion pass or performance claim exists.
+`ee39e09` doorway-jamb repair → `3c92a5e` fast reserve → `38c4db3` Sandbox reserve → `6d7b51e` hardening and annual-playtest source → `c0cb562` light-service/request/commissioning guidance repairs → `b89d711` automatic Sandbox readiness → `6e278d6` lighting/security upgrades → `1774b0f` review/deselection/obstruction fixes → `d6abaa3` Growth-return rotation → original Office `17f49f9` / source-identical snapshot `b7092e0`.
 
-## Next decision
-The checkpoint adoption is complete. Documentation corrections, test maintenance and visual experiments remain separate scopes. If Eddie elects to resume visual work, use one isolated lamp-glow presentation prototype from exact 7d9bce5 and compare the same disposable company/camera in fair and rainy nights. Preserve useful coverage and fault cues. No fresh implementation, deployment or merge is authorized by this status file.
+Later candidate changes are not automatically accepted master changes. The intentional costs and maintenance behavior of the upgrades are upstream work; Office preservation is measured against d6abaa3, not against every older master.
 
-See [HANDOFF.md](HANDOFF.md), [RECOVERY-INDEX.md](RECOVERY-INDEX.md), [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and [checkpoint inventory](checkpoints/20261023/INVENTORY.json).
+## Office delivered and verified scope
+
+Four compact rows show actual counter coverage, Owner charged/reserved capacity and separate recorded property-job completions, pending Owner decisions and delegated work. Waiting and served customers are separate. A Manager never counts as a counter server. Existing controls provide coverage/hire review, Work queue, request decisions/settings, Owner chores, Staff, Policies, Asking rents, Collections and Manager log. Manager financial authority is disclosed prominently.
+
+Existing production edits are limited to `js/ui.js` and `css/game.css`; `js/officepanel.js` is a new read-only derived view. No new authority rules, scheduling, prices, wages, RNG, economics coefficients or save schema were added. Simulation, data, finance, economics, main loop, save modules and renderer match the exact parent. Original test logs and the preservation record are unchanged.
+
+| Evidence | Result | Boundary |
+| --- | --- | --- |
+| Office focused script | 9 groups PASS | Retained implementation-session result |
+| Pause policy | 13 checks PASS | Retained result |
+| Property UI | 22 checks PASS | Retained result |
+| Traffic and delegation | 20 groups PASS | Retained result |
+| Save recovery | 14 checks PASS | Disposable fixtures/autosave double; not device storage |
+| Current synchronization | Full snapshot tree equality, documentation diff checks and recovery-artifact hashes | No new game tests |
+| Office browser layout, touch and physical Safari | NOT TESTED | No gameplay or owner-acceptance claim |
+
+Chromium was missing during implementation; attempted browser downloads were invalid/truncated. That failure evidence is retained. This housekeeping task does not repeat the failed installation path or certify rendering, WebGL, performance or touch.
+
+## Deployments and source relationships
+
+All three Site/version/deployment records were freshly checked and report succeeded. No deployment, audience or Site content was changed. No live served assets were downloaded in this cleanup.
+
+| Role | Version and access | Hosting commit | Game source relationship |
+| --- | --- | --- | --- |
+| [Fast-reserve review](https://sst-fast-reserve-3c92a5e-review.rainy-ash-3714.chatgpt.site) | V4; custom owner-only access; zero external visitors | `d5225a9db467f697538c00049dc214881720a494` | Retained playtest-package evidence maps 48 runtime files to d6abaa3 |
+| [Open House review](https://sst-v62-open-house-23a68ba-review.rainy-ash-3714.chatgpt.site) | V6; public | `d4338597aac5433f3c8afd99e1172f0a14131228` | Earlier publication record identifies game integration 70a4e318f78f2a528a9241186341209ff7eeb3bf |
+| [Protected original](https://sst-js-bplus-fa061565-iphone.rainy-ash-3714.chatgpt.site) | V62; public | `fbb046d32978d59d44954e30858c4e901b70986a` | Historical pre-Open-House V62 snapshot 0385af2 / original b2c55a6 |
+
+Metadata success is not fresh served-byte or rendering verification. Site descriptions and URL slugs are historical. Office is not on these deployments.
+
+## Proposals and pending evidence
+
+- [Office brainstorming](design/office/Office-Brainstorming-20261024.md) and [one-page brief](design/office/Office-Design-Brief-20261024.md) are synchronized design records, not implementation approval. The new recommendations are one operating priority, recorded delegation outcomes and Manager authority before hiring. New permissions, spending caps and persistent activity tracking remain separate future scope.
+- The original broad office conversation was not recovered; the brainstorming document does not claim to reproduce it.
+- Existing Claude/Grok assignments target d6abaa3 lighting/security, Growth-return rotation and Pause. No completed follow-up results were present in the material reviewed here; this is not proof that none exist elsewhere.
+- Year-one/year-two and Director/year-three observations concern older 6d7b51e, with collaborator emulation limits. The recovery reports record the extra year-three evidence. Later repairs must be considered before treating an older finding as a current defect. Helper-selected financial answers are not proof of autonomous staff choices.
+- Coastal is rejected. Stylized comparison 20db0f4 is historical unaccepted work. PR #2 was freshly read as open, draft and unmerged; it remains excluded. Do not combine it with Office.
+
+## Release readiness and unfinished work
+
+Source and document preservation can be completed independently of release acceptance. Office needs focused real-browser review at 375×667 and 390×844: internal scrolling/close access, direct destinations, queue and capacity labels, disclosure, camera retention and manual Pause, using disposable state. Physical Safari remains a separate untested result. Do not repeat unaffected annual simulations or already-passing checks merely for documentation changes.
+
+No new Office feature work is authorized by this cleanup. No master merge or replacement of a protected playable deployment has been performed. Preserve accepted evidence, existing deployments, 2096ef6 and V60/V62 recovery anchors and all normal saves.
+
+See [handoff](HANDOFF.md), [recovery index](RECOVERY-INDEX.md) and [checkpoint inventory](checkpoints/20261024-sync/INVENTORY.json).
