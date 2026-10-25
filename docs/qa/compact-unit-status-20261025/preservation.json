@@ -1,0 +1,16 @@
+{
+  "source_commit": "5317162be0543c95a7154464967008890d75c9fa",
+  "source_tree": "d68bc81306183747a74ce42564f2b786e696a011",
+  "implementation_parent": "57b141d7f997753f31520e9e0515765c5ad49dd0",
+  "acquisition_source": "6066ff380fa842a9abde3138cea1e702c016bacc",
+  "production_files_changed": [
+    "js/ui.js"
+  ],
+  "change": "Only compact dockSummary readiness labels; existing detailed terminology reused.",
+  "focused_native": "5 groups PASS",
+  "browser_recheck": "P02 only at 375x667 and 390x844 \u2014 NOT TESTED",
+  "prior_browser": "24 reported PASS at exact 6066ff3; retained unchanged, not relabeled for successor",
+  "physical_safari": "NOT TESTED",
+  "retained_native_files_verified": 192,
+  "external_results_zip_sha256": "37286782a9d8f9ea4200bbe9a091f30845d1995497002cf012721918c804d897"
+}

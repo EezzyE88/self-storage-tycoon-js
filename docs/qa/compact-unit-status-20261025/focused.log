@@ -1,0 +1,6 @@
+PASS actual P02 blocked and eligible units have distinct compact readiness labels without state mutation
+PASS each missing prerequisite uses the existing built-not-ready terminology
+PASS construction and every operating status keep their existing labels
+PASS real advancing-time opening still distinguishes the blocked target and updates the eligible summary
+PASS non-unit selection and absent selection keep their normal compact summaries
+5 compact unit-status groups passed; no rendered-browser claim
