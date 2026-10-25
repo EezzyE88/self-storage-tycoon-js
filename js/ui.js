@@ -622,6 +622,7 @@ export class UI {
     this.pauseForPopup('review');
     this.setTab(null); this.setView(this.validView(saved.view ?? a.f));
     this.pickTool(a.tool);
+    this.buildRotation = a.rotation ?? null;
     this.upgradeOptions = { lighting: a.lighting || 'none', outsideCameras: !!a.outsideCameras, excludedFixtures: [...(a.excludedFixtures || [])] };
     this.flip = !!a.flip; this.climate = !!a.climate; this.rush = !!a.rush;
     this.planArgs = { a: { ...a.a }, b: { ...a.b }, axis: a.axis, dir: a.dir };
