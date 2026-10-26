@@ -5,6 +5,7 @@ import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperation
 import { ReserveWait, sandboxReserveQuote, reserveQuote } from './reservewait.js';
 import { yardProgress, yardChoices, yardInventory, yardQuote } from './yardloop.js';
 import { creditProjection, creditNeeded } from './finance.js';
+import { applyBorrowSettle, operatingNet } from './borrowsettle.js';
 import { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';
 import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
@@ -2510,7 +2511,7 @@ export class UI {
   slowHud() {
     const sim = this.sim, s = sim.s; const oc = sim.occupancy();
     if (!oc.n || s.creative) { this.cashSub = null; return; }
-    const actual = sim.cashWindow(1), n = Math.round(actual.net);
+    const actual = sim.cashWindow(1), n = Math.round(operatingNet(actual));
     this.cashSub = `${oc.occ}/${oc.n} · today${actual.complete ? '' : ' (partial)'} ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;
   }
   ownerStatus() {
@@ -2947,3 +2948,4 @@ export class UI {
     const x = this.root.querySelector('[data-a="showTitle"]'); if (x) x.onclick = () => this.showTitle();
   }
 }
+applyBorrowSettle(UI);
