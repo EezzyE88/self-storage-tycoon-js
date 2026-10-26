@@ -114,6 +114,18 @@ intentional(`      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
       });`);
 assert.equal(readFileSync('js/sim.js','utf8'),expectedSim);
 // Fast-reserve intentionally changed main's clock dispatch. Preserve its exact verified implementation.
-assert.equal(readFileSync('js/main.js','utf8'),execFileSync('git',['show','3c92a5eb6a8d906264e9019e26fa24a100bffb31:js/main.js'],{encoding:'utf8'}));
+let actualMain=readFileSync('js/main.js','utf8');
+// Permit only the exact paused-autosave hooks; retain the complete-file comparison.
+assert.equal(actualMain.split('    this.autosavePaused();\n').length-1,3);
+actualMain=actualMain.replaceAll('    this.autosavePaused();\n','');
+const pausedHook=`  // Paused actions cannot wait for the running-time timer or an unload event.
+  // Reuse the synchronous leaving path, including its stale-compression fence.
+  autosavePaused() {
+    if (this.sim?.s.speed === 0) return this.autosave(true);
+  },
+`;
+assert.ok(actualMain.includes(pausedHook));actualMain=actualMain.replace(pausedHook,'');
+actualMain=actualMain.replace('  // autosave: during active play (including Pause); `hide` writes locally synchronously and uses a keepalive request','  // autosave: whenever a game is running (not on the title screen); `hide` uses a keepalive request');
+assert.equal(actualMain,execFileSync('git',['show','3c92a5eb6a8d906264e9019e26fa24a100bffb31:js/main.js'],{encoding:'utf8'}));
 console.log('PASS mixed-height context across Exterior/F1/F2/F3, four rotations, active-floor picking/inspection, camera preservation, repeated rebuild and byte-identical complete state');
 console.log('LIMIT: CPU scene graph + UI handler checks; WebGL pixels, Safari and physical iPhone not tested.');

@@ -106,7 +106,9 @@ console.log('PASS production UI arming, exact-target completion preview, already
 {
  const sim=fresh(),h=harness(sim);arm(sim,h);const other=fresh();other.s.speed=2;
  const switchSource=source.slice(source.indexOf('  switchProperty(k) {'),source.indexOf('  tierInfo()')).trim().replace(/,$/,'');
- const swap=vm.runInNewContext('({'+switchSource+'})');swap.company={active:0,props:[{sim},{sim:other}]};swap.sim=sim;swap.ui=h.ui;swap.attach=s=>{swap.sim=s;};swap.switchProperty(1);
+ let checkpoints=0;
+ const swap=vm.runInNewContext('({'+switchSource+'})');swap.company={active:0,props:[{sim},{sim:other}]};swap.sim=sim;swap.ui=h.ui;swap.attach=s=>{swap.sim=s;};swap.autosavePaused=()=>{checkpoints++;assert.equal(swap.sim,other);assert.equal(other.s.speed,0);};swap.switchProperty(1);
+ assert.equal(checkpoints,1,'completed paused property switch requests persistence');
  assert.equal(h.wait.active,null);assert.equal(sim.s.speed,0);assert.equal(other.s.speed,0,'new property cannot inherit armed 4x');
 }
 console.log('PASS real staff-classified request continues; loss of coverage pauses before next minute; production property switch cancels before speed transfer');
