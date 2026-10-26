@@ -1,3 +1,4 @@
+// South-facing touch anchors moved to the door edge; original unit footprints remain unchanged.
 // Production Sandbox build-review/controller/clock paths; no browser or device claim.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,7 +9,7 @@ import {UI} from '../../js/ui.js';
 import {ReserveWait,sandboxReserveQuote} from '../../js/reservewait.js';
 const source=fs.readFileSync('js/main.js','utf8');
 const batch=source.slice(source.indexOf('const BG_EVENTS ='),source.indexOf('let last = performance.now()'));
-const args={tool:'du5x10',a:{x:10,y:2},b:{x:10,y:2},rotation:2,f:0,climate:false,flip:false,rush:false};
+const args={tool:'du5x10',a:{x:10,y:3},b:{x:10,y:3},rotation:2,f:0,climate:false,flip:false,rush:false};
 function el(){return {innerHTML:'',firstChild:null,querySelector:()=>null,querySelectorAll:()=>[],classList:{add(){},remove(){},toggle(){}},setAttribute(){}};}
 function fixture(){
  const sim=makeSandbox({start:'starter',cash:60000});

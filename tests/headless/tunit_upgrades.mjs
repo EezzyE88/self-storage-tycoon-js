@@ -1,3 +1,4 @@
+// South-facing touch anchors moved to the door edge; original unit footprints remain unchanged.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {makeSandbox} from '../../js/scenarios.js';
@@ -6,7 +7,7 @@ import {UI} from '../../js/ui.js';
 import {TOOLS,OPEX,POWER,G} from '../../js/data.js';
 import {attachmentCoverage,mountedOn,retrofitEligible} from '../../js/unitupgrades.js';
 import {ReserveWait} from '../../js/reservewait.js';
-const a={tool:'du5x10',a:{x:10,y:2},b:{x:14,y:2},rotation:2,f:0};
+const a={tool:'du5x10',a:{x:10,y:3},b:{x:14,y:3},rotation:2,f:0};
 function fixture(){const s=makeSandbox({start:'starter',cash:100000});s.s.open=false;s.ensure();return s;}
 function buy(s,args){const R=s.plan(args);assert.notEqual(R.status,'invalid',R.reasons.join(';'));const cash=s.s.cash;const r=s.dispatch({type:'build',...args,upgradeStamp:R.upgradeStamp});assert.ok(r.ok,r.msg);assert.equal(s.s.cash,cash-R.cost);return {R,ord:s.s.orders.find(o=>o.id===r.order)};}
 function finish(s,ord){for(let n=0;n<7000&&ord.st==='construction';n++)s.step();assert.equal(ord.st,'done');s.ensure();}
@@ -39,7 +40,7 @@ console.log('PASS stable deselection, stale-quote refusal, paused load/poll, com
  const light=items.find(o=>o.type==='light'),cam=items.find(o=>o.type==='camera'),privateLight=items.find(o=>o.type==='unitLight');
  assert.ok(attachmentCoverage(s,light).some(c=>c.x===10&&c.y===4));assert.ok(attachmentCoverage(s,cam).every(c=>c.y>=4));assert.ok(!attachmentCoverage(s,cam).some(c=>c.x===u.x&&c.y===u.y));
  s.s.t=23*60;assert.ok(s.unitSecurity(u)>.8);assert.equal(privateLight.unpowered,false);
- const R=s.plan({...single,b:{x:11,y:2}});assert.equal(R.status,'invalid','existing unit overlap still rejected');
+ const R=s.plan({...single,b:{x:11,y:3}});assert.equal(R.status,'invalid','existing unit overlap still rejected');
  // Physical wall and diagonal corner blockers in an otherwise identical shared area.
  const p=light.mount.frontage,idx=s.idx(p.x+1,p.y);s.D.solid[idx]=1;assert.ok(!attachmentCoverage(s,light).some(c=>c.x===p.x+2&&c.y===p.y));s.D.solid[idx]=0;
  s.D.solid[s.idx(p.x+1,p.y)]=1;assert.ok(!attachmentCoverage(s,light).some(c=>c.x===p.x+1&&c.y===p.y+1));s.markDirty();s.ensure();

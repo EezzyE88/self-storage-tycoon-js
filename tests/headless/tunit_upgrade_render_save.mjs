@@ -1,3 +1,4 @@
+// South-facing touch anchors moved to the door edge; original unit footprints remain unchanged.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -9,7 +10,7 @@ import {attachmentCoverage,mountedOn} from '../../js/unitupgrades.js';
 registerHooks({resolve(specifier,context,next){return specifier==='three'?{url:new URL('../../vendor/three.module.min.js',import.meta.url).href,shortCircuit:true}:next(specifier,context);}});
 const THREE=await import('three'),{Renderer}=await import('../../js/render.js');
 const s=makeSandbox({start:'starter',cash:100000});s.s.open=false;s.ensure();
-const a={tool:'du5x10',a:{x:10,y:2},b:{x:10,y:2},rotation:2,f:0,lighting:'both',outsideCameras:true},R=s.plan(a);
+const a={tool:'du5x10',a:{x:10,y:3},b:{x:10,y:3},rotation:2,f:0,lighting:'both',outsideCameras:true},R=s.plan(a);
 const r=Object.create(Renderer.prototype);Object.assign(r,{sim:s,previewG:new THREE.Group(),staticG:new THREE.Group(),geo:{box:new THREE.BoxGeometry(1,1,1),cone:new THREE.ConeGeometry(.5,1,8)},mat:{lamp:new THREE.MeshStandardMaterial(),office:new THREE.MeshStandardMaterial()},ringGeo:{},tx:{plaques:{}},anim:[],view:0,sel:null});
 r.setPreview(R);assert.ok(r.previewG.children.length>3);
 for(const option of R.upgrades.options){const mesh=r.fixtureCoverageMesh(option.fixture,option.cells);assert.equal(mesh.geometry.attributes.position.count,option.cells.length*6);assert.ok(option.cells.every(c=>c.y>=4));}

@@ -1077,6 +1077,17 @@
         "minimum_pass_lines": 16,
         "timeout": 180,
         "evidence": "production methods and CPU scene graph; no browser or device claim"
+      },
+      {
+        "id": "tplacement_bf",
+        "command": [
+          "@node",
+          "tests/headless/tplacement_bf.mjs"
+        ],
+        "completion": "73 B/F placement groups passed; no browser or physical-device claim",
+        "minimum_pass_lines": 73,
+        "timeout": 180,
+        "evidence": "real planning and UI handlers; disposable native fixtures only; rendered phone layouts and physical Safari not established"
       }
     ],
     "historical": [

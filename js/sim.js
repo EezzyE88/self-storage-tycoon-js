@@ -786,10 +786,13 @@ export class Sim {
     // Explicit rotation anchors the footprint at the touched corner. Never move
     // it to the opposite side of the finger to guess an access direction.
     if (turn !== null) {
+      // The touched cell sits on the door edge; the row grows from it in the drag direction.
       const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
-      const x = Math.min(a.a.x,a.b.x), y = Math.min(a.a.y,a.b.y);
-      units = Array.from({length:n}, (_,k) => ({x:x+(axisX?k*sz.w:0), y:y+(axisX?0:k*sz.w),
-        w:axisX?sz.w:sz.d, h:axisX?sz.d:sz.w, dir:[...dir], f}));
+      units = Array.from({length:n}, (_,k) => {
+        const along = (axisX ? a.a.x : a.a.y) + (step > 0 ? k * sz.w : -(k + 1) * sz.w + 1);
+        const perp = (axisX ? a.a.y : a.a.x) - ((axisX ? dir[1] : dir[0]) > 0 ? sz.d - 1 : 0);
+        return axisX ? {x:along, y:perp, w:sz.w, h:sz.d, dir:[...dir], f} : {x:perp, y:along, w:sz.d, h:sz.w, dir:[...dir], f};
+      });
     }
     let anyBad = false;
     for (const u of units) {

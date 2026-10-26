@@ -1,9 +1,10 @@
+// South-facing touch anchors moved to the door edge; original unit footprints remain unchanged.
 import assert from 'node:assert/strict';
 import {makeSandbox} from '../../js/scenarios.js';
 import {Sim} from '../../js/sim.js';
 import {UI} from '../../js/ui.js';
 import fs from 'node:fs';
-const args={tool:'du5x10',a:{x:10,y:2},b:{x:10,y:2},rotation:2,f:0};
+const args={tool:'du5x10',a:{x:10,y:3},b:{x:10,y:3},rotation:2,f:0};
 function fixture(){const s=makeSandbox({start:'starter',cash:100000});s.ensure();return s;}
 function finished(s){assert.ok(s.dispatch({type:'build',...args}).ok);const ord=s.s.orders.at(-1);for(let i=0;i<3000&&ord.st==='construction';i++)s.step();assert.equal(ord.st,'done');const u=ord.objs.map(id=>s.s.objects[id]).find(o=>o?.type==='unit');u.cstate='ready';u.commercial='none';s.markDirty();s.ensure();return u;}
 {
@@ -45,7 +46,7 @@ console.log('PASS tutorials, lessons, scenarios and Free Build use automatic ope
  const text=fs.readFileSync('js/ui.js','utf8');assert.match(text,/Confirm authorizes construction/);assert.match(text,/Property remains closed/);assert.doesNotMatch(text,/>Commission unit</);assert.doesNotMatch(text,/Commission whole order/);console.log('PASS purchase disclosure, grouped notification and no player commissioning buttons');
 }
 {
- const s=fixture(),a={...args,b:{x:11,y:2}},q=s.plan(a);assert.equal(q.status,'valid');assert.equal(q.creates.length,2);
+ const s=fixture(),a={...args,b:{x:11,y:3}},q=s.plan(a);assert.equal(q.status,'valid');assert.equal(q.creates.length,2);
  const cash=s.s.cash;assert.ok(s.dispatch({type:'build',...a}).ok);assert.equal(s.s.cash,cash-q.cost,'Confirm charges ordinary quoted construction exactly once');
  const ord=s.s.orders.at(-1);s.events.length=0;s.s.speed=1;for(let i=0;i<3000&&ord.st==='construction';i++)s.step();
  assert.equal(ord.st,'done');assert.ok(ord.objs.every(id=>s.s.objects[id].cstate==='operating'));

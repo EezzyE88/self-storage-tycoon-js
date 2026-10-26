@@ -96,6 +96,7 @@ export function completeText(e) {
   return `${e.label} finished - ${ready}/${units} ${e.vertical ? 'order ' : ''}units ready to open automatically${other ? ` · ${other} other ready ${other === 1 ? 'unit' : 'units'} elsewhere on the property` : ''}`;
 }
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const NO_AISLE = 'Door faces no drive aisle yet';
 const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control', noReady: 'Nothing rent-ready', price: 'Rent too high', convenience: 'Not convenient enough', shopping: 'Kept shopping', service: 'No one at the office' };
 export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion opened', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate', first_retention: 'Kept a tenant from leaving', first_auction: 'First lien auction', first_loan: 'Financed growth' };
 const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanliness', security: 'Security', climate: 'Climate', service: 'Service', value: 'Value', comfort: 'Comfort' };
@@ -333,6 +334,7 @@ export class UI {
       case 'lessonLater': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'dismiss', id: v }); this.renderTut(true); break;
       case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
       case 'suggestPlacement': this.suggestPlacement(); break;
+      case 'snapPlacement': { const n=this.nearestValidPlacement(); if(n){ this.buildRotation=n.rotation; this.planArgs={a:n.a,b:n.b}; this.replan(); } break; }
       case 'showPlacement': this.autoPanKey=null; this.guideScrolled=null; this.setTab(null); this.sel=null; this.renderSheet(true); this.showBlueprintTarget(); break;
       case 'recheckLayout': this.toast(verticalCheck(this.sim)); break;
       case 'tutWhy': this.tutWhy = !this.tutWhy; this.renderTut(true); break;
@@ -935,9 +937,10 @@ export class UI {
       const shapes = T.unit ? this.plan.units : office ? [office] : [];
       const x=shapes.length?Math.min(...shapes.map(u=>u.x)):Math.min(a.x,b.x);
       const y=shapes.length?Math.min(...shapes.map(u=>u.y)):Math.min(a.y,b.y);
-      if(T.unit) {
-        const span=SIZES[T.size].w*this.plan.count;
-        this.planArgs={a:{x,y},b:{x:x+(this.buildRotation%2?0:span-1),y:y+(this.buildRotation%2?span-1:0)}};
+      if(T.unit) { // keep the row anchored at the touched cell, growing the same way the finger dragged
+        const axisX=dir ? dir[1] !== 0 : Math.abs(b.x-a.x)>=Math.abs(b.y-a.y);
+        const span=SIZES[T.size].w*this.plan.count, sg=Math.sign(axisX?b.x-a.x:b.y-a.y)||1;
+        this.planArgs={a:{...a},b:{x:a.x+(this.buildRotation%2?0:sg*(span-1)),y:a.y+(this.buildRotation%2?sg*(span-1):0)}};
       } else if(office) this.planArgs={a:{x,y},b:{x,y}};
       else {
         const w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1;
@@ -945,6 +948,29 @@ export class UI {
       }
     }
     this.replan();
+  }
+  // Find a nearby buildable footprint, retaining unit count and all readiness requirements.
+  nearestValidPlacement() {
+    const T=TOOLS[this.tool], pa=this.planArgs, R=this.plan; if(!T?.unit||!pa||!R?.count) return null;
+    const key=JSON.stringify([R.args,R.count,this.buildRotation,this.toolFloor(),this.sim.s.objVer??this.sim.s.t]);
+    if(this.nearSim===this.sim&&this.nearKey===key) return this.nearHit;
+    this.nearSim=this.sim; this.nearKey=key; this.nearHit=null;
+    const axisX=R.doorDir ? R.doorDir[1] !== 0 : Math.abs(pa.b.x-pa.a.x)>=Math.abs(pa.b.y-pa.a.y);
+    const span=SIZES[T.size].w*R.count, sg=Math.sign(axisX?pa.b.x-pa.a.x:pa.b.y-pa.a.y)||1, base=R.args, cand=[];
+    for(let dy=-6; dy<=6; dy++) for(let dx=-6; dx<=6; dx++) cand.push([dx,dy]);
+    cand.sort((p,q)=>Math.abs(p[0])+Math.abs(p[1])-Math.abs(q[0])-Math.abs(q[1]));
+    for(const [dx,dy] of cand) for(let r=0;r<4;r++) {
+      if(!dx&&!dy&&r===this.buildRotation) continue;
+      const a={x:pa.a.x+dx,y:pa.a.y+dy}, b={x:a.x+(r%2?0:sg*(span-1)),y:a.y+(r%2?sg*(span-1):0)};
+      const P=this.sim.plan({...base,a,b,rotation:r,axis:undefined,dir:undefined});
+      if(P.status!=='invalid'&&!P.missing?.includes(NO_AISLE)&&P.count===R.count){
+        const side=['north-facing','east-facing','south-facing','west-facing'][r];
+        const mv=[dy?`${Math.abs(dy)} ${dy<0?'north':'south'}`:'',dx?`${Math.abs(dx)} ${dx<0?'west':'east'}`:''].filter(Boolean).join(' + ');
+        this.nearHit={a,b,rotation:r,label:`${mv?'shift '+mv+' · ':''}${side} doors`,missing:[...P.missing]};
+        return this.nearHit;
+      }
+    }
+    return null;
   }
   rotationHtml() {
     const T=TOOLS[this.tool];
@@ -1025,14 +1051,16 @@ export class UI {
       return;
     }
     const mm=curBeat(this.sim)?this.placementMismatch(curBeat(this.sim).steps[stepState(this.sim,this).cur]):null;
-    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
+    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button> ' : ''}${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
       const projectMarker = this.projectProposal?.sim === this.sim ? `<p class="project-review">${matchesProject(R.args, this.projectProposal.key) ? esc(PROJECTS[this.projectProposal.key].label) + ' · project preview' : 'Placement changed · ordinary build, not a tracked project'}</p>` : '';
       const compareProjects = this.projectProposal?.sim === this.sim && this.projectProposal.key !== 'cover' ? '<div class="row wrap project-switch"><button class="btn sm" data-a="projectPreview" data-v="small">Two 5×10s</button><button class="btn sm" data-a="projectPreview" data-v="large">One 10×10</button></div>' : '';
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
-      const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
-      status = (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects + `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
+      const more = R.reasons.length > 1 ? `<details class="note"><summary>+${R.reasons.length - 1} more placement blocker${R.reasons.length > 2 ? 's' : ''}</summary>${R.reasons.slice(1).map(esc).join('; ')}</details>` : '';
+      const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons[0] || '');
+      const near = T.unit && (R.status === 'invalid' || R.missing?.includes(NO_AISLE)) ? this.nearestValidPlacement() : null;
+      status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>` + (R.status === 'invalid' ? more : '') + (near ? `<div class="status idle near-valid"><span class="ic">&#8599;</span><span>Nearest buildable spot: ${esc(near.label)}${near.missing.length ? `<small>Still needs: ${esc(near.missing.join('; '))}</small>` : ''}</span><button class="btn sm" data-a="snapPlacement">Move there</button></div>` : '') + (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects;
       if(T.unit&&this.sim.autoOpenEnabled())status += '<p class="note">Confirm authorizes construction. These units enter rental inventory automatically when construction and required access, lighting and capacity are complete. Opening the property remains your decision.</p>';
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
@@ -1054,6 +1082,7 @@ export class UI {
     box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${status}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
       <div class="bot"><div class="cost">${costTxt}</div>
       ${this.rotationHtml()}
+      ${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
       <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
