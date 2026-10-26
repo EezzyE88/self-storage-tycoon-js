@@ -1132,6 +1132,17 @@
         "minimum_pass_lines": 4,
         "timeout": 90,
         "evidence": "current production offers/UI handlers/acquisition engine; controlled fixtures and stub DOM; browser evidence separate"
+      },
+      {
+        "id": "tfirst_gate_guidance",
+        "command": [
+          "@node",
+          "tests/headless/tfirst_gate_guidance.mjs"
+        ],
+        "completion": "7 first-gate guidance groups passed",
+        "minimum_pass_lines": 7,
+        "timeout": 90,
+        "evidence": "current production gate planning, UI preview/Confirm and actual acquisition; controlled fixtures and stub DOM; rendered checks separate"
       }
     ],
     "historical": [

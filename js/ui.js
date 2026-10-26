@@ -360,6 +360,7 @@ export class UI {
       case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.g.autosave?.(true); this.sfx('confirm'); }); break; }
       case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
       case 'acquire': this.showAcquisitionReview(v, el.dataset.m); break;
+      case 'previewFirstGate': this.previewFirstGate(); break;
       case 'acquisitionFinancing': this.fundingContext=null; this.setTab('business',true); this.jumpSection('Financing'); break;
       case 'acquisitionConfirm': this.confirmAcquisitionReview(); break;
       case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
@@ -594,6 +595,8 @@ export class UI {
     const build=title==='Build', office=title==='Office';
     // Keep completion and work assignment controls outside the collapsible information body.
     const actions = [];
+    // The first-gate action remains reachable even while Growth details are collapsed.
+    if(title==='Growth')body=body.replace(/<button\b[^>]*data-a="previewFirstGate"[^>]*>[\s\S]*?<\/button>/g,button=>{actions.push(button);return '';});
     if (this.sel != null && !office) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
       const cmd = button.match(/data-cmd='([^']*)'/);
       if (!cmd) { if (/data-a="(?:staffHelp|verticalReview)"/.test(button)) { actions.push(button); return ''; } return button; }
@@ -909,6 +912,34 @@ export class UI {
     const history = (r?.history || []).map(p => `<div class="project-result"><b>${esc(PROJECTS[p.key].label)} · opened Day ${dayOf(p.completed)}</b><small>${p.key === 'cover' ? 'Loading shelter completed. Rainy-day customer use is separate from profitability.' : p.firstLease ? `First project lease: ${money(p.firstLease.rent,true)}/mo contracted. Customer use demonstrated; investment payback is not established.` : 'In service. No project lease recorded yet; customer use and profitability are separate.'}</small><button class="btn sm" data-a="projectView" data-v="${p.key}">View improvement</button></div>`).join('');
     return `<h3>Your next improvement</h3><div class="yard-infill">${this.yardLoopHtml()}${this.rescueOperationHtml()}<details data-yard-detail="optional-projects"><summary>Other property improvements</summary><p class="note">Optional projects. Keep your cash if the evidence or buffer is weak.</p>${this.projectProgressHtml()}${cards ? `<div class="list">${cards}</div>` : r?.active ? '' : '<p class="note">Ordinary building remains available.</p>'}</details>${history ? `<details data-yard-detail="project-history"><summary>Your completed projects</summary>${history}</details>` : ''}</div>`;
   }
+  firstGateGuidance() {
+    const sim=this.sim,s=sim.s,C=this.g.company;
+    // Acquired plain parcels have no sandbox settings or operating-facility mirror.
+    // Use the existing saved shape; no new acquisition/save marker is needed.
+    if(!C||C.active<1||C.props[C.active]?.sim!==sim||s.mode!=='sandbox'||s.sb||s.mirror!=null||s.creative||s.scenario||s.lesson||s.tut?.on||sim.objs('gate').length)return null;
+    const p=s.parcel,center=(p.x0+p.x1)/2;
+    const xs=Array.from({length:p.x1-p.x0+1},(_,i)=>p.x0+i).sort((a,b)=>Math.abs(a-center)-Math.abs(b-center)||a-b);
+    let fallback=null;
+    for(const x of xs) {
+      const args={tool:'gate',a:{x,y:p.y1},b:{x,y:p.y1},f:0},plan=sim.plan(args);
+      if(plan.status==='valid')return {args,plan};
+      if(plan.status==='incomplete'&&!fallback)fallback={args,plan};
+    }
+    return fallback||{args:null};
+  }
+  firstGateHtml(guide) {
+    if(!guide)return '';
+    return `<p class="note first-gate-guide">Place your first Entrance Gate on the street-facing front fence. ${guide.args?'Preview spends nothing; Confirm starts construction.':'No buildable gate position is clear on that fence. Clear its lane or choose another valid position.'}</p>${guide.args?`<button class="btn sm" data-a="previewFirstGate">Preview suggested gate · ${money(guide.plan.cost)}</button>`:''}`;
+  }
+  previewFirstGate() {
+    const guide=this.firstGateGuidance();
+    if(!guide?.args){this.toast('No suggested gate is available. Review the current property and front fence.','bad');return false;}
+    const a=guide.args;
+    this.pauseForPopup('review');this.setTab(null);this.setView('ext');this.cat='site';this.pickTool('gate');
+    this.rend.lookAt(a.a.x+.5,a.a.y+.5);
+    this.planArgs={a:{...a.a},b:{...a.b}};this.replan();
+    return true;
+  }
   pickTool(k) {
     if(this.retrofitReview)this.endRetrofit();
     this.fundingContext = null;
@@ -1055,7 +1086,7 @@ export class UI {
       return;
     }
     const mm=curBeat(this.sim)?this.placementMismatch(curBeat(this.sim).steps[stepState(this.sim,this).cur]):null;
-    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button> ' : ''}${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
+    if(!R) { const gate=this.tool==='gate'?this.firstGateGuidance():null; box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${gate?.args?`<button class="btn sm" data-a="previewFirstGate">Preview ${money(gate.plan.cost)} gate</button>`:`${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button> ' : ''}${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
       const projectMarker = this.projectProposal?.sim === this.sim ? `<p class="project-review">${matchesProject(R.args, this.projectProposal.key) ? esc(PROJECTS[this.projectProposal.key].label) + ' · project preview' : 'Placement changed · ordinary build, not a tracked project'}</p>` : '';
@@ -1066,6 +1097,7 @@ export class UI {
       const near = T.unit && (R.status === 'invalid' || R.missing?.includes(NO_AISLE)) ? this.nearestValidPlacement() : null;
       status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>` + (R.status === 'invalid' ? more : '') + (near ? `<div class="status idle near-valid"><span class="ic">&#8599;</span><span>Nearest buildable spot: ${esc(near.label)}${near.missing.length ? ` <small>Still needs: ${esc(near.missing.join('; '))}</small>` : ''}</span><button class="btn sm" data-a="snapPlacement">Move there</button></div>` : '') + (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
+      if(this.tool==='gate')status+=this.firstGateHtml(this.firstGateGuidance());
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
@@ -1763,7 +1795,7 @@ export class UI {
   // ------------------------------------------------------------ GROWTH
   growthSheet() {
     const sim = this.sim, s = sim.s;
-    let h = '';
+    let h = this.firstGateHtml(this.firstGateGuidance());
     // not open yet: the opening checklist comes first (the coach sends players here; on phones it used to sit below the fold)
     if (!s.open) {
       const iss = sim.openingIssues();
