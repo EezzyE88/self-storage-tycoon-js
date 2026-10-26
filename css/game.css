@@ -1191,6 +1191,7 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .actionbar .bot > [data-a="confirm"] { margin-left:auto; }
 @media (max-width:700px) and (min-height:521px) {
  #ui .actionbar:not(.placing):not(.idle-strip) { max-height:min(58dvh, calc(100dvh - var(--review-top, 116px) - 64px - var(--safe-b) - 64px)); }
+ #ui:has(.actionbar:not(.placing):not(.idle-strip)) .tut .how-line { display:none; }
  /* The same measured tutorial boundary used by reviews also reserves the card
     and its required button above expanded Statement/Hire and other panels. */
  #ui.has-sheet:has(#tut .tut:not(.offer):not(.scen)) .sheet.tall { max-height:calc(100dvh - var(--review-top, 176px) - 64px - var(--safe-b)); }
