@@ -1167,3 +1167,11 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 @media (max-width:410px) and (min-height:521px) {
  #ui .hud .career-goal { width:calc(100% - 52px); min-width:0; }
 }
+
+/* B/F review presentation: readable setup line and phone-sized touch targets. */
+#ui #abar button, #ui #abar summary { min-height:44px; }
+#ui #abar .near-valid small { display:block; margin-top:4px; }
+/* Recover 48px of visible yard on short portrait phones; details retain their own scroller. */
+@media (max-width:410px) and (min-height:521px) and (max-height:740px) and (orientation:portrait) {
+ #ui .actionbar:not(.placing):not(.idle-strip) { max-height:min(48dvh, calc(100dvh - var(--review-top, 116px) - 64px - var(--safe-b) - 112px)); }
+}

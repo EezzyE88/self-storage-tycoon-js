@@ -1,0 +1,22 @@
+{
+  "source": "copy of previously production-validated bf-interior.sst; disposable authored fixture",
+  "placement": {
+    "tool": "du10x20",
+    "a": {
+      "x": 3,
+      "y": 1
+    },
+    "b": {
+      "x": 8,
+      "y": 1
+    },
+    "rotation": 0,
+    "f": 0
+  },
+  "expected": [
+    "Outside the property line",
+    "Blocked: overlaps another structure"
+  ],
+  "expectedCount": 3,
+  "expectedCost": 4950
+}
