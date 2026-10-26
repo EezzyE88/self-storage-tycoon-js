@@ -936,6 +936,7 @@ export class UI {
     if(!guide?.args){this.toast('No suggested gate is available. Review the current property and front fence.','bad');return false;}
     const a=guide.args;
     this.pauseForPopup('review');this.setTab(null);this.setView('ext');this.cat='site';this.pickTool('gate');
+    this.flip=false;this.climate=false;this.rush=false;
     // A distant parcel overview cannot pan its front fence above a phone review
     // within the camera bounds. This explicit preview brings the gate into view.
     if(this.rend.zoom<1.5)this.rend.zoomBy?.(1.5/this.rend.zoom);
@@ -1158,7 +1159,7 @@ export class UI {
     const args = this.plan?.args;
     if (!args?.a || !args?.b) return false;
     const shapes = [...(this.plan.units || []), ...(this.plan.creates || []).filter(c => c.w && c.h)];
-    if(this.tool==='gate')for(const c of this.plan.items||[])shapes.push({x:c.x,y:c.y,w:1,h:1,f:0});
+    if(this.tool==='gate'&&this.firstGateGuidance())for(const c of this.plan.items||[])shapes.push({x:c.x,y:c.y,w:1,h:1,f:0});
     // Frame the access cells as well as the structure, so the highlighted side stays visible.
     for(const u of this.plan.units || []) if(u.dir) {
       shapes.push({x:u.dir[0]>0?u.x+u.w:u.dir[0]<0?u.x-1:u.x,

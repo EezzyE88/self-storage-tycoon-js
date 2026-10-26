@@ -74,4 +74,7 @@ test('ordinary sandbox, Free Build, tutorial, scenarios, lessons, source propert
 test('compact Growth retains one fixed preview action; normal gate tool retains an explicit suggestion',()=>{
  const f=acquired();f.ui.cat='site';f.ui.dockSummary=()=>'';const guide=f.ui.firstGateHtml(f.ui.firstGateGuidance());const html=f.ui.sheet('Growth','',guide);assert.match(html,/dock-actions[\s\S]*data-a="previewFirstGate"/);assert.equal((html.match(/data-a="previewFirstGate"/g)||[]).length,1);f.ui.pickTool('gate');assert.match(f.boxes.abar.innerHTML,/Preview \$4,500 gate/);assert.equal(f.ui.plan,null);
 });
+test('guided preview clears carried Rush and unit options so its advertised normal quote remains exact',()=>{
+ const f=acquired();f.sim.s.coTier=3;f.ui.rush=true;f.ui.flip=true;f.ui.climate=true;const cash=f.sim.s.cash;assert.equal(f.ui.firstGateGuidance().plan.cost,4500);press(f,'previewFirstGate');assert.equal(f.ui.rush,false);assert.equal(f.ui.flip,false);assert.equal(f.ui.climate,false);assert.equal(f.ui.plan.args.rush,false);assert.equal(f.ui.plan.cost,4500);press(f,'confirm');assert.equal(f.sim.s.cash,cash-4500);assert.equal(f.sim.s.speed,0);
+});
 console.log(`${n} first-gate guidance groups passed`);

@@ -1139,8 +1139,8 @@
           "@node",
           "tests/headless/tfirst_gate_guidance.mjs"
         ],
-        "completion": "7 first-gate guidance groups passed",
-        "minimum_pass_lines": 7,
+        "completion": "8 first-gate guidance groups passed",
+        "minimum_pass_lines": 8,
         "timeout": 90,
         "evidence": "current production gate planning, UI preview/Confirm and actual acquisition; controlled fixtures and stub DOM; rendered checks separate"
       }
