@@ -120,7 +120,7 @@ test('ui.js applies the module through three one-line hooks and the guard instal
   assert.equal((src.match(/operatingNet\(/g)||[]).length,1,'HUD uses operatingNet once');
   assert.ok(!/borrowSettle/.test(src.replace(/applyBorrowSettle/g,'')),'no other inline settle code in ui.js');
   assert.equal(UI.prototype.borrowSettleApplied,true);
-  for(const m of BORROW_SETTLE_METHODS)assert.equal(typeof UI.prototype[m],'function',m);
+  for(const m of BORROW_SETTLE_METHODS)assert.equal(UI.prototype[m]?.borrowSettleWrapped,true,m+' is wrapped');
   const added=[];const prevWin=globalThis.window;globalThis.window={addEventListener:(ev,fn,o)=>added.push([ev,o])};
   try { const ui={};installBorrowSettleInput(ui);installBorrowSettleInput(ui); } finally { if(prevWin===undefined) delete globalThis.window; else globalThis.window=prevWin; }
   assert.deepEqual(added.map(a=>a[0]),BORROW_SETTLE_EVENTS);

@@ -64,8 +64,10 @@ export function applyBorrowSettle(UIClass) {
   if (p.borrowSettleApplied) return; p.borrowSettleApplied = true;
   for (const name of BORROW_SETTLE_METHODS) {
     const fn = p[name];
-    if (typeof fn !== 'function') throw new Error(`borrowsettle: UI.${name} not found`);
-    p[name] = function (...args) { try { return fn.apply(this, args); } finally { armBorrowSettle(this); } };
+    // A renamed method must not stop the game loading; tborrowing_settle.mjs fails instead.
+    if (typeof fn !== 'function') { console.warn(`borrowsettle: UI.${name} not found; settle not armed for it`); continue; }
+    const wrapped = function (...args) { try { return fn.apply(this, args); } finally { armBorrowSettle(this); } };
+    wrapped.borrowSettleWrapped = true; p[name] = wrapped;
   }
   p.armBorrowSettle = function (t) { armBorrowSettle(this, t); };
   p.borrowSettleSwallow = function (e, t) { return borrowSettleSwallow(this, e, t); };
