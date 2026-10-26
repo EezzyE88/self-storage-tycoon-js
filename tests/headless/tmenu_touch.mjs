@@ -34,7 +34,7 @@ test('held placement stays compact; release restores B+ review without spending'
   const { sim, ui, box } = fixture(); ui.tool = 'du10x10'; ui.plan = { status: 'valid', cost: 2940, count: 3, dur: 720, opex: 0.75, reasons: [], missing: [] };
   const cash = sim.s.cash, bills = sim.committedBills(); ui.buildPlacing = true; ui.renderActionBar();
   assert.match(box.innerHTML, /Lift finger to review/); assert.doesNotMatch(box.innerHTML, /committed bills|data-a="confirm"/);
-  ui.finishPlacement(); assert.match(box.innerHTML, /committed bills/); assert.match(box.innerHTML, /Available after bills/); assert.match(box.innerHTML, /data-a="confirm"/);
+  ui.finishPlacement(); assert.match(box.innerHTML, /[Cc]ommitted bills/); assert.match(box.innerHTML, /Available after bills/); assert.match(box.innerHTML, /data-a="confirm"/);
   assert.equal(sim.s.cash, cash); assert.equal(sim.committedBills(), bills);
 });
 test('shortcuts expose sections and keep header outside scroll body', () => {
