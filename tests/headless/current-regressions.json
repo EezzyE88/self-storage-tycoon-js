@@ -1121,6 +1121,17 @@
         "minimum_pass_lines": 4,
         "timeout": 60,
         "evidence": "actual production review and financialPosition; controlled disposable fixtures; browser geometry checked separately"
+      },
+      {
+        "id": "tacquisition_affordability",
+        "command": [
+          "@node",
+          "tests/headless/tacquisition_affordability.mjs"
+        ],
+        "completion": "4 acquisition-affordability groups passed",
+        "minimum_pass_lines": 4,
+        "timeout": 90,
+        "evidence": "current production offers/UI handlers/acquisition engine; controlled fixtures and stub DOM; browser evidence separate"
       }
     ],
     "historical": [
