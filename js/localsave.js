@@ -8,9 +8,9 @@ const read = (k) => { try { const raw = store && store.getItem(k); if (!raw) ret
 export const localsave = {
   ok: !!store, lastAt: 0, lastErr: '',
   get() { return { main: read(MAIN), backup: read(BAK) }; },
-  put(code, meta) {
+  put(code, meta, checkpoint) {
     if (!store) return false;
-    const rec = JSON.stringify({ code, meta, at: Math.floor(Date.now() / 1000), v: 1 });
+    const rec = JSON.stringify({ code, meta, at: Math.floor((checkpoint?.atMs ?? Date.now()) / 1000), v: 1, ...(checkpoint ? { checkpoint: { epoch: checkpoint.epoch, revision: checkpoint.revision, atMs: checkpoint.atMs } } : {}) });
     try {
       const prev = store.getItem(MAIN); if (prev && read(MAIN)) store.setItem(BAK, prev); // keep the previous good save
       store.setItem(MAIN, rec); this.lastAt = Date.now(); this.lastErr = ''; return true;
@@ -23,5 +23,6 @@ export const localsave = {
     if (!store || !rec || typeof rec.code !== 'string') return false;
     try { store.setItem(KEPT, JSON.stringify({ code: rec.code, meta: rec.meta || {}, at: rec.at || Math.floor(Date.now() / 1000), keptAt: Math.floor(Date.now() / 1000), v: 1 })); return true; } catch (e) { return false; }
   },
-  clear() { try { store && store.removeItem(MAIN); store && store.removeItem(BAK); } catch (e) { /* ignore */ } },
+  onClear: null,
+  clear() { const barrier = this.onClear?.(); try { store && store.removeItem(MAIN); store && store.removeItem(BAK); } catch (e) { /* ignore */ } return barrier; },
 };

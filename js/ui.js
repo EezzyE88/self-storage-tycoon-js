@@ -253,6 +253,7 @@ export class UI {
     const el = e.target.closest('[data-a]'); if (!el) return;
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
+    if (this.g.saveStartup) return;
     if(!['reserveStart','reserveResume','reserveStop','speed'].includes(a))this.reserveWait?.interrupt('You opened another control.');
     // Navigating out of the Requests dialog: close it first so the destination is never opened underneath it.
     if (this.requestPanel && ['focus', 'overlay', 'requestHelp', 'feedback'].includes(a) && el.closest('.modal')) this.leaveRequests(a === 'requestHelp' || a === 'feedback');
@@ -342,7 +343,7 @@ export class UI {
       case 'handbook': this.showHandbook(); this.sfx('click'); break;
       case 'modalClose': this.closeModal(); break;
       case 'tabFromModal': this.closeModal(); this.setTab(v); break;
-      case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); }); break;
+      case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.g.autosave?.(true); this.sfx('confirm'); }); break;
       case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then((r) => { if (stored(r) || !this.g.localsave.ok) run(); else this.toast(storeFailText(r, 'no new game was started'), 'bad'); }); break; }
       case 'replaceNo': this.pendingNew = null; if (this.title) this.showTitle(); else this.closeModal(); break;
       case 'restoreKept': this.restoreKept(); break;
@@ -356,9 +357,11 @@ export class UI {
       case 'sbAdv': this.sbAdv = !this.sbAdv; this.showSandbox(); this.sfx('click'); break;
       case 'sbFunds': this.do({ type: 'sbFunds', amt: +v }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
       case 'sbSet': this.do({ type: 'sbSet', k: el.dataset.k, v: JSON.parse(v) }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
-      case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.sfx('confirm'); }); break; }
+      case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.g.autosave?.(true); this.sfx('confirm'); }); break; }
       case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
       case 'acquire': this.showAcquisitionReview(v, el.dataset.m); break;
+      case 'previewFirstGate': this.previewFirstGate(); break;
+      case 'acquisitionFinancing': this.fundingContext=null; this.setTab('business',true); this.jumpSection('Financing'); break;
       case 'acquisitionConfirm': this.confirmAcquisitionReview(); break;
       case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
       case 'comebackClose': if (this.sim.s.scenario?.status === 'won') this.do({ type: 'comebackAck' }); this.scMin = true; this.renderTut(true); break;
@@ -410,9 +413,9 @@ export class UI {
       case 'lens': this.g.showcase.setLens(!this.g.showcase.lensPref); this.showMenu(); break;
       case 'continue': { const d = this.contSave; if (!d) break;
         const told = (r, note) => { const m = r.meta || {}; this.closeModal(); this.sfx('confirm'); this.toast(`${note}Restored ${m.name || 'your game'}: Day ${+m.day || 1}${m.time ? ', ' + m.time : ''}, ${money(+m.cash || 0)} cash (${this.ago((r.at || 0) * 1000)}${r.src === 'server' ? ', from the save server' : ''}).`, note ? 'bad' : 'good'); };
-        this.g.loadCode(d.code).then(async (ok) => {
-          if (ok) return told(d, d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '');
-          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
+        this.g.loadCode(d.code, true).then(async (ok) => {
+          if (ok) { this.g.autosave?.(true); return told(d, this.contRecovery || (d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '')); }
+          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code, true)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
           this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded, and no backup worked. Load a save code or file instead.', 'bad');
         }); break; }
       case 'loadCode': { const ta = this.root.querySelector('#loadTa'); this.importSave(ta ? ta.value : '', 'code'); break; }
@@ -592,6 +595,8 @@ export class UI {
     const build=title==='Build', office=title==='Office';
     // Keep completion and work assignment controls outside the collapsible information body.
     const actions = [];
+    // The first-gate action remains reachable even while Growth details are collapsed.
+    if(title==='Growth')body=body.replace(/<button\b[^>]*data-a="previewFirstGate"[^>]*>[\s\S]*?<\/button>/g,button=>{actions.push(button);return '';});
     if (this.sel != null && !office) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
       const cmd = button.match(/data-cmd='([^']*)'/);
       if (!cmd) { if (/data-a="(?:staffHelp|verticalReview)"/.test(button)) { actions.push(button); return ''; } return button; }
@@ -907,6 +912,38 @@ export class UI {
     const history = (r?.history || []).map(p => `<div class="project-result"><b>${esc(PROJECTS[p.key].label)} · opened Day ${dayOf(p.completed)}</b><small>${p.key === 'cover' ? 'Loading shelter completed. Rainy-day customer use is separate from profitability.' : p.firstLease ? `First project lease: ${money(p.firstLease.rent,true)}/mo contracted. Customer use demonstrated; investment payback is not established.` : 'In service. No project lease recorded yet; customer use and profitability are separate.'}</small><button class="btn sm" data-a="projectView" data-v="${p.key}">View improvement</button></div>`).join('');
     return `<h3>Your next improvement</h3><div class="yard-infill">${this.yardLoopHtml()}${this.rescueOperationHtml()}<details data-yard-detail="optional-projects"><summary>Other property improvements</summary><p class="note">Optional projects. Keep your cash if the evidence or buffer is weak.</p>${this.projectProgressHtml()}${cards ? `<div class="list">${cards}</div>` : r?.active ? '' : '<p class="note">Ordinary building remains available.</p>'}</details>${history ? `<details data-yard-detail="project-history"><summary>Your completed projects</summary>${history}</details>` : ''}</div>`;
   }
+  firstGateGuidance() {
+    const sim=this.sim,s=sim.s,C=this.g.company;
+    // Acquired plain parcels have no sandbox settings or operating-facility mirror.
+    // Use the existing saved shape; no new acquisition/save marker is needed.
+    if(!C||C.active<1||C.props[C.active]?.sim!==sim||s.mode!=='sandbox'||s.sb||s.mirror!=null||s.creative||s.scenario||s.lesson||s.tut?.on||sim.objs('gate').length)return null;
+    const p=s.parcel,center=(p.x0+p.x1)/2;
+    const xs=Array.from({length:p.x1-p.x0+1},(_,i)=>p.x0+i).sort((a,b)=>Math.abs(a-center)-Math.abs(b-center)||a-b);
+    let fallback=null;
+    for(const x of xs) {
+      const args={tool:'gate',a:{x,y:p.y1},b:{x,y:p.y1},f:0},plan=sim.plan(args);
+      if(plan.status==='valid')return {args,plan};
+      if(plan.status==='incomplete'&&!fallback)fallback={args,plan};
+    }
+    return fallback||{args:null};
+  }
+  firstGateHtml(guide) {
+    if(!guide)return '';
+    return `<p class="note first-gate-guide">Place your first Entrance Gate on the street-facing front fence. ${guide.args?'Preview spends nothing; Confirm starts construction.':'No buildable gate position is clear on that fence. Clear its lane or choose another valid position.'}</p>${guide.args?`<button class="btn sm" data-a="previewFirstGate">Preview suggested gate · ${money(guide.plan.cost)}</button>`:''}`;
+  }
+  previewFirstGate() {
+    const guide=this.firstGateGuidance();
+    if(!guide?.args){this.toast('No suggested gate is available. Review the current property and front fence.','bad');return false;}
+    const a=guide.args;
+    this.pauseForPopup('review');this.setTab(null);this.setView('ext');this.cat='site';this.pickTool('gate');
+    this.flip=false;this.climate=false;this.rush=false;
+    // A distant parcel overview cannot pan its front fence above a phone review
+    // within the camera bounds. This explicit preview brings the gate into view.
+    if(this.rend.zoom<1.5)this.rend.zoomBy?.(1.5/this.rend.zoom);
+    this.rend.lookAt(a.a.x,a.a.y);
+    this.planArgs={a:{...a.a},b:{...a.b}};this.replan();
+    return true;
+  }
   pickTool(k) {
     if(this.retrofitReview)this.endRetrofit();
     this.fundingContext = null;
@@ -1053,7 +1090,7 @@ export class UI {
       return;
     }
     const mm=curBeat(this.sim)?this.placementMismatch(curBeat(this.sim).steps[stepState(this.sim,this).cur]):null;
-    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button> ' : ''}${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
+    if(!R) { const gate=this.tool==='gate'?this.firstGateGuidance():null; box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${gate?.args?`<button class="btn sm" data-a="previewFirstGate">Preview ${money(gate.plan.cost)} gate</button>`:`${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button> ' : ''}${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
       const projectMarker = this.projectProposal?.sim === this.sim ? `<p class="project-review">${matchesProject(R.args, this.projectProposal.key) ? esc(PROJECTS[this.projectProposal.key].label) + ' · project preview' : 'Placement changed · ordinary build, not a tracked project'}</p>` : '';
@@ -1063,12 +1100,11 @@ export class UI {
       const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons[0] || '');
       const near = T.unit && (R.status === 'invalid' || R.missing?.includes(NO_AISLE)) ? this.nearestValidPlacement() : null;
       status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>` + (R.status === 'invalid' ? more : '') + (near ? `<div class="status idle near-valid"><span class="ic">&#8599;</span><span>Nearest buildable spot: ${esc(near.label)}${near.missing.length ? ` <small>Still needs: ${esc(near.missing.join('; '))}</small>` : ''}</span><button class="btn sm" data-a="snapPlacement">Move there</button></div>` : '') + (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects;
-      if(T.unit&&this.sim.autoOpenEnabled())status += '<p class="note">Confirm authorizes construction. These units enter rental inventory automatically when construction and required access, lighting and capacity are complete. Opening the property remains your decision.</p>';
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
+      if(this.tool==='gate'&&R.status==='invalid')status+=this.firstGateHtml(this.firstGateGuidance());
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
-        status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
         if(this.sim.financialPosition({spend:R.cost,extraDaily:this.sim.planDailyCost(R)}).available<0){
           status += '<button class="btn sm" data-a="fundingReview">Review funding · optional</button>';
           if(sandboxReserveQuote(this.sim,R.args))status += '<button class="btn sm" data-a="sandboxReserveStart">Fast-forward to reserve</button><p class="note">Runs normal time for up to 7 game days, then pauses. Owner decisions stop the wait. Stop or Pause ends it. Return to this placement and Confirm separately to buy.</p>';
@@ -1080,11 +1116,15 @@ export class UI {
     }
     const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
     const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
+    // Keep the same financial calculation beside Confirm, outside optional review details.
+    const daily = this.sim.planDailyCost(R);
+    const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });
+    const authorization = T.unit && this.sim.autoOpenEnabled() ? '<p class="note build-authorization">Confirm authorizes construction. Units open automatically when ready. Opening the property remains your decision.</p>' : '';
+    const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after build: <b>${money(P.cash)}</b><br>Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br>Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br>Added costs: ${money(daily, true)}/day when operating.</p>` : ''}${authorization}</div>`;
     const wasOpen = !!box.firstChild;
-    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${status}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
-      <div class="bot"><div class="cost">${costTxt}</div>
+    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
+      ${commitment}<div class="bot">
       ${this.rotationHtml()}
-      ${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
       <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
@@ -1119,6 +1159,7 @@ export class UI {
     const args = this.plan?.args;
     if (!args?.a || !args?.b) return false;
     const shapes = [...(this.plan.units || []), ...(this.plan.creates || []).filter(c => c.w && c.h)];
+    if(this.tool==='gate'&&this.firstGateGuidance())for(const c of this.plan.items||[])shapes.push({x:c.x,y:c.y,w:1,h:1,f:0});
     // Frame the access cells as well as the structure, so the highlighted side stays visible.
     for(const u of this.plan.units || []) if(u.dir) {
       shapes.push({x:u.dir[0]>0?u.x+u.w:u.dir[0]<0?u.x-1:u.x,
@@ -1759,7 +1800,7 @@ export class UI {
   // ------------------------------------------------------------ GROWTH
   growthSheet() {
     const sim = this.sim, s = sim.s;
-    let h = '';
+    let h = this.firstGateHtml(this.firstGateGuidance());
     // not open yet: the opening checklist comes first (the coach sends players here; on phones it used to sit below the fold)
     if (!s.open) {
       const iss = sim.openingIssues();
@@ -2420,7 +2461,7 @@ export class UI {
     if (C.feed.length) h += `<h3>Company attention</h3><div class="list">${C.feed.slice(0, 6).map((e) => `<div class="item"><div class="grow"><b>${esc(e.prop)}</b><small>Day ${dayOf(e.t)} · ${esc(e.msg)}</small></div>${C.props[e.k] && e.k !== cur ? `<button class="btn sm" data-a="switchProp" data-v="${e.k}">Go</button>` : ''}</div>`).join('')}</div>`;
     if (!this.sim.s.creative && (this.sim.s.mode !== 'tutorial' || this.sim.s.tut.done)) {
       const offers = this.g.offers();
-      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small></div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Review ${money(of.price)}</button></div>`).join('')}</div>
+      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item" data-acquisition-offer="${of.kind}:${of.market}"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small>${this.sim.s.cash < of.price ? `<p class="note acquisition-shortfall">Need <strong>${money(of.price-this.sim.s.cash,true)}</strong> more at this property.</p><button class="btn sm" data-a="acquisitionFinancing" aria-label="View Financing for ${esc(of.name)}">View Financing</button>` : ''}</div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Review ${money(of.price)}</button></div>`).join('')}</div>
         <p class="note">Paid from this property's cash. Prices include ${money(ACQUISITION_OPENING_CASH)} of opening working cash for the new property; send more from here to fund construction.</p>`;
     } else if (this.sim.s.mode === 'tutorial' && !this.sim.s.tut.done) h += `<p class="note">Finish the tutorial to unlock acquisitions and a multi-property company.</p>`;
     return h;
@@ -2670,6 +2711,7 @@ export class UI {
   keptLabel() { const k = this.g.localsave && this.g.localsave.getKept(); if (!k) return ''; const m = k.meta || {}; return `${esc(m.name || 'Saved game')} · Day ${+m.day || 1} · ${money(+m.cash || 0)}`; }
   showTitle() {
     this.title = true;
+    if (this.g.saveStartup) { this.$('modal').innerHTML = '<div class="title"><h1>Self Storage Tycoon</h1><p role="status">Checking saved progress…</p></div>'; return; }
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
       <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
@@ -2678,7 +2720,21 @@ export class UI {
       <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
   }
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
+  renderSaveStatus() {
+    const D = this.g.durable; if (!D || !this.root) return;
+    const label = D.status === 'pending' ? 'Saving progress' : D.status === 'saved' ? 'Progress saved' : D.status === 'error' || D.status === 'unavailable' ? 'Save not confirmed' : 'Autosave ready';
+    const menu = this.root.querySelector('[data-a=menu]');
+    if (menu) { menu.dataset.saveState = D.status; menu.setAttribute('aria-label', 'Menu · ' + label); menu.title = label; }
+    const note = this.root.querySelector('#autosaveNote'); if (note) note.textContent = this.autosaveNote();
+    if (!this.g.playing()) return;
+    if (D.status === 'saved' && D.latest === this.g.saveNotice && this.saveToastRevision !== D.latest) { this.saveToastRevision = D.latest; this.toast('Progress saved', 'good'); }
+    if ((D.status === 'error' || D.status === 'unavailable') && this.saveError !== D.lastErr) { this.saveError = D.lastErr; this.toast('Save not confirmed. Keep a save file or code before leaving.', 'bad'); }
+  }
   autosaveNote() {
+    const D = this.g.durable;
+    if (D?.status === 'pending') return 'Saving progress… Wait for saving to finish before leaving.';
+    if (D && (D.status === 'error' || D.status === 'unavailable')) return 'This browser could not confirm the latest save. A browser or server copy may still be available. Export a save code or file to keep your progress.';
+    if (D?.status === 'saved') return 'Progress saved in this browser. Codes and files remain separate backups you can move between devices.';
     const L = this.g.localsave;
     if (L?.lastErr === 'storage full') return 'Latest autosave failed: browser storage is full. Export a save code or file now to keep your progress.';
     if (L && L.ok) return L.lastAt ? `Autosave is on in this browser (${this.ago(L.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave, and keeps the previous save as a backup.${L.lastErr ? ' Note: ' + L.lastErr + '.' : ''} Codes and files move a game between devices.` : 'Autosave is on in this browser. It saves each in-game day and when you leave, and keeps the previous save as a backup. Codes and files move a game between devices.';

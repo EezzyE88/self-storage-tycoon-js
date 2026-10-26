@@ -1135,8 +1135,8 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  #ui .actionbar .bot { gap:4px; padding:2px 0; }
  #ui .actionbar .bot .btn, #ui .build-rotate { min-height:44px; }
  #ui .actionbar .review-body { flex:1 1 auto; }
- #ui .actionbar .build-details[open] { max-height:120px; overflow-y:auto; overscroll-behavior:contain; }
- #ui .actionbar .build-details summary { position:sticky; top:0; z-index:2; background:var(--paper); }
+ #ui .actionbar .build-details[open] { max-height:none; overflow:visible; }
+ #ui .actionbar .build-details summary { position:static; }
  #ui .actionbar .build-details .refund-note { opacity:1; color:var(--muted); }
  #ui .actionbar .access-side { margin:2px 0; }
 }
@@ -1174,4 +1174,25 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 /* Recover 48px of visible yard on short portrait phones; details retain their own scroller. */
 @media (max-width:410px) and (min-height:521px) and (max-height:740px) and (orientation:portrait) {
  #ui .actionbar:not(.placing):not(.idle-strip) { max-height:min(48dvh, calc(100dvh - var(--review-top, 116px) - 64px - var(--safe-b) - 112px)); }
+}
+
+/* Save acknowledgement uses the existing Menu footprint. */
+#ui [data-a="menu"][data-save-state] { position:relative; }
+#ui [data-a="menu"][data-save-state]::after { content:''; position:absolute; width:6px; height:6px; border-radius:50%; right:3px; top:3px; background:var(--green); }
+#ui [data-a="menu"][data-save-state="pending"]::after { background:#f5c542; }
+#ui [data-a="menu"][data-save-state="error"]::after, #ui [data-a="menu"][data-save-state="unavailable"]::after { background:#e75e52; }
+
+/* Construction decisions keep money beside Confirm; only the details scroll. */
+#ui .actionbar .review-commitment { flex:none; border-top:1px solid var(--line); padding-top:4px; }
+#ui .actionbar .review-commitment .note { margin:2px 0; line-height:1.3; }
+#ui .actionbar .review-commitment .spending { color:var(--ink); }
+#ui .actionbar .top .cost { display:inline; margin-left:6px; font-size:16px; }
+#ui .actionbar .top .cost small { display:block; }
+#ui .actionbar .bot > [data-a="confirm"] { margin-left:auto; }
+@media (max-width:700px) and (min-height:521px) {
+ #ui .actionbar:not(.placing):not(.idle-strip) { max-height:min(58dvh, calc(100dvh - var(--review-top, 116px) - 64px - var(--safe-b) - 64px)); }
+ #ui:has(.actionbar:not(.placing):not(.idle-strip)) .tut .how-line { display:none; }
+ /* The same measured tutorial boundary used by reviews also reserves the card
+    and its required button above expanded Statement/Hire and other panels. */
+ #ui.has-sheet:has(#tut .tut:not(.offer):not(.scen)) .sheet.tall { max-height:calc(100dvh - var(--review-top, 176px) - 64px - var(--safe-b)); }
 }

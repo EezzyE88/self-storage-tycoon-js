@@ -14,6 +14,7 @@ import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { cloud } from './cloud.js';
 import { localsave } from './localsave.js';
+import { durablesave, checkpointRecord, recoverCheckpoints } from './durablesave.js';
 import { savearchive } from './savearchive.js';
 import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
@@ -31,7 +32,13 @@ const canvas = document.getElementById('view');
 const game = {
   sim: null, rend: null, ui: null, audio: new Audio(), showFps: false, acc: 0,
   company: null,
+  durable: typeof durablesave === 'undefined' ? null : durablesave,
+  beginSaveSession(replace = true) {
+    this.saveSeq = (this.saveSeq || 0) + 1; this.saving = false;
+    if (replace) return this.durable?.replace();
+  },
   newGame(kind, opts) {
+    this.beginSaveSession();
     let sim, name;
     if (kind && kind.startsWith('sc:')) { sim = makeScenario(kind.slice(3)); name = SCENARIOS[kind.slice(3)].name; }
     else if (kind === 'custom') { sim = makeSandbox(opts); name = sandboxName(sim.s); }
@@ -162,11 +169,12 @@ const game = {
       return { ok: true, company, view, meta };
     } catch (e) { console.warn(e); return { ok: false, msg: 'Unreadable save' }; }
   },
-  applyLoad(prep) {
+  applyLoad(prep, resume = false) {
+    this.beginSaveSession(!resume);
     this.company = prep.company;
     this.attach(prep.company.props[prep.company.active].sim, 'load', { view: prep.view }); this.ui.title = false; return true;
   },
-  async loadCode(code) { const prep = await this.prepareLoad(code); return prep.ok ? this.applyLoad(prep) : false; },
+  async loadCode(code, resume = false) { const prep = await this.prepareLoad(code); return prep.ok ? this.applyLoad(prep, resume) : false; },
   saveMeta() {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
     return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name };
@@ -183,14 +191,17 @@ const game = {
     const company = this.company, sim = this.sim;
     // Capture both before compression yields. Leaving must reach local storage synchronously.
     const json = this.saveJSON(), meta = this.saveMeta(), day = sim.day;
+    const ticket = this.durable?.ticket();
+    if (hide && ticket) this.saveNotice = ticket.revision;
     this.saving = true;
     try {
       const code = hide ? this.rawSaveCode(json) : await this.saveCode(json);
       if (seq !== this.saveSeq || company !== this.company) return false;
-      const local = localsave.put(code, meta);
-      if (hide) { if (cloud.ok !== false || !local) cloud.beacon(code, meta); return local; }
-      const remote = cloud.ok === false && local ? false : await cloud.put(code, meta);
-      return local || remote;
+      const local = localsave.put(code, meta, ticket);
+      const committed = this.durable ? this.durable.put({ code, meta, at: Math.floor(ticket.atMs / 1000), v: 1 }, ticket) : Promise.resolve({ ok: false });
+      if (hide) { if (cloud.ok !== false || !local) cloud.beacon(code, meta); return (await committed).ok || local; }
+      const [durable, remote] = await Promise.all([committed, cloud.ok === false && local ? false : cloud.put(code, meta)]);
+      return durable.ok || local || remote;
     }
     catch (e) { return false; } finally {
       if (seq === this.saveSeq) { this.saving = false; this.lastAuto = performance.now(); this.lastAutoDay = company === this.company ? day : -1; }
@@ -210,8 +221,8 @@ const game = {
   // Autosave the game just loaded and report whether it reached browser storage (not only the save server).
   async persistLoaded() {
     for (let i = 0; i < 100 && this.saving; i++) await new Promise((r) => setTimeout(r, 20)); // let an in-flight save finish
-    const before = localsave.lastAt; const ok = await this.autosave();
-    return !!ok && localsave.lastAt !== before;
+    const before = localsave.lastAt; const ok = await this.autosave(true);
+    return !!ok && (this.durable?.ok ? this.durable.status === 'saved' : localsave.lastAt !== before);
   },
   // What would become the "previous game" if the running (or last autosaved) game were replaced now.
   async outgoingRecord(fallback) {
@@ -425,12 +436,27 @@ function tick(now) {
 requestAnimationFrame(loop);
 window.addEventListener('resize', () => game.rend.resize());
 window.addEventListener('pagehide', () => { game.ui.reserveWait?.interrupt('Page left active play.'); if (!document.hidden) game.autosave(true); });
-// offer "Continue" on the title screen: newest of the browser autosave and the save server, with the browser backup as fallback
+// Offer Continue only after checking durable and legacy records. No late server result may replace an active game.
 game.localsave = localsave; game.BUILD = BUILD;
-{ const L = localsave.get(); const pick = (d, src) => d ? { ...d, src } : null;
-  const offer = (cl) => { const cands = [pick(L.main, 'browser'), pick(cl, 'server')].filter(Boolean).sort((a, b) => (b.at || 0) - (a.at || 0));
-    game.ui.contSave = cands[0] || pick(L.backup, 'backup'); game.ui.contBackup = L.main && L.backup ? pick(L.backup, 'backup') : null; if (game.ui.title) game.ui.showTitle(); };
-  offer(null); cloud.get().then((d) => offer(d)); }
+game.saveStartup = true; game.ui.showTitle();
+durablesave.onChange = () => game.ui.renderSaveStatus?.();
+localsave.onClear = () => game.beginSaveSession();
+game.startupReady = (async () => {
+  await durablesave.ready;
+  const L = localsave.get(), D = durablesave.snapshot;
+  durablesave.observe([L.main, L.backup]);
+  let timer;
+  const remote = await Promise.race([cloud.get(), new Promise(resolve => { timer = setTimeout(() => resolve(null), 2000); })]);
+  clearTimeout(timer);
+  const pick = (record, src) => checkpointRecord(record) && durablesave.allows(record) ? { ...record, src } : null;
+  const candidates = [pick(D?.main, 'durable'), pick(L.main, 'browser'), pick(remote, 'server'), pick(D?.backup, 'backup'), pick(L.backup, 'backup')].filter(Boolean);
+  const recovered = await recoverCheckpoints(candidates, code => game.prepareLoad(code));
+  game.ui.contSave = recovered.main; game.ui.contBackup = recovered.backup;
+  game.ui.contRecovery = recovered.damaged ? 'The latest autosave could not be read, so an earlier valid save was used. ' : '';
+  durablesave.accept(recovered.main);
+  game.saveStartup = false;
+  if (game.ui.title) game.ui.showTitle();
+})();
 
 // ---------------------------------------------------------------- input
 const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null; let lastMapTap = null; let mapTapTimer = null;

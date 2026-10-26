@@ -1099,6 +1099,50 @@
         "minimum_pass_lines": 14,
         "timeout": 180,
         "evidence": "production game/UI save paths and localStorage double; no abrupt-browser or physical-device claim"
+      },
+      {
+        "id": "tdurable_checkpoint",
+        "command": [
+          "@node",
+          "tests/headless/tdurable_checkpoint.mjs"
+        ],
+        "completion": "ALL PASS: 17 durable checkpoint groups \\(queue/failure model; real IndexedDB separately browser-tested\\)",
+        "minimum_pass_lines": 17,
+        "timeout": 180,
+        "evidence": "production adapter lifecycle, real game save/replace/clear handlers over a controlled commit model; actual process-kill verification separately required"
+      },
+      {
+        "id": "tshort_screen_review",
+        "command": [
+          "@node",
+          "tests/headless/tshort_screen_review.mjs"
+        ],
+        "completion": "ALL PASS: short-screen review financial parity",
+        "minimum_pass_lines": 4,
+        "timeout": 60,
+        "evidence": "actual production review and financialPosition; controlled disposable fixtures; browser geometry checked separately"
+      },
+      {
+        "id": "tacquisition_affordability",
+        "command": [
+          "@node",
+          "tests/headless/tacquisition_affordability.mjs"
+        ],
+        "completion": "4 acquisition-affordability groups passed",
+        "minimum_pass_lines": 4,
+        "timeout": 90,
+        "evidence": "current production offers/UI handlers/acquisition engine; controlled fixtures and stub DOM; browser evidence separate"
+      },
+      {
+        "id": "tfirst_gate_guidance",
+        "command": [
+          "@node",
+          "tests/headless/tfirst_gate_guidance.mjs"
+        ],
+        "completion": "8 first-gate guidance groups passed",
+        "minimum_pass_lines": 8,
+        "timeout": 90,
+        "evidence": "current production gate planning, UI preview/Confirm and actual acquisition; controlled fixtures and stub DOM; rendered checks separate"
       }
     ],
     "historical": [
