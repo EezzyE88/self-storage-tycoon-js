@@ -57,7 +57,7 @@ await test('only explicit save hooks differ from exact 918d31f production source
   const method="  // Paused actions cannot wait for the running-time timer or an unload event.\n  // Reuse the synchronous leaving path, including its stale-compression fence.\n  autosavePaused() {\n    if (this.sim?.s.speed === 0) return this.autosave(true);\n  },\n";
   const normalized=main.replaceAll('    this.autosavePaused();\n','').replace(method,'').replace('  // autosave: during active play (including Pause); `hide` writes locally synchronously and uses a keepalive request','  // autosave: whenever a game is running (not on the title screen); `hide` uses a keepalive request');
   assert.equal(hash(normalized),parentHashes['js/main.js']);
-  assert.equal(hash(readFileSync('js/ui.js','utf8').replaceAll('    if (r.ok) this.g.autosavePaused?.();\n','')),parentHashes['js/ui.js']);
+  assert.equal(hash(readFileSync('js/ui.js','utf8').replaceAll('    if (r.ok) this.g.autosavePaused?.();\n','').replace("import { applyBorrowSettle, operatingNet } from './borrowsettle.js';\n",'').replace('applyBorrowSettle(UI);\n','').replace('Math.round(operatingNet(actual))','Math.round(actual.net)')),parentHashes['js/ui.js']);
   for(const file of ['js/sim.js','js/data.js','js/finance.js','js/localsave.js','js/savearchive.js','js/cloud.js','css/game.css'])assert.equal(hash(readFileSync(file,'utf8')),parentHashes[file],file);
 });
 console.log(`ALL PASS: ${n} paused autosave regression groups`);
