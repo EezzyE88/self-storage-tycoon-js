@@ -1099,6 +1099,17 @@
         "minimum_pass_lines": 14,
         "timeout": 180,
         "evidence": "production game/UI save paths and localStorage double; no abrupt-browser or physical-device claim"
+      },
+      {
+        "id": "tdurable_checkpoint",
+        "command": [
+          "@node",
+          "tests/headless/tdurable_checkpoint.mjs"
+        ],
+        "completion": "ALL PASS: 16 durable checkpoint groups \\(queue/failure model; real IndexedDB separately browser-tested\\)",
+        "minimum_pass_lines": 16,
+        "timeout": 180,
+        "evidence": "production adapter lifecycle, real game save/replace/clear handlers over a controlled commit model; actual process-kill verification separately required"
       }
     ],
     "historical": [

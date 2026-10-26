@@ -253,6 +253,7 @@ export class UI {
     const el = e.target.closest('[data-a]'); if (!el) return;
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
+    if (this.g.saveStartup) return;
     if(!['reserveStart','reserveResume','reserveStop','speed'].includes(a))this.reserveWait?.interrupt('You opened another control.');
     // Navigating out of the Requests dialog: close it first so the destination is never opened underneath it.
     if (this.requestPanel && ['focus', 'overlay', 'requestHelp', 'feedback'].includes(a) && el.closest('.modal')) this.leaveRequests(a === 'requestHelp' || a === 'feedback');
@@ -342,7 +343,7 @@ export class UI {
       case 'handbook': this.showHandbook(); this.sfx('click'); break;
       case 'modalClose': this.closeModal(); break;
       case 'tabFromModal': this.closeModal(); this.setTab(v); break;
-      case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); }); break;
+      case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.g.autosave?.(true); this.sfx('confirm'); }); break;
       case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then((r) => { if (stored(r) || !this.g.localsave.ok) run(); else this.toast(storeFailText(r, 'no new game was started'), 'bad'); }); break; }
       case 'replaceNo': this.pendingNew = null; if (this.title) this.showTitle(); else this.closeModal(); break;
       case 'restoreKept': this.restoreKept(); break;
@@ -356,7 +357,7 @@ export class UI {
       case 'sbAdv': this.sbAdv = !this.sbAdv; this.showSandbox(); this.sfx('click'); break;
       case 'sbFunds': this.do({ type: 'sbFunds', amt: +v }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
       case 'sbSet': this.do({ type: 'sbSet', k: el.dataset.k, v: JSON.parse(v) }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
-      case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.sfx('confirm'); }); break; }
+      case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.g.autosave?.(true); this.sfx('confirm'); }); break; }
       case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
       case 'acquire': this.showAcquisitionReview(v, el.dataset.m); break;
       case 'acquisitionConfirm': this.confirmAcquisitionReview(); break;
@@ -410,9 +411,9 @@ export class UI {
       case 'lens': this.g.showcase.setLens(!this.g.showcase.lensPref); this.showMenu(); break;
       case 'continue': { const d = this.contSave; if (!d) break;
         const told = (r, note) => { const m = r.meta || {}; this.closeModal(); this.sfx('confirm'); this.toast(`${note}Restored ${m.name || 'your game'}: Day ${+m.day || 1}${m.time ? ', ' + m.time : ''}, ${money(+m.cash || 0)} cash (${this.ago((r.at || 0) * 1000)}${r.src === 'server' ? ', from the save server' : ''}).`, note ? 'bad' : 'good'); };
-        this.g.loadCode(d.code).then(async (ok) => {
-          if (ok) return told(d, d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '');
-          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
+        this.g.loadCode(d.code, true).then(async (ok) => {
+          if (ok) { this.g.autosave?.(true); return told(d, this.contRecovery || (d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '')); }
+          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code, true)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
           this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded, and no backup worked. Load a save code or file instead.', 'bad');
         }); break; }
       case 'loadCode': { const ta = this.root.querySelector('#loadTa'); this.importSave(ta ? ta.value : '', 'code'); break; }
@@ -2670,6 +2671,7 @@ export class UI {
   keptLabel() { const k = this.g.localsave && this.g.localsave.getKept(); if (!k) return ''; const m = k.meta || {}; return `${esc(m.name || 'Saved game')} · Day ${+m.day || 1} · ${money(+m.cash || 0)}`; }
   showTitle() {
     this.title = true;
+    if (this.g.saveStartup) { this.$('modal').innerHTML = '<div class="title"><h1>Self Storage Tycoon</h1><p role="status">Checking saved progress…</p></div>'; return; }
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
       <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
@@ -2678,7 +2680,21 @@ export class UI {
       <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
   }
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
+  renderSaveStatus() {
+    const D = this.g.durable; if (!D || !this.root) return;
+    const label = D.status === 'pending' ? 'Saving progress' : D.status === 'saved' ? 'Progress saved' : D.status === 'error' || D.status === 'unavailable' ? 'Save not confirmed' : 'Autosave ready';
+    const menu = this.root.querySelector('[data-a=menu]');
+    if (menu) { menu.dataset.saveState = D.status; menu.setAttribute('aria-label', 'Menu · ' + label); menu.title = label; }
+    const note = this.root.querySelector('#autosaveNote'); if (note) note.textContent = this.autosaveNote();
+    if (!this.g.playing()) return;
+    if (D.status === 'saved' && D.latest === this.g.saveNotice && this.saveToastRevision !== D.latest) { this.saveToastRevision = D.latest; this.toast('Progress saved', 'good'); }
+    if ((D.status === 'error' || D.status === 'unavailable') && this.saveError !== D.lastErr) { this.saveError = D.lastErr; this.toast('Save not confirmed. Keep a save file or code before leaving.', 'bad'); }
+  }
   autosaveNote() {
+    const D = this.g.durable;
+    if (D?.status === 'pending') return 'Saving progress… Wait for saving to finish before leaving.';
+    if (D && (D.status === 'error' || D.status === 'unavailable')) return 'This browser could not confirm the latest save. A browser or server copy may still be available. Export a save code or file to keep your progress.';
+    if (D?.status === 'saved') return 'Progress saved in this browser. Codes and files remain separate backups you can move between devices.';
     const L = this.g.localsave;
     if (L?.lastErr === 'storage full') return 'Latest autosave failed: browser storage is full. Export a save code or file now to keep your progress.';
     if (L && L.ok) return L.lastAt ? `Autosave is on in this browser (${this.ago(L.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave, and keeps the previous save as a backup.${L.lastErr ? ' Note: ' + L.lastErr + '.' : ''} Codes and files move a game between devices.` : 'Autosave is on in this browser. It saves each in-game day and when you leave, and keeps the previous save as a backup. Codes and files move a game between devices.';
