@@ -2,11 +2,12 @@
 // Runtime behavioral tests continue to execute current production methods.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { shortScreenBaseline } from './short_screen_baseline.mjs';
 import { createHash } from 'node:crypto';
 const declarations = JSON.parse(readFileSync(new URL('./durable-allowlist.json', import.meta.url)));
 const hash = text => createHash('sha256').update(text).digest('hex');
 export function durableBaseline(file) {
-  let text = readFileSync(file, 'utf8');
+  let text = shortScreenBaseline(file);
   const entry = declarations.files[file]; if (!entry) return text;
   assert.equal(hash(text), entry.current_sha256, 'exact declared durable change: ' + file);
   for (const hunk of entry.hunks) {

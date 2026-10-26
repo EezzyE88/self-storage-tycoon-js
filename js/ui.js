@@ -1069,7 +1069,6 @@ export class UI {
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
-        status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
         if(this.sim.financialPosition({spend:R.cost,extraDaily:this.sim.planDailyCost(R)}).available<0){
           status += '<button class="btn sm" data-a="fundingReview">Review funding · optional</button>';
           if(sandboxReserveQuote(this.sim,R.args))status += '<button class="btn sm" data-a="sandboxReserveStart">Fast-forward to reserve</button><p class="note">Runs normal time for up to 7 game days, then pauses. Owner decisions stop the wait. Stop or Pause ends it. Return to this placement and Confirm separately to buy.</p>';
@@ -1081,11 +1080,14 @@ export class UI {
     }
     const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
     const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
+    // Keep the same financial calculation beside Confirm, outside optional review details.
+    const daily = this.sim.planDailyCost(R);
+    const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });
+    const commitment = !this.sim.s.creative && R.cost ? `<div class="review-commitment"><p class="note spending">Cash after build: <b>${money(P.cash)}</b><br>Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br>Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br>Added operating costs: ${money(daily, true)}/day once operating.</p></div>` : '';
     const wasOpen = !!box.firstChild;
-    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${status}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
-      <div class="bot"><div class="cost">${costTxt}</div>
+    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
+      ${commitment}<div class="bot">
       ${this.rotationHtml()}
-      ${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
       <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;

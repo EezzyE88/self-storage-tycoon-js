@@ -1110,6 +1110,17 @@
         "minimum_pass_lines": 17,
         "timeout": 180,
         "evidence": "production adapter lifecycle, real game save/replace/clear handlers over a controlled commit model; actual process-kill verification separately required"
+      },
+      {
+        "id": "tshort_screen_review",
+        "command": [
+          "@node",
+          "tests/headless/tshort_screen_review.mjs"
+        ],
+        "completion": "ALL PASS: short-screen review financial parity",
+        "minimum_pass_lines": 4,
+        "timeout": 60,
+        "evidence": "actual production review and financialPosition; controlled disposable fixtures; browser geometry checked separately"
       }
     ],
     "historical": [
