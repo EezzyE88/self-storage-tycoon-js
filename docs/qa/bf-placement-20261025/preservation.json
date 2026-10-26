@@ -1,0 +1,19 @@
+{
+  "parent": "62d27478e8e6fdafc8a747c290e0993872611f90",
+  "source_commit": "59717ddffeeaf5e68dde76dbb11cbc44d4566e1e",
+  "unchanged_tracked_historical_documents_and_evidence": 1310,
+  "production_changes": [
+    "js/sim.js",
+    "js/ui.js"
+  ],
+  "other_production_files_byte_identical": 47,
+  "excluded_slices": [
+    "A",
+    "C",
+    "D",
+    "E",
+    "G"
+  ],
+  "physical_safari": "NOT TESTED",
+  "browser": "NOT TESTED"
+}
