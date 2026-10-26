@@ -439,6 +439,7 @@ export class UI {
   }
   do(action, feedback = false) {
     const r = this.sim.dispatch(action) || {};
+    if (r.ok) this.g.autosavePaused?.();
     if (feedback && r.msg) this.toast(r.msg, r.ok ? 'good' : 'bad');
     if (feedback) this.sfx(r.ok ? 'click' : 'refuse');
     return r;
@@ -1014,6 +1015,7 @@ export class UI {
     const finishesWait=this.reserveWait?.pending&&this.reserveWait.matches(this.plan.args);
     const finishesResult=this.reserveResult&&this.reserveWait?.matches(this.plan.args,this.reserveResult);
     const r = this.sim.dispatch({ type: 'build', ...this.plan.args, ...(projectKey ? { projectKey } : {}) });
+    if (r.ok) this.g.autosavePaused?.();
     if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
     if(r.ok&&(finishesWait||finishesResult)){this.reserveResult=null;this.reserveNotice=null;this.renderTut(true);}
     if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }

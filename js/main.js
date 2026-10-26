@@ -48,6 +48,7 @@ const game = {
     this.ui?.reserveWait?.stop('Property changed.');
     const speed = this.sim.s.speed; C.active = k; const sim = C.props[k].sim; sim.s.speed = speed;
     this.attach(sim, 'switch');
+    this.autosavePaused();
   },
   tierInfo() { return portfolioCareer(this.company ? this.company.props : [{ sim: this.sim }]); },
   syncTier() { // Once an hour, from the completed company minute; tiers never go down.
@@ -92,12 +93,14 @@ const game = {
     sim.money(WORKING_FLOAT, 'other', 'Opening working cash from ' + C.props[C.active].name);
     C.props.push({ name, sim }); if (this.ui) this.ui.setMeta(this.metaName(), modeLabel(src.s));
     this.note(C.active, `Acquired ${name} for $${of.price.toLocaleString()}`);
+    this.autosavePaused();
     return { ok: true, msg: `Acquired ${name}. Open the Portfolio to switch to it and send it cash.` };
   },
   transfer(from, to, amt) {
     const C = this.company; const A = C && C.props[from], B = C && C.props[to]; if (!A || !B || from === to || !Number.isFinite(amt) || amt <= 0) return { ok: false, msg: 'Invalid transfer' };
     if (A.sim.s.cash < amt) return { ok: false, msg: 'Not enough cash' };
     A.sim.money(-amt, 'other', 'Transfer to ' + B.name); B.sim.money(amt, 'other', 'Transfer from ' + A.name);
+    this.autosavePaused();
     return { ok: true, msg: `Sent $${amt.toLocaleString()} to ${B.name}` };
   },
   note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },
@@ -168,7 +171,12 @@ const game = {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
     return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name };
   },
-  // autosave: whenever a game is running (not on the title screen); `hide` uses a keepalive request
+  // Paused actions cannot wait for the running-time timer or an unload event.
+  // Reuse the synchronous leaving path, including its stale-compression fence.
+  autosavePaused() {
+    if (this.sim?.s.speed === 0) return this.autosave(true);
+  },
+  // autosave: during active play (including Pause); `hide` writes locally synchronously and uses a keepalive request
   async autosave(hide) {
     if (!this.ui || this.ui.title || (this.saving && !hide)) return false;
     const seq = this.saveSeq = (this.saveSeq || 0) + 1;

@@ -1088,6 +1088,17 @@
         "minimum_pass_lines": 73,
         "timeout": 180,
         "evidence": "real planning and UI handlers; disposable native fixtures only; rendered phone layouts and physical Safari not established"
+      },
+      {
+        "id": "tpaused_autosave",
+        "command": [
+          "@node",
+          "tests/headless/tpaused_autosave.mjs"
+        ],
+        "completion": "ALL PASS: 14 paused autosave regression groups",
+        "minimum_pass_lines": 14,
+        "timeout": 180,
+        "evidence": "production game/UI save paths and localStorage double; no abrupt-browser or physical-device claim"
       }
     ],
     "historical": [

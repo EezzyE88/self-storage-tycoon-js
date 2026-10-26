@@ -1,0 +1,74 @@
+PASS du5x5 facing 0, drag -1: touched door edge, single and three-unit row
+PASS du5x5 facing 0, drag 1: touched door edge, single and three-unit row
+PASS du5x5 facing 1, drag -1: touched door edge, single and three-unit row
+PASS du5x5 facing 1, drag 1: touched door edge, single and three-unit row
+PASS du5x5 facing 2, drag -1: touched door edge, single and three-unit row
+PASS du5x5 facing 2, drag 1: touched door edge, single and three-unit row
+PASS du5x5 facing 3, drag -1: touched door edge, single and three-unit row
+PASS du5x5 facing 3, drag 1: touched door edge, single and three-unit row
+PASS iu5x5 facing 0, drag -1: touched door edge, single and three-unit row
+PASS iu5x5 facing 0, drag 1: touched door edge, single and three-unit row
+PASS iu5x5 facing 1, drag -1: touched door edge, single and three-unit row
+PASS iu5x5 facing 1, drag 1: touched door edge, single and three-unit row
+PASS iu5x5 facing 2, drag -1: touched door edge, single and three-unit row
+PASS iu5x5 facing 2, drag 1: touched door edge, single and three-unit row
+PASS iu5x5 facing 3, drag -1: touched door edge, single and three-unit row
+PASS iu5x5 facing 3, drag 1: touched door edge, single and three-unit row
+PASS du5x10 facing 0, drag -1: touched door edge, single and three-unit row
+PASS du5x10 facing 0, drag 1: touched door edge, single and three-unit row
+PASS du5x10 facing 1, drag -1: touched door edge, single and three-unit row
+PASS du5x10 facing 1, drag 1: touched door edge, single and three-unit row
+PASS du5x10 facing 2, drag -1: touched door edge, single and three-unit row
+PASS du5x10 facing 2, drag 1: touched door edge, single and three-unit row
+PASS du5x10 facing 3, drag -1: touched door edge, single and three-unit row
+PASS du5x10 facing 3, drag 1: touched door edge, single and three-unit row
+PASS iu5x10 facing 0, drag -1: touched door edge, single and three-unit row
+PASS iu5x10 facing 0, drag 1: touched door edge, single and three-unit row
+PASS iu5x10 facing 1, drag -1: touched door edge, single and three-unit row
+PASS iu5x10 facing 1, drag 1: touched door edge, single and three-unit row
+PASS iu5x10 facing 2, drag -1: touched door edge, single and three-unit row
+PASS iu5x10 facing 2, drag 1: touched door edge, single and three-unit row
+PASS iu5x10 facing 3, drag -1: touched door edge, single and three-unit row
+PASS iu5x10 facing 3, drag 1: touched door edge, single and three-unit row
+PASS du10x10 facing 0, drag -1: touched door edge, single and three-unit row
+PASS du10x10 facing 0, drag 1: touched door edge, single and three-unit row
+PASS du10x10 facing 1, drag -1: touched door edge, single and three-unit row
+PASS du10x10 facing 1, drag 1: touched door edge, single and three-unit row
+PASS du10x10 facing 2, drag -1: touched door edge, single and three-unit row
+PASS du10x10 facing 2, drag 1: touched door edge, single and three-unit row
+PASS du10x10 facing 3, drag -1: touched door edge, single and three-unit row
+PASS du10x10 facing 3, drag 1: touched door edge, single and three-unit row
+PASS iu10x10 facing 0, drag -1: touched door edge, single and three-unit row
+PASS iu10x10 facing 0, drag 1: touched door edge, single and three-unit row
+PASS iu10x10 facing 1, drag -1: touched door edge, single and three-unit row
+PASS iu10x10 facing 1, drag 1: touched door edge, single and three-unit row
+PASS iu10x10 facing 2, drag -1: touched door edge, single and three-unit row
+PASS iu10x10 facing 2, drag 1: touched door edge, single and three-unit row
+PASS iu10x10 facing 3, drag -1: touched door edge, single and three-unit row
+PASS iu10x10 facing 3, drag 1: touched door edge, single and three-unit row
+PASS du10x20 facing 0, drag -1: touched door edge, single and three-unit row
+PASS du10x20 facing 0, drag 1: touched door edge, single and three-unit row
+PASS du10x20 facing 1, drag -1: touched door edge, single and three-unit row
+PASS du10x20 facing 1, drag 1: touched door edge, single and three-unit row
+PASS du10x20 facing 2, drag -1: touched door edge, single and three-unit row
+PASS du10x20 facing 2, drag 1: touched door edge, single and three-unit row
+PASS du10x20 facing 3, drag -1: touched door edge, single and three-unit row
+PASS du10x20 facing 3, drag 1: touched door edge, single and three-unit row
+PASS iu10x20 facing 0, drag -1: touched door edge, single and three-unit row
+PASS iu10x20 facing 0, drag 1: touched door edge, single and three-unit row
+PASS iu10x20 facing 1, drag -1: touched door edge, single and three-unit row
+PASS iu10x20 facing 1, drag 1: touched door edge, single and three-unit row
+PASS iu10x20 facing 2, drag -1: touched door edge, single and three-unit row
+PASS iu10x20 facing 2, drag 1: touched door edge, single and three-unit row
+PASS iu10x20 facing 3, drag -1: touched door edge, single and three-unit row
+PASS iu10x20 facing 3, drag 1: touched door edge, single and three-unit row
+PASS four UI rotations preserve a reverse drag, count, touch anchor, quotation and manual Pause
+PASS diagonal reverse drags follow the actual row axis when rotated
+PASS incomplete interior suggestion exposes blockers before and after Move there without spending or opening
+PASS suggestions retain row count, revalidate through real planning and cannot bypass physical frontage
+PASS climate changes invalidate cached readiness and list all missing capacity requirements
+PASS F reaches real frontage six cells away while retaining a single unit
+PASS another property cannot reuse a cached placement from an identical preview key
+PASS additional invalid placement blockers remain accessible and do not erase incomplete setup reasons
+PASS tutorial suggested placement remains reachable in both idle and planned build bars
+73 B/F placement groups passed; no browser or physical-device claim

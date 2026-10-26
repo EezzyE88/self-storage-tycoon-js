@@ -1,0 +1,13 @@
+PASS paused expansion loan is durable immediately without a frame or leave event
+file:///workspace/scratch/59ecf19363d3/bf-placement/js/ui.js:2469
+    this.$('pname').innerHTML = `${esc(name)}<small>${esc(mode)}</small>`;
+         ^
+
+TypeError: this.$ is not a function
+    at UI.setMeta (file:///workspace/scratch/59ecf19363d3/bf-placement/js/ui.js:2469:10)
+    at Object.acquire (evalmachine.<anonymous>:64:55)
+    at file:///workspace/scratch/59ecf19363d3/bf-placement/tests/headless/tpaused_autosave.mjs:41:125
+    at test (file:///workspace/scratch/59ecf19363d3/bf-placement/tests/headless/tpaused_autosave.mjs:39:44)
+    at file:///workspace/scratch/59ecf19363d3/bf-placement/tests/headless/tpaused_autosave.mjs:41:7
+
+Node.js v24.22.1

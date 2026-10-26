@@ -1,0 +1,14 @@
+evalmachine.<anonymous>:184
+  savearchive,
+  ^
+
+ReferenceError: savearchive is not defined
+    at evalmachine.<anonymous>:184:3
+    at Script.runInContext (node:vm:149:12)
+    at Object.runInContext (node:vm:301:6)
+    at fixture (file:///workspace/scratch/59ecf19363d3/bf-placement/tests/headless/tpaused_autosave.mjs:20:6)
+    at file:///workspace/scratch/59ecf19363d3/bf-placement/tests/headless/tpaused_autosave.mjs:39:103
+    at test (file:///workspace/scratch/59ecf19363d3/bf-placement/tests/headless/tpaused_autosave.mjs:38:44)
+    at file:///workspace/scratch/59ecf19363d3/bf-placement/tests/headless/tpaused_autosave.mjs:39:7
+
+Node.js v24.22.1
