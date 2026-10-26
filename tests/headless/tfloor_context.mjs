@@ -99,6 +99,19 @@ const intentional=(from,to)=>{assert.ok(expectedSim.includes(from),'declared sim
 intentional("  autoOpenEnabled() {\n    const s=this.s;\n    return s.mode==='sandbox'&&!s.scenario&&!s.lesson&&!s.tut?.on&&!this.unlimited();\n  }","  autoOpenEnabled() {\n    return true;\n  }");
 intentional("    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No commissioned rent-ready units');","    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No operating rent-ready units');");
 intentional("    // 1. commission rent-ready units\n    if (s.open && this.objs('unit').some((u) => u.cstate === 'ready')) { const r = this.act_commission({ all: true }); if (r.ok) this.mgr('Opened rent-ready units for rental'); }\n    // 2. escalate stalled repairs to vendors","    // 1. escalate stalled repairs to vendors. Finished eligible units open automatically for every player.");
+// B/F intentionally changes only explicit-rotation footprint anchors in the simulation.
+// Keep the complete-file comparison: any other simulation drift still fails.
+intentional(`      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
+      const x = Math.min(a.a.x,a.b.x), y = Math.min(a.a.y,a.b.y);
+      units = Array.from({length:n}, (_,k) => ({x:x+(axisX?k*sz.w:0), y:y+(axisX?0:k*sz.w),
+        w:axisX?sz.w:sz.d, h:axisX?sz.d:sz.w, dir:[...dir], f}));`,
+`      // The touched cell sits on the door edge; the row grows from it in the drag direction.
+      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
+      units = Array.from({length:n}, (_,k) => {
+        const along = (axisX ? a.a.x : a.a.y) + (step > 0 ? k * sz.w : -(k + 1) * sz.w + 1);
+        const perp = (axisX ? a.a.y : a.a.x) - ((axisX ? dir[1] : dir[0]) > 0 ? sz.d - 1 : 0);
+        return axisX ? {x:along, y:perp, w:sz.w, h:sz.d, dir:[...dir], f} : {x:perp, y:along, w:sz.d, h:sz.w, dir:[...dir], f};
+      });`);
 assert.equal(readFileSync('js/sim.js','utf8'),expectedSim);
 // Fast-reserve intentionally changed main's clock dispatch. Preserve its exact verified implementation.
 assert.equal(readFileSync('js/main.js','utf8'),execFileSync('git',['show','3c92a5eb6a8d906264e9019e26fa24a100bffb31:js/main.js'],{encoding:'utf8'}));
