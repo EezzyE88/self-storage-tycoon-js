@@ -936,7 +936,10 @@ export class UI {
     if(!guide?.args){this.toast('No suggested gate is available. Review the current property and front fence.','bad');return false;}
     const a=guide.args;
     this.pauseForPopup('review');this.setTab(null);this.setView('ext');this.cat='site';this.pickTool('gate');
-    this.rend.lookAt(a.a.x+.5,a.a.y+.5);
+    // A distant parcel overview cannot pan its front fence above a phone review
+    // within the camera bounds. This explicit preview brings the gate into view.
+    if(this.rend.zoom<1.5)this.rend.zoomBy?.(1.5/this.rend.zoom);
+    this.rend.lookAt(a.a.x,a.a.y);
     this.planArgs={a:{...a.a},b:{...a.b}};this.replan();
     return true;
   }
@@ -1097,7 +1100,7 @@ export class UI {
       const near = T.unit && (R.status === 'invalid' || R.missing?.includes(NO_AISLE)) ? this.nearestValidPlacement() : null;
       status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>` + (R.status === 'invalid' ? more : '') + (near ? `<div class="status idle near-valid"><span class="ic">&#8599;</span><span>Nearest buildable spot: ${esc(near.label)}${near.missing.length ? ` <small>Still needs: ${esc(near.missing.join('; '))}</small>` : ''}</span><button class="btn sm" data-a="snapPlacement">Move there</button></div>` : '') + (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
-      if(this.tool==='gate')status+=this.firstGateHtml(this.firstGateGuidance());
+      if(this.tool==='gate'&&R.status==='invalid')status+=this.firstGateHtml(this.firstGateGuidance());
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
@@ -1155,6 +1158,7 @@ export class UI {
     const args = this.plan?.args;
     if (!args?.a || !args?.b) return false;
     const shapes = [...(this.plan.units || []), ...(this.plan.creates || []).filter(c => c.w && c.h)];
+    if(this.tool==='gate')for(const c of this.plan.items||[])shapes.push({x:c.x,y:c.y,w:1,h:1,f:0});
     // Frame the access cells as well as the structure, so the highlighted side stays visible.
     for(const u of this.plan.units || []) if(u.dir) {
       shapes.push({x:u.dir[0]>0?u.x+u.w:u.dir[0]<0?u.x-1:u.x,
