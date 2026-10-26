@@ -28,12 +28,18 @@ for(const tool of Object.keys(TOOLS).filter(k=>TOOLS[k].unit))for(let rotation=0
   for(const count of [1,3]) {
     const b={x:a.x+(axisX?sign*(count*sz.w-1):0),y:a.y+(axisX?0:sign*(count*sz.w-1))};
     const p=sim.plan({tool,a,b,rotation,f:0});assert.equal(p.count,count);assert.equal(p.cost,TOOLS[tool].cost*count);
-    for(let k=0;k<count;k++) {
-      const along=(axisX?a.x:a.y)+(sign>0?k*sz.w:-(k+1)*sz.w+1);
-      const perp=(axisX?a.y:a.x)-((axisX?dirs[rotation][1]:dirs[rotation][0])>0?sz.d-1:0);
-      assert.deepEqual([p.units[k].x,p.units[k].y,p.units[k].w,p.units[k].h,p.units[k].dir],axisX?[along,perp,sz.w,sz.d,dirs[rotation]]:[perp,along,sz.d,sz.w,dirs[rotation]]);
+    const edge=[];
+    for(const unit of p.units) {
+      assert.deepEqual(unit.dir,dirs[rotation]);assert.deepEqual([unit.w,unit.h],axisX?[sz.w,sz.d]:[sz.d,sz.w]);
+      // Use the real door-front cells to check the user-visible contract, independently of the planner's anchor formula.
+      const cells=sim.unitFront(unit).map(c=>({x:c.x-unit.dir[0],y:c.y-unit.dir[1]}));
+      assert.ok(cells.every(c=>(axisX?c.y:c.x)===(axisX?a.y:a.x)),'all doors stay on the touched edge');
+      assert.ok(cells.every(c=>sign*((axisX?c.x:c.y)-(axisX?a.x:a.y))>=0),'the row grows with the drag');
+      edge.push(...cells.map(c=>axisX?c.x:c.y));
     }
-    const q=sim.plan({tool,a,b,rotation:(rotation+4)%4,f:0});assert.equal(q.dur,p.dur);assert.equal(q.opex,p.opex);
+    assert.ok(edge.includes(axisX?a.x:a.y),'the first unit includes the touched corner');
+    edge.sort((x,y)=>x-y);assert.equal(edge.length,count*sz.w);assert.equal(new Set(edge).size,edge.length);
+    assert.ok(edge.every((v,i)=>i===0||v===edge[i-1]+1),'the row is contiguous');
     assert.equal(new Set(p.items.map(c=>`${c.x},${c.y}`)).size,count*sz.w*sz.d);
   }
   assert.equal(JSON.stringify(sim.s),before,'previews never buy, advance time or alter saved state');
