@@ -19,7 +19,8 @@ export async function recoverCheckpoints(records, validate) {
 const failure = (message, code = 'storage') => Object.assign(new Error(message), { code });
 
 // Strict commits are bounded. A timed-out transaction is aborted, not later reported saved.
-export function indexedCheckpointStore(factory = globalThis.indexedDB, timeoutMs = 8000) {
+export function indexedCheckpointStore(factory, timeoutMs = 8000) {
+  if (factory === undefined) { try { factory = globalThis.indexedDB; } catch { factory = null; } }
   let dbPromise;
   const open = () => dbPromise ||= new Promise((resolve, reject) => {
     if (!factory) return reject(failure('Durable storage unavailable', 'unsupported'));

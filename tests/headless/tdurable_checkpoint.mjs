@@ -97,6 +97,11 @@ await test('strict unsupported status is explicit and never acknowledges a save'
   const S = store(), D = createDurableSave(S); await D.ready; S.fail = 'unsupported';
   assert.equal((await D.put(record('x'))).ok, false); assert.equal(D.ok, false); assert.equal(D.status, 'error');
 });
+await test('a denied IndexedDB getter cannot prevent the game module from loading', async () => {
+  Object.defineProperty(globalThis, 'indexedDB', { configurable: true, get() { throw new DOMException('Denied', 'SecurityError'); } });
+  const D = createDurableSave(indexedCheckpointStore()); await D.ready; assert.equal(D.ok, false);
+  delete globalThis.indexedDB;
+});
 await test('storage revisions order same-second records ahead of stale browser copies', async () => {
   const S = store(), D = createDurableSave(S); await D.ready;
   await D.put(record('first')); const first = S.data.main; await D.put(record('last'));
