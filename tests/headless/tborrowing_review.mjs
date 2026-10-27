@@ -1,5 +1,6 @@
 // Real UI actions and financial commands; disposable seeded states, no normal saves.
 import assert from 'node:assert/strict';
+import {financialContextBaseline} from './financial_context_baseline.mjs';
 import {readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import path from 'node:path';
@@ -163,11 +164,11 @@ test('construction funding context and its existing projections remain exact par
   }
   assert.ok(f.ui.creditContext().spend>0);assert.deepEqual(f.ui.creditContext(),b.ui.creditContext());
 });
-test('no production simulation, finance, Office model, entrance, CSS or save implementation changed',()=>{
+test('engine/save files remain unchanged; exact inverse of declared financial-context CSS matches parent',()=>{
   for(const name of ['sim.js','finance.js','officepanel.js','main.js','localsave.js','savearchive.js']) {
     assert.equal(readFileSync(new URL('../../js/'+name,import.meta.url),'utf8'),readFileSync(path.join(parent,'js',name),'utf8'),name);
   }
-  assert.equal(readFileSync('css/game.css','utf8'),readFileSync(path.join(parent,'css/game.css'),'utf8'));
+  assert.equal(financialContextBaseline('css/game.css'),readFileSync(path.join(parent,'css/game.css'),'utf8'));
   const f=fixture(),before=JSON.stringify(f.sim.s);act(f,'termLoanReview','10000');act(f,'modalClose');assert.equal(JSON.stringify(f.sim.s),before);
 });
 console.log(`${n} borrowing-review groups passed`);

@@ -710,6 +710,10 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 :root { --paper:#f4f7fa; --paper2:#e3eaf0; --line:#cbd5df; --muted:#536474; --tabs-h:52px; }
 #ui .hud { gap:6px; }
 #ui .hud .brand, #ui .hud .spacer { display:none; }
+#ui .hud .cash-chip, #ui .hud .cash-context { min-width:0; }
+#ui .hud .cash-context { width:100%; }
+#ui .hud .active-property { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:650; line-height:16px; color:#d5dedb; }
+#ui .modal[aria-labelledby="transfer-title"] .kv b { min-width:0; overflow-wrap:anywhere; }
 #ui .chip { border-radius:10px; box-shadow:0 2px 10px #07142130; min-height:44px; }
 #ui .speed button { min-width:44px; height:44px; }
 #ui .hud .cash { font-size:18px; }
@@ -1169,6 +1173,12 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 }
 
 /* B/F review presentation: readable setup line and phone-sized touch targets. */
+/* The cash chip's property line adds 16px; preserve the existing second control row. */
+@media (max-width:700px) {
+ #ui .hud .speed { top:67px; }
+ #ui .viewctl { top:calc(73px + var(--safe-t)); }
+ #ui .hud .career-goal { margin-top:70px; }
+}
 #ui #abar button, #ui #abar summary { min-height:44px; }
 #ui #abar .near-valid small { display:block; margin-top:4px; }
 /* Recover 48px of visible yard on short portrait phones; details retain their own scroller. */

@@ -59,7 +59,7 @@ test('career and Finance actions stay separate, preserve Pause and company data'
  calls.length=0;click(ui,'finances');assert.deepEqual(calls,[['finance']]);assert.equal(JSON.stringify(s),before);
  s.creative=true;calls.length=0;click(ui,'careerGoal');assert.deepEqual(calls,[]);
  const source=readFileSync('js/ui.js','utf8');
- assert.match(source,/<div class="chip" data-a="finances" role="button" aria-label="Open finances">/);
+ assert.match(source,/<div class="chip cash-chip" data-a="finances" role="button" aria-label="Open finances">/);
  assert.match(source,/<button class="career-goal" id="careerGoal" data-a="careerGoal" hidden>/);
 });
 console.log(`${groups} career HUD test groups passed`);

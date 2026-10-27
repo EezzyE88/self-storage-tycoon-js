@@ -5,6 +5,15 @@
   "profiles": {
     "current": [
       {
+        "id": "tfinancial_context",
+        "command": ["@node", "tests/headless/tfinancial_context.mjs"],
+        "completion": "13 financial-context groups passed",
+        "minimum_pass_lines": 13,
+        "required_objects": ["b8ce9e9f0c00fa239b33da96c19662a962a5afd6"],
+        "timeout": 180,
+        "evidence": "actual current UI review handlers and unchanged engine; historical exact-byte normalization checked separately; no rendered-device claim"
+      },
+      {
         "id": "tads",
         "command": [
           "@node",

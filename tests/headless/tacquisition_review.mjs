@@ -14,6 +14,7 @@ import {portfolioCareer} from '../../js/career.js';
 import {installTutorial} from '../../js/tutorial.js';
 import {localsave} from '../../js/localsave.js';
 import {savearchive} from '../../js/savearchive.js';
+import {financialContextBaseline} from './financial_context_baseline.mjs';
 const parent=resolve(process.argv[2]);
 const {UI:ParentUI}=await import(pathToFileURL(join(parent,'js/ui.js')));
 function gameAt(dir) {
@@ -135,7 +136,7 @@ test('review names are escaped and no transient review data is added to saved st
   const before=snap(f);review(f);assert.equal(snap(f),before);assert.doesNotMatch(f.boxes.modal.innerHTML,/<script>|<img src=x>|<b>Offer/);
   assert.match(f.boxes.modal.innerHTML,/&lt;b&gt;Offer/);click(f,'modalClose');assert.equal(snap(f),before);
 });
-test('unchanged simulation, prices, save schema, CSS and prior evidence remain byte-identical to parent',()=>{
-  for(const file of ['js/main.js','js/sim.js','js/data.js','js/finance.js','js/localsave.js','js/savearchive.js','js/cloud.js','css/game.css'])assert.deepEqual(readFileSync(file),readFileSync(join(parent,file)),file);
+test('engine/save files remain unchanged; exact inverse of declared financial-context CSS matches parent',()=>{
+  for(const file of ['js/main.js','js/sim.js','js/data.js','js/finance.js','js/localsave.js','js/savearchive.js','js/cloud.js','css/game.css'])assert.equal(financialContextBaseline(file),readFileSync(join(parent,file),'utf8'),file);
 });
 console.log(`${n} acquisition-review groups passed`);
