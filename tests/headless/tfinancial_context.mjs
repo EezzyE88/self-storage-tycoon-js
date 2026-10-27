@@ -113,6 +113,28 @@ test('HUD metadata stays visible outside cash updates, exposes full safe name an
  }
  assert.equal(snapshot(f),before);assert.doesNotMatch(f.nodes.pname.innerHTML,/<Two>/);
 });
+test('F/f keyboard menu replacement invalidates transfer tokens without changing money, Pause or saves',()=>{
+ const start=main.indexOf("window.addEventListener('keydown', (e) => {");
+ assert.ok(start>=0);const end=main.indexOf('\n});',start);assert.ok(end>start);
+ for(const key of ['f','F'])for(const speed of [0,1,2,4])for(const manual of [false,true]){
+  const f=fixture(speed);f.g.audio.vol={master:0,sfx:0,music:0,amb:0};
+  for(const k of ['keptLabel','archiveLabel','numberingInfo','autosaveNote'])f.ui[k]=()=>'';
+  f.ui.pauseForPopup('panel');review(f);if(manual)f.ui.notePause(0);
+  const token=f.ui.transferReview.token,before=snapshot(f),time=f.A.s.t,initialSaves=f.saves;
+  let keydown;vm.runInNewContext(main.slice(start,end+4),{game:f.g,window:{addEventListener(type,fn){assert.equal(type,'keydown');keydown=fn;}}});
+  keydown({key,target:{tagName:'DIV'}});
+  assert.match(f.nodes.modal.innerHTML,/<h2 style="flex:1">Menu/);
+  assert.equal(f.ui.transferReview,null);assert.equal(snapshot(f),before);assert.equal(f.saves,initialSaves);
+  click(f,'transferConfirm',token);assert.equal(snapshot(f),before);assert.equal(f.saves,initialSaves);
+  f.ui.closeModal();assert.equal(f.A.s.speed,0);f.ui.resumePopup('panel');assert.equal(f.A.s.speed,manual?0:speed);assert.equal(f.A.s.t,time);
+  review(f);const fresh=f.ui.transferReview.token;assert.notEqual(fresh,token);
+  const reopened=snapshot(f),reopenSaves=f.saves;click(f,'transferConfirm',token);assert.equal(snapshot(f),reopened);assert.equal(f.saves,reopenSaves);
+  click(f,'transferConfirm',fresh);assert.equal(f.A.s.cash,65000);assert.equal(f.B.s.cash,15000);assert.equal(f.saves,reopenSaves+1);
+  assert.equal(f.saved.props[0].s.cash,65000);assert.equal(f.saved.props[1].s.cash,15000);
+  assert.equal(f.A.s.ledger.filter(e=>e.note.startsWith('Transfer to')).length,1);assert.equal(f.B.s.ledger.filter(e=>e.note.startsWith('Transfer from')).length,1);
+  click(f,'transferConfirm',fresh);assert.equal(f.saves,reopenSaves+1);assert.equal(f.A.s.speed,manual?0:speed);assert.equal(f.A.s.t,time);
+ }
+});
 test('exact historical normalization preserves full parent identities and engine/save files',()=>{
  for(const file of ['js/ui.js','css/game.css','js/main.js','js/sim.js','js/finance.js','js/data.js','js/localsave.js','js/savearchive.js','js/durablesave.js','js/cloud.js'])assert.equal(financialContextBaseline(file),execFileSync('git',['show','b8ce9e9f0c00fa239b33da96c19662a962a5afd6:'+file],{encoding:'utf8'}));
 });
