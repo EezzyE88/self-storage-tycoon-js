@@ -31,7 +31,7 @@ October 28, 2026. Documentation-only record. No game code, test, price or econom
 
 25 assertions per configuration, 100/100 true. Raw bounds, state snapshots and rendered-font output are in the evidence `results.json`.
 
-## Confirm burst timing — UNVERIFIED
+## Confirm burst timing — first attempt UNVERIFIED (retained; superseded by the DPR 1 rerun below)
 
 The probe scheduled three touches 150 ms apart and asserted that three `pointerdown` events arrived. It did **not** check their spacing. Delivered gaps, from the recorded `pointerdown` timestamps:
 
@@ -43,6 +43,31 @@ The probe scheduled three touches 150 ms apart and asserted that three `pointerd
 | Offline fonts, 390x844 | 216 ms / 1,298 ms |
 
 The new 150 ms urban Confirm burst is therefore **UNVERIFIED**. The exactly-once purchase result holds for these delivered spacings only. The cause of the wider gaps is not established. This is not evidence of a game defect. The earlier acquisition/transfer burst passes recorded in the October 28 handoff (blank parcel, two runs at both sizes) are separate evidence and remain as recorded; this check neither reruns nor replaces them.
+
+## Confirm burst timing — DPR 1 rerun PASS
+
+Rerun on development **3d285d3bfe0f0a82e7a16f222961b1556767963c** (runtime identical to 47797b5) after review of the first attempt. Only the scratch probe changed (`urban-burst-probe.cjs`). No game or tracked-test change.
+
+Criteria were written to `CRITERIA.md` at 2026-10-28T14:24:12Z, before any run:
+
+- Target: three touches on the urban Confirm button, 150 ms apart.
+- Measure: gaps between consecutive window capture-phase `pointerdown` `event.timeStamp` values (delivered input).
+- Tolerance: each gap 150 ± 50 ms (100–200 ms), exactly 3 pointerdowns.
+- Gate: three validation bursts on the non-transacting review title (Inter, 375x667). All 6 gaps in tolerance and no state change, or BLOCKED and stop.
+- Then one attempt per configuration, no retries. Timing is checked first; a purchase counts only if timing passes.
+
+Declared probe changes: deviceScaleFactor 1, matching `tests/browser/transaction-safety.cjs` (the first attempt used 2); all three touches scheduled from one start time instead of after each previous send completed. That device scale factor 2 caused the first attempt's wide gaps is an **inference**; it was not isolated.
+
+Validation gate: PASS. Gaps 152 / 147, 150 / 149.8, 150.1 / 149.8 ms; game state unchanged.
+
+| Configuration | Delivered gaps | Timing | Purchase | Row |
+|---|---|---|---|---|
+| Inter, 375x667 | 155.8 / 141.4 ms | PASS | +1 property, cash −$75,000 once, new property $5,000, manual Pause kept | PASS |
+| Inter, 390x844 | 151.0 / 151.6 ms | PASS | same | PASS |
+| Offline fonts, 375x667 | 150.9 / 149.7 ms | PASS | same | PASS |
+| Offline fonts, 390x844 | 147.4 / 152.2 ms | PASS | same | PASS |
+
+No page exceptions. Offline runs loaded Satoshi 500/700/900 and General Sans 500 via the handoff font kit replay. This closes the 150 ms urban Confirm burst gap under emulated touch only; the limits below still apply.
 
 ## Fonts
 
@@ -63,4 +88,6 @@ Emulated touch in headless Chromium, not physical iPhone Safari. Synthetic tier-
 
 ## Evidence
 
-`urban-parcel-check-47797b5.zip`, 10,185,332 bytes, SHA-256 `d73459698f69bede6554653ac67e6449c68d80236995dcf52c0ea762e8c5226f`. It contains the probe script, final `results.json`, 20 screenshots (5 per configuration), the first-run setup-failure output and a README. It was delivered to Eddie as a session attachment and is not committed to this repository.
+`urban-parcel-check-47797b5.zip`, 10,185,332 bytes, SHA-256 `d73459698f69bede6554653ac67e6449c68d80236995dcf52c0ea762e8c5226f`. It contains the probe script, final `results.json`, 20 screenshots (5 per configuration), the first-run setup-failure output and a README. It was delivered to Eddie as a session attachment and is not committed to this repository. Its README still describes the first attempt's taps as "150 ms apart"; this note is the corrected record.
+
+DPR 1 burst rerun: `urban-burst-timing-3d285d3.zip`, 514,576 bytes, SHA-256 `fedc3e8b52d93d59d27a0cc388a8d06bf3dc426afaf67483fefded627e6b3192`. It contains `CRITERIA.md`, the probe, validation and burst `results.json` files with raw pointerdown timestamps and send offsets, and 5 screenshots. It was delivered as a session attachment and is not committed to this repository.
