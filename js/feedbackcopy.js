@@ -29,7 +29,7 @@ const AVAILABILITY = {
   sizeFull: ['No accessible rent-ready unit of this size was available.', 'Check this size’s availability now; assess expansion only if unmet demand repeats.'],
   makeReady: ['Matching vacant units needed make-ready.', 'Check their current make-ready jobs and staff availability.'],
   access: ['Matching units had blocked rental access.', 'Inspect the unit’s door, hall or drive-up route.'],
-  construction: ['Matching units were unfinished or uncommissioned.', 'Complete their construction and commissioning checklist.']
+  construction: ['Matching units were unfinished or waiting on readiness requirements.', 'Complete construction and the listed readiness requirements; eligible units open automatically.']
 };
 export function complaintCopy(th, d) {
   let [what, why, next] = COPY[d.id] || [th.text, 'A customer reported this condition.', 'Inspect the reported location and current conditions.'];
@@ -55,13 +55,13 @@ export function complaintCopy(th, d) {
       if (c.occupied || c.reserved) blockers.push('occupied or reserved');
       if (c.makeReady) blockers.push('needing make-ready');
       if (c.blocked) blockers.push('access-blocked');
-      if (c.unfinished) blockers.push('unfinished or uncommissioned');
+      if (c.unfinished) blockers.push('unfinished or waiting on readiness requirements');
       if (c.other) blockers.push('in another unavailable state');
       why = blockers.length ? 'Recorded matching stock included units ' + blockers.join('; ') + '.' : 'Matching stock was recorded as ready to offer; the detailed rejection cause is unknown.';
       if (blockers.length === 1 && (c.occupied || c.reserved)) next = 'Check availability now. If still full, wait for turnover or assess expansion.';
       else if (blockers.length === 1 && c.makeReady) next = 'Check these units’ current make-ready jobs and staff availability.';
       else if (blockers.length === 1 && c.blocked) next = 'Inspect current doors, halls and freight access; temporary holds may have cleared.';
-      else if (blockers.length === 1 && c.unfinished) next = 'Check these units’ construction and commissioning checklist.';
+      else if (blockers.length === 1 && c.unfinished) next = 'Check these units’ construction and readiness requirements.';
       else next = 'Inspect matching units now. Resolve existing readiness or access issues before adding stock.';
     }
   }

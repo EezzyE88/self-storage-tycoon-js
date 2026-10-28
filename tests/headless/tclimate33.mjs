@@ -20,7 +20,7 @@ for(const [name,changes,pattern] of [
  ['reserved',{env:'climate',commercial:'reserved'},/reserved climate stock/],
  ['make-ready',{env:'climate',commercial:'unready',lease:null},/make-ready jobs/],
  ['blocked',{env:'climate',commercial:'ready',blocked:true,missing:['Door needs hallway'],accessHold:72},/freight route/],
- ['unfinished',{env:'climate',commercial:'ready',cstate:'built',missing:['HVAC capacity exceeded for this zone']},/commissioning checklist/]])test(name+' records stock and provides cause-specific guidance',()=>{
+ ['unfinished',{env:'climate',commercial:'ready',cstate:'built',missing:['HVAC capacity exceeded for this zone']},/readiness requirements/]])test(name+' records stock and provides cause-specific guidance',()=>{
  const {sim,u}=setup();if(changes)Object.assign(u,changes);const th=lose(sim,u.size),d=diagnoseComplaint(sim,th);
  assert.ok(validClimateSnapshot(th.climateAvailability));assert.match(d.remedy,pattern);assert.match(d.cause,/At report time/);assert.match(d.cause,/Current matching climate inventory/);
  assert.equal(sim.s.lost.noClimate,1);if(changes){assert.equal(th.climateAvailability.units[0].id,u.id);assert.deepEqual(th.climateAvailability.units[0].missing,u.missing||[]);}

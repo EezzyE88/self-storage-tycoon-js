@@ -34,7 +34,7 @@ const career = () => { const m = makeMaple(); m.s.tut = { on: false, beat: 99, f
   const before = s.visits.length; try { for (let i = 0; i < 1440; i++) { sim.step(); sim.events.length = 0; } } catch (e) { /* synthetic agents may be removed */ }
   ok(s.visits.length < before / 10, 'B5 routine access visits are not re-queued forever when the lot is crowded', `${before} -> ${s.visits.length}`);
 }
-// B6 preserves both automatic Sandbox readiness and manual order-ID fallback after pruning.
+// B6 requires automatic readiness in ordinary Sandbox and while a lesson is active.
 for (const manual of [false, true]) {
   const label = manual ? 'active lesson' : 'ordinary Sandbox';
   const sim = makeSandbox({ kind: 'business' });
@@ -42,7 +42,7 @@ for (const manual of [false, true]) {
     const lesson = sim.dispatch({ type: 'lesson', op: 'start', id: 'financing' });
     ok(lesson.ok && sim.s.lesson?.id === 'financing', 'B6 active financing lesson starts through the existing command');
   }
-  ok(sim.autoOpenEnabled() === !manual, `B6 ${label} uses the expected commissioning authority`);
+  ok(sim.autoOpenEnabled() === true, `B6 ${label} uses automatic opening`);
   const B = (tool, a, b) => { const r = sim.dispatch({ type: 'build', tool, a, b: b || a, f: 0 }); ok(r.ok, `B6 ${label} builds ${tool}`, r.msg); };
   const commissioned = [];
   const step = () => { sim.step(); commissioned.push(...sim.events.filter(e => e.type === 'commissioned')); sim.events.length = 0; };
@@ -54,16 +54,10 @@ for (const manual of [false, true]) {
   const order = units[0].order;
   ok(!!order && units.every(u => u.order === order), `B6 ${label} retains the shared original order ID`);
   ok(!sim.s.orders.some(o => o.id === order), `B6 ${label} order record is pruned before manual command`);
-  ok(units.every(u => u.cstate === (manual ? 'ready' : 'operating') && !u.missing?.length), `B6 ${label} has the correct pre-command unit states`);
+  ok(units.every(u => u.cstate === 'operating' && !u.missing?.length), `B6 ${label} has the correct automatically opened states`);
   ok(sim.s.open === false, `B6 ${label} readiness does not open the property`);
-  if (manual) {
-    ok(sim.s.lesson?.id === 'financing' && commissioned.length === 0, 'B6 active lesson prevents automatic commissioning throughout construction');
-    const r = sim.dispatch({ type: 'commission', order });
-    ok(r.ok && units.every(u => u.cstate === 'operating'), 'B6 commissioning a whole order works after its record was pruned', r.msg);
-  } else {
-    ok(commissioned.length === 1 && commissioned[0].automatic === true && commissioned[0].n === 13, 'B6 ordinary Sandbox automatically commissions exactly the constructed batch');
-    const before = JSON.stringify(sim.s), r = sim.dispatch({ type: 'commission', order });
-    ok(r.ok === false && r.msg === 'Nothing is ready to commission' && JSON.stringify(sim.s) === before && units.every(u => u.cstate === 'operating'), 'B6 redundant manual commissioning is refused without changing operating state', r.msg);
-  }
+  ok(commissioned.length === 1 && commissioned[0].automatic === true && commissioned[0].n === 13, `B6 ${label} automatically opens exactly the constructed batch`);
+  const before = JSON.stringify(sim.s), r = sim.dispatch({ type: 'commission', order });
+  ok(r.ok === false && r.msg === 'Nothing is ready to commission' && JSON.stringify(sim.s) === before && units.every(u => u.cstate === 'operating'), `B6 ${label} redundant legacy command is refused without changing operating state`, r.msg);
 }
 console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);

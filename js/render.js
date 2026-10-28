@@ -96,7 +96,7 @@ function badgeTexture(kind) {
     rent: { bg: '#2f8f5b', fg: '#fff', text: 'FOR\nRENT', shape: 'tag' },
     turn: { bg: '#e0a526', fg: '#1b1b1b', text: 'MAKE\nREADY', shape: 'diamond' },
     fault: { bg: '#c8412f', fg: '#fff', text: '!', shape: 'tri' },
-    commission: { bg: '#2f5e8e', fg: '#fff', text: 'READY?', shape: 'round' },
+    commission: { bg: '#2f5e8e', fg: '#fff', text: 'OPEN?', shape: 'round' },
     missing: { bg: '#6b6f76', fg: '#fff', text: '?', shape: 'round' },
     unready: { bg: '#e0a526', fg: '#1b1b1b', text: 'TURN', shape: 'diamond' },
     reserved: { bg: '#6a4fa0', fg: '#fff', text: 'HELD', shape: 'round' },
@@ -531,7 +531,7 @@ export class Renderer {
   }
   comebackFinish(o, target) {
     if (!targetUnits(this.sim.s,target).some(u=>u.id===o.id)) return o.num % 2 ? this.mat.unitWall : this.mat.unitWall2;
-    // Access/commissioning issues must not masquerade as fresh cleaning dirt.
+    // Access/opening issues must not masquerade as fresh cleaning dirt.
     if (o.cstate === 'operating' && o.commercial === 'unready') return this.mat.comebackWorn;
     return targetInService(this.sim.s,target) ? this.mat.comebackRestored : this.mat.unitWall;
   }

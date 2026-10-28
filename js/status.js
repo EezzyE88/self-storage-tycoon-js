@@ -13,7 +13,7 @@ export const UNIT_STATUS = {
   turnover: {label:'Turnover',mark:'◇',color:'#ba8b37'},
   blocked: {label:'Blocked',mark:'×',color:'#b45448'},
   handover: {label:'Handover test',mark:'~',color:'#7e8fa3'},
-  commission: {label:'Commission',mark:'?',color:'#477a99'},
+  commission: {label:'Opening',mark:'?',color:'#477a99'},
   construction: {label:'Building',mark:'/',color:'#9b917b'},
 };
 export function loadingStatus(sim) {

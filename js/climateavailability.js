@@ -26,15 +26,15 @@ export function climateCauseKey(report) {
 }
 export function climateInventoryText(r) {
   const c=r.counts;
-  return `${r.size} climate: ${r.total} total; ${c.occupied} occupied, ${c.reserved} reserved, ${c.makeReady} vacant needing make-ready, ${c.blocked} operating with blocked access, ${c.unfinished} unfinished or uncommissioned, ${c.eligible} accessible operating rent-ready${c.other?`, ${c.other} other unavailable state`:''}. Counts can overlap.`;
+  return `${r.size} climate: ${r.total} total; ${c.occupied} occupied, ${c.reserved} reserved, ${c.makeReady} vacant needing make-ready, ${c.blocked} operating with blocked access, ${c.unfinished} unfinished or waiting on readiness requirements, ${c.eligible} accessible operating rent-ready${c.other?`, ${c.other} other unavailable state`:''}. Counts can overlap.`;
 }
 export function climateRemedy(r) {
   const c=r.counts,parts=[];
-  if(!r.total)parts.push('No matching-size climate stock was recorded. Review repeated size-and-climate demand, conversion eligibility and cash before adding stock; check building HVAC only when commissioning requires it.');
+  if(!r.total)parts.push('No matching-size climate stock was recorded. Review repeated size-and-climate demand, conversion eligibility and cash before adding stock; check building HVAC before construction finishes.');
   if(c.occupied||c.reserved)parts.push('For occupied or reserved climate stock, wait for turnover or review Growth Readiness and cash before justified expansion. Cleaning occupied units does not create vacancies.');
   if(c.makeReady)parts.push('For vacant unready climate units, review their make-ready jobs in Operate, staff shifts, routes and remaining work hours.');
   if(c.blocked)parts.push('For blocked operating units, inspect the recorded doorway, hallway, entrance or freight route. A freight-handover hold can be temporary; check its current status before building more.');
-  if(c.unfinished)parts.push('Finish existing construction and its actual commissioning checklist first, including HVAC capacity only where listed as a prerequisite.');
+  if(c.unfinished)parts.push('Finish existing construction and its readiness requirements first, including HVAC capacity where listed. Eligible units open automatically.');
   if(c.other)parts.push('Inspect the listed units and their current readiness before spending.');
   if(!parts.length)parts.push('Matching climate units were eligible to offer in this inventory snapshot. The detailed rejection cause is unknown; inspect current stock before spending.');
   return parts.join(' ')+' Adding stock does not guarantee leases.';

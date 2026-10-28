@@ -1,0 +1,15 @@
+PASS every offered property opens a pure review with the selected name, authoritative total and included cash
+PASS Back restores full saved state and original speed; stale confirmation after Back is inert
+PASS confirmed purchases match the exact parent acquisition state, ledger, portfolio and clock for every offer
+PASS duplicate confirmation can purchase only once even with ample funds for repeated purchases
+PASS affordability is revalidated and an unaffordable stale quote cannot spend or add property
+PASS changed remaining cash or offer terms require review again before any purchase
+PASS removed offers and a newly full portfolio cannot be purchased through stale confirmation
+PASS switching active property, replacing its identity or loading another company invalidates confirmation
+PASS nested panel/request holds and manual Pause survive both Back and successful purchase
+PASS opening a financial review invalidates pending acquisition and vice versa
+PASS existing credit and term-loan review, Back and confirmation retain exact parent behavior
+PASS failed engine purchase cannot retain a consumable confirmation or change saved state
+PASS review names are escaped and no transient review data is added to saved state
+PASS unchanged simulation, prices, save schema, CSS and prior evidence remain byte-identical to parent
+14 acquisition-review groups passed

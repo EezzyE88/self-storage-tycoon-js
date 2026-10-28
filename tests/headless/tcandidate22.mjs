@@ -16,7 +16,7 @@ const clone=sim=>new Sim(JSON.parse(JSON.stringify(sim.s)));
 
 // Three-floor fixture through the real staged packages (Building 12 on Maple, as in the Candidate-21 playtest).
 const three=makeMaple(3);three.s.cash=1e6;three.s.open=true;const SH=three.objs('shell')[0].id;const charges=[],completions=[];
-for(let k=0;k<2;k++){const R=three.verticalPlan(SH);const cash=three.s.cash;assert.ok(three.dispatch({type:'verticalUpgrade',...R}).ok);charges.push(cash-three.s.cash);const ord=three.s.orders.at(-1);for(let i=0;i<60000&&ord.st==='construction';i++){three.step();completions.push(...three.events.filter(e=>e.type==='complete'||e.type==='access_lost'));three.events.length=0;}if(k===0)assert.ok(three.dispatch({type:'commission',order:ord.id}).ok);}
+for(let k=0;k<2;k++){const R=three.verticalPlan(SH);const cash=three.s.cash;assert.ok(three.dispatch({type:'verticalUpgrade',...R}).ok);charges.push(cash-three.s.cash);const ord=three.s.orders.at(-1);for(let i=0;i<60000&&ord.st==='construction';i++){three.step();completions.push(...three.events.filter(e=>e.type==='complete'||e.type==='access_lost'));three.events.length=0;}assert.ok(three.objs('unit').filter(u=>u.order===ord.id).every(u=>u.cstate==='operating'));}
 const unitNo=num=>three.objs('unit').find(u=>u.num===num);
 
 // Minimal DOM: elements with classList/dataset; enough for the production handlers under test.
@@ -41,15 +41,15 @@ await test('1. EXT/F1/Floors highlight follows the rendered view, including dire
 await test('1. saved floor restores when valid, otherwise falls back to an existing view',()=>{const {ui}=fixture();assert.equal(ui.validView(2),2);assert.equal(ui.validView(1),1);assert.equal(ui.validView(3),'ext');assert.equal(ui.validView(4),'ext');assert.equal(ui.validView('bogus'),'ext');assert.equal(ui.validView(-1),'ext');
   const {ui:one}=fixture(makeMaple(3));assert.equal(one.validView(1),'ext');assert.equal(one.validView(0),0);});
 
-await test('2. completion reports defined order counts, separately labelled extras, and order-only commissioning',()=>{
-  const comp=completions.filter(e=>e.type==='complete');assert.deepEqual(comp.map(e=>[e.label,e.units,e.ready,e.otherReady]),[['Building 12 → F2',14,14,0],['Building 12 → F3',14,14,0]]);
+await test('2. completion reports defined order counts and automatic opening without player controls',()=>{
+  const comp=completions.filter(e=>e.type==='complete');assert.deepEqual(comp.map(e=>[e.label,e.units,e.ready,e.otherReady]),[['Building 12 → F2',14,0,0],['Building 12 → F3',14,14,0]]);
   for(const e of comp)assert.ok(Number.isInteger(e.ready)&&!/undefined/.test(completeText(e)));
-  assert.equal(completeText(comp[1]),'Building 12 → F3 finished - 14/14 order units ready to commission');
-  assert.equal(completeText({label:'X',units:14,ready:12,otherReady:3,vertical:true}),'X finished - 12/14 order units ready to commission · 3 other ready units elsewhere on the property');
-  assert.equal(completeText({label:'Legacy',units:2}),'Legacy finished - 0/2 units ready to commission');
-  const s=clone(three),f3=s.s.orders.at(-1).id,extra=s.objs('unit').find(u=>u.f===0&&u.cstate==='operating'&&!u.lease);extra.cstate='ready';extra.order=null;
-  const {ui}=fixture(s);ui.sel=s.objs('unit').find(u=>u.order===f3).id;const h=ui.inspector();assert.match(h,/Commission whole order · 14 units/);assert.match(h,/Commission all ready units on property · 15/);
-  assert.ok(s.dispatch({type:'commission',order:f3}).ok);assert.equal(extra.cstate,'ready','order commissioning leaves other ready units alone');assert.ok(s.objs('unit').filter(u=>u.order===f3).every(u=>u.cstate==='operating'));});
+  assert.equal(completeText(comp[1]),'Building 12 → F3 finished - 14/14 order units ready to open automatically');
+  assert.equal(completeText({label:'X',units:14,ready:12,otherReady:3,vertical:true}),'X finished - 12/14 order units ready to open automatically · 3 other ready units elsewhere on the property');
+  assert.equal(completeText({label:'Legacy',units:2}),'Legacy finished - 0/2 units ready to open automatically');
+  const s=clone(three),extra=s.objs('unit').find(u=>u.f===0&&u.cstate==='operating'&&!u.lease);extra.cstate='ready';extra.order=null;
+  const {ui}=fixture(s);ui.sel=extra.id;const h=ui.inspector();assert.match(h,/Opening automatically/);assert.doesNotMatch(h,/Commission unit|Commission whole order|Commission all ready/);
+  s.s.speed=1;s.step();assert.equal(extra.cstate,'operating');});
 await test('2. full package arithmetic, single charge and full grace-period refund',()=>{
   assert.deepEqual(charges,[17660,10060]);const two=makeMaple(3);two.s.cash=1e6;const R=two.verticalPlan(SH,{fitout:false});assert.equal(R.cost,12470,'structure-only F2');
   const s=makeMaple(3);s.s.cash=1e6;const P=s.verticalPlan(SH);const cash=s.s.cash;s.dispatch({type:'verticalUpgrade',...P});s.dispatch({type:'verticalUpgrade',...P});assert.equal(s.s.cash,cash-17660);
@@ -58,7 +58,7 @@ await test('2. full package arithmetic, single charge and full grace-period refu
   const g=makeMaple(3);g.s.cash=1e6;const p2=g.verticalPlan(SH);g.dispatch({type:'verticalUpgrade',...p2});const o2=g.s.orders.at(-1);for(let i=0;i<60000&&o2.st==='construction';i++){g.step();g.events.length=0;}assert.equal(g.verticalPlan(SH,{fitout:false}).cost,4870,'structure-only F3');assert.equal(g.verticalPlan(SH).cost,10060);});
 await test('3. handover topology is held, not reported; a real disconnection still warns after handover',()=>{
   assert.ok(!completions.some(e=>e.type==='access_lost'),'no transient access complaint during F3 handover');
-  const s=clone(three);for(const u of s.objs('unit').filter(u=>u.f===2))s.dispatch({type:'commission',unit:u.id});s.ensure();s.events.length=0;
+  const s=clone(three);assert.ok(s.objs('unit').filter(u=>u.f===2).every(u=>u.cstate==='operating'));s.ensure();s.events.length=0;
   const u=s.objs('unit').find(u=>u.f===2&&u.cstate==='operating'),fc=s.unitFront(u)[0];s.s.hall[2][s.idx(fc.x,fc.y)]=0;s.markDirty();s.ensure();
   const ev=s.events.filter(e=>e.type==='access_lost');assert.equal(ev.length,1);assert.equal(u.accessHold,undefined);assert.ok(u.blocked);});
 
@@ -117,9 +117,9 @@ await test('4. clock steps never target an inert 1x: an expanded panel redirects
   ui.sheetTall=false;ui.resumePopup('panel');assert.equal(sim.s.speed,0,'Back to map restores the paused clock it found');assert.equal(ui.resolveStep(step),step,'the step now targets the working 1x');
   ui.onClick({target:{closest:()=>({dataset:{a:'speed',v:'1'}})}});assert.equal(sim.s.speed,1,'1x responds after Back to map');
   ui.popupBlocks=new Set(['modal']);boxes.modal=el();boxes.modal.firstChild={};assert.equal(ui.resolveStep(step).redirect,'modal');});
-await test('4. an armed build tool redirects map/commission steps to putting the tool away',()=>{
-  const {ui}=fixture();ui.tool='du10x10';const commission=BEATS.find(b=>b.id==='expand').steps.at(-1);const r=ui.resolveStep(commission);assert.equal(r.redirect,'tool');assert.match(r.sel,/cancelTool/);
-  const place=BEATS.find(b=>b.id==='expand').steps.find(s=>s.placement);assert.equal(ui.resolveStep(place),place);ui.tool=null;assert.equal(ui.resolveStep(commission),commission);});
+await test('4. an armed build tool does not hide the usable run-time control for automatic opening',()=>{
+  const {ui}=fixture();ui.tool='du10x10';const opening=BEATS.find(b=>b.id==='expand').steps.at(-1);const r=ui.resolveStep(opening);assert.equal(r,opening);assert.match(r.sel,/#speed/);
+  const place=BEATS.find(b=>b.id==='expand').steps.find(s=>s.placement);assert.equal(ui.resolveStep(place),place);ui.tool=null;assert.equal(ui.resolveStep(opening),opening);assert.doesNotMatch(JSON.stringify(BEATS),/Commission whole order|Commission unit/);});
 await test('4. instructions use current UI terms and navigation',()=>{
   const all=[...BEATS,...LESSONS].flatMap(b=>b.steps||[]);for(const st of all)assert.doesNotMatch(st.d||'',/Scroll (down )?to/i,st.t);
   assert.match(BEATS.find(b=>b.id==='hire').steps[1].d,/section selector/);assert.match(BEATS.find(b=>b.id==='makeready').steps[1].t,/Owner Make-Ready/);assert.doesNotMatch(BEATS.find(b=>b.id==='makeready').steps[1].t,/Start Owner/);
@@ -139,7 +139,7 @@ await test('8/12. review keeps full terms, exact price, preview on map without l
   ui.showVertical(SH);const h=boxes.modal.innerHTML;for(const re of [/Required/,/Freight elevator access to the new floor is required/,/Options/,/Extend existing stairs/,/optional redundancy/,/Unit mix &amp; demand evidence/,/5x10 standard/,/Complete package \$17,660/,/cash after/,/Cancellation:/,/data-a="verticalPreview"/,/Confirm · \$17,660/,/5x10 standard unit × 14/])assert.match(h,re);
   assert.ok(rend.preview&&rend.preview.proposed,'proposed preview is marked distinct');
   ui.popupBlocks=new Set(['modal']);ui.previewVertical();assert.equal(boxes.modal.innerHTML,'');assert.ok(ui.verticalQuote&&ui.verticalPreviewing);assert.equal(rend.view,1);assert.equal(s.s.speed,0);
-  const bar=ui.verticalBarHtml();assert.match(bar,/Proposed F2 · Building 12/);assert.match(bar,/not built, not commissioned/);assert.match(bar,/verticalBack/);assert.match(bar,/verticalConfirm/);assert.match(bar,/verticalCancel/);
+  const bar=ui.verticalBarHtml();assert.match(bar,/Proposed F2 · Building 12/);assert.match(bar,/not built/);assert.doesNotMatch(bar,/not commissioned/);assert.match(bar,/verticalBack/);assert.match(bar,/verticalConfirm/);assert.match(bar,/verticalCancel/);
   const cash=s.s.cash;ui.onClick({target:{closest:()=>({dataset:{a:'verticalConfirm'}})}});assert.equal(cash-s.s.cash,17660);assert.equal(ui.verticalQuote,null);
   const css=readFileSync('css/game.css','utf8');assert.match(css,/\.vr-opt input\[type=checkbox\] \{ width:26px; height:26px/);assert.match(css,/\.vr-opt \{ display:flex; align-items:center; gap:10px; min-height:48px/);});
 await test('12. evidence verdicts follow observed history only',()=>{

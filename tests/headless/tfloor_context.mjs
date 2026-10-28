@@ -1,5 +1,6 @@
 // Real Three.js scene graph; GPU/Canvas stubbed. No physical-device claim.
 import assert from 'node:assert/strict';
+import {durableBaseline} from './durable_baseline.mjs';
 import {readFileSync} from 'node:fs';
 import {base, full} from './tthreefloor.mjs';
 import {Sim} from '../../js/sim.js';
@@ -86,11 +87,46 @@ const count=counts();r.rebuildStatic();assert.deepEqual(counts(),count,'context 
 assert.equal(JSON.stringify(sim.s),saved);
 assert.ok(r.contextG.children.length <= 5,'mixed fixture uses at most ten instanced context draws, independent of unit count');
 // Keep unchanged floor-numbering/save/visual source byte-identical to the numbering parent.
-// Simulation includes intentional maintenance, automatic opening, upgrades and entrance-route changes through d84fb59.
+// Simulation includes intentional maintenance, upgrades and entrance-route changes through d84fb59.
+// Reconstruct the approved automatic-opening successor from that exact baseline so unrelated simulation drift still fails.
 import {execFileSync} from 'node:child_process';
-for(const file of ['js/unitnumbering.js','js/vertical.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
-assert.equal(readFileSync('js/sim.js','utf8'),execFileSync('git',['show','d84fb59171152e670a5d3d2940830310fd7cc1d9:js/sim.js'],{encoding:'utf8'}));
+for(const file of ['js/unitnumbering.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
+let expectedVertical=execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:js/vertical.js'],{encoding:'utf8'});
+const oldVertical="warning:!fitout?'Structure only; fit-out and commissioning are still required.': 'Copies the existing interior layout and product mix. Commission units after construction; rentals are not guaranteed.'";
+const newVertical="warning:!fitout?'Structure only; fit-out and readiness requirements are still required.': 'Copies the existing interior layout and product mix. Eligible units open automatically after construction; rentals are not guaranteed.'";
+assert.ok(expectedVertical.includes(oldVertical),'declared vertical.js baseline hunk exists');expectedVertical=expectedVertical.replace(oldVertical,newVertical);assert.equal(readFileSync('js/vertical.js','utf8'),expectedVertical);
+let expectedSim=execFileSync('git',['show','d84fb59171152e670a5d3d2940830310fd7cc1d9:js/sim.js'],{encoding:'utf8'});
+const intentional=(from,to)=>{assert.ok(expectedSim.includes(from),'declared sim.js baseline hunk exists');expectedSim=expectedSim.replace(from,to);};
+intentional("  autoOpenEnabled() {\n    const s=this.s;\n    return s.mode==='sandbox'&&!s.scenario&&!s.lesson&&!s.tut?.on&&!this.unlimited();\n  }","  autoOpenEnabled() {\n    return true;\n  }");
+intentional("    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No commissioned rent-ready units');","    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No operating rent-ready units');");
+intentional("    // 1. commission rent-ready units\n    if (s.open && this.objs('unit').some((u) => u.cstate === 'ready')) { const r = this.act_commission({ all: true }); if (r.ok) this.mgr('Opened rent-ready units for rental'); }\n    // 2. escalate stalled repairs to vendors","    // 1. escalate stalled repairs to vendors. Finished eligible units open automatically for every player.");
+// B/F intentionally changes only explicit-rotation footprint anchors in the simulation.
+// Keep the complete-file comparison: any other simulation drift still fails.
+intentional(`      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
+      const x = Math.min(a.a.x,a.b.x), y = Math.min(a.a.y,a.b.y);
+      units = Array.from({length:n}, (_,k) => ({x:x+(axisX?k*sz.w:0), y:y+(axisX?0:k*sz.w),
+        w:axisX?sz.w:sz.d, h:axisX?sz.d:sz.w, dir:[...dir], f}));`,
+`      // The touched cell sits on the door edge; the row grows from it in the drag direction.
+      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
+      units = Array.from({length:n}, (_,k) => {
+        const along = (axisX ? a.a.x : a.a.y) + (step > 0 ? k * sz.w : -(k + 1) * sz.w + 1);
+        const perp = (axisX ? a.a.y : a.a.x) - ((axisX ? dir[1] : dir[0]) > 0 ? sz.d - 1 : 0);
+        return axisX ? {x:along, y:perp, w:sz.w, h:sz.d, dir:[...dir], f} : {x:perp, y:along, w:sz.d, h:sz.w, dir:[...dir], f};
+      });`);
+assert.equal(readFileSync('js/sim.js','utf8'),expectedSim);
 // Fast-reserve intentionally changed main's clock dispatch. Preserve its exact verified implementation.
-assert.equal(readFileSync('js/main.js','utf8'),execFileSync('git',['show','3c92a5eb6a8d906264e9019e26fa24a100bffb31:js/main.js'],{encoding:'utf8'}));
+let actualMain=durableBaseline('js/main.js');
+// Permit only the exact paused-autosave hooks; retain the complete-file comparison.
+assert.equal(actualMain.split('    this.autosavePaused();\n').length-1,3);
+actualMain=actualMain.replaceAll('    this.autosavePaused();\n','');
+const pausedHook=`  // Paused actions cannot wait for the running-time timer or an unload event.
+  // Reuse the synchronous leaving path, including its stale-compression fence.
+  autosavePaused() {
+    if (this.sim?.s.speed === 0) return this.autosave(true);
+  },
+`;
+assert.ok(actualMain.includes(pausedHook));actualMain=actualMain.replace(pausedHook,'');
+actualMain=actualMain.replace('  // autosave: during active play (including Pause); `hide` writes locally synchronously and uses a keepalive request','  // autosave: whenever a game is running (not on the title screen); `hide` uses a keepalive request');
+assert.equal(actualMain,execFileSync('git',['show','3c92a5eb6a8d906264e9019e26fa24a100bffb31:js/main.js'],{encoding:'utf8'}));
 console.log('PASS mixed-height context across Exterior/F1/F2/F3, four rotations, active-floor picking/inspection, camera preservation, repeated rebuild and byte-identical complete state');
 console.log('LIMIT: CPU scene graph + UI handler checks; WebGL pixels, Safari and physical iPhone not tested.');

@@ -1,5 +1,5 @@
 // Deterministic F3 customer/cart/elevator journeys on the real simulation (no renderer, no fake agents in the journey).
-// Each fixed seed builds F2 then F3 through the real staged packages, commissions them, and drives a keen 5x10 shopper
+// Each fixed seed builds F2 then F3 through the real staged packages, lets them open automatically, and drives a keen 5x10 shopper
 // through Sim.step(): lease → arrival → cart → freight queue → ride → F3 unit → return → departure.
 // Fixture arrangement: vacant rent-ready 5x10 units on F1/F2 are marked as awaiting make-ready, so the only rent-ready
 // 5x10 stock is on F3 (a real game state). No demand, price or market coefficient is changed.
@@ -29,7 +29,7 @@ const clone=sim=>new Sim(JSON.parse(JSON.stringify(sim.s)));
 function threeFloor(seed){
   const sim=makeMaple(seed);sim.s.cash=1e6;sim.s.open=true;const sh=sim.objs('shell')[0];const costs=[];
   for(let n=0;n<2;n++){const R=sim.verticalPlan(sh.id);assert.ok(R.ok,R.msg);const cash=sim.s.cash;assert.ok(sim.dispatch({type:'verticalUpgrade',...R}).ok);assert.equal(sim.s.cash,cash-R.cost);costs.push(R.cost);
-    const ord=sim.s.orders.at(-1);for(let i=0;i<60000&&ord.st==='construction';i++){sim.step();sim.events.length=0;}assert.equal(ord.st,'done');assert.ok(sim.dispatch({type:'commission',order:ord.id}).ok);}
+    const ord=sim.s.orders.at(-1);for(let i=0;i<60000&&ord.st==='construction';i++){sim.step();sim.events.length=0;}assert.equal(ord.st,'done');assert.ok(ord.objs.every(id=>sim.s.objects[id]?.type!=='unit'||sim.s.objects[id].cstate==='operating'));}
   assert.deepEqual(costs,[17660,10060],'verified F2/F3 complete-package prices');
   for(const u of sim.objs('unit'))if(u.f!==2&&u.size==='5x10'&&u.commercial==='ready'&&!u.lease)u.commercial='unready';
   // Earlier ordinary traffic can leave carts stranded (Maple has no Porter); start as if the "Recover cart" chores were done.
@@ -125,9 +125,9 @@ for(const seed of SEEDS){
 }
 // Handover reporting: the transient service-test topology is held, then authoritative validation runs at completion.
 { const sim=makeMaple(7);sim.s.cash=1e6;sim.s.open=true;const sh=sim.objs('shell')[0];const seen=[];let hold=false;
-  for(let n=0;n<2;n++){const R=sim.verticalPlan(sh.id);sim.dispatch({type:'verticalUpgrade',...R});const ord=sim.s.orders.at(-1);for(let i=0;i<60000&&ord.st==='construction';i++){sim.step();if(sim.objs('unit').some(u=>u.accessHold!=null))hold=true;seen.push(...sim.events.filter(e=>['access_lost','complete'].includes(e.type)));sim.events.length=0;}sim.dispatch({type:'commission',order:ord.id});}
+  for(let n=0;n<2;n++){const R=sim.verticalPlan(sh.id);sim.dispatch({type:'verticalUpgrade',...R});const ord=sim.s.orders.at(-1);for(let i=0;i<60000&&ord.st==='construction';i++){sim.step();if(sim.objs('unit').some(u=>u.accessHold!=null))hold=true;seen.push(...sim.events.filter(e=>['access_lost','complete'].includes(e.type)));sim.events.length=0;}assert.ok(ord.objs.every(id=>sim.s.objects[id]?.type!=='unit'||sim.s.objects[id].cstate==='operating'));}
   assert.ok(hold,'F2 units were held during the F3 service test');assert.ok(!seen.some(e=>e.type==='access_lost'),'no transient access complaint');
-  const comp=seen.filter(e=>e.type==='complete');assert.deepEqual(comp.map(e=>[e.floor,e.units,e.ready,e.otherReady]),[[2,14,14,0],[3,14,14,0]]);
+  const comp=seen.filter(e=>e.type==='complete');assert.deepEqual(comp.map(e=>[e.floor,e.units,e.ready,e.otherReady]),[[2,14,0,0],[3,14,14,0]]);
   assert.ok(sim.objs('unit').every(u=>u.accessHold==null&&!u.blocked));
 }
 console.log('F3 journey counts',JSON.stringify(counts));

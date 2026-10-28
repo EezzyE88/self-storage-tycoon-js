@@ -1,0 +1,15 @@
+PASS paused expansion loan is durable immediately without a frame or leave event
+PASS paused acquisition stores both properties atomically with exact economics
+PASS paused transfer preserves both ledgers and failed transfer cannot replace save
+PASS paused build saves charge and order before returning; duplicate confirm spends nothing
+PASS property switch saves active property and paused portfolio for fresh load
+PASS older pending compression cannot overwrite a newer paused transaction
+PASS repeated paused actions leave the final complete snapshot and prior backup
+PASS running actions retain existing cadence and never force Pause or advance time
+PASS failed commands and title-screen actions cannot overwrite autosave
+PASS manual Pause checkpoints earlier running transactions without advancing time
+PASS paused checkpoint keeps existing cloud fallback when local storage is unavailable
+PASS storage failure does not roll back or repeat a financial action and keeps error reporting
+PASS no new state schema or simulation/economics changes
+PASS only explicit save hooks differ from exact 918d31f production source
+ALL PASS: 14 paused autosave regression groups

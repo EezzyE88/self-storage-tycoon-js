@@ -19,11 +19,11 @@ export const BUILD_GUIDE = {
   elevator: { how: 'Place the shaft inside a multi-floor building with hallway access on both floors.', why: 'Moves customers and carts between floors; upper-floor cart access depends on it.', when: 'Use whenever Floor 2 is intended to function as practical rentable storage.' },
   stairs: { how: 'Place inside a multi-floor shell beside hallways on both floors.', why: 'Provides people-only access between floors.', when: 'Use as supplementary vertical access; it does not replace an elevator for carts.' },
 
-  light: { how: 'Place lights along exterior lots or interior halls; use the Security overlay to find dark areas.', why: 'Dark halls cannot open and lighting contributes to security.', when: 'Add before commissioning dark interior areas and anywhere customer or security quality is weak.' },
+  light: { how: 'Place lights along exterior lots or interior halls; use the Security overlay to find dark areas.', why: 'Dark halls cannot open and lighting contributes to security.', when: 'Add before finishing dark interior areas and anywhere customer or security quality is weak.' },
   camera: { how: 'Place cameras so their coverage overlaps customer and unit areas; check the Security overlay.', why: 'Visible camera coverage improves security quality.', when: 'Use around entrances, loading zones and poorly covered unit areas.' },
   keypad: { how: 'Place the upgrade on an existing building entrance door.', why: 'Adds controlled access to the building.', when: 'Use when an interior building needs stronger access control.' },
 
-  hvac: { how: 'Place the plant on open ground directly beside the building it will serve.', why: 'Climate-controlled units require HVAC capacity.', when: 'Build before commissioning climate-controlled interior units and expand capacity when the zone is full.' },
+  hvac: { how: 'Place the plant on open ground directly beside the building it will serve.', why: 'Climate-controlled units require HVAC capacity.', when: 'Build before finishing climate-controlled interior units and expand capacity when the zone is full.' },
   power: { how: 'Place the electrical service pad on open ground.', why: 'Adds 40 kW of property-wide electrical capacity. If demand exceeds capacity, lower-priority equipment is shed.', when: 'Add when the power readout approaches its limit or before heavy loads such as elevators and HVAC.' },
   water: { how: 'Place the hookup on open ground directly beside the building it serves.', why: 'Restrooms and water fountains need a water connection.', when: 'Build before adding plumbing-dependent amenities.' },
 

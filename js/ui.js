@@ -83,6 +83,8 @@ const I = {
   logo: '<svg viewBox="0 0 48 48" fill="none" aria-label="Self Storage Tycoon"><path d="M6 20 24 8l18 12" stroke="#f5c542" stroke-width="4" stroke-linejoin="round"/><rect x="9" y="21" width="30" height="21" rx="2" fill="currentColor"/><path d="M13 26h22M13 30.5h22M13 35h22" stroke="#16202b" stroke-width="2.2" opacity=".55"/></svg>',
 };
 const money = (v, dec = false) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: dec ? 2 : 0, minimumFractionDigits: dec ? 2 : 0 });
+// Existing acquisition term, also disclosed in Growth; checked against actual engine purchases.
+const ACQUISITION_OPENING_CASH = 5000;
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const pct = (v) => Math.round(v * 100) + '%';
 // Floor identity shown to the player: numeric level 0 is Floor 1. Non-integers fall back to Floor 1, never a guess.
@@ -91,11 +93,12 @@ export const floorName = (f) => `Floor ${(Number.isInteger(f) && f > 0 ? f : 0) 
 export function completeText(e) {
   const units = Number.isInteger(e.units) ? e.units : 0, ready = Number.isInteger(e.ready) ? e.ready : 0, other = Number.isInteger(e.otherReady) ? e.otherReady : 0;
   if (!units) return `${e.label} finished`;
-  return `${e.label} finished - ${ready}/${units} ${e.vertical ? 'order ' : ''}units ready to commission${other ? ` · ${other} other ready ${other === 1 ? 'unit' : 'units'} elsewhere on the property` : ''}`;
+  return `${e.label} finished - ${ready}/${units} ${e.vertical ? 'order ' : ''}units ready to open automatically${other ? ` · ${other} other ready ${other === 1 ? 'unit' : 'units'} elsewhere on the property` : ''}`;
 }
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const NO_AISLE = 'Door faces no drive aisle yet';
 const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control', noReady: 'Nothing rent-ready', price: 'Rent too high', convenience: 'Not convenient enough', shopping: 'Kept shopping', service: 'No one at the office' };
-export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion commissioned', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate', first_retention: 'Kept a tenant from leaving', first_auction: 'First lien auction', first_loan: 'Financed growth' };
+export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion opened', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate', first_retention: 'Kept a tenant from leaving', first_auction: 'First lien auction', first_loan: 'Financed growth' };
 const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanliness', security: 'Security', climate: 'Climate', service: 'Service', value: 'Value', comfort: 'Comfort' };
 
 export class UI {
@@ -107,7 +110,7 @@ export class UI {
       <div id="pins"></div><svg id="blueprint" aria-label="Suggested building placement"></svg>
       <div class="hud">
         <div class="chip brand">${I.logo}<div class="nm" id="pname">Maple Street Storage<small id="pmode">Tutorial</small></div></div>
-        <div class="chip" data-a="finances" role="button" aria-label="Open finances"><div class="cash num" id="cash">$0<small>Cash</small></div><i id="goalbar" class="goalbar" hidden aria-hidden="true"><b></b></i></div>
+        <div class="chip cash-chip" data-a="finances" role="button" aria-label="Open finances"><div class="cash-context"><span class="active-property" id="activeProperty"></span><div class="cash num" id="cash">$0<small>Cash</small></div></div><i id="goalbar" class="goalbar" hidden aria-hidden="true"><b></b></i></div>
         <div class="chip clock" data-a="calendar" role="button" aria-label="Open calendar"><b class="num" id="clock">7:00 AM</b><span id="date">Day 1</span><span class="sbflag" id="sbflag" hidden></span></div>
         <div class="spacer"></div>
         <div class="chip speed" id="speed"><button data-a="speed" data-v="0" aria-label="Pause">${I.pause}</button><button data-a="speed" data-v="1" aria-label="1×: 24-second day" title="1×: 24-second day">1x</button><button data-a="speed" data-v="2" aria-label="2×: 12-second day" title="2×: 12-second day">2x</button><button data-a="speed" data-v="4" aria-label="4×: 6-second day" title="4×: 6-second day">4x</button></div>
@@ -250,6 +253,8 @@ export class UI {
     const el = e.target.closest('[data-a]'); if (!el) return;
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
+    if (this.g.saveStartup) return;
+    if (a !== 'transferConfirm' && a !== 'speed') this.transferReview = null;
     if(!['reserveStart','reserveResume','reserveStop','speed'].includes(a))this.reserveWait?.interrupt('You opened another control.');
     // Navigating out of the Requests dialog: close it first so the destination is never opened underneath it.
     if (this.requestPanel && ['focus', 'overlay', 'requestHelp', 'feedback'].includes(a) && el.closest('.modal')) this.leaveRequests(a === 'requestHelp' || a === 'feedback');
@@ -331,6 +336,7 @@ export class UI {
       case 'lessonLater': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'dismiss', id: v }); this.renderTut(true); break;
       case 'tutMin': this.tutMin = !this.tutMin; this.renderTut(true); break;
       case 'suggestPlacement': this.suggestPlacement(); break;
+      case 'snapPlacement': { const n=this.nearestValidPlacement(); if(n){ this.buildRotation=n.rotation; this.planArgs={a:n.a,b:n.b}; this.replan(); } break; }
       case 'showPlacement': this.autoPanKey=null; this.guideScrolled=null; this.setTab(null); this.sel=null; this.renderSheet(true); this.showBlueprintTarget(); break;
       case 'recheckLayout': this.toast(verticalCheck(this.sim)); break;
       case 'tutWhy': this.tutWhy = !this.tutWhy; this.renderTut(true); break;
@@ -338,7 +344,7 @@ export class UI {
       case 'handbook': this.showHandbook(); this.sfx('click'); break;
       case 'modalClose': this.closeModal(); break;
       case 'tabFromModal': this.closeModal(); this.setTab(v); break;
-      case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.sfx('confirm'); }); break;
+      case 'new': this.guardNew(() => { this.closeModal(); this.g.newGame(v); this.title = false; this.g.autosave?.(true); this.sfx('confirm'); }); break;
       case 'replaceYes': { const run = this.pendingNew; this.pendingNew = null; if (run) this.g.keepCurrent(this.contSave).then((r) => { if (stored(r) || !this.g.localsave.ok) run(); else this.toast(storeFailText(r, 'no new game was started'), 'bad'); }); break; }
       case 'replaceNo': this.pendingNew = null; if (this.title) this.showTitle(); else this.closeModal(); break;
       case 'restoreKept': this.restoreKept(); break;
@@ -352,10 +358,14 @@ export class UI {
       case 'sbAdv': this.sbAdv = !this.sbAdv; this.showSandbox(); this.sfx('click'); break;
       case 'sbFunds': this.do({ type: 'sbFunds', amt: +v }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
       case 'sbSet': this.do({ type: 'sbSet', k: el.dataset.k, v: JSON.parse(v) }, true); this.setMeta(this.g.metaName(), this.g.modeLabel(this.sim.s)); this.renderSheet(true); break;
-      case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.sfx('confirm'); }); break; }
+      case 'sbStart': { const sb = { ...this.sb }; this.guardNew(() => { this.closeModal(); this.g.newGame('custom', sb); this.title = false; this.g.autosave?.(true); this.sfx('confirm'); }); break; }
       case 'switchProp': this.g.switchProperty(+v); this.sfx('tab'); break;
-      case 'acquire': { const r = this.g.acquire(v, el.dataset.m); this.toast(r.msg, r.ok ? 'good' : 'bad'); this.renderSheet(true); break; }
-      case 'transfer': { const r = this.g.transfer(+el.dataset.from, +el.dataset.to, +v); this.toast(r.msg, r.ok ? '' : 'bad'); this.renderSheet(true); break; }
+      case 'acquire': this.showAcquisitionReview(v, el.dataset.m); break;
+      case 'previewFirstGate': this.previewFirstGate(); break;
+      case 'acquisitionFinancing': this.fundingContext=null; this.setTab('business',true); this.jumpSection('Financing'); break;
+      case 'acquisitionConfirm': this.confirmAcquisitionReview(); break;
+      case 'transfer': this.showTransferReview(+el.dataset.from, +el.dataset.to, +v); break;
+      case 'transferConfirm': this.confirmTransferReview(v); break;
       case 'comebackClose': if (this.sim.s.scenario?.status === 'won') this.do({ type: 'comebackAck' }); this.scMin = true; this.renderTut(true); break;
       case 'comebackWork': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('operate'); this.jumpSection('Work queue'); break;
       case 'comebackReadiness': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Growth Readiness'); break;
@@ -405,9 +415,9 @@ export class UI {
       case 'lens': this.g.showcase.setLens(!this.g.showcase.lensPref); this.showMenu(); break;
       case 'continue': { const d = this.contSave; if (!d) break;
         const told = (r, note) => { const m = r.meta || {}; this.closeModal(); this.sfx('confirm'); this.toast(`${note}Restored ${m.name || 'your game'}: Day ${+m.day || 1}${m.time ? ', ' + m.time : ''}, ${money(+m.cash || 0)} cash (${this.ago((r.at || 0) * 1000)}${r.src === 'server' ? ', from the save server' : ''}).`, note ? 'bad' : 'good'); };
-        this.g.loadCode(d.code).then(async (ok) => {
-          if (ok) return told(d, d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '');
-          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
+        this.g.loadCode(d.code, true).then(async (ok) => {
+          if (ok) { this.g.autosave?.(true); return told(d, this.contRecovery || (d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '')); }
+          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code, true)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
           this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded, and no backup worked. Load a save code or file instead.', 'bad');
         }); break; }
       case 'loadCode': { const ta = this.root.querySelector('#loadTa'); this.importSave(ta ? ta.value : '', 'code'); break; }
@@ -434,6 +444,7 @@ export class UI {
   }
   do(action, feedback = false) {
     const r = this.sim.dispatch(action) || {};
+    if (r.ok) this.g.autosavePaused?.();
     if (feedback && r.msg) this.toast(r.msg, r.ok ? 'good' : 'bad');
     if (feedback) this.sfx(r.ok ? 'click' : 'refuse');
     return r;
@@ -478,7 +489,7 @@ export class UI {
     this.toasts = [];
     this.growthProposal = null; this.growthPlanArgs = null;
     this.projectProposal = null;
-    this.pricingReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null;
+    this.pricingReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null; this.transferReview = null;
     this.yardGuide = null;
     this.floorBuilding = null;
     this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
@@ -586,6 +597,8 @@ export class UI {
     const build=title==='Build', office=title==='Office';
     // Keep completion and work assignment controls outside the collapsible information body.
     const actions = [];
+    // The first-gate action remains reachable even while Growth details are collapsed.
+    if(title==='Growth')body=body.replace(/<button\b[^>]*data-a="previewFirstGate"[^>]*>[\s\S]*?<\/button>/g,button=>{actions.push(button);return '';});
     if (this.sel != null && !office) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
       const cmd = button.match(/data-cmd='([^']*)'/);
       if (!cmd) { if (/data-a="(?:staffHelp|verticalReview)"/.test(button)) { actions.push(button); return ''; } return button; }
@@ -605,7 +618,7 @@ export class UI {
     else if(title==='Business') {const o=sim.occupancy();pairs=[['Cash',money(s.cash)],['Occupied',`${o.occ}/${o.n}`],['Vacant ready',sim.objs('unit').filter(u=>u.cstate==='operating'&&u.commercial==='ready'&&!u.blocked).length]];}
     else if(title==='Growth') pairs=[['Reputation',pct(sim.reputation())],['Properties',this.g.company?.props.length||1]];
     else if(title==='Customer feedback') pairs=[['Recent reports',s.thoughts.filter(t=>t.kind==='bad').length],['Requests',s.convos.length]];
-    else {const o=typeof this.sel==='number'&&s.objects[this.sel];pairs=o?.type==='unit'?[['Status',UNIT_STATUS[unitStatus(o)].label],['Size',o.access==='drive'?o.size:`${o.size} · ${floorName(o.f)}`]]:[['Selected',sub||title]];}
+    else {const o=typeof this.sel==='number'&&s.objects[this.sel];const status=o?.cstate==='built'?'Built · not ready':o?.cstate==='ready'?'Opening automatically':o?.type==='unit'?UNIT_STATUS[unitStatus(o)].label:null;pairs=o?.type==='unit'?[['Status',status],['Size',o.access==='drive'?o.size:`${o.size} · ${floorName(o.f)}`]]:[['Selected',sub||title]];}
     return `<div class="dock-metrics">${pairs.map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(String(v))}</b></div>`).join('')}</div>`;
   }
   // ------------------------------------------------------------ BUILD
@@ -731,10 +744,8 @@ export class UI {
     const active=p?.groups.some(g=>!g.changed&&g.completed==null);
     let h='<section class="yard-loop"><b>Your next win</b>';
     if(p){
-      h+=`<p>${p.changed?'Some tracked spaces changed. Earlier leases remain recorded.':p.completed!=null?'Your spaces found tenants.':p.building?'Bring your new spaces into service.':p.commissioning?'Your new spaces are ready to commission.':'Put these spaces to work.'}</p><div class="yard-loop-progress"><b>${p.occupied}/${p.total} occupied</b><span>${p.reserved} reserved · ${p.ready} ready to rent</span></div><p class="note">${p.signed} signed since Day ${dayOf(s.yardLoop.started)} · ${money(p.activeRent,true)}/month in current contracts. ${p.completed!=null?'Current occupancy can change. ':''}Contracted rent, not profit.</p><div class="row wrap">${p.units.map(u=>`<button class="btn sm" data-a="yardUnit" data-v="${u.id}">${esc(u.name)} · ${u.cstate==='construction'?'building':u.cstate==='ready'?'commission':esc(u.commercial)}</button>`).join('')}</div>`;
+      h+=`<p>${p.changed?'Some tracked spaces changed. Earlier leases remain recorded.':p.completed!=null?'Your spaces found tenants.':p.building?'Finish construction and readiness requirements.':p.commissioning?'Your new spaces open automatically when time advances.':'Put these spaces to work.'}</p><div class="yard-loop-progress"><b>${p.occupied}/${p.total} occupied</b><span>${p.reserved} reserved · ${p.ready} ready to rent</span></div><p class="note">${p.signed} signed since Day ${dayOf(s.yardLoop.started)} · ${money(p.activeRent,true)}/month in current contracts. ${p.completed!=null?'Current occupancy can change. ':''}Contracted rent, not profit.</p><div class="row wrap">${p.units.map(u=>`<button class="btn sm" data-a="yardUnit" data-v="${u.id}">${esc(u.name)} · ${u.cstate==='construction'?'building':u.cstate==='ready'?'opening':esc(u.commercial)}</button>`).join('')}</div>`;
       if(p.groups.length>1)h+=`<div class="list">${p.groups.map(g=>`<p class="note"><b>${esc(g.label)}</b> · ${g.occupied}/${g.total} occupied · ${g.reserved} reserved${g.changed?' · tracked layout changed':g.completed!=null?' · lease-up achieved':''}</p>`).join('')}</div>`;
-      const orders=[...new Set(p.units.filter(u=>u.cstate==='ready').map(u=>u.order))];
-      for(const order of orders)h+=this.cmdBtn('Commission ready spaces',{type:'commission',order},'pri');
     }
     if(ready.length){h+=`<p><b>${ready.length} existing spaces can earn next.</b></p><p class="note">${[...groups.values()].map(g=>`${g.n} × ${g.size} ${g.env==='climate'?'climate':'standard'} at ${money(g.ask,true)}/month`).join(' · ')}. Keep offering them at these rents, or review asking rents.</p><div class="row wrap">${!active?'<button class="btn pri" data-a="yardWatch">Keep rents &amp; watch leasing</button>':''}<button class="btn" data-a="yardPrices">Review asking rents</button></div>`;}
     if(!active&&!ready.length){
@@ -758,6 +769,68 @@ export class UI {
     this.pricingReview={sim:this.sim,approach,ask:q.ask};this.pauseForPopup('modal');
     const lower=approach==='lower',selected=lower?q.lower:q.ask;
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>${lower?'Review lower asking rent':'Keep current asking rent'}</h2><p>10×10 standard · ${money(q.ask,true)} → ${money(selected,true)}/month.</p><p>${q.restored} restored vacancies are being tracked. ${lower?`This asking-price group affects all ${q.matching} matching ready vacancies on this property. Existing signed lease rents stay unchanged. ${money(q.difference,true)} less monthly rent per new lease; ${q.restored} new leases would carry ${money(q.difference*q.restored,true)} less monthly rent than at the previous ask. Neither occupancy outcome is guaranteed.`:'No asking price changes. Measurement starts now; earlier leases are not counted.'}</p><div class="row wrap"><button class="btn" data-a="modalClose">Decide later</button><button class="btn pri" data-a="rescuePricingConfirm">${lower?'Apply '+money(selected,true)+' asking rent':'Keep rent &amp; watch leasing'}</button></div></div></div>`;
+  }
+  transferQuote(from, to, amount) {
+    const C=this.g.company,A=C?.props[from],B=C?.props[to];
+    if(!C||!Number.isInteger(from)||!Number.isInteger(to)||from!==C.active||!A||!B||A.sim!==this.sim||from===to||amount!==10000)return {ok:false,msg:'Transfer is no longer available'};
+    if(A.sim.s.cash<amount)return {ok:false,msg:'Not enough cash at the sending property'};
+    return {ok:true,amount,fromName:A.name,toName:B.name,fromCash:A.sim.s.cash,toCash:B.sim.s.cash,
+      position:A.sim.financialPosition({spend:amount}),toCashAfter:B.sim.financialPosition({spend:-amount}).cash};
+  }
+  showTransferReview(from, to, amount) {
+    const q=this.transferQuote(from,to,amount),C=this.g.company;
+    this.acquisitionReview=null;this.creditReview=null;this.termLoanReview=null;
+    const token=String(this.transferReviewSeq=(this.transferReviewSeq||0)+1);
+    this.transferReview=q.ok?{company:C,sim:this.sim,source:C.props[from],destination:C.props[to],destinationSim:C.props[to].sim,from,to,amount,token,quote:q}:null;
+    this.requestPanel=false;this.pauseForPopup('modal');
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="transfer-title"><h2 id="transfer-title">Review property transfer</h2>${q.ok?`<div class="kv"><span>From</span><b>${esc(q.fromName)}</b><span>Source cash now</span><b>${money(q.fromCash,true)}</b><span>Source cash after transfer</span><b>${money(q.position.cash,true)}</b><span>To</span><b>${esc(q.toName)}</b><span>Destination cash now</span><b>${money(q.toCash,true)}</b><span>Destination cash after transfer</span><b>${money(q.toCashAfter,true)}</b><span>Transfer amount</span><b>${money(q.amount)}</b></div>${this.financialContextHtml(q.position,q.fromName,'transfer')}<p class="note">Internal transfer: no fee, income or expense. Company total cash is unchanged. Debt stays with its current property.</p>`:`<p class="note">${esc(q.msg)}. Return to Properties to review the current accounts.</p>`}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="transferConfirm" data-v="${token}">Confirm ${money(q.amount)} transfer</button>`:''}</div></div></div>`;
+  }
+  confirmTransferReview(token) {
+    const r=this.transferReview,C=this.g.company;
+    if(!r||token!==r.token)return;
+    if(r.company!==C||r.sim!==this.sim||r.source!==C?.props[C.active]||r.source!==C?.props[r.from]||r.destination!==C?.props[r.to]||r.destinationSim!==C?.props[r.to]?.sim){this.transferReview=null;this.closeModal();return;}
+    const q=this.transferQuote(r.from,r.to,r.amount);
+    if(!q.ok||JSON.stringify(q)!==JSON.stringify(r.quote)){
+      this.toast('Transfer quote changed. Review before confirming.','bad');this.showTransferReview(r.from,r.to,r.amount);return;
+    }
+    this.transferReview=null;
+    const result=this.g.transfer(r.from,r.to,r.amount);this.toast(result.msg,result.ok?'good':'bad');
+    if(!result.ok){this.showTransferReview(r.from,r.to,r.amount);return;}
+    this.closeModal();this.renderSheet(true);
+  }
+  financialContextHtml(position, name, action) {
+    return `<div class="kv financial-context"><span>Unpaid committed bills</span><b>${money(position.committed,true)}</b><span>Recommended reserve</span><b>${money(position.reserve,true)}</b><span>Available after bills &amp; reserve</span><b class="${position.available<0?'neg':''}">${money(position.available,true)}</b></div>${position.available<0?`<p class="note financial-warning">This leaves ${esc(name)} below its recommended reserve after committed bills. You can still ${action==='purchase'?'purchase':'transfer'}. Future rent is not guaranteed.</p>`:''}`;
+  }
+  acquisitionQuote(kind, market) {
+    const C=this.g.company;
+    if(!C)return {ok:false,msg:'No company'};
+    if(C.props.length>=5)return {ok:false,msg:'Portfolio is limited to 5 properties'};
+    const offer=this.g.offers().find(o=>o.kind===kind&&o.market===market);
+    if(!offer)return {ok:false,msg:'Offer not available'};
+    if(this.sim.s.cash<offer.price)return {ok:false,msg:'Not enough cash at this property'};
+    const position=this.sim.financialPosition({spend:offer.price});
+    return {ok:true,offer,workingCash:ACQUISITION_OPENING_CASH,sourceName:C.props[C.active].name,cashAfter:position.cash,position};
+  }
+  showAcquisitionReview(kind, market) {
+    const q=this.acquisitionQuote(kind,market),C=this.g.company;
+    this.creditReview=null;this.termLoanReview=null;this.transferReview=null;
+    this.acquisitionReview=q.ok?{sim:this.sim,company:C,source:C.props[C.active],kind,market,quote:q}:null;
+    this.requestPanel=false;this.pauseForPopup('modal');
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="acquisition-title"><h2 id="acquisition-title">Review property purchase</h2>${q.ok?`<h3>${esc(q.offer.name)}</h3><p>${esc(q.offer.desc)}</p><div class="kv"><span>Purchasing property</span><b>${esc(q.sourceName)}</b><span>Total price</span><b>${money(q.offer.price)}</b><span>Included opening working cash</span><b>${money(q.workingCash)}</b><span>Purchasing property's cash after purchase</span><b>${money(q.cashAfter,true)}</b></div>${this.financialContextHtml(q.position,q.sourceName,'purchase')}<p class="note">Opening working cash is included in the total price and goes into the new property's account. The remaining cash shown stays at ${esc(q.sourceName)}. Future rent is not guaranteed.</p>`:`<p class="note">${esc(q.msg)}. Return to Acquisitions to review current offers.</p>`}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="acquisitionConfirm">Confirm ${money(q.offer.price)} purchase</button>`:''}</div></div></div>`;
+  }
+  confirmAcquisitionReview() {
+    const r=this.acquisitionReview,C=this.g.company;
+    if(!r)return;
+    if(r.sim!==this.sim||r.company!==C||r.source!==C?.props[C.active]){this.acquisitionReview=null;return;}
+    const q=this.acquisitionQuote(r.kind,r.market);
+    if(!q.ok||JSON.stringify(q)!==JSON.stringify(r.quote)) {
+      this.toast('Property quote changed. Review before confirming.','bad');this.showAcquisitionReview(r.kind,r.market);return;
+    }
+    // Consume the review before purchasing; queued/repeated confirmation taps cannot buy twice.
+    this.acquisitionReview=null;
+    const result=this.g.acquire(r.kind,r.market);this.toast(result.msg,result.ok?'good':'bad');
+    if(!result.ok){this.showAcquisitionReview(r.kind,r.market);return;}
+    this.closeModal();this.renderSheet(true);
   }
   creditContext() {
     if(this.fundingContext?.sim!==this.sim)return null;
@@ -783,7 +856,7 @@ export class UI {
   }
   showCreditReview(amount, bank=null) {
     const context=bank?null:this.creditContext(),q=amount>0?creditProjection(this.sim,amount,context||{}):null;
-    this.termLoanReview=null;
+    this.acquisitionReview=null;this.termLoanReview=null;this.transferReview=null;
     this.creditReview=q?.ok?{sim:this.sim,amount:q.amount,bank,quote:q}:null;
     // The request remains pending, but must not repaint over its borrowing review.
     this.requestPanel=false;this.pauseForPopup('modal');
@@ -818,7 +891,7 @@ export class UI {
   }
   showTermLoanReview(amount) {
     const q=this.termLoanQuote(amount);
-    this.creditReview=null;this.termLoanReview=q.ok?{sim:this.sim,quote:q}:null;
+    this.acquisitionReview=null;this.creditReview=null;this.transferReview=null;this.termLoanReview=q.ok?{sim:this.sim,quote:q}:null;
     this.requestPanel=false;this.pauseForPopup('modal');
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal"><h2>Review expansion loan</h2>${q.ok?`<div class="kv"><span>Borrow</span><b>${money(q.amount)}</b><span>Annual interest rate</span><b>${(q.rate*100).toFixed(1)}%</b><span>Term</span><b>${q.months} months</b><span>New monthly payment</span><b>${money(q.payment,true)}</b><span>First payment</span><b>Day ${q.firstDay}</b><span>Total term-loan payments</span><b>${money(q.monthlyPayments,true)}/month</b><span>Cash after borrowing</span><b>${money(q.draw.cash,true)}</b><span>Available after bills &amp; reserve</span><b>${money(q.draw.available,true)}</b></div><p class="note">Debt must be repaid. Borrowing creates no profit and buys no expansion. The existing 14-day reserve estimate excludes this new loan's first payment, due on Day ${q.firstDay}. Future rent is not guaranteed.</p>`:'<p class="note">That amount is no longer approved. Return to Financing to review current options.</p>'}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="termLoanConfirm">Confirm ${money(q.amount)} loan</button>`:''}</div></div></div>`;
   }
@@ -857,7 +930,7 @@ export class UI {
   projectProgressHtml() {
     const p = this.sim.s.propertyProjects?.active, st = projectStatus(this.sim);
     if (!p || !st) return '';
-    return `<section class="property-project"><b>${esc(st.label)}</b><small>${esc(st.text)}${p.key === 'cover' ? ' · service improvement, no new units' : ` · ${st.leased}/${st.total} leased`}</small><div class="row wrap"><button class="btn sm" data-a="projectView" data-v="${p.key}">View project</button>${st.commissionable ? this.cmdBtn('Commission project', {type:'commission',order:p.order}, 'pri') : ''}</div></section>`;
+    return `<section class="property-project"><b>${esc(st.label)}</b><small>${esc(st.text)}${p.key === 'cover' ? ' · service improvement, no new units' : ` · ${st.leased}/${st.total} leased`}</small><div class="row wrap"><button class="btn sm" data-a="projectView" data-v="${p.key}">View project</button></div></section>`;
   }
   yardInfillHtml() {
     const c = this.sim.s.scenario;
@@ -872,6 +945,38 @@ export class UI {
     }).join('');
     const history = (r?.history || []).map(p => `<div class="project-result"><b>${esc(PROJECTS[p.key].label)} · opened Day ${dayOf(p.completed)}</b><small>${p.key === 'cover' ? 'Loading shelter completed. Rainy-day customer use is separate from profitability.' : p.firstLease ? `First project lease: ${money(p.firstLease.rent,true)}/mo contracted. Customer use demonstrated; investment payback is not established.` : 'In service. No project lease recorded yet; customer use and profitability are separate.'}</small><button class="btn sm" data-a="projectView" data-v="${p.key}">View improvement</button></div>`).join('');
     return `<h3>Your next improvement</h3><div class="yard-infill">${this.yardLoopHtml()}${this.rescueOperationHtml()}<details data-yard-detail="optional-projects"><summary>Other property improvements</summary><p class="note">Optional projects. Keep your cash if the evidence or buffer is weak.</p>${this.projectProgressHtml()}${cards ? `<div class="list">${cards}</div>` : r?.active ? '' : '<p class="note">Ordinary building remains available.</p>'}</details>${history ? `<details data-yard-detail="project-history"><summary>Your completed projects</summary>${history}</details>` : ''}</div>`;
+  }
+  firstGateGuidance() {
+    const sim=this.sim,s=sim.s,C=this.g.company;
+    // Acquired plain parcels have no sandbox settings or operating-facility mirror.
+    // Use the existing saved shape; no new acquisition/save marker is needed.
+    if(!C||C.active<1||C.props[C.active]?.sim!==sim||s.mode!=='sandbox'||s.sb||s.mirror!=null||s.creative||s.scenario||s.lesson||s.tut?.on||sim.objs('gate').length)return null;
+    const p=s.parcel,center=(p.x0+p.x1)/2;
+    const xs=Array.from({length:p.x1-p.x0+1},(_,i)=>p.x0+i).sort((a,b)=>Math.abs(a-center)-Math.abs(b-center)||a-b);
+    let fallback=null;
+    for(const x of xs) {
+      const args={tool:'gate',a:{x,y:p.y1},b:{x,y:p.y1},f:0},plan=sim.plan(args);
+      if(plan.status==='valid')return {args,plan};
+      if(plan.status==='incomplete'&&!fallback)fallback={args,plan};
+    }
+    return fallback||{args:null};
+  }
+  firstGateHtml(guide) {
+    if(!guide)return '';
+    return `<p class="note first-gate-guide">Place your first Entrance Gate on the street-facing front fence. ${guide.args?'Preview spends nothing; Confirm starts construction.':'No buildable gate position is clear on that fence. Clear its lane or choose another valid position.'}</p>${guide.args?`<button class="btn sm" data-a="previewFirstGate">Preview suggested gate · ${money(guide.plan.cost)}</button>`:''}`;
+  }
+  previewFirstGate() {
+    const guide=this.firstGateGuidance();
+    if(!guide?.args){this.toast('No suggested gate is available. Review the current property and front fence.','bad');return false;}
+    const a=guide.args;
+    this.pauseForPopup('review');this.setTab(null);this.setView('ext');this.cat='site';this.pickTool('gate');
+    this.flip=false;this.climate=false;this.rush=false;
+    // A distant parcel overview cannot pan its front fence above a phone review
+    // within the camera bounds. This explicit preview brings the gate into view.
+    if(this.rend.zoom<1.5)this.rend.zoomBy?.(1.5/this.rend.zoom);
+    this.rend.lookAt(a.a.x,a.a.y);
+    this.planArgs={a:{...a.a},b:{...a.b}};this.replan();
+    return true;
   }
   pickTool(k) {
     if(this.retrofitReview)this.endRetrofit();
@@ -904,9 +1009,10 @@ export class UI {
       const shapes = T.unit ? this.plan.units : office ? [office] : [];
       const x=shapes.length?Math.min(...shapes.map(u=>u.x)):Math.min(a.x,b.x);
       const y=shapes.length?Math.min(...shapes.map(u=>u.y)):Math.min(a.y,b.y);
-      if(T.unit) {
-        const span=SIZES[T.size].w*this.plan.count;
-        this.planArgs={a:{x,y},b:{x:x+(this.buildRotation%2?0:span-1),y:y+(this.buildRotation%2?span-1:0)}};
+      if(T.unit) { // keep the row anchored at the touched cell, growing the same way the finger dragged
+        const axisX=dir ? dir[1] !== 0 : Math.abs(b.x-a.x)>=Math.abs(b.y-a.y);
+        const span=SIZES[T.size].w*this.plan.count, sg=Math.sign(axisX?b.x-a.x:b.y-a.y)||1;
+        this.planArgs={a:{...a},b:{x:a.x+(this.buildRotation%2?0:sg*(span-1)),y:a.y+(this.buildRotation%2?sg*(span-1):0)}};
       } else if(office) this.planArgs={a:{x,y},b:{x,y}};
       else {
         const w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1;
@@ -914,6 +1020,29 @@ export class UI {
       }
     }
     this.replan();
+  }
+  // Find a nearby buildable footprint, retaining unit count and all readiness requirements.
+  nearestValidPlacement() {
+    const T=TOOLS[this.tool], pa=this.planArgs, R=this.plan; if(!T?.unit||!pa||!R?.count) return null;
+    const key=JSON.stringify([R.args,R.count,this.buildRotation,this.toolFloor(),this.sim.s.objVer??this.sim.s.t]);
+    if(this.nearSim===this.sim&&this.nearKey===key) return this.nearHit;
+    this.nearSim=this.sim; this.nearKey=key; this.nearHit=null;
+    const axisX=R.doorDir ? R.doorDir[1] !== 0 : Math.abs(pa.b.x-pa.a.x)>=Math.abs(pa.b.y-pa.a.y);
+    const span=SIZES[T.size].w*R.count, sg=Math.sign(axisX?pa.b.x-pa.a.x:pa.b.y-pa.a.y)||1, base=R.args, cand=[];
+    for(let dy=-6; dy<=6; dy++) for(let dx=-6; dx<=6; dx++) cand.push([dx,dy]);
+    cand.sort((p,q)=>Math.abs(p[0])+Math.abs(p[1])-Math.abs(q[0])-Math.abs(q[1]));
+    for(const [dx,dy] of cand) for(let r=0;r<4;r++) {
+      if(!dx&&!dy&&r===this.buildRotation) continue;
+      const a={x:pa.a.x+dx,y:pa.a.y+dy}, b={x:a.x+(r%2?0:sg*(span-1)),y:a.y+(r%2?sg*(span-1):0)};
+      const P=this.sim.plan({...base,a,b,rotation:r,axis:undefined,dir:undefined});
+      if(P.status!=='invalid'&&!P.missing?.includes(NO_AISLE)&&P.count===R.count){
+        const side=['north-facing','east-facing','south-facing','west-facing'][r];
+        const mv=[dy?`${Math.abs(dy)} ${dy<0?'north':'south'}`:'',dx?`${Math.abs(dx)} ${dx<0?'west':'east'}`:''].filter(Boolean).join(' + ');
+        this.nearHit={a,b,rotation:r,label:`${mv?'shift '+mv+' · ':''}${side} doors`,missing:[...P.missing]};
+        return this.nearHit;
+      }
+    }
+    return null;
   }
   rotationHtml() {
     const T=TOOLS[this.tool];
@@ -957,6 +1086,7 @@ export class UI {
     const finishesWait=this.reserveWait?.pending&&this.reserveWait.matches(this.plan.args);
     const finishesResult=this.reserveResult&&this.reserveWait?.matches(this.plan.args,this.reserveResult);
     const r = this.sim.dispatch({ type: 'build', ...this.plan.args, ...(projectKey ? { projectKey } : {}) });
+    if (r.ok) this.g.autosavePaused?.();
     if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
     if(r.ok&&(finishesWait||finishesResult)){this.reserveResult=null;this.reserveNotice=null;this.renderTut(true);}
     if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
@@ -994,20 +1124,21 @@ export class UI {
       return;
     }
     const mm=curBeat(this.sim)?this.placementMismatch(curBeat(this.sim).steps[stepState(this.sim,this).cur]):null;
-    if(!R) { box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
+    if(!R) { const gate=this.tool==='gate'?this.firstGateGuidance():null; box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${gate?.args?`<button class="btn sm" data-a="previewFirstGate">Preview ${money(gate.plan.cost)} gate</button>`:`${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button> ' : ''}${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place.' : 'Press and hold, then drag to size it. Drag normally to pan; two fingers also pan/zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
     if (R) {
       const projectMarker = this.projectProposal?.sim === this.sim ? `<p class="project-review">${matchesProject(R.args, this.projectProposal.key) ? esc(PROJECTS[this.projectProposal.key].label) + ' · project preview' : 'Placement changed · ordinary build, not a tracked project'}</p>` : '';
       const compareProjects = this.projectProposal?.sim === this.sim && this.projectProposal.key !== 'cover' ? '<div class="row wrap project-switch"><button class="btn sm" data-a="projectPreview" data-v="small">Two 5×10s</button><button class="btn sm" data-a="projectPreview" data-v="large">One 10×10</button></div>' : '';
       const ic = R.status === 'valid' ? '&#10003;' : R.status === 'incomplete' ? '!' : '&#215;';
-      const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons.join('; '));
-      status = (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects + `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>`;
-      if(T.unit&&this.sim.autoOpenEnabled())status += '<p class="note">Confirm authorizes construction. These units enter rental inventory automatically when construction and required access, lighting and capacity are complete. Opening the property remains your decision.</p>';
+      const more = R.reasons.length > 1 ? `<details class="note"><summary>+${R.reasons.length - 1} more placement blocker${R.reasons.length > 2 ? 's' : ''}</summary>${R.reasons.slice(1).map(esc).join('; ')}</details>` : '';
+      const txt = R.status === 'valid' ? (this.tool === 'demolish' ? esc(R.label) : 'Correct — ready to build') : R.status === 'incomplete' ? 'Will build, but not earn yet: ' + esc(R.missing.join('; ')) : esc(R.reasons[0] || '');
+      const near = T.unit && (R.status === 'invalid' || R.missing?.includes(NO_AISLE)) ? this.nearestValidPlacement() : null;
+      status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>` + (R.status === 'invalid' ? more : '') + (near ? `<div class="status idle near-valid"><span class="ic">&#8599;</span><span>Nearest buildable spot: ${esc(near.label)}${near.missing.length ? ` <small>Still needs: ${esc(near.missing.join('; '))}</small>` : ''}</span><button class="btn sm" data-a="snapPlacement">Move there</button></div>` : '') + (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
+      if(this.tool==='gate'&&R.status==='invalid')status+=this.firstGateHtml(this.firstGateGuidance());
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
       if (R.status !== 'invalid' && !this.sim.s.creative && R.cost) {
-        status += this.spendingHtml(R.cost, this.sim.planDailyCost(R), 'after build');
         if(this.sim.financialPosition({spend:R.cost,extraDaily:this.sim.planDailyCost(R)}).available<0){
           status += '<button class="btn sm" data-a="fundingReview">Review funding · optional</button>';
           if(sandboxReserveQuote(this.sim,R.args))status += '<button class="btn sm" data-a="sandboxReserveStart">Fast-forward to reserve</button><p class="note">Runs normal time for up to 7 game days, then pauses. Owner decisions stop the wait. Stop or Pause ends it. Return to this placement and Confirm separately to buy.</p>';
@@ -1019,9 +1150,14 @@ export class UI {
     }
     const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
     const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
+    // Keep the same financial calculation beside Confirm, outside optional review details.
+    const daily = this.sim.planDailyCost(R);
+    const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });
+    const authorization = T.unit && this.sim.autoOpenEnabled() ? '<p class="note build-authorization">Confirm authorizes construction. Units open automatically when ready. Opening the property remains your decision.</p>' : '';
+    const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after build: <b>${money(P.cash)}</b><br>Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br>Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br>Added costs: ${money(daily, true)}/day when operating.</p>` : ''}${authorization}</div>`;
     const wasOpen = !!box.firstChild;
-    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${status}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
-      <div class="bot"><div class="cost">${costTxt}</div>
+    box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
+      ${commitment}<div class="bot">
       ${this.rotationHtml()}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
@@ -1057,6 +1193,7 @@ export class UI {
     const args = this.plan?.args;
     if (!args?.a || !args?.b) return false;
     const shapes = [...(this.plan.units || []), ...(this.plan.creates || []).filter(c => c.w && c.h)];
+    if(this.tool==='gate'&&this.firstGateGuidance())for(const c of this.plan.items||[])shapes.push({x:c.x,y:c.y,w:1,h:1,f:0});
     // Frame the access cells as well as the structure, so the highlighted side stays visible.
     for(const u of this.plan.units || []) if(u.dir) {
       shapes.push({x:u.dir[0]>0?u.x+u.w:u.dir[0]<0?u.x-1:u.x,
@@ -1162,7 +1299,7 @@ export class UI {
     <details class="office-authority" data-yard-detail="office-authority"><summary>Staff &amp; authority · ${money(p.payroll, true)}/day payroll</summary>
       <p>Capacity is charged or reserved when work is assigned; it is not elapsed labor or completed work. The completed count records finished property jobs only; office service and travel are excluded.</p>
       <p><b>Clerk ${money(ROLES.clerk.wage, true)}/day:</b> counter coverage 8 AM–6 PM, first before the Owner, plus eligible requests. Each customer served by the Owner charges 0.5h. <b>Porter ${money(ROLES.porter.wage, true)}/day:</b> make-ready, cleaning and permitted cart recovery. <b>Tech ${money(ROLES.tech.wage, true)}/day:</b> repairs and enabled preventive maintenance. Owner, Porter and Tech each have 8 daily capacity hours.</p>
-      <p><b>Manager ${money(ROLES.manager.wage, true)}/day:</b> does not serve the counter. Automatically commissions ready units, books qualifying delayed/urgent vendors ($250 simple / $650 complex), and buys $${CART_COST} carts for qualifying empty corrals (at most one per corral per game day). Vendor/cart purchases check available cash after bills and recommended reserve; there is no separate approval or daily spending budget.</p>
+      <p><b>Manager ${money(ROLES.manager.wage, true)}/day:</b> does not serve the counter. Books qualifying delayed/urgent vendors ($250 simple / $650 complex), and buys $${CART_COST} carts for qualifying empty corrals (at most one per corral per game day). Finished eligible units open automatically for every player. Vendor/cart purchases check available cash after bills and recommended reserve; there is no separate approval or daily spending budget.</p>
       <p>Every 30 game days, the Manager adjusts eligible asking rents at high/low occupancy, approximately +3% / −3% with rounding and market bounds. Existing lease rents are not raised by this automation. Retention is <b>${s.policies.retention ? 'On' : 'Off'}</b>: eligible staff may offer 10% off to price-driven move-outs; acceptance changes that tenant’s lease rent.</p>
       <p>Request mode: <b>${p.manual ? 'Owner reviews every request' : 'Staff handle eligible requests'}</b>. Critical requests and explicit Owner takeovers stay with you. Manual review controls requests only; it does not turn off Manager pricing, purchases or lien notices. Those Manager powers have no separate switches.</p>
       <p>Automatic lien notices: <b>${s.policies.autoNotice ? 'On' : 'Off'}</b>; a Manager sends them anyway. An unresolved lien-eligible account also advances to notice after 14 days. Late fee: <b>${money(s.policies.lateFee || 0)}</b>, once after 5 days late; 15-day overlock: <b>${s.policies.overlock ? 'On' : 'Off'}</b>. Resolution: <b>${s.policies.resolution === 'auction' ? 'Auction' : 'Clean-out/donation'}</b>. Scheduled resolution can charge $80 haul-away for a junk auction lot or $120 for clean-out/donation, without another approval. Payroll accrues at 7 AM; operating bills settle weekly and scheduled debt payments debit automatically.</p>
@@ -1245,7 +1382,7 @@ export class UI {
       case 'fountain': return this.sheet('Water Fountain', sim.amenityWorks(o) ? 'Working' : 'Not working', `${this.condBar(o.cond)}${this.taskActions(o)}<p class="note">${sim.hasWater(D.shellAt[o.y * s.W + o.x]) ? 'A small comfort boost for tenants in this building.' : 'This building needs a Water Service hookup.'}</p>`);
       case 'unit': {
         const L = o.lease && s.leases[o.lease], tn = L && s.tenants[L.tenant];
-        const state = o.cstate === 'built' ? '<span class="pill a">Built · not ready</span>' : o.cstate === 'ready' ? '<span class="pill b">Ready to commission</span>' :
+        const state = o.cstate === 'built' ? '<span class="pill a">Built · not ready</span>' : o.cstate === 'ready' ? '<span class="pill b">Opening automatically</span>' :
           o.commercial === 'occupied' ? (L && L.status !== 'current' ? this.stagePill(L) + (o.overlock ? '<span class="pill r">Overlocked</span>' : '') : '<span class="pill g">Occupied</span>') : o.commercial === 'ready' ? '<span class="pill g">Rent-ready</span>' : o.commercial === 'reserved' ? '<span class="pill b">Reserved · move-in pending</span>' : o.commercial === 'unready' ? '<span class="pill a">Needs make-ready</span>' : '<span class="pill">—</span>';
         const key = productKey(o.size, o.env), ask = s.market.ask[key];
         let h = `<div class="row wrap">${state}<span class="pill">${o.access === 'drive' ? 'Drive-up' : 'Interior'}</span>${o.env === 'climate' ? '<span class="pill b">Climate</span>' : ''}${o.access === 'drive' ? '' : `<span class="pill">${floorName(o.f)}</span>`}</div>`;
@@ -1266,9 +1403,7 @@ export class UI {
         const attachments=mountedOn(sim,o.id);if(attachments.length)h+=`<h3>Unit equipment</h3><div class="row wrap">${attachments.map(f=>`<button class="btn sm" data-a="unitAttachment" data-v="${f.id}">${f.type==='unitLight'?'Interior light':f.type==='light'?'Wall light':'Outside camera'} · ${f.cstate==='construction'?'installing':f.unpowered?'no power':'installed'}</button>`).join('')}</div>`;
         if(o.retrofitOrder){const ord=s.orders.find(q=>q.id===o.retrofitOrder);h+='<p class="note">Lighting/security installation: temporarily unavailable for rental.</p>';if(ord)acts.push(this.cmdBtn('Cancel installation…',{type:'cancelOrder',id:ord.id}));}
         if(retrofitEligible(sim,o))acts.push(`<button class="btn" data-a="upgradeRetrofit" data-v="${o.id}">Review unit upgrades</button>`);
-        if (o.cstate === 'ready') acts.push(`<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', unit: o.id })}'>Commission unit</button>`);
-        if (o.cstate === 'ready' && o.order) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: o.order })}'>Commission whole order · ${sim.objs('unit').filter((u) => u.cstate === 'ready' && u.order === o.order).length} units</button>`);
-        if (o.cstate === 'ready') { const allReady = sim.objs('unit').filter((u) => u.cstate === 'ready').length, inOrder = o.order ? sim.objs('unit').filter((u) => u.cstate === 'ready' && u.order === o.order).length : 1; if (allReady > inOrder) acts.push(`<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission all ready units on property · ${allReady}</button>`); }
+        if (o.cstate === 'ready') h += '<p class="note">Construction is complete. This unit becomes rent-ready automatically when time advances.</p>';
         const mr = s.tasks.find((t) => t.type === 'makeready' && t.obj === o.id);
         if (mr && !mr.assigned) { h += this.delegationHtml(mr); const row = sim.staffForTask(mr); if (row && sim.taskDelegation(mr)?.status !== 'available') h += this.cmdBtn('Queue Porter', { type: 'ownerTask', task: mr.id }, 'pri'); }
         if (mr) { const mh = sim.taskHours(mr), ow = s.staff.find((x) => x.role === 'owner'), left = ow ? sim.workRemaining(ow) : 0; acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id, forceOwner: true })}' ${mh > left ? 'disabled' : ''}>Owner Make-Ready · ${mh}h</button>`); }
@@ -1369,7 +1504,7 @@ export class UI {
   }
   climateUnitsHtml(d) {
     if(!d.climate)return '';
-    const list=(r,label)=>!r ? '' : `<details class="explanation"><summary>${label} · ${r.total} matching climate units · ${r.counts.eligible} ready to offer</summary><p>Matching stock includes unavailable units. Ready to offer uses stored rental readiness; it does not guarantee a lease. Condition counts can overlap.</p>${r.units.map(u=>`<p><b>${esc(u.name)}</b> · F${u.f+1} (${u.x}, ${u.y}) · ${esc(u.conditions.map(k=>({occupied:'Occupied',reserved:'Reserved',makeReady:'Needs make-ready',blocked:'Access blocked',unfinished:'Not commissioned',eligible:'Ready to offer',other:'Review status'})[k]).join(', '))}${u.missing.length?' · Checklist: '+esc(u.missing.join('; ')):''}${u.accessHold!=null?' · Temporary freight-handover hold':''}</p>${reportedTarget(this.sim,{...u,obj:u.id})?`<button class="btn sm" data-a="complaintView" data-property="${this.feedbackEpoch}" data-target="${esc(JSON.stringify({obj:u.id,x:u.x,y:u.y,f:u.f,building:u.building}))}">${label==='At report time'?'View reported':'Inspect current'} ${esc(u.name)}</button>`:''}`).join('')}${r.omitted?`<p>${r.omitted} additional units omitted from this bounded list; counts include all matching stock.</p>`:''}</details>`;
+    const list=(r,label)=>!r ? '' : `<details class="explanation"><summary>${label} · ${r.total} matching climate units · ${r.counts.eligible} ready to offer</summary><p>Matching stock includes unavailable units. Ready to offer uses stored rental readiness; it does not guarantee a lease. Condition counts can overlap.</p>${r.units.map(u=>`<p><b>${esc(u.name)}</b> · F${u.f+1} (${u.x}, ${u.y}) · ${esc(u.conditions.map(k=>({occupied:'Occupied',reserved:'Reserved',makeReady:'Needs make-ready',blocked:'Access blocked',unfinished:'Construction/readiness incomplete',eligible:'Ready to offer',other:'Review status'})[k]).join(', '))}${u.missing.length?' · Checklist: '+esc(u.missing.join('; ')):''}${u.accessHold!=null?' · Temporary freight-handover hold':''}</p>${reportedTarget(this.sim,{...u,obj:u.id})?`<button class="btn sm" data-a="complaintView" data-property="${this.feedbackEpoch}" data-target="${esc(JSON.stringify({obj:u.id,x:u.x,y:u.y,f:u.f,building:u.building}))}">${label==='At report time'?'View reported':'Inspect current'} ${esc(u.name)}</button>`:''}`).join('')}${r.omitted?`<p>${r.omitted} additional units omitted from this bounded list; counts include all matching stock.</p>`:''}</details>`;
     return list(d.climate.historical,'At report time')+list(d.climate.current,'Current inventory');
   }
   feedbackSheet() {
@@ -1445,7 +1580,7 @@ export class UI {
       h += `<div class="item"><div class="grow"><b>${ROLES[st.role].name} · ${esc(st.name)}</b><small>${doing}${ag && ag.queue && ag.queue.length ? ` · ${ag.queue.length} queued` : ''}${capTxt} · ${st.wage ? money(st.wage, !Number.isInteger(st.wage)) + '/day' : 'unpaid'}</small></div>${st.role !== 'owner' ? `<button class="btn sm danger" data-a="cmd" data-cmd='${JSON.stringify({ type: 'fire', id: st.id })}'>Let go</button>` : ''}</div>`;
     }
     const focus = this.tutFocus();
-    const roleWhy = { porter: 'Adds another 8h/day for make-ready, cleaning and carts.', tech: 'Adds another 8h/day for repairs, including elevators and HVAC.', clerk: 'Handles office shoppers so those 0.5h service blocks stop consuming Owner capacity.', manager: 'Automates commissioning, vendor escalation, cart restocking and monthly pricing.' };
+    const roleWhy = { porter: 'Adds another 8h/day for make-ready, cleaning and carts.', tech: 'Adds another 8h/day for repairs, including elevators and HVAC.', clerk: 'Handles office shoppers so those 0.5h service blocks stop consuming Owner capacity.', manager: 'Automates vendor escalation, cart restocking and monthly pricing.' };
     h += `</div><h3>Hire capacity</h3><div class="list">${['porter', 'tech', 'clerk', 'manager'].sort((a, b) => Number(b === this.hireRoleFocus) - Number(a === this.hireRoleFocus)).map((r) => { const E = sim.staffingEvidence(r); return `<div class="item"><div class="grow"><b>${ROLES[r].name} · ${money(ROLES[r].wage, true)}/day</b><small>${roleWhy[r]} ${esc(E.evidence)} Payroll adds ${money(E.monthlyWages)} over 30 employed days; no guaranteed return.</small>${this.spendingHtml(0, ROLES[r].wage, 'after hire')}</div><button class="btn ${r === 'porter' && focus && focus.tab === 'operate' ? 'pri pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'hire', role: r })}'>Hire</button></div>`; }).join('')}</div>
       <p class="note">Owner, Porters and Techs each have 8 task-hours per game day. Each in-person office shopper costs the Owner 0.5h without a Clerk. Employed at 7:00 AM: one daily wage accrues. Hire after 7:00 AM: first wage tomorrow. Letting someone go keeps today's accrued wage owed. Routine bills settle weekly.</p>`;
     h += `<h3>Customer requests</h3><p class="note">${s.policies.manualRequests ? 'Owner reviews every request.' : 'Clerks and Managers handle eligible requests using existing policies.'} Owner decisions pause the game.</p><button class="btn" data-a="requests" data-v="settings">Requests &amp; staff responses</button>`;
@@ -1699,12 +1834,12 @@ export class UI {
   // ------------------------------------------------------------ GROWTH
   growthSheet() {
     const sim = this.sim, s = sim.s;
-    let h = '';
+    let h = this.firstGateHtml(this.firstGateGuidance());
     // not open yet: the opening checklist comes first (the coach sends players here; on phones it used to sit below the fold)
     if (!s.open) {
       const iss = sim.openingIssues();
       const nReady = sim.objs('unit').filter((u) => u.cstate === 'ready').length, nUnits = sim.objs('unit').length;
-      const fix = (m) => /gate/i.test(m) ? (sim.objs('gate').length ? '' : this.issueBtn('Place a gate', 'gate')) : /No operating office/.test(m) ? (sim.objs('office').length ? '<small> (being built)</small>' : this.issueBtn('Place an office', 'office')) : /Office door/.test(m) ? this.issueBtn('Pave a walkway', 'walk') : /commissioned/.test(m) ? (nReady ? `<button class="btn sm go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission ${nReady} ready</button>` : nUnits ? '<small> (units under construction)</small>' : this.issueBtn('Build units', 'du5x10')) : '';
+      const fix = (m) => /gate/i.test(m) ? (sim.objs('gate').length ? '' : this.issueBtn('Place a gate', 'gate')) : /No operating office/.test(m) ? (sim.objs('office').length ? '<small> (being built)</small>' : this.issueBtn('Place an office', 'office')) : /Office door/.test(m) ? this.issueBtn('Pave a walkway', 'walk') : /No operating rent-ready units/.test(m) ? (nReady ? '<small> (ready units open automatically when time advances)</small>' : nUnits ? '<small> (units under construction)</small>' : this.issueBtn('Build units', 'du5x10')) : '';
       h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)} ${fix(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
     }
     if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>${isComeback(s)?'Pacing':'Deadline'}</span><span>${isComeback(s)?`No deadline (${s.scenario.status})`:`Day ${s.scenario.deadline} (${s.scenario.status})`}</span></div>`; }
@@ -2353,15 +2488,15 @@ export class UI {
       const sm = p.sim, o = sm.occupancy();
       h += `<div class="item"><div class="grow"><b>${esc(p.name)}${k === cur ? ' <span class="pill b">Here</span>' : ''}</b><small>${money(sm.s.cash)} cash · ${o.occ}/${o.n} leased · ${money(sm.rentRoll())}/mo · rep ${pct(sm.reputation())}</small></div>
         ${k !== cur ? `<button class="btn sm pri" data-a="switchProp" data-v="${k}">Go</button>` : ''}
-        ${k !== cur && this.sim.s.cash >= 10000 ? `<button class="btn sm" data-a="transfer" data-from="${cur}" data-to="${k}" data-v="10000">Send $10k</button>` : ''}</div>`;
+        ${k !== cur && this.sim.s.cash >= 10000 ? `<button class="btn sm" data-a="transfer" data-from="${cur}" data-to="${k}" data-v="10000">Review $10k transfer</button>` : ''}</div>`;
     });
     const total = C.props.reduce((a, p) => a + p.sim.s.cash, 0), roll = C.props.reduce((a, p) => a + p.sim.rentRoll(), 0);
     h += `</div><p class="note">Company: ${C.props.length} propert${C.props.length > 1 ? 'ies' : 'y'} · ${money(total)} total cash · ${money(roll)}/mo rent roll. All properties run on the same clock; each keeps its own books.</p>`;
     if (C.feed.length) h += `<h3>Company attention</h3><div class="list">${C.feed.slice(0, 6).map((e) => `<div class="item"><div class="grow"><b>${esc(e.prop)}</b><small>Day ${dayOf(e.t)} · ${esc(e.msg)}</small></div>${C.props[e.k] && e.k !== cur ? `<button class="btn sm" data-a="switchProp" data-v="${e.k}">Go</button>` : ''}</div>`).join('')}</div>`;
     if (!this.sim.s.creative && (this.sim.s.mode !== 'tutorial' || this.sim.s.tut.done)) {
       const offers = this.g.offers();
-      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small></div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Buy ${money(of.price)}</button></div>`).join('')}</div>
-        <p class="note">Paid from this property's cash. Prices include $5,000 of opening working cash for the new property; send more from here to fund construction.</p>`;
+      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item" data-acquisition-offer="${of.kind}:${of.market}"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small>${this.sim.s.cash < of.price ? `<p class="note acquisition-shortfall">Need <strong>${money(of.price-this.sim.s.cash,true)}</strong> more at this property.</p><button class="btn sm" data-a="acquisitionFinancing" aria-label="View Financing for ${esc(of.name)}">View Financing</button>` : ''}</div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Review ${money(of.price)}</button></div>`).join('')}</div>
+        <p class="note">Paid from this property's cash. Prices include ${money(ACQUISITION_OPENING_CASH)} of opening working cash for the new property; send more from here to fund construction.</p>`;
     } else if (this.sim.s.mode === 'tutorial' && !this.sim.s.tut.done) h += `<p class="note">Finish the tutorial to unlock acquisitions and a multi-property company.</p>`;
     return h;
   }
@@ -2407,6 +2542,8 @@ export class UI {
   }
   setMeta(name, mode) {
     this.$('pname').innerHTML = `${esc(name)}<small>${esc(mode)}</small>`;
+    const property=this.$('activeProperty');property.textContent=name;
+    property.closest?.('[data-a="finances"]')?.setAttribute('aria-label',`Open finances for ${name}`);
     // overrides stay visible on phones too, where the name chip is hidden
     const B = this.sim && this.sim.s.sb, f = this.$('sbflag'); if (!f) return;
     const t = !B ? '' : [B.unlimited ? 'Free Build' : '', B.instant ? 'Instant' : '', !B.unlimited && B.injected ? 'Funds added' : ''].filter(Boolean).join(' · ');
@@ -2474,7 +2611,7 @@ export class UI {
     if(waiting?.length)return T(`${waiting.length} finished unit${waiting.length===1?' is':'s are'} waiting: ${waiting[0].missing.join('; ')}.`,{sel:waiting[0].id},'warn');
     const ready = objs.filter((o) => o.type === 'unit' && o.cstate === 'ready');
     if(ready.length&&sim.autoOpenEnabled())return T(`${ready.length} finished units become rent-ready when time advances.`,{sel:ready[0].id},'good');
-    if (ready.length) return T(`${ready.length} new ${ready.length === 1 ? 'unit is' : 'units are'} ready to commission.`, { sel: ready[0].id }, 'good');
+    if (ready.length) return T(`${ready.length} finished ${ready.length === 1 ? 'unit opens' : 'units open'} automatically when time advances.`, { sel: ready[0].id }, 'good');
     const open = s.tasks.filter((t) => !t.assigned);
     const rep = open.filter((t) => (t.type === 'repair') && s.objects[t.obj]).sort((a, b) => b.pri - a.pri)[0];
     if (rep) { const d = sim.taskDelegation(rep); return T(`${sim.objName(s.objects[rep.obj])} needs repair. ${d && d.status === 'missing' ? 'A Tech can handle repairs for you.' : d ? d.message : 'Review repair options.'}`, { sel: rep.obj }); }
@@ -2494,7 +2631,7 @@ export class UI {
     if (oc.n >= 4 && oc.pct >= 0.95) {
       if (oc.occ === oc.n) return T(`All ${oc.n} operating units are leased. Check demand and Growth Readiness before adding units.`, { tab: 'growth', section: 'Growth Readiness' }, 'good');
       if (vacancies) return T(`Nearly full: ${oc.occ}/${oc.n} leased · ${vacancies} rent-ready ${vacancies === 1 ? 'vacancy' : 'vacancies'}. Check asking rents before expanding.`, { tab: 'business', section: 'Asking rents' }, 'ok');
-      return T(`Nearly full: ${oc.occ}/${oc.n} leased. Remaining units need turnover, commissioning or access before renting.`, { tab: 'operate', section: 'Jobs' }, 'warn');
+      return T(`Nearly full: ${oc.occ}/${oc.n} leased. Remaining units need turnover, completed construction or customer access before renting.`, { tab: 'operate', section: 'Jobs' }, 'warn');
     }
     if (vacancies && s.open) return T(`${vacancies} rent-ready units vacant. Check demand and asking rents before expanding.`, { tab: 'business', section: 'Asking rents' }, 'ok');
     return T('All caught up.', null, 'ok');
@@ -2564,7 +2701,7 @@ export class UI {
       if (cl) { cl.n++; continue; }
       let el = pool.get(p.key);
       if (!el) { el = document.createElement('button'); el.className = 'pin'; el.dataset.a = 'pin'; pool.set(p.key, el); root.appendChild(el); }
-      const sig = p.k + p.who; if (el.dataset.sig !== sig) { el.dataset.sig = sig; el.className = 'pin ' + p.k; el.innerHTML = PIN[p.k] + (p.who ? `<span class="who">${PIN.person}</span>` : ''); el.setAttribute('aria-label', { repair: 'Needs repair', makeready: 'Needs make-ready', clean: 'Needs cleaning', late: 'Rent past due', lock: 'Overlocked for non-payment', auction: 'Scheduled for auction', blocked: 'No customer access', power: 'No power', cart: 'Stranded cart', ready: 'Ready to commission' }[p.k]); }
+      const sig = p.k + p.who; if (el.dataset.sig !== sig) { el.dataset.sig = sig; el.className = 'pin ' + p.k; el.innerHTML = PIN[p.k] + (p.who ? `<span class="who">${PIN.person}</span>` : ''); el.setAttribute('aria-label', { repair: 'Needs repair', makeready: 'Needs make-ready', clean: 'Needs cleaning', late: 'Rent past due', lock: 'Overlocked for non-payment', auction: 'Scheduled for auction', blocked: 'No customer access', power: 'No power', cart: 'Stranded cart', ready: 'Opening automatically' }[p.k]); }
       el.dataset.k = p.cart ? 'cart' : p.dirt ? 'dirt' : 'obj'; el.dataset.id = p.cart ? p.id : p.id; if (p.dirt) { el.dataset.f = p.f; el.dataset.x = p.x - 0.5; el.dataset.y = p.y - 0.5; }
       el.style.transform = `translate(${Math.round(pr.x - 17)}px, ${Math.round(pr.y - 40)}px)`; live.add(p.key); placed.push({ x: pr.x - 17, y: pr.y - 40, w: 34, h: 40, pin: true, n: 1, el });
     }
@@ -2610,6 +2747,7 @@ export class UI {
   keptLabel() { const k = this.g.localsave && this.g.localsave.getKept(); if (!k) return ''; const m = k.meta || {}; return `${esc(m.name || 'Saved game')} · Day ${+m.day || 1} · ${money(+m.cash || 0)}`; }
   showTitle() {
     this.title = true;
+    if (this.g.saveStartup) { this.$('modal').innerHTML = '<div class="title"><h1>Self Storage Tycoon</h1><p role="status">Checking saved progress…</p></div>'; return; }
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
       <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
@@ -2618,7 +2756,21 @@ export class UI {
       <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
   }
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
+  renderSaveStatus() {
+    const D = this.g.durable; if (!D || !this.root) return;
+    const label = D.status === 'pending' ? 'Saving progress' : D.status === 'saved' ? 'Progress saved' : D.status === 'error' || D.status === 'unavailable' ? 'Save not confirmed' : 'Autosave ready';
+    const menu = this.root.querySelector('[data-a=menu]');
+    if (menu) { menu.dataset.saveState = D.status; menu.setAttribute('aria-label', 'Menu · ' + label); menu.title = label; }
+    const note = this.root.querySelector('#autosaveNote'); if (note) note.textContent = this.autosaveNote();
+    if (!this.g.playing()) return;
+    if (D.status === 'saved' && D.latest === this.g.saveNotice && this.saveToastRevision !== D.latest) { this.saveToastRevision = D.latest; this.toast('Progress saved', 'good'); }
+    if ((D.status === 'error' || D.status === 'unavailable') && this.saveError !== D.lastErr) { this.saveError = D.lastErr; this.toast('Save not confirmed. Keep a save file or code before leaving.', 'bad'); }
+  }
   autosaveNote() {
+    const D = this.g.durable;
+    if (D?.status === 'pending') return 'Saving progress… Wait for saving to finish before leaving.';
+    if (D && (D.status === 'error' || D.status === 'unavailable')) return 'This browser could not confirm the latest save. A browser or server copy may still be available. Export a save code or file to keep your progress.';
+    if (D?.status === 'saved') return 'Progress saved in this browser. Codes and files remain separate backups you can move between devices.';
     const L = this.g.localsave;
     if (L?.lastErr === 'storage full') return 'Latest autosave failed: browser storage is full. Export a save code or file now to keep your progress.';
     if (L && L.ok) return L.lastAt ? `Autosave is on in this browser (${this.ago(L.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave, and keeps the previous save as a backup.${L.lastErr ? ' Note: ' + L.lastErr + '.' : ''} Codes and files move a game between devices.` : 'Autosave is on in this browser. It saves each in-game day and when you leave, and keeps the previous save as a backup. Codes and files move a game between devices.';
@@ -2684,14 +2836,10 @@ export class UI {
       '<p class="note">Day ' + dayOf(now) + ' · ' + fmtTime(now) + '</p><details class="explanation"><summary>How scheduled dates work</summary><p class="note">Dates below come from current leases, collections, loans, construction, competitors and scenario state; estimated construction dates can move if prerequisites block work.</p></details>' +
       '<div class="list">' + (rows || '<p class="note">No important scheduled dates yet.</p>') + '</div></div></div>';
   }
-  // Commissioning from a building: this building's finished orders first (scoped), then the explicit property-wide action.
+  // Finished eligible units open automatically; this method retains a non-actionable status for existing callers.
   buildingCommissionHtml(sh) {
-    const sim = this.sim, s = sim.s, ready = sim.objs('unit').filter((u) => u.cstate === 'ready'), byOrder = new Map();
-    for (const u of ready) { const q = u.order && s.orders.find((x) => x.id === u.order); if (q && q.vertical && q.vertical.shell === sh.id) byOrder.set(q, (byOrder.get(q) || 0) + 1); }
-    const scoped = [...byOrder].map(([q, n]) => `<button class="btn pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', order: q.id })}'>Commission ${esc(q.label.replace(/^Building \d+ → /, ''))} order · ${n} unit${n === 1 ? '' : 's'}</button>`).join('');
-    const inOrders = [...byOrder.values()].reduce((a, n) => a + n, 0);
-    const all = ready.length > inOrders || (!inOrders && ready.length) ? `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'commission', all: true })}'>Commission all ${ready.length} ready unit${ready.length === 1 ? '' : 's'} on property</button><p class="note">Property-wide: includes ready units outside this building's order.</p>` : '';
-    return scoped + all;
+    const ready = this.sim.objs('unit').filter((u) => u.cstate === 'ready' && this.sim.D.shellAt[this.sim.idx(u.x, u.y)] === sh.id).length;
+    return ready ? `<p class="note">${ready} finished unit${ready === 1 ? '' : 's'} will open automatically when time advances.</p>` : '';
   }
   // Live floor state per building: completed (handed over) floors, and any vertical order in progress.
   floorState(sh) {
@@ -2750,7 +2898,7 @@ export class UI {
       body+=`<h3>Unit mix &amp; demand evidence</h3>${E.n?`<div class="kv vr-ev"><span><b>Copied product</b></span><span><b>New · vacant · unmet · leased</b></span>${E.rows.map(r=>`<span>${esc(r.product)}</span><span>${r.n} · ${r.vacant} · ${r.unmet} · ${r.recentLeases}</span>`).join('')}</div>`:''}
         <p class="vr-verdict ${E.verdict}">${esc(E.why)}</p>${E.elsewhere.length?`<p class="note">Other recently unmet requests: ${E.elsewhere.slice(0,3).map(e=>`${esc(e.product)} (${e.unmet})`).join(', ')}.</p>`:''}
         <p class="note">Vacant = matching rent-ready vacancies now; unmet and leased = matching shopper outcomes in the last 30 days. This is observed evidence, not a revenue promise. Structure only lets you choose a different fit-out later.</p>`;
-      body+=`<h3>Complete package ${money(R.cost)}</h3>${this.spendingHtml(R.cost,this.sim.planDailyCost(R),'after full package')}<p>F${R.from} → F${R.f+1}. ~${Math.ceil(R.dur/1440)} financial days, plus time to clear and test the elevator: reinforce → structure → fit-out → freight extension → service test → commission. Existing leases and units stay in service; the freight elevator pauses briefly for its service test.</p><p class="note">${esc(R.warning)}</p><p class="note">${esc(paybackText(inv))} Prices are provisional prototype values.</p><p class="note">Cancellation: full undo within 30 minutes before any stage finishes; otherwise 60% of unbuilt work until the structure is complete. After that the package must finish.</p>`;
+      body+=`<h3>Complete package ${money(R.cost)}</h3>${this.spendingHtml(R.cost,this.sim.planDailyCost(R),'after full package')}<p>F${R.from} → F${R.f+1}. ~${Math.ceil(R.dur/1440)} financial days, plus time to clear and test the elevator: reinforce → structure → fit-out → freight extension → service test → automatic opening. Existing leases and units stay in service; the freight elevator pauses briefly for its service test.</p><p class="note">${esc(R.warning)}</p><p class="note">${esc(paybackText(inv))} Prices are provisional prototype values.</p><p class="note">Cancellation: full undo within 30 minutes before any stage finishes; otherwise 60% of unbuilt work until the structure is complete. After that the package must finish.</p>`;
     }else body+=`<p class="vr-verdict unsupported">${esc(R.msg)}</p>`;
     const acts=R.ok?`<button class="btn" data-a="verticalPreview" data-qa="vr-preview">Preview on map</button><button class="btn pri" data-a="verticalConfirm" data-qa="vr-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button>`:'';
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal vreview" role="dialog" aria-modal="true" aria-labelledby="vr-title"><div class="row"><h2 id="vr-title">Building ${id} · ${R.ok?`F${R.f+1} expansion review`:'vertical expansion'}<small class="vr-paused">Paused while you review · nothing is charged until Confirm</small></h2><button class="x" data-a="modalClose" data-qa="vr-close" aria-label="Close review" title="Close review">${I.x}</button></div><div class="vr-body">${body}</div><div class="row wrap vr-acts">${acts}<button class="btn" data-a="modalClose" data-qa="vr-close-review">Close review</button></div></div></div>`;
@@ -2768,11 +2916,12 @@ export class UI {
   }
   verticalBarHtml() {
     const R=this.verticalQuote; if(!R) return '';
-    return `<div class="actionbar vpreview"><div class="top"><div class="nm">Proposed F${R.f+1} · Building ${R.shell}<small>Preview only — not built, not commissioned · ${money(R.cost)} complete package</small></div></div><div class="bot"><button class="btn" data-a="verticalBack" data-qa="vp-back">Back to review</button><button class="btn pri" data-a="verticalConfirm" data-qa="vp-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button><button class="btn" data-a="verticalCancel" data-qa="vp-discard">Discard preview</button></div></div>`;
+    return `<div class="actionbar vpreview"><div class="top"><div class="nm">Proposed F${R.f+1} · Building ${R.shell}<small>Preview only — not built · ${money(R.cost)} complete package</small></div></div><div class="bot"><button class="btn" data-a="verticalBack" data-qa="vp-back">Back to review</button><button class="btn pri" data-a="verticalConfirm" data-qa="vp-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button><button class="btn" data-a="verticalCancel" data-qa="vp-discard">Discard preview</button></div></div>`;
   }
   modalOpen() { return !!this.$('modal').firstChild; }
-  closeModal() { this.creditReview=null; this.termLoanReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
+  closeModal() { this.acquisitionReview=null; this.creditReview=null; this.termLoanReview=null; this.transferReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
+    this.transferReview = null;
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
       <div class="menu-list"><button class="btn" data-a="requests" data-v="settings">Customer requests <small>Staff responses and saved handling settings</small></button><button class="btn" data-a="handbook">Builder\'s handbook <small>How, why and when to use every build item</small></button><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}</div>

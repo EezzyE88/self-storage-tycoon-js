@@ -1,0 +1,1 @@
+Initial custom test harness stopped before gameplay assertions: ReferenceError: cloud is not defined (VM context). Added the existing cloud placeholder and localsave/savearchive dependencies. No production defect was established. Intermediate attempt2 passed before finalizing the UI-only implementation; acquisition-final.log is the final-source result.

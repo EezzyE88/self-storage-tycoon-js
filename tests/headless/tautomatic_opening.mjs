@@ -1,11 +1,12 @@
+// South-facing touch anchors moved to the door edge; original unit footprints remain unchanged.
 import assert from 'node:assert/strict';
 import {makeSandbox} from '../../js/scenarios.js';
 import {Sim} from '../../js/sim.js';
 import {UI} from '../../js/ui.js';
 import fs from 'node:fs';
-const args={tool:'du5x10',a:{x:10,y:2},b:{x:10,y:2},rotation:2,f:0};
+const args={tool:'du5x10',a:{x:10,y:3},b:{x:10,y:3},rotation:2,f:0};
 function fixture(){const s=makeSandbox({start:'starter',cash:100000});s.ensure();return s;}
-function finished(s){assert.ok(s.dispatch({type:'build',...args}).ok);s.s.lesson={id:'fixture'};const ord=s.s.orders.at(-1);for(let i=0;i<3000&&ord.st==='construction';i++)s.step();assert.equal(ord.st,'done');delete s.s.lesson;return ord.objs.map(id=>s.s.objects[id]).find(o=>o?.type==='unit');}
+function finished(s){assert.ok(s.dispatch({type:'build',...args}).ok);const ord=s.s.orders.at(-1);for(let i=0;i<3000&&ord.st==='construction';i++)s.step();assert.equal(ord.st,'done');const u=ord.objs.map(id=>s.s.objects[id]).find(o=>o?.type==='unit');u.cstate='ready';u.commercial='none';s.markDirty();s.ensure();return u;}
 {
  const s=fixture(),cash=s.s.cash,u=finished(s);assert.ok(s.s.cash<cash);assert.equal(u.cstate,'ready');const before=JSON.stringify(s.s);s.poll();assert.equal(JSON.stringify(s.s),before);
  s.s.speed=4;s.events.length=0;s.step();assert.equal(u.cstate,'operating');assert.equal(u.commercial,'ready');assert.equal(s.events.filter(e=>e.type==='commissioned'&&e.automatic).length,1);
@@ -23,9 +24,9 @@ function finished(s){assert.ok(s.dispatch({type:'build',...args}).ok);s.s.lesson
 }
 for(const kind of ['tutorial','lesson','scenario','free']){
  const s=fixture(),u=finished(s);if(kind==='tutorial')s.s.tut.on=true;if(kind==='lesson')s.s.lesson={id:'fixture'};if(kind==='scenario')s.s.scenario={id:'fixture'};if(kind==='free')s.s.sb.unlimited=true;
- s.s.speed=1;s.autoOpenReadyUnits(true);assert.equal(u.cstate,'ready');assert.ok(s.act_commission({unit:u.id}).ok);
+ s.s.speed=1;s.events.length=0;s.autoOpenReadyUnits(true);assert.equal(u.cstate,'operating');assert.equal(s.events.filter(e=>e.type==='commissioned'&&e.automatic).length,1);
 }
-console.log('PASS tutorials, lessons, scenarios and Free Build retain manual commissioning');
+console.log('PASS tutorials, lessons, scenarios and Free Build use automatic opening');
 {
  const s=fixture(),u=finished(s);const c=new Sim(JSON.parse(JSON.stringify(s.s)));c.s.speed=0;c.poll();assert.equal(c.s.objects[u.id].cstate,'ready');c.s.speed=1;c.step();assert.equal(c.s.objects[u.id].cstate,'operating');console.log('PASS old ready saves remain paused until simulation resumes');
 }
@@ -37,15 +38,15 @@ console.log('PASS tutorials, lessons, scenarios and Free Build retain manual com
  // Deliberately limited shared-capacity fixture; production rebuild still computes all access/light requirements.
  s.rebuild=()=>{rebuild();const h=s.D.hvac[sh];h.cap=units[0].w*units[0].h;for(const u of units)if(u.cstate==='ready'&&h.load+u.w*u.h>h.cap){u.cstate='built';u.missing=['HVAC capacity exceeded for this zone'];}};
  s.markDirty();s.ensure();assert.ok(units.some(u=>u.cstate==='ready'));s.act_commission({all:true});assert.equal(units.filter(u=>u.cstate==='operating').length,1);assert.equal(units.filter(u=>u.cstate==='built').length,1);
- console.log('PASS shared manual/automatic commissioning path rechecks capacity between units');
+ console.log('PASS shared opening path rechecks capacity between units');
 }
 {
  const ui=Object.create(UI.prototype),messages=[];ui.g={sim:fixture()};ui.toast=t=>messages.push(t);ui.sfx=()=>{};ui.onEvent({type:'commissioned',automatic:true,propertyOpen:true,n:14});assert.equal(messages.length,1);assert.match(messages[0],/14 new units.*rent-ready/);
  ui.onEvent({type:'complete',units:14,order:999,label:'Test construction'});assert.equal(messages.length,1,'automatic completion must not also instruct manual commissioning');
- const text=fs.readFileSync('js/ui.js','utf8');assert.match(text,/Confirm authorizes construction/);assert.match(text,/Property remains closed/);console.log('PASS purchase disclosure and actual grouped UI notification');
+ const text=fs.readFileSync('js/ui.js','utf8');assert.match(text,/Confirm authorizes construction/);assert.match(text,/Property remains closed/);assert.doesNotMatch(text,/>Commission unit</);assert.doesNotMatch(text,/Commission whole order/);console.log('PASS purchase disclosure, grouped notification and no player commissioning buttons');
 }
 {
- const s=fixture(),a={...args,b:{x:11,y:2}},q=s.plan(a);assert.equal(q.status,'valid');assert.equal(q.creates.length,2);
+ const s=fixture(),a={...args,b:{x:11,y:3}},q=s.plan(a);assert.equal(q.status,'valid');assert.equal(q.creates.length,2);
  const cash=s.s.cash;assert.ok(s.dispatch({type:'build',...a}).ok);assert.equal(s.s.cash,cash-q.cost,'Confirm charges ordinary quoted construction exactly once');
  const ord=s.s.orders.at(-1);s.events.length=0;s.s.speed=1;for(let i=0;i<3000&&ord.st==='construction';i++)s.step();
  assert.equal(ord.st,'done');assert.ok(ord.objs.every(id=>s.s.objects[id].cstate==='operating'));

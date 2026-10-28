@@ -39,8 +39,8 @@ async function roundTrip(label) {
 }
 await roundTrip('construction');
 for(let i=0;i<500;i++)g.sim.step();
-g.sim.dispatch({type:'commission',all:true});g.sim.events=[];
-await roundTrip('commissioned');
+assert.ok(g.sim.s.propertyProjects.history[0].ids.every(id=>g.sim.s.objects[id].cstate==='operating'));g.sim.events=[];
+await roundTrip('opened automatically');
 const hist=g.sim.s.propertyProjects.history[0];g.sim.signLease(g.sim.s.objects[hist.ids[0]],{size:'5x10',climate:false});g.sim.events=[];
 await roundTrip('first lease acknowledged');
 assert.ok(g.sim.dispatch({type:'build',...PROJECTS.cover.args,projectKey:'cover'}).ok);

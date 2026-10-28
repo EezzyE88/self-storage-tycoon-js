@@ -52,11 +52,11 @@ if(path){
       const c=yardChoices(cycle).find(c=>c.position.available>=0);
       if(c){const r=cycle.dispatch({type:'build',...c.args});assert.ok(r.ok,r.msg);order=r.order;selected={day:cycle.day,size:c.size,cost:c.plan.cost,buffer:c.position.available};}
     }
-    const ord=order&&s.orders.find(o=>o.id===order);
-    if(ord?.objs.some(id=>s.objects[id]?.cstate==='ready')){assert.ok(cycle.dispatch({type:'commission',order}).ok);opened=true;}
-    cycle.step();cycleEvents.push(...cycle.events);cycle.events=[];
+    cycle.step();const ord=order&&s.orders.find(o=>o.id===order);
+    if(ord?.objs.some(id=>s.objects[id]?.cstate==='operating'))opened=true;
+    cycleEvents.push(...cycle.events);cycle.events=[];
   }
   assert.ok(selected&&opened);assert.ok(selected.buffer>=0);assert.equal(yardProgress(cycle).total,1);assert.equal(yardProgress(cycle).signed,1);assert.equal(yardProgress(cycle).occupied,1);
   assert.equal(cycleEvents.filter(e=>e.type==='yard_filled').length,2);assert.deepEqual(s.market.ask,state.market.ask);assert.deepEqual(s.scenario.earned,state.scenario.earned);assert.equal(s.loan.bal,0);
-  console.log('PASS actual-save next investment, normal construction/commission, natural lease and occupied payoff within original Day45 cap',JSON.stringify({selected,endCash:s.cash,rent:yardProgress(cycle).rent}));
+  console.log('PASS actual-save next investment, normal construction/automatic opening, natural lease and occupied payoff within original Day45 cap',JSON.stringify({selected,endCash:s.cash,rent:yardProgress(cycle).rent}));
 }

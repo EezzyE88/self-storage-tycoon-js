@@ -5,6 +5,15 @@
   "profiles": {
     "current": [
       {
+        "id": "tfinancial_context",
+        "command": ["@node", "tests/headless/tfinancial_context.mjs"],
+        "completion": "14 financial-context groups passed",
+        "minimum_pass_lines": 14,
+        "required_objects": ["b8ce9e9f0c00fa239b33da96c19662a962a5afd6"],
+        "timeout": 180,
+        "evidence": "actual current UI review handlers and unchanged engine; historical exact-byte normalization checked separately; no rendered-device claim"
+      },
+      {
         "id": "tads",
         "command": [
           "@node",
@@ -1077,6 +1086,72 @@
         "minimum_pass_lines": 16,
         "timeout": 180,
         "evidence": "production methods and CPU scene graph; no browser or device claim"
+      },
+      {
+        "id": "tplacement_bf",
+        "command": [
+          "@node",
+          "tests/headless/tplacement_bf.mjs"
+        ],
+        "completion": "73 B/F placement groups passed; no browser or physical-device claim",
+        "minimum_pass_lines": 73,
+        "timeout": 180,
+        "evidence": "real planning and UI handlers; disposable native fixtures only; rendered phone layouts and physical Safari not established"
+      },
+      {
+        "id": "tpaused_autosave",
+        "command": [
+          "@node",
+          "tests/headless/tpaused_autosave.mjs"
+        ],
+        "completion": "ALL PASS: 14 paused autosave regression groups",
+        "minimum_pass_lines": 14,
+        "timeout": 180,
+        "evidence": "production game/UI save paths and localStorage double; no abrupt-browser or physical-device claim"
+      },
+      {
+        "id": "tdurable_checkpoint",
+        "command": [
+          "@node",
+          "tests/headless/tdurable_checkpoint.mjs"
+        ],
+        "completion": "ALL PASS: 17 durable checkpoint groups \\(queue/failure model; real IndexedDB separately browser-tested\\)",
+        "minimum_pass_lines": 17,
+        "timeout": 180,
+        "evidence": "production adapter lifecycle, real game save/replace/clear handlers over a controlled commit model; actual process-kill verification separately required"
+      },
+      {
+        "id": "tshort_screen_review",
+        "command": [
+          "@node",
+          "tests/headless/tshort_screen_review.mjs"
+        ],
+        "completion": "ALL PASS: short-screen review financial parity",
+        "minimum_pass_lines": 4,
+        "timeout": 60,
+        "evidence": "actual production review and financialPosition; controlled disposable fixtures; browser geometry checked separately"
+      },
+      {
+        "id": "tacquisition_affordability",
+        "command": [
+          "@node",
+          "tests/headless/tacquisition_affordability.mjs"
+        ],
+        "completion": "4 acquisition-affordability groups passed",
+        "minimum_pass_lines": 4,
+        "timeout": 90,
+        "evidence": "current production offers/UI handlers/acquisition engine; controlled fixtures and stub DOM; browser evidence separate"
+      },
+      {
+        "id": "tfirst_gate_guidance",
+        "command": [
+          "@node",
+          "tests/headless/tfirst_gate_guidance.mjs"
+        ],
+        "completion": "8 first-gate guidance groups passed",
+        "minimum_pass_lines": 8,
+        "timeout": 90,
+        "evidence": "current production gate planning, UI preview/Confirm and actual acquisition; controlled fixtures and stub DOM; rendered checks separate"
       }
     ],
     "historical": [

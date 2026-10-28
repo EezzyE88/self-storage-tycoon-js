@@ -97,7 +97,7 @@ export function verticalCheck(sim) {
   const units=sim.objs('unit').filter(o=>!l.proposed&&inside(l.sh,o)&&(o.f||0)===1);
   const missing=[...new Set(units.flatMap(o=>o.missing||[]))];
   if(missing.length) return missing.join('; ');
-  const labels={aisle:'Connected drive aisle',shell2:'Two-floor shell',hall:'F1 hallway to entrance',doorWide:'Wide entrance',loading:'Loading zone',hall2:'F2 hallway',elevator:'Elevator beside both halls',lights:'Hallway lights on both floors',units:'F2 units',finished:'Construction and operational access',commissioned:'Commission upstairs units'};
+  const labels={aisle:'Connected drive aisle',shell2:'Two-floor shell',hall:'F1 hallway to entrance',doorWide:'Wide entrance',loading:'Loading zone',hall2:'F2 hallway',elevator:'Elevator beside both halls',lights:'Hallway lights on both floors',units:'F2 units',finished:'Construction and operational access',commissioned:'Upstairs units open'};
   const next=Object.keys(labels).find(k=>!verticalDone(sim,k));
   return next ? 'Next: '+labels[next]+'. Use the highlighted placement; Confirm spends cash.' : 'Customer access is ready: gate → loading → entrance → elevator → upstairs unit.';
 }
