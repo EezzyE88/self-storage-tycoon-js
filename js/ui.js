@@ -5,6 +5,7 @@ import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperation
 import { ReserveWait, sandboxReserveQuote, reserveQuote } from './reservewait.js';
 import { yardProgress, yardChoices, yardInventory, yardQuote } from './yardloop.js';
 import { creditProjection, creditNeeded } from './finance.js';
+import { applyBorrowSettle, operatingNet } from './borrowsettle.js';
 import { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';
 import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
@@ -254,7 +255,10 @@ export class UI {
     this.g.audio.unlock();
     const a = el.dataset.a, v = el.dataset.v;
     if (this.g.saveStartup) return;
-    if (a !== 'transferConfirm' && a !== 'speed') this.transferReview = null;
+    // Only the matching confirmation or a speed choice preserves a transaction review.
+    for (const [field, confirm] of [['acquisitionReview','acquisitionConfirm'], ['creditReview','creditConfirm'], ['termLoanReview','termLoanConfirm'], ['transferReview','transferConfirm']]) {
+      if (a !== confirm && a !== 'speed') this[field] = null;
+    }
     if(!['reserveStart','reserveResume','reserveStop','speed'].includes(a))this.reserveWait?.interrupt('You opened another control.');
     // Navigating out of the Requests dialog: close it first so the destination is never opened underneath it.
     if (this.requestPanel && ['focus', 'overlay', 'requestHelp', 'feedback'].includes(a) && el.closest('.modal')) this.leaveRequests(a === 'requestHelp' || a === 'feedback');
@@ -489,7 +493,7 @@ export class UI {
     this.toasts = [];
     this.growthProposal = null; this.growthPlanArgs = null;
     this.projectProposal = null;
-    this.pricingReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null; this.transferReview = null;
+    this.pricingReview = null; this.acquisitionReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null; this.transferReview = null;
     this.yardGuide = null;
     this.floorBuilding = null;
     this.hCash = null; this.hSub = null; this.hTime = null; this.hSpeed = null;
@@ -2524,7 +2528,7 @@ export class UI {
     if (!this.title && this.modalOpen()) this.pauseForPopup('modal');
     else this.resumePopup('modal');
     const cash = Math.round(s.cash);
-    const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small>${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }
+    const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small title="Cash movement excluding borrowing and principal repayments; includes construction and transfers. Not profit.">${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }
     if (now - (this.goalT || 0) > 1000) { // next career goal, always visible as a thin bar under the cash
       this.goalT = now; this.renderCareerGoal();
     }
@@ -2587,8 +2591,8 @@ export class UI {
   slowHud() {
     const sim = this.sim, s = sim.s; const oc = sim.occupancy();
     if (!oc.n || s.creative) { this.cashSub = null; return; }
-    const actual = sim.cashWindow(1), n = Math.round(actual.net);
-    this.cashSub = `${oc.occ}/${oc.n} · today${actual.complete ? '' : ' (partial)'} ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;
+    const actual = sim.cashWindow(1), n = Math.round(operatingNet(actual));
+    this.cashSub = `${oc.occ}/${oc.n} · cash today${actual.complete ? '' : ' (partial)'} ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;
   }
   ownerStatus() {
     const s = this.sim.s, owner = s.staff.find((x) => x.role === 'owner'); if (!owner) return '';
@@ -2921,7 +2925,7 @@ export class UI {
   modalOpen() { return !!this.$('modal').firstChild; }
   closeModal() { this.acquisitionReview=null; this.creditReview=null; this.termLoanReview=null; this.transferReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
-    this.transferReview = null;
+    this.acquisitionReview = null; this.creditReview = null; this.termLoanReview = null; this.transferReview = null;
     const a = this.g.audio;
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Menu</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
       <div class="menu-list"><button class="btn" data-a="requests" data-v="settings">Customer requests <small>Staff responses and saved handling settings</small></button><button class="btn" data-a="handbook">Builder\'s handbook <small>How, why and when to use every build item</small></button><button class="btn" data-a="saveCode">Save game (copy code)</button><button class="btn" data-a="saveFile">Save game (download file)</button><button class="btn" data-a="loadOpen">Load game</button>${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}</div>
@@ -3040,3 +3044,4 @@ export class UI {
     const x = this.root.querySelector('[data-a="showTitle"]'); if (x) x.onclick = () => this.showTitle();
   }
 }
+applyBorrowSettle(UI);

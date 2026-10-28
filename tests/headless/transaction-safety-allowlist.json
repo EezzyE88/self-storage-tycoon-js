@@ -1,0 +1,39 @@
+{
+  "parent_commit": "d03bbcdb7245f379512b0c13041b004742133d83",
+  "files": {
+    "js/ui.js": {
+      "parent_sha256": "b3bfee3530e59fa08e465bb0fd0f222b359a5f78448873f701bd0406e37690d8",
+      "current_sha256": "b256f12403c2cd817d2780efda8b8001ab31d48cbb3ba0a3dffc26b7a8cc55a0",
+      "hunks": [
+        {
+          "before": "import { yardProgress, yardChoices, yardInventory, yardQuote } from './yardloop.js';\nimport { creditProjection, creditNeeded } from './finance.js';\nimport { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';\nimport { workingYard } from './workreport.js';\n",
+          "after": "import { yardProgress, yardChoices, yardInventory, yardQuote } from './yardloop.js';\nimport { creditProjection, creditNeeded } from './finance.js';\nimport { applyBorrowSettle, operatingNet } from './borrowsettle.js';\nimport { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';\nimport { workingYard } from './workreport.js';\n"
+        },
+        {
+          "before": "    const a = el.dataset.a, v = el.dataset.v;\n    if (this.g.saveStartup) return;\n    if (a !== 'transferConfirm' && a !== 'speed') this.transferReview = null;\n    if(!['reserveStart','reserveResume','reserveStop','speed'].includes(a))this.reserveWait?.interrupt('You opened another control.');\n    // Navigating out of the Requests dialog: close it first so the destination is never opened underneath it.\n",
+          "after": "    const a = el.dataset.a, v = el.dataset.v;\n    if (this.g.saveStartup) return;\n    // Only the matching confirmation or a speed choice preserves a transaction review.\n    for (const [field, confirm] of [['acquisitionReview','acquisitionConfirm'], ['creditReview','creditConfirm'], ['termLoanReview','termLoanConfirm'], ['transferReview','transferConfirm']]) {\n      if (a !== confirm && a !== 'speed') this[field] = null;\n    }\n    if(!['reserveStart','reserveResume','reserveStop','speed'].includes(a))this.reserveWait?.interrupt('You opened another control.');\n    // Navigating out of the Requests dialog: close it first so the destination is never opened underneath it.\n"
+        },
+        {
+          "before": "    this.growthProposal = null; this.growthPlanArgs = null;\n    this.projectProposal = null;\n    this.pricingReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null; this.transferReview = null;\n    this.yardGuide = null;\n    this.floorBuilding = null;\n",
+          "after": "    this.growthProposal = null; this.growthPlanArgs = null;\n    this.projectProposal = null;\n    this.pricingReview = null; this.acquisitionReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null; this.transferReview = null;\n    this.yardGuide = null;\n    this.floorBuilding = null;\n"
+        },
+        {
+          "before": "    else this.resumePopup('modal');\n    const cash = Math.round(s.cash);\n    const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small>${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }\n    if (now - (this.goalT || 0) > 1000) { // next career goal, always visible as a thin bar under the cash\n      this.goalT = now; this.renderCareerGoal();\n",
+          "after": "    else this.resumePopup('modal');\n    const cash = Math.round(s.cash);\n    const sub = this.cashSub; if (cash !== this.hCash || sub !== this.hSub) { this.hCash = cash; this.hSub = sub; const el = this.$('cash'); el.innerHTML = `${money(cash)}<small title=\"Cash movement excluding borrowing and principal repayments; includes construction and transfers. Not profit.\">${sub || (s.creative ? 'Creative' : 'Cash')}</small>`; el.classList.toggle('neg', cash < 0); }\n    if (now - (this.goalT || 0) > 1000) { // next career goal, always visible as a thin bar under the cash\n      this.goalT = now; this.renderCareerGoal();\n"
+        },
+        {
+          "before": "    const sim = this.sim, s = sim.s; const oc = sim.occupancy();\n    if (!oc.n || s.creative) { this.cashSub = null; return; }\n    const actual = sim.cashWindow(1), n = Math.round(actual.net);\n    this.cashSub = `${oc.occ}/${oc.n} \u00b7 today${actual.complete ? '' : ' (partial)'} ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;\n  }\n  ownerStatus() {\n",
+          "after": "    const sim = this.sim, s = sim.s; const oc = sim.occupancy();\n    if (!oc.n || s.creative) { this.cashSub = null; return; }\n    const actual = sim.cashWindow(1), n = Math.round(operatingNet(actual));\n    this.cashSub = `${oc.occ}/${oc.n} \u00b7 cash today${actual.complete ? '' : ' (partial)'} ${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString()}`;\n  }\n  ownerStatus() {\n"
+        },
+        {
+          "before": "  closeModal() { this.acquisitionReview=null; this.creditReview=null; this.termLoanReview=null; this.transferReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }\n  showMenu() {\n    this.transferReview = null;\n    const a = this.g.audio;\n    this.$('modal').innerHTML = `<div class=\"modal-bg\"><div class=\"modal\"><div class=\"row\"><h2 style=\"flex:1\">Menu</h2><button class=\"x\" data-a=\"modalClose\" aria-label=\"Close\">${I.x}</button></div>\n",
+          "after": "  closeModal() { this.acquisitionReview=null; this.creditReview=null; this.termLoanReview=null; this.transferReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }\n  showMenu() {\n    this.acquisitionReview = null; this.creditReview = null; this.termLoanReview = null; this.transferReview = null;\n    const a = this.g.audio;\n    this.$('modal').innerHTML = `<div class=\"modal-bg\"><div class=\"modal\"><div class=\"row\"><h2 style=\"flex:1\">Menu</h2><button class=\"x\" data-a=\"modalClose\" aria-label=\"Close\">${I.x}</button></div>\n"
+        },
+        {
+          "before": "  }\n}\n",
+          "after": "  }\n}\napplyBorrowSettle(UI);\n"
+        }
+      ]
+    }
+  }
+}

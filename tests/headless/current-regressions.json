@@ -6,10 +6,15 @@
     "current": [
       {
         "id": "tfinancial_context",
-        "command": ["@node", "tests/headless/tfinancial_context.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tfinancial_context.mjs"
+        ],
         "completion": "14 financial-context groups passed",
         "minimum_pass_lines": 14,
-        "required_objects": ["b8ce9e9f0c00fa239b33da96c19662a962a5afd6"],
+        "required_objects": [
+          "b8ce9e9f0c00fa239b33da96c19662a962a5afd6"
+        ],
         "timeout": 180,
         "evidence": "actual current UI review handlers and unchanged engine; historical exact-byte normalization checked separately; no rendered-device claim"
       },
@@ -1152,6 +1157,31 @@
         "minimum_pass_lines": 8,
         "timeout": 90,
         "evidence": "current production gate planning, UI preview/Confirm and actual acquisition; controlled fixtures and stub DOM; rendered checks separate"
+      },
+      {
+        "id": "tborrowing_settle",
+        "command": [
+          "@node",
+          "tests/headless/tborrowing_settle.mjs"
+        ],
+        "completion": "12 borrowing settle and HUD groups passed",
+        "minimum_pass_lines": 12,
+        "timeout": 180,
+        "evidence": "version-B native methods and controlled input; no physical-device claim"
+      },
+      {
+        "id": "ttransaction_safety",
+        "command": [
+          "@node",
+          "tests/headless/ttransaction_safety.mjs"
+        ],
+        "completion": "8 transaction safety groups passed",
+        "minimum_pass_lines": 8,
+        "required_objects": [
+          "d03bbcdb7245f379512b0c13041b004742133d83"
+        ],
+        "timeout": 180,
+        "evidence": "production handlers, in-memory companies, exact inverse preservation and financial categories; no rendered-device claim"
       }
     ],
     "historical": [
