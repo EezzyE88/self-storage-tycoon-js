@@ -1206,3 +1206,14 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
     and its required button above expanded Statement/Hire and other panels. */
  #ui.has-sheet:has(#tut .tut:not(.offer):not(.scen)) .sheet.tall { max-height:calc(100dvh - var(--review-top, 176px) - 64px - var(--safe-b)); }
 }
+
+/* Purchase Confirm stays left, away from the right-hand acquisition offer buttons. */
+#ui .modal[aria-labelledby="acquisition-title"] > .row.wrap {
+ flex-direction:row-reverse;
+ justify-content:space-between;
+}
+#ui .modal[aria-labelledby="acquisition-title"] [data-a="acquisitionConfirm"] {
+ flex:0 1 140px;
+ max-width:calc(100% - 76px);
+ white-space:normal;
+}

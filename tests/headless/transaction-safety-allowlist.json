@@ -34,6 +34,16 @@
           "after": "  }\n}\napplyBorrowSettle(UI);\n"
         }
       ]
+    },
+    "css/game.css": {
+      "parent_sha256": "aaef75fa1b948f1da82b45b50e03071f5df8ea85035370172b0ee1978360e180",
+      "current_sha256": "1b23cf250fed476ee4247ed1d50b4cf984d55549cef5852ef65ba8e4fa55fa1e",
+      "hunks": [
+        {
+          "before": "",
+          "after": "\n/* Purchase Confirm stays left, away from the right-hand acquisition offer buttons. */\n#ui .modal[aria-labelledby=\"acquisition-title\"] > .row.wrap {\n flex-direction:row-reverse;\n justify-content:space-between;\n}\n#ui .modal[aria-labelledby=\"acquisition-title\"] [data-a=\"acquisitionConfirm\"] {\n flex:0 1 140px;\n max-width:calc(100% - 76px);\n white-space:normal;\n}\n"
+        }
+      ]
     }
   }
 }
