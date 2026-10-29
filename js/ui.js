@@ -1425,7 +1425,8 @@ export class UI {
         return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class="kv"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}`);
       }
       case 'door': {
-        return this.sheet(nm, o.keypad ? 'With keypad' : 'No keypad', `${o.kind === 'auto' ? this.condBar(o.cond) : ''}<div class="kv"><span>Cart speed</span><span>${o.kind === 'std' ? 'Slow' : o.kind === 'wide' ? 'Good' : 'Fast'}</span>${o.keypad ? `<span>Keypad</span><span>${o.keypad === 'operating' ? pct(o.kcond ?? 1) : 'Installing'}</span>` : ''}</div>${o.kind === 'auto' ? this.taskActions(o) : ''}`);
+        const ord = o.keypad === 'pending' && s.orders.find(q => q.id === o.keypadOrder && q.keypadDoor === o.id && q.st === 'construction');
+        return this.sheet(nm, o.keypad ? 'With keypad' : 'No keypad', `${o.kind === 'auto' ? this.condBar(o.cond) : ''}<div class="kv"><span>Cart speed</span><span>${o.kind === 'std' ? 'Slow' : o.kind === 'wide' ? 'Good' : 'Fast'}</span>${o.keypad ? `<span>Keypad</span><span>${o.keypad === 'operating' ? pct(o.kcond ?? 1) : 'Installing'}</span>` : ''}</div>${ord ? this.cmdBtn('Cancel keypad installation…', {type:'cancelOrder',id:ord.id}, 'danger') : ''}${o.kind === 'auto' ? this.taskActions(o) : ''}`);
       }
       case 'elevator': {
         const waiting = o.q.reduce((a, q) => a + q.length, 0);

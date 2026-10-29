@@ -1184,6 +1184,14 @@
         "evidence": "production handlers, in-memory companies, exact inverse preservation and financial categories; no rendered-device claim"
       },
       {
+        "id": "tkeypad_cancel_ui",
+        "command": ["@node", "tests/headless/tkeypad_cancel_ui.mjs"],
+        "completion": "ALL PASS: 8 keypad cancellation UI groups",
+        "minimum_pass_lines": 8,
+        "timeout": 60,
+        "evidence": "production inspector, click handler, refund confirmation and dispatch with disposable state; no rendered-device claim"
+      },
+      {
         "id": "tunfinished_demolition",
         "command": ["@node", "tests/headless/tunfinished_demolition.mjs"],
         "completion": "ALL PASS: 11 unfinished-demolition groups",

@@ -1,5 +1,6 @@
 // Exact inverse of Stage 0 only; current behavioral checks execute the real guard.
 import assert from 'node:assert/strict';
+import {normalizeKeypadCancel} from './keypad_cancel_baseline.mjs';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 const hash=t=>createHash('sha256').update(t).digest('hex');
@@ -12,4 +13,4 @@ export function normalizeStage0(text,file) {
  assert.equal(hash(text),'4f981640eaa7827a6ecb02e5ded951f370c7735feee8676b532045d1b7702656','complete eec4f5b simulation identity after Stage 0 inverse');
  return text;
 }
-export const stage0Baseline=file=>normalizeStage0(readFileSync(file,'utf8'),file);
+export const stage0Baseline=file=>normalizeStage0(normalizeKeypadCancel(readFileSync(file,'utf8'),file),file);
