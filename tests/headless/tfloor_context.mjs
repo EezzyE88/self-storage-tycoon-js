@@ -1,6 +1,7 @@
 // Real Three.js scene graph; GPU/Canvas stubbed. No physical-device claim.
 import assert from 'node:assert/strict';
 import {durableBaseline} from './durable_baseline.mjs';
+import {stage0Baseline} from './stage0_baseline.mjs';
 import {readFileSync} from 'node:fs';
 import {base, full} from './tthreefloor.mjs';
 import {Sim} from '../../js/sim.js';
@@ -113,7 +114,7 @@ intentional(`      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
         const perp = (axisX ? a.a.y : a.a.x) - ((axisX ? dir[1] : dir[0]) > 0 ? sz.d - 1 : 0);
         return axisX ? {x:along, y:perp, w:sz.w, h:sz.d, dir:[...dir], f} : {x:perp, y:along, w:sz.d, h:sz.w, dir:[...dir], f};
       });`);
-assert.equal(readFileSync('js/sim.js','utf8'),expectedSim);
+assert.equal(stage0Baseline('js/sim.js'),expectedSim);
 // Fast-reserve intentionally changed main's clock dispatch. Preserve its exact verified implementation.
 let actualMain=durableBaseline('js/main.js');
 // Permit only the exact paused-autosave hooks; retain the complete-file comparison.

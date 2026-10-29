@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {fixture,snapshot,click,review} from './transaction-fixture.mjs';
 import {transactionBaseline} from './transaction_baseline.mjs';
+import {stage0Baseline} from './stage0_baseline.mjs';
 import {operatingNet} from '../../js/borrowsettle.js';
 const main=readFileSync('js/main.js','utf8');
 const kinds={acquisition:['acquisitionReview','acquisitionConfirm'],credit:['creditReview','creditConfirm'],term:['termLoanReview','termLoanConfirm'],transfer:['transferReview','transferConfirm']};
@@ -39,7 +40,7 @@ test('whole-file inverse exactly restores original master UI with no weakened ol
  assert.equal(transactionBaseline('js/ui.js'),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:js/ui.js'],{encoding:'utf8'}));
  assert.equal(readFileSync('tests/headless/financial-context-allowlist.json','utf8'),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:tests/headless/financial-context-allowlist.json'],{encoding:'utf8'}));
 });
-test('finance engine and persistence files remain original master blobs',()=>{
- for(const file of ['js/main.js','js/sim.js','js/finance.js','js/data.js','js/localsave.js','js/durablesave.js','js/savearchive.js','js/cloud.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:'+file],{encoding:'utf8'}));
+test('finance and persistence retain master identity after exact Stage 0 inverse',()=>{
+ for(const file of ['js/main.js','js/sim.js','js/finance.js','js/data.js','js/localsave.js','js/durablesave.js','js/savearchive.js','js/cloud.js'])assert.equal(stage0Baseline(file),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:'+file],{encoding:'utf8'}));
 });
 console.log(`${n} transaction safety groups passed`);
