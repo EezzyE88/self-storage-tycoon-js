@@ -1186,8 +1186,8 @@
       {
         "id": "tunfinished_demolition",
         "command": ["@node", "tests/headless/tunfinished_demolition.mjs"],
-        "completion": "ALL PASS: 10 unfinished-demolition groups",
-        "minimum_pass_lines": 10,
+        "completion": "ALL PASS: 11 unfinished-demolition groups",
+        "minimum_pass_lines": 11,
         "timeout": 60,
         "evidence": "production planning/dispatch, disposable construction and save fixtures; exact refusal preservation, refunds and references; no rendered-device claim"
       }

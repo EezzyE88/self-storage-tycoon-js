@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import {makeSandbox} from '../../js/scenarios.js';
 import {Sim} from '../../js/sim.js';
+import {readFileSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import {normalizeStage0} from './stage0_baseline.mjs';
 
 let checks=0,failures=0;
 function test(name,fn){try{fn();checks++;console.log('PASS '+name);}catch(e){failures++;console.error('FAIL '+name+'\n'+e.stack);}}
@@ -21,4 +24,5 @@ test('save/reload retains unfinished references and the same refusal/refund',()=
 test('refused attempt does not stop completion or legitimate completed demolition',()=>{const s=fresh(),o=build(s,args('light',10,10)),id=o.objs[0];refused(s,s.s.objects[id]);for(let i=0;i<200&&o.st==='construction';i++){s.step();s.events.length=0;}assert.equal(o.st,'done');assert.equal(s.s.objects[id].cstate,'operating');const a=args('demolish',10,10),q=s.plan(a),cash=s.s.cash;assert.equal(q.status,'valid');assert.ok(s.dispatch({type:'build',...a}).ok);assert.equal(s.s.cash,cash-q.cost);assert.equal(s.s.objects[id],undefined);assert.equal(s.dispatch({type:'build',...a}).ok,false);assert.equal(s.s.cash,cash-q.cost);refs(s);});
 test('Confirm revalidates when a completed asset is replaced by unfinished construction',()=>{const s=makeSandbox({kind:'free'});let o=build(s,args('light',10,10));assert.equal(o.st,'done');const a=args('demolish',10,10);assert.equal(s.plan(a).status,'valid');assert.ok(s.dispatch({type:'build',...a}).ok);assert.ok(s.dispatch({type:'sbSet',k:'instant',v:false}).ok);o=build(s,args('light',10,10));refused(s,s.s.objects[o.objs[0]]);});
 test('existing occupied-unit and active-retrofit protections remain',()=>{const s=makeSandbox({start:'starter',cash:100000}),occupied=s.objs('unit').find(u=>u.lease);assert.equal(s.plan(args('demolish',occupied.x,occupied.y)).status,'invalid');const u=s.objs('unit').find(u=>!u.lease&&u.cstate==='operating');const a={unit:u.id,lighting:'interior'},q=s.plan({tool:'unitRetrofit',...a});assert.notEqual(q.status,'invalid',q.reasons.join(';'));assert.ok(s.dispatch({type:'unitRetrofit',...a,upgradeStamp:q.upgradeStamp}).ok);refused(s,u,/Cancel.*upgrade installation/);});
+test('exact inverse retains full parent source and rejects unrelated drift',()=>{const source=readFileSync('js/sim.js','utf8');assert.equal(normalizeStage0(source,'js/sim.js'),execFileSync('git',['show','eec4f5b9573a40b9e4303ada74a16bd5f2528be5:js/sim.js'],{encoding:'utf8'}));assert.throws(()=>normalizeStage0(source+'\n','js/sim.js'));assert.throws(()=>normalizeStage0(source.replace("o.keypad === 'pending'","o.keypad === 'operating'"),'js/sim.js'));});
 console.log(failures?`${failures} FAILED`:`ALL PASS: ${checks} unfinished-demolition groups`);if(failures)process.exitCode=1;

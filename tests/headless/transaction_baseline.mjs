@@ -2,10 +2,11 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {stage0Baseline} from './stage0_baseline.mjs';
 const declaration=JSON.parse(readFileSync(new URL('./transaction-safety-allowlist.json',import.meta.url)));
 const hash=s=>createHash('sha256').update(s).digest('hex');
 export function transactionBaseline(file) {
- let text=readFileSync(file,'utf8');const entry=declaration.files[file];if(!entry)return text;
+ let text=stage0Baseline(file);const entry=declaration.files[file];if(!entry)return text;
  assert.equal(hash(text),entry.current_sha256,'exact transaction repair: '+file);
  for(const h of [...entry.hunks].reverse()) {
   assert.equal(text.split(h.after).length-1,1,'one exact transaction hunk: '+file);
