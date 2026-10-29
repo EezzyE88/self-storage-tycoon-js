@@ -1,4 +1,5 @@
 import { SIZES } from './data.js';
+import { gateQueue, gateServing, gateStatus } from './gateaccess.js';
 
 const ordered = (value) => {
   if (Array.isArray(value)) return value.map(ordered);
@@ -28,10 +29,10 @@ function dependencies(sim, o) {
   const agents = s.agents.filter((a) => a.unit === o.id || a.obj === o.id || a.gate === o.id || a.gateId === o.id).map((a) => ({ id: a.id, st: a.st || null }));
   const lease = o.lease && s.leases[o.lease] ? { id: o.lease, status: s.leases[o.lease].status } : null;
   const host = o.mount?.host ? targetState(s.objects[o.mount.host]) : null;
-  const gates = Object.values(s.objects).filter((x) => x.type === 'gate').sort((a, b) => a.id - b.id).map((g) => ({ id: g.id, cstate: g.cstate, cond: g.cond, open: g.open, serving: g.serving || null }));
+  const gates = Object.values(s.objects).filter((x) => x.type === 'gate').sort((a, b) => a.id - b.id).map((g) => ({ id: g.id, cstate: g.cstate, cond: g.cond, open: g.open, status: gateStatus(s,g), serving: gateServing(s,g.id) }));
   return {
     attachments: attachments.map(targetState), orders, tasks, agents, lease, host,
-    access: { structV: s.structV, gates, gateQ: [...s.gateQ], visits: s.visits.map((v) => ({ id: v.id, st: v.st, gate: v.gate || v.gateId || null })) },
+    access: { structV: s.structV, gates, gateQueues: Object.fromEntries(gates.map(g=>[g.id,[...gateQueue(s,g.id)]])), visits: s.visits.map((v) => ({ id: v.id, st: v.st, gate: v.gate || v.gateId || null })) },
   };
 }
 
@@ -49,7 +50,7 @@ export function analyzePlaceableRemoval(sim, targetId) {
   if (dep.agents.length) prerequisites.push('A customer or worker is using this asset right now.');
   if (o.type === 'unit' && (dep.lease || o.commercial === 'reserved')) prerequisites.push('Occupied - the lease must end before demolition.');
   if (o.type === 'gate') {
-    if (s.gateQ.length || o.serving) prerequisites.push('Clear approaching, queued and crossing traffic first.');
+    if (gateQueue(s,o.id).length || gateServing(s,o.id)) prerequisites.push('Clear approaching, queued and crossing traffic first.');
     prerequisites.push('Gate removal waits for functional alternate-route support; object count alone cannot prove safe access.');
     effects.push('Would change the property vehicle entrance and fence crossing.');
   }

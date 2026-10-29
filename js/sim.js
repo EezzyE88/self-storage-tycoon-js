@@ -10,6 +10,7 @@ import { climateInventory, climateCauseKey, climateSuggestion } from './climatea
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
 import { analyzePlaceableRemoval } from './placeableops.js';
+import { normalizeGateAccess, registerGateAccess, unregisterGateAccess, primaryGateId, gateQueue, gateServing, enqueueGate, shiftGate, setGateServing, removeGateAgent, gateConnection, gateStatus } from './gateaccess.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
 // Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.
 // All mutations go through sim.dispatch(action). Deterministic given seed + action script.
@@ -44,7 +45,7 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     hall: [new Array(WH).fill(0), new Array(WH).fill(0)], // 0 none, 1 built, 2 under construction
     dirt: [new Array(WH).fill(0), new Array(WH).fill(0)],
     objects: {}, orders: [], leases: {}, tenants: {}, carts: [], vehicles: [], agents: [], staff: [], tasks: [],
-    visits: [], gateQ: [], officeQ: [],
+    visits: [], gateAccess: { v: 1, gateIds: [], connections: {}, queues: {}, serving: {}, migration: { legacy: false, issues: [] } }, officeQ: [],
     market: { id: market, ask: {} },
     ledger: [], days: [], today: null, finance: financeState(),
     exp: { access: 0.85, convenience: 0.8, cleanliness: 0.85, security: 0.7, climate: 0.9, service: 0.85, value: 0.8, comfort: 0.8 },
@@ -114,6 +115,7 @@ export class Sim {
     normalizeProjects(state);
     normalizeRescueOperation(state);
     normalizeYardLoop(state);
+    normalizeGateAccess(state);
     if (state.lessonOffer === 'financing') state.lessonOffer = null;
     this.rebuild();
   }
@@ -135,6 +137,10 @@ export class Sim {
   objs(type) { return (this.D && this.D.byType[type]) || []; }
   obj(id) { return this.s.objects[id]; }
   placeableRemoval(targetId) { return analyzePlaceableRemoval(this, Number(targetId)); }
+  gateQueue(id = primaryGateId(this.s)) { return gateQueue(this.s, id); }
+  gateServing(id = primaryGateId(this.s)) { return gateServing(this.s, id); }
+  gateConnection(id = primaryGateId(this.s)) { return gateConnection(this.s, id); }
+  gateStatus(id = primaryGateId(this.s)) { return gateStatus(this.s, id); }
   isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }
 
   money(amt, cat, note) {
@@ -253,7 +259,7 @@ export class Sim {
       const sh = D.shellAt[this.idx(u.x, u.y)]; const e = (D.hvac[sh] ||= { cap: 0, load: 0, plants: [] }); e.load += SIZES[u.size].sqft / 25;
     }
     // vehicle reachability from street (through the gate)
-    const gate = this.objs('gate')[0];
+    const gate = s.objects[primaryGateId(s)] || null;
     D.gate = gate && gate.cstate === 'operating' ? gate : null;
     const start = [];
     for (let x = 0; x < W; x++) start.push(this.idx(x, p.y1 + 2));
@@ -917,7 +923,7 @@ export class Sim {
       if (o.type === 'corral') { o.name = this.corralName(o); }
       if (o.type === 'elevator') Object.assign(o, { pos: 0, tgt: null, door: 0, riders: [], q: Array.from({length:o.servedFloors?.length||2},()=>[]), cap: 4, trips: 0 });
       if (o.type === 'gate') Object.assign(o, { open: 0 });
-      s.objects[o.id] = o; ord.objs.push(o.id);
+      s.objects[o.id] = o; if (o.type === 'gate') registerGateAccess(s, o); ord.objs.push(o.id);
     }
     for (const tl of R.tiles) if (tl.k === 'hall') s.hall[tl.f][tl.i] = 2;
     s.orders.push(ord);
@@ -1264,7 +1270,7 @@ export class Sim {
     for(const ag of this.s.agents){if(taskIds.has(ag.task)){ag.task=null;ag.st='idle';}if(ag.queue)ag.queue=ag.queue.filter(id=>!taskIds.has(id));}
     for(const t of this.s.tasks.filter(t=>taskIds.has(t.id)))if(t.workBooked)this.refundTaskWork(this.s.staff.find(st=>st.id===t.workBooked),t);
     this.s.tasks=this.s.tasks.filter(t=>!taskIds.has(t.id));this.s.convos=this.s.convos.filter(c=>!ids.has(c.obj));
-    for(const id of ids)delete this.s.objects[id];
+    for(const id of ids){if(this.s.objects[id]?.type==='gate')unregisterGateAccess(this.s,id);delete this.s.objects[id];}
   }
   act_unitRetrofit(a) {
     const R=this.plan({...a,tool:'unitRetrofit'});
@@ -2106,10 +2112,11 @@ export class Sim {
     const sx = fromEast ? s.W - 1 : 0, sy = fromEast ? p.y1 + 2 : p.y1 + 3;
     const veh = { id: this.id(), type: vtype, x: sx + 0.5, y: sy + 0.5, hx: fromEast ? -1 : 1, hy: 0, path: null, pi: 0, color: this.pick(['#c8ccd0', '#2e3a4a', '#8a2f2f', '#f2f2ee', '#3d5a3f', '#6b7a8f', '#a8834e', '#1e1f22']), parked: null };
     const needCart = u && u.access === 'interior' ? (v.kind === 'movein' || v.kind === 'moveout' ? true : v.kind === 'bigaccess' ? this.rnd() < 0.8 : this.rnd() < 0.25) : false;
-    const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,
+    const gateId = primaryGateId(s);
+    const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, gateId, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,
       exp: { gate: 0, cart: 0, elev: 0, office: 0, walk: 0, dirt: 0, dirtN: 0, dark: false, noCart: false, door: 0 }, t0: s.t, look: Math.floor(this.rnd() * 1e6) };
     s.vehicles.push(veh); s.agents.push(ag);
-    const gx = this.D.gate.x;
+    const gx = s.objects[gateId]?.x ?? this.D.gate.x;
     const goal = this.idx(gx, p.y1 + 1);
     const path = this.bfs([this.idx(sx, sy)], (n) => n === goal, (n) => this.vehNbr(n));
     this.setVehPath(veh, path);
@@ -2233,13 +2240,14 @@ export class Sim {
   // ---------------- gate
   updateGate() {
     const s = this.s, gate = this.D.gate; if (!gate) return;
+    const serving = gateServing(s, gate.id);
     // exit sensor opens automatically; keypad controls entry
     const near = s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);
-    const target = near || gate.serving ? 1 : 0;
+    const target = near || serving ? 1 : 0;
     if (target && gate.open < 1) { if (gate.open === 0) this.emit('gate', { x: gate.x, y: gate.y }); gate.open = Math.min(1, gate.open + 0.25); }
     else if (!target && gate.open > 0) gate.open = Math.max(0, gate.open - 0.2);
   }
-  keypadServiceTime() { const g = this.D.gate; return Math.round(4 + (1 - g.cond) * 14); }
+  keypadServiceTime(g = this.D.gate) { return Math.round(4 + (1 - g.cond) * 14); }
 
   // ---------------- customer state machine
   updateCustomer(ag) {
@@ -2249,16 +2257,16 @@ export class Sim {
     switch (ag.st) {
       case 'arrive': {
         veh.moving = true;
-        if (this.moveVeh(veh, VS)) { veh.moving = false; ag.st = 'gateq'; if (!s.gateQ.includes(ag.id)) s.gateQ.push(ag.id); }
+        if (this.moveVeh(veh, VS)) { veh.moving = false; ag.st = 'gateq'; enqueueGate(s, ag.gateId, ag.id); }
         break;
       }
       case 'gateq': {
-        const gate = this.D.gate; ag.exp.gate++;
-        const qi = s.gateQ.indexOf(ag.id);
+        const gate = s.objects[ag.gateId] || this.D.gate; ag.exp.gate++;
+        const q = gateQueue(s, gate.id), qi = q.indexOf(ag.id);
         // queue position on the street behind the apron
         if (qi > 0) { const tx = gate.x + 0.5 + (veh.hx < 0 ? 0 : 0), ty = p.y1 + 1.5 + Math.min(qi, 1) * 1.0; veh.x += (tx + (qi > 1 ? (qi - 1) * 2.4 * (veh.hx < 0 ? 1 : -1) : 0) - veh.x) * 0.2; veh.y += (ty - veh.y) * 0.2; if (qi >= 2 && ag.exp.gate === 20) this.thought(ag, 'Gate line is backing up.', 'bad'); break; }
-        if (!gate.serving) { gate.serving = ag.id; ag.gateT = this.keypadServiceTime(); ag.gateFail = gate.cond < 0.2 || !!gate.unpowered; this.emit('keypad', { x: gate.x, y: gate.y }); }
-        if (gate.serving !== ag.id) break;
+        if (!gateServing(s, gate.id)) { setGateServing(s, gate.id, ag.id); ag.gateT = this.keypadServiceTime(gate); ag.gateFail = gate.cond < 0.2 || !!gate.unpowered; this.emit('keypad', { x: gate.x, y: gate.y }); }
+        if (gateServing(s, gate.id) !== ag.id) break;
         ag.gateT--;
         if (ag.gateT <= 0) {
           if (ag.gateFail && !ag.buzzed) {
@@ -2272,12 +2280,12 @@ export class Sim {
             }
             if (this.officeServers() > 0) { ag.buzzed = true; this.thought(ag, 'The office buzzed me in.', 'neutral'); }
             else { // gives up
-              s.gateQ.shift(); gate.serving = null; ag.exp.gate += 60; ag.failed = true;
+              shiftGate(s, gate.id); setGateServing(s, gate.id, null); ag.exp.gate += 60; ag.failed = true;
               this.thought(ag, 'Nobody answered. I\'m leaving.', 'bad');
               this.depart(ag); break;
             }
           }
-          s.gateQ.shift(); gate.serving = null; this.wear(gate, 0.0012);
+          shiftGate(s, gate.id); setGateServing(s, gate.id, null); this.wear(gate, 0.0012);
           this.emit('keypad_ok', { x: gate.x, y: gate.y });
           const dest = this.chooseDest(ag, veh);
           if (!dest) { ag.failed = true; this.thought(ag, "I can't get to my unit from here.", 'bad'); this.depart(ag); break; }
@@ -2561,8 +2569,7 @@ export class Sim {
     const s = this.s, veh = this.vehAt(ag.veh);
     this.recordExperience(ag);
     ag.hidden = true; ag.st = 'leave'; this.leaveElevator(ag);
-    s.gateQ = s.gateQ.filter((x) => x !== ag.id);
-    if (this.D.gate && this.D.gate.serving === ag.id) this.D.gate.serving = null;
+    removeGateAgent(s, ag.gateId, ag.id);
     if (!veh) { s.agents = s.agents.filter((x) => x !== ag); return; }
     veh.parked = null; veh.dest = null; veh.moving = true;
     const p = s.parcel, toEast = this.rnd() < 0.5;

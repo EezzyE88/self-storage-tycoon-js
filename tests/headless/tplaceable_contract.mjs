@@ -54,7 +54,7 @@ test('stale target, funds, occupancy, construction, attachment and access state 
     (f)=>{f.unit.lease=999;f.unit.commercial='occupied';},
     (f)=>{f.light.cstate='construction';},
     (f)=>{const id=f.sim.id();f.sim.s.objects[id]={...f.attachment,id};f.sim.markDirty();},
-    (f)=>{f.sim.s.gateQ.push(999);},
+    (f)=>{f.sim.gateQueue(f.gate.id).push(999);},
   ];
   for(const [i,mutate] of cases.entries()){
     const f=fixture(),target=i===0||i===1||i===3?f.light:f.unit,q=f.sim.plan(args(target));assert.equal(q.status,'valid');

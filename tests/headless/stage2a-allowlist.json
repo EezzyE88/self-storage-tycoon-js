@@ -1,0 +1,93 @@
+{
+  "base_commit": "827cc8adb0d02e44b91be5fc4821942bb38b110c",
+  "files": {
+    "js/sim.js": {
+      "parent_sha256": "c2b4bfbdc034b23c5fe9b0df15721ce9365019c54ca35b495e154696ddf02126",
+      "current_sha256": "391a4baa6b8fd64dd94e3bca234af34d13cc428fc842851a3d8ed6fb8cb8655d",
+      "hunks": [
+        {
+          "before": "import { analyzePlaceableRemoval } from './placeableops.js';\n// AUTHORITATIVE SIMULATION (GDD \u00a751). No DOM, no rendering, no audio.\n",
+          "after": "import { analyzePlaceableRemoval } from './placeableops.js';\nimport { normalizeGateAccess, registerGateAccess, unregisterGateAccess, primaryGateId, gateQueue, gateServing, enqueueGate, shiftGate, setGateServing, removeGateAgent, gateConnection, gateStatus } from './gateaccess.js';\n// AUTHORITATIVE SIMULATION (GDD \u00a751). No DOM, no rendering, no audio.\n"
+        },
+        {
+          "before": "    objects: {}, orders: [], leases: {}, tenants: {}, carts: [], vehicles: [], agents: [], staff: [], tasks: [],\n    visits: [], gateQ: [], officeQ: [],\n    market: { id: market, ask: {} },\n",
+          "after": "    objects: {}, orders: [], leases: {}, tenants: {}, carts: [], vehicles: [], agents: [], staff: [], tasks: [],\n    visits: [], gateAccess: { v: 1, gateIds: [], connections: {}, queues: {}, serving: {}, migration: { legacy: false, issues: [] } }, officeQ: [],\n    market: { id: market, ask: {} },\n"
+        },
+        {
+          "before": "    normalizeYardLoop(state);\n    if (state.lessonOffer === 'financing') state.lessonOffer = null;\n",
+          "after": "    normalizeYardLoop(state);\n    normalizeGateAccess(state);\n    if (state.lessonOffer === 'financing') state.lessonOffer = null;\n"
+        },
+        {
+          "before": "  placeableRemoval(targetId) { return analyzePlaceableRemoval(this, Number(targetId)); }\n  isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }\n",
+          "after": "  placeableRemoval(targetId) { return analyzePlaceableRemoval(this, Number(targetId)); }\n  gateQueue(id = primaryGateId(this.s)) { return gateQueue(this.s, id); }\n  gateServing(id = primaryGateId(this.s)) { return gateServing(this.s, id); }\n  gateConnection(id = primaryGateId(this.s)) { return gateConnection(this.s, id); }\n  gateStatus(id = primaryGateId(this.s)) { return gateStatus(this.s, id); }\n  isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }\n"
+        },
+        {
+          "before": "    // vehicle reachability from street (through the gate)\n    const gate = this.objs('gate')[0];\n    D.gate = gate && gate.cstate === 'operating' ? gate : null;\n",
+          "after": "    // vehicle reachability from street (through the gate)\n    const gate = s.objects[primaryGateId(s)] || null;\n    D.gate = gate && gate.cstate === 'operating' ? gate : null;\n"
+        },
+        {
+          "before": "      if (o.type === 'gate') Object.assign(o, { open: 0 });\n      s.objects[o.id] = o; ord.objs.push(o.id);\n    }\n",
+          "after": "      if (o.type === 'gate') Object.assign(o, { open: 0 });\n      s.objects[o.id] = o; if (o.type === 'gate') registerGateAccess(s, o); ord.objs.push(o.id);\n    }\n"
+        },
+        {
+          "before": "    this.s.tasks=this.s.tasks.filter(t=>!taskIds.has(t.id));this.s.convos=this.s.convos.filter(c=>!ids.has(c.obj));\n    for(const id of ids)delete this.s.objects[id];\n  }\n",
+          "after": "    this.s.tasks=this.s.tasks.filter(t=>!taskIds.has(t.id));this.s.convos=this.s.convos.filter(c=>!ids.has(c.obj));\n    for(const id of ids){if(this.s.objects[id]?.type==='gate')unregisterGateAccess(this.s,id);delete this.s.objects[id];}\n  }\n"
+        },
+        {
+          "before": "    const needCart = u && u.access === 'interior' ? (v.kind === 'movein' || v.kind === 'moveout' ? true : v.kind === 'bigaccess' ? this.rnd() < 0.8 : this.rnd() < 0.25) : false;\n    const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,\n      exp: { gate: 0, cart: 0, elev: 0, office: 0, walk: 0, dirt: 0, dirtN: 0, dark: false, noCart: false, door: 0 }, t0: s.t, look: Math.floor(this.rnd() * 1e6) };\n",
+          "after": "    const needCart = u && u.access === 'interior' ? (v.kind === 'movein' || v.kind === 'moveout' ? true : v.kind === 'bigaccess' ? this.rnd() < 0.8 : this.rnd() < 0.25) : false;\n    const gateId = primaryGateId(s);\n    const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, gateId, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,\n      exp: { gate: 0, cart: 0, elev: 0, office: 0, walk: 0, dirt: 0, dirtN: 0, dark: false, noCart: false, door: 0 }, t0: s.t, look: Math.floor(this.rnd() * 1e6) };\n"
+        },
+        {
+          "before": "    s.vehicles.push(veh); s.agents.push(ag);\n    const gx = this.D.gate.x;\n    const goal = this.idx(gx, p.y1 + 1);\n",
+          "after": "    s.vehicles.push(veh); s.agents.push(ag);\n    const gx = s.objects[gateId]?.x ?? this.D.gate.x;\n    const goal = this.idx(gx, p.y1 + 1);\n"
+        },
+        {
+          "before": "    const s = this.s, gate = this.D.gate; if (!gate) return;\n    // exit sensor opens automatically; keypad controls entry\n",
+          "after": "    const s = this.s, gate = this.D.gate; if (!gate) return;\n    const serving = gateServing(s, gate.id);\n    // exit sensor opens automatically; keypad controls entry\n"
+        },
+        {
+          "before": "    const near = s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);\n    const target = near || gate.serving ? 1 : 0;\n    if (target && gate.open < 1) { if (gate.open === 0) this.emit('gate', { x: gate.x, y: gate.y }); gate.open = Math.min(1, gate.open + 0.25); }\n",
+          "after": "    const near = s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);\n    const target = near || serving ? 1 : 0;\n    if (target && gate.open < 1) { if (gate.open === 0) this.emit('gate', { x: gate.x, y: gate.y }); gate.open = Math.min(1, gate.open + 0.25); }\n"
+        },
+        {
+          "before": "  }\n  keypadServiceTime() { const g = this.D.gate; return Math.round(4 + (1 - g.cond) * 14); }\n\n",
+          "after": "  }\n  keypadServiceTime(g = this.D.gate) { return Math.round(4 + (1 - g.cond) * 14); }\n\n"
+        },
+        {
+          "before": "        veh.moving = true;\n        if (this.moveVeh(veh, VS)) { veh.moving = false; ag.st = 'gateq'; if (!s.gateQ.includes(ag.id)) s.gateQ.push(ag.id); }\n        break;\n",
+          "after": "        veh.moving = true;\n        if (this.moveVeh(veh, VS)) { veh.moving = false; ag.st = 'gateq'; enqueueGate(s, ag.gateId, ag.id); }\n        break;\n"
+        },
+        {
+          "before": "      case 'gateq': {\n        const gate = this.D.gate; ag.exp.gate++;\n        const qi = s.gateQ.indexOf(ag.id);\n        // queue position on the street behind the apron\n",
+          "after": "      case 'gateq': {\n        const gate = s.objects[ag.gateId] || this.D.gate; ag.exp.gate++;\n        const q = gateQueue(s, gate.id), qi = q.indexOf(ag.id);\n        // queue position on the street behind the apron\n"
+        },
+        {
+          "before": "        if (qi > 0) { const tx = gate.x + 0.5 + (veh.hx < 0 ? 0 : 0), ty = p.y1 + 1.5 + Math.min(qi, 1) * 1.0; veh.x += (tx + (qi > 1 ? (qi - 1) * 2.4 * (veh.hx < 0 ? 1 : -1) : 0) - veh.x) * 0.2; veh.y += (ty - veh.y) * 0.2; if (qi >= 2 && ag.exp.gate === 20) this.thought(ag, 'Gate line is backing up.', 'bad'); break; }\n        if (!gate.serving) { gate.serving = ag.id; ag.gateT = this.keypadServiceTime(); ag.gateFail = gate.cond < 0.2 || !!gate.unpowered; this.emit('keypad', { x: gate.x, y: gate.y }); }\n        if (gate.serving !== ag.id) break;\n        ag.gateT--;\n",
+          "after": "        if (qi > 0) { const tx = gate.x + 0.5 + (veh.hx < 0 ? 0 : 0), ty = p.y1 + 1.5 + Math.min(qi, 1) * 1.0; veh.x += (tx + (qi > 1 ? (qi - 1) * 2.4 * (veh.hx < 0 ? 1 : -1) : 0) - veh.x) * 0.2; veh.y += (ty - veh.y) * 0.2; if (qi >= 2 && ag.exp.gate === 20) this.thought(ag, 'Gate line is backing up.', 'bad'); break; }\n        if (!gateServing(s, gate.id)) { setGateServing(s, gate.id, ag.id); ag.gateT = this.keypadServiceTime(gate); ag.gateFail = gate.cond < 0.2 || !!gate.unpowered; this.emit('keypad', { x: gate.x, y: gate.y }); }\n        if (gateServing(s, gate.id) !== ag.id) break;\n        ag.gateT--;\n"
+        },
+        {
+          "before": "            else { // gives up\n              s.gateQ.shift(); gate.serving = null; ag.exp.gate += 60; ag.failed = true;\n              this.thought(ag, 'Nobody answered. I\\'m leaving.', 'bad');\n",
+          "after": "            else { // gives up\n              shiftGate(s, gate.id); setGateServing(s, gate.id, null); ag.exp.gate += 60; ag.failed = true;\n              this.thought(ag, 'Nobody answered. I\\'m leaving.', 'bad');\n"
+        },
+        {
+          "before": "          }\n          s.gateQ.shift(); gate.serving = null; this.wear(gate, 0.0012);\n          this.emit('keypad_ok', { x: gate.x, y: gate.y });\n",
+          "after": "          }\n          shiftGate(s, gate.id); setGateServing(s, gate.id, null); this.wear(gate, 0.0012);\n          this.emit('keypad_ok', { x: gate.x, y: gate.y });\n"
+        },
+        {
+          "before": "    ag.hidden = true; ag.st = 'leave'; this.leaveElevator(ag);\n    s.gateQ = s.gateQ.filter((x) => x !== ag.id);\n    if (this.D.gate && this.D.gate.serving === ag.id) this.D.gate.serving = null;\n    if (!veh) { s.agents = s.agents.filter((x) => x !== ag); return; }\n",
+          "after": "    ag.hidden = true; ag.st = 'leave'; this.leaveElevator(ag);\n    removeGateAgent(s, ag.gateId, ag.id);\n    if (!veh) { s.agents = s.agents.filter((x) => x !== ag); return; }\n"
+        }
+      ]
+    },
+    "js/ui.js": {
+      "parent_sha256": "57cc9cae7f174afe9d0d1163bd4e54c0aa42cc8d448e93ecce790e4d263a39a9",
+      "current_sha256": "03d0df86a96d8541ee1afb253b07591fd19d8cced051040ea6e99a638a52dcc0",
+      "hunks": [
+        {
+          "before": "      case 'gate': {\n        const q = s.gateQ.length;\n        return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class=\"kv\"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}`);\n",
+          "after": "      case 'gate': {\n        const q = sim.gateQueue(o.id).length;\n        return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class=\"kv\"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}`);\n"
+        }
+      ]
+    }
+  }
+}

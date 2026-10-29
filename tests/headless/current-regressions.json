@@ -1207,6 +1207,15 @@
         "timeout": 180,
         "evidence": "native production simulation and UI contract methods with disposable fixtures; no rendered-device claim",
         "scope": "exact target, pure quote, cancel purity, stale identity/cost/funds/occupancy/construction/attachment/access rejection, once-only commit"
+      },
+      {
+        "id": "tgate_stage2a",
+        "command": ["@node", "tests/headless/tgate_stage2a.mjs"],
+        "completion": "8\\ gate\\ Stage\\ 2A\\ migration/state-integrity\\ groups\\ passed",
+        "minimum_pass_lines": 8,
+        "timeout": 180,
+        "evidence": "native production migration/save state with disposable legacy and new-format raw/compressed fixtures; no rendered-device claim",
+        "scope": "single-gate identity/collection/connection metadata, authoritative queue/trip state, legacy/new-format save reload, deterministic continuation, no duplication, second-gate refusal"
       }
     ],
     "historical": [

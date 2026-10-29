@@ -1431,7 +1431,7 @@ export class UI {
         return this.sheet(nm, inside ? 'Interior' : 'Exterior', `${this.condBar(o.cond)}<div class="kv"><span>Coverage radius</span><span>${TOOLS[o.type].radius} cells</span><span>Daily cost</span><span>${money(0.35, true)}</span></div>${this.taskActions(o)}<p class="note">${o.type === 'light' ? 'Dark hallways block new interior units and hurt security.' : 'Visible camera coverage lifts security quality.'}</p>`);
       }
       case 'gate': {
-        const q = s.gateQ.length;
+        const q = sim.gateQueue(o.id).length;
         return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class="kv"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}`);
       }
       case 'door': {
