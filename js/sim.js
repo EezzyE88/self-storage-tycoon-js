@@ -9,6 +9,7 @@ import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplac
 import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
+import { analyzePlaceableRemoval } from './placeableops.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
 // Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.
 // All mutations go through sim.dispatch(action). Deterministic given seed + action script.
@@ -133,6 +134,7 @@ export class Sim {
   inParcel(x, y) { const p = this.s.parcel; return x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1; }
   objs(type) { return (this.D && this.D.byType[type]) || []; }
   obj(id) { return this.s.objects[id]; }
+  placeableRemoval(targetId) { return analyzePlaceableRemoval(this, Number(targetId)); }
   isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }
 
   money(amt, cat, note) {
@@ -734,13 +736,24 @@ export class Sim {
       }
       case 'demolish': {
         const small = { light: 0, camera: 0, sign: 0, corral: 1, hvac: 1, amenity: 1, door: 2, unit: 5 };
-        const cand = atHere.filter((o) => o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office' && o.type !== 'unitLight').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));
-        let o = cand[0];
+        const cand = atHere.filter((o) => o && o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office' && o.type !== 'unitLight').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));
+        let o = a.targetId != null ? s.objects[Number(a.targetId)] : cand[0];
+        if (a.targetId != null && !o) { R.operation = this.placeableRemoval(a.targetId); failItem('The selected asset changed or no longer exists. Review again.'); return R; }
         if (!o && D.elevAt[i]) o = s.objects[D.elevAt[i]];
         if (!o && D.stairAt[i]) o = s.objects[D.stairAt[i]];
         if (!o) { const dd = this.objs('door').find((d) => d.x === x && d.y === y); if (dd) o = dd; }
         if (!o) { failItem('Nothing removable here'); return R; }
         R.target = o.id; R.label = 'Demolish ' + this.objName(o);
+        const operation = this.placeableRemoval(o.id);
+        if (operation.covered) {
+          R.operation = operation;
+          R.cost = operation.cost; R.count = 1; R.dur = 0;
+          if (operation.classification === 'blocked') { failItem(operation.prerequisites[0]); return R; }
+          R.missing.push(...operation.effects);
+          if (operation.classification === 'allowed with disclosed effects') R.warn = [...operation.effects];
+          R.status = 'valid';
+          return R;
+        }
         if (o.cstate === 'construction' || o.keypad === 'pending') { failItem('Construction or installation is unfinished. Use Cancel construction for the applicable refund.'); return R; }
         const attached=mountedOn(this,o.id);if(attached.length)R.warn=[`Removes ${attached.length} attached fixtures; neighboring shared lighting and security coverage may be lost.`];
         if(o.retrofitOrder){failItem('Cancel this unit’s upgrade installation before demolition');return R;}
@@ -877,9 +890,13 @@ export class Sim {
   act_build(a) {
     if (a.projectKey && (!matchesProject(a, a.projectKey) || !projectOffers(this).some(p => p.key === a.projectKey))) return { ok: false, msg: 'That project has changed. Review the yard again.' };
     const s = this.s, R = this.plan(a);
+    if (a.tool === 'demolish' && a.targetId != null && (typeof a.quoteStamp !== 'string' || R.operation?.stamp !== a.quoteStamp)) { this.emit('refuse'); return { ok: false, msg: 'Removal review changed. Review the exact asset, cost and consequences again.' }; }
     if (R.status === 'invalid') { this.emit('refuse'); return { ok: false, msg: R.reasons[0] }; }
     if(R.upgrades && (a.lighting&&a.lighting!=='none'||a.outsideCameras) && a.upgradeStamp!==R.upgradeStamp)return {ok:false,msg:'Fixture package changed. Review positions and cost before confirming.'};
-    if (a.tool === 'demolish') return this.demolish(R);
+    if (a.tool === 'demolish') {
+      if (!this.unlimited() && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }
+      return this.demolish(R);
+    }
     const rush = !!a.rush && (s.coTier || 1) >= 2 && !this.instantOn(); if (rush) { R.cost = Math.round(R.cost * 1.25); R.dur = R.dur * 0.5; }
     if (!this.unlimited() && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }
     const capacity=numberCapacity(s,R.creates);if(!capacity.ok)return capacity;

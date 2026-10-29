@@ -1,0 +1,57 @@
+{
+  "base_commit": "da6a7cc310287446a33b4c0fe97b5f43750a4638",
+  "files": {
+    "js/sim.js": {
+      "parent_sha256": "8dbd416d8fc705d590df9a38b7632a067da4d5d110e6f4e505992555be48308c",
+      "current_sha256": "c2b4bfbdc034b23c5fe9b0df15721ce9365019c54ca35b495e154696ddf02126",
+      "hunks": [
+        {
+          "before": "",
+          "after": "import { analyzePlaceableRemoval } from './placeableops.js';\n"
+        },
+        {
+          "before": "",
+          "after": "  placeableRemoval(targetId) { return analyzePlaceableRemoval(this, Number(targetId)); }\n"
+        },
+        {
+          "before": "        const cand = atHere.filter((o) => o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office' && o.type !== 'unitLight').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));\n        let o = cand[0];\n",
+          "after": "        const cand = atHere.filter((o) => o && o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office' && o.type !== 'unitLight').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));\n        let o = a.targetId != null ? s.objects[Number(a.targetId)] : cand[0];\n        if (a.targetId != null && !o) { R.operation = this.placeableRemoval(a.targetId); failItem('The selected asset changed or no longer exists. Review again.'); return R; }\n"
+        },
+        {
+          "before": "",
+          "after": "        const operation = this.placeableRemoval(o.id);\n        if (operation.covered) {\n          R.operation = operation;\n          R.cost = operation.cost; R.count = 1; R.dur = 0;\n          if (operation.classification === 'blocked') { failItem(operation.prerequisites[0]); return R; }\n          R.missing.push(...operation.effects);\n          if (operation.classification === 'allowed with disclosed effects') R.warn = [...operation.effects];\n          R.status = 'valid';\n          return R;\n        }\n"
+        },
+        {
+          "before": "",
+          "after": "    if (a.tool === 'demolish' && a.targetId != null && (typeof a.quoteStamp !== 'string' || R.operation?.stamp !== a.quoteStamp)) { this.emit('refuse'); return { ok: false, msg: 'Removal review changed. Review the exact asset, cost and consequences again.' }; }\n"
+        },
+        {
+          "before": "    if (a.tool === 'demolish') return this.demolish(R);\n",
+          "after": "    if (a.tool === 'demolish') {\n      if (!this.unlimited() && s.cash < R.cost) { this.emit('refuse'); return { ok: false, msg: `Not enough cash (${Math.round(R.cost).toLocaleString()} needed)` }; }\n      return this.demolish(R);\n    }\n"
+        }
+      ]
+    },
+    "js/ui.js": {
+      "parent_sha256": "1a1de61e9dc1ca335fb07a2bf52e5c8a034c3d8381977a6e5497b280cc4bd48c",
+      "current_sha256": "4ce4e0ebbc1ebbfd90c02745e839582ddfbf2f8a8915c9a7ccfff5f6ecec99a0",
+      "hunks": [
+        {
+          "before": "    this.plan = this.sim.plan(a); a.upgradeStamp=this.plan.upgradeStamp; this.plan.args = a;\n",
+          "after": "    this.plan = this.sim.plan(a); a.upgradeStamp=this.plan.upgradeStamp;\n    if (this.tool === 'demolish' && this.plan.target != null) { a.targetId = this.plan.target; a.quoteStamp = this.plan.operation?.stamp; }\n    this.plan.args = a;\n"
+        },
+        {
+          "before": "",
+          "after": "      if (this.tool === 'demolish' && R.operation?.target) {\n        const O=R.operation,t=O.target;\n        status += `<div class=\"operation-review\"><p><b>Selected exact asset:</b> ${esc(t.type)} #${t.id} \u00b7 (${t.x}, ${t.y}) \u00b7 F${t.f+1}</p><p><b>Removal quote:</b> ${money(O.cost)} \u00b7 cash after ${money(O.cashAfter,true)}</p>${O.effects.length?`<p><b>Consequences:</b> ${esc(O.effects.join(' '))}</p>`:''}${O.prerequisites.length?`<p><b>Required first:</b> ${esc(O.prerequisites.join(' '))}</p>`:''}</div>`;\n      }\n"
+        },
+        {
+          "before": "    const commitment = `<div class=\"review-commitment\">${!this.sim.s.creative && R.cost ? `<p class=\"note spending\">Cash after build: <b>${money(P.cash)}</b><br>Committed bills ${money(P.committed)} \u00b7 reserve ${money(P.reserve)}<br>Available after bills &amp; reserve: <b class=\"${P.available < 0 ? 'neg' : ''}\">${money(P.available)}</b><br>Added costs: ${money(daily, true)}/day when operating.</p>` : ''}${authorization}</div>`;\n",
+          "after": "    const commitment = `<div class=\"review-commitment\">${!this.sim.s.creative && R.cost ? `<p class=\"note spending\">Cash after ${this.tool==='demolish'?'removal':'build'}: <b>${money(P.cash)}</b><br>Committed bills ${money(P.committed)} \u00b7 reserve ${money(P.reserve)}<br>Available after bills &amp; reserve: <b class=\"${P.available < 0 ? 'neg' : ''}\">${money(P.available)}</b><br>Added costs: ${money(daily, true)}/day when operating.</p>` : ''}${authorization}</div>`;\n"
+        },
+        {
+          "before": "",
+          "after": "      ${this.tool==='demolish'?'<button class=\"btn\" data-a=\"cancelTool\">Cancel review</button>':''}\n"
+        }
+      ]
+    }
+  }
+}

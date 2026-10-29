@@ -1198,6 +1198,15 @@
         "minimum_pass_lines": 11,
         "timeout": 60,
         "evidence": "production planning/dispatch, disposable construction and save fixtures; exact refusal preservation, refunds and references; no rendered-device claim"
+      },
+      {
+        "id": "tplaceable_contract",
+        "command": ["@node", "tests/headless/tplaceable_contract.mjs"],
+        "completion": "6\\ placeable\\ Stage\\ 1\\ contract\\ groups\\ passed",
+        "minimum_pass_lines": 6,
+        "timeout": 180,
+        "evidence": "native production simulation and UI contract methods with disposable fixtures; no rendered-device claim",
+        "scope": "exact target, pure quote, cancel purity, stale identity/cost/funds/occupancy/construction/attachment/access rejection, once-only commit"
       }
     ],
     "historical": [

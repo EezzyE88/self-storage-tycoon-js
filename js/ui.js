@@ -1074,7 +1074,9 @@ export class UI {
     if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
     if (this.tool.startsWith('du')) a.f = 0;
     Object.assign(a,this.upgradeOptions||{});
-    this.plan = this.sim.plan(a); a.upgradeStamp=this.plan.upgradeStamp; this.plan.args = a;
+    this.plan = this.sim.plan(a); a.upgradeStamp=this.plan.upgradeStamp;
+    if (this.tool === 'demolish' && this.plan.target != null) { a.targetId = this.plan.target; a.quoteStamp = this.plan.operation?.stamp; }
+    this.plan.args = a;
     this.rend.setPreview(this.plan, this.planArgs.a); this.renderActionBar();
   }
   canRush() { const s = this.sim.s; return !s.creative && (s.coTier || 1) >= 2; }
@@ -1139,6 +1141,10 @@ export class UI {
       const near = T.unit && (R.status === 'invalid' || R.missing?.includes(NO_AISLE)) ? this.nearestValidPlacement() : null;
       status = `<div class="status ${R.status}"><span class="ic">${ic}</span><span>${txt}</span></div>` + (R.status === 'invalid' ? more : '') + (near ? `<div class="status idle near-valid"><span class="ic">&#8599;</span><span>Nearest buildable spot: ${esc(near.label)}${near.missing.length ? ` <small>Still needs: ${esc(near.missing.join('; '))}</small>` : ''}</span><button class="btn sm" data-a="snapPlacement">Move there</button></div>` : '') + (T.unit?this.upgradeHtml(R,R.args):'') + projectMarker + compareProjects;
       if (R.warn && R.warn.length) status += `<div class="status incomplete"><span class="ic">!</span><span>${esc(R.warn.join('; '))}</span></div>`;
+      if (this.tool === 'demolish' && R.operation?.target) {
+        const O=R.operation,t=O.target;
+        status += `<div class="operation-review"><p><b>Selected exact asset:</b> ${esc(t.type)} #${t.id} · (${t.x}, ${t.y}) · F${t.f+1}</p><p><b>Removal quote:</b> ${money(O.cost)} · cash after ${money(O.cashAfter,true)}</p>${O.effects.length?`<p><b>Consequences:</b> ${esc(O.effects.join(' '))}</p>`:''}${O.prerequisites.length?`<p><b>Required first:</b> ${esc(O.prerequisites.join(' '))}</p>`:''}</div>`;
+      }
       if(this.tool==='gate'&&R.status==='invalid')status+=this.firstGateHtml(this.firstGateGuidance());
       // Hard cash requirement (what the simulation enforces), kept separate from advisory reserve guidance.
       if (R.status !== 'invalid' && R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) status += `<div class="status invalid shortfall"><span class="ic">$</span><span>Not enough cash: needs ${money(Math.ceil(R.cost - this.sim.s.cash))} more (${money(Math.floor(this.sim.s.cash))} available, ${money(R.cost)} required).</span></div>`;
@@ -1158,13 +1164,14 @@ export class UI {
     const daily = this.sim.planDailyCost(R);
     const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });
     const authorization = T.unit && this.sim.autoOpenEnabled() ? '<p class="note build-authorization">Confirm authorizes construction. Units open automatically when ready. Opening the property remains your decision.</p>' : '';
-    const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after build: <b>${money(P.cash)}</b><br>Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br>Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br>Added costs: ${money(daily, true)}/day when operating.</p>` : ''}${authorization}</div>`;
+    const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after ${this.tool==='demolish'?'removal':'build'}: <b>${money(P.cash)}</b><br>Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br>Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br>Added costs: ${money(daily, true)}/day when operating.</p>` : ''}${authorization}</div>`;
     const wasOpen = !!box.firstChild;
     box.innerHTML = `<div class="actionbar${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${isUnit || this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
       ${commitment}<div class="bot">
       ${this.rotationHtml()}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
+      ${this.tool==='demolish'?'<button class="btn" data-a="cancelTool">Cancel review</button>':''}
       <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
     this.schedulePlacementFrame();
   }
