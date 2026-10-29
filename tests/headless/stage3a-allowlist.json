@@ -1,0 +1,67 @@
+{
+  "base_commit": "a30d1465ca1d501cb7f54f3687d0db836081feae",
+  "files": {
+    "js/sim.js": {
+      "parent_sha256": "391a4baa6b8fd64dd94e3bca234af34d13cc428fc842851a3d8ed6fb8cb8655d",
+      "current_sha256": "9be19846a4f606459263a889a1086fdc600ef4cd46fea95cc4e6b502fef130d8",
+      "hunks": [
+        {
+          "before": "  gateStatus(id = primaryGateId(this.s)) { return gateStatus(this.s, id); }\n  isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }\n",
+          "after": "  gateStatus(id = primaryGateId(this.s)) { return gateStatus(this.s, id); }\n  routeGateIds() {\n    const s = this.s, ids = s.gateAccess?.gateIds || [];\n    const connected = ids.filter((id) => {\n      const g = s.objects[id], c = gateConnection(s, id);\n      return !!g && g.type === 'gate' && g.cstate === 'operating' && c?.kind === 'front-street' && c.boundary === 'front';\n    });\n    const healthy = connected.filter((id) => gateStatus(s, id) === 'operating');\n    if (healthy.length) return healthy;\n    // Preserve established single-gate failure/buzz behavior until Stage 3B owns rerouting.\n    return connected.length === 1 ? connected : [];\n  }\n  vehicleReachForGate(id) {\n    this.ensure(); const D = this.D, k = String(id);\n    D.gateReach ||= {}; if (D.gateReach[k]) return D.gateReach[k];\n    const seen = new Uint8Array(this.s.W * this.s.H), p = this.s.parcel, q = [];\n    for (let x = 0; x < this.s.W; x++) { const i = this.idx(x, p.y1 + 2); seen[i] = 1; q.push(i); }\n    while (q.length) { const i = q.pop(); for (const j of this.vehNbr(i, id)) if (!seen[j]) { seen[j] = 1; q.push(j); } }\n    return (D.gateReach[k] = seen);\n  }\n  gateCanServeVisit(id, visit) {\n    if (!visit) return true;\n    const s = this.s, reach = this.vehicleReachForGate(id), u = visit.unit && s.objects[visit.unit];\n    if (u) {\n      if (u.access === 'drive') return this.unitFront(u).some((c) => reach[this.idx(c.x, c.y)]);\n      const fc = this.unitFront(u).find((c) => s.hall[u.f || 0][this.idx(c.x, c.y)] === 1);\n      if (!fc) return false;\n      const d = this.distField([this.node(u.f || 0, fc.x, fc.y)], (n) => this.pedNbr(n));\n      for (let i = 0; i < s.ground.length; i++) if (reach[i] && d.has(i) && (s.ground[i] === G.LOADING || s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT)) return true;\n      return false;\n    }\n    if (visit.kind === 'prospect') {\n      const office = this.objs('office')[0]; if (!office) return false;\n      const d = this.distField([this.idx(office.door.x, office.door.y)], (n) => this.pedNbr(n));\n      for (let i = 0; i < s.ground.length; i++) if (reach[i] && d.has(i) && (s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT)) return true;\n      return false;\n    }\n    return true;\n  }\n  selectGateForTrip(start, visit = null) {\n    const p = this.s.parcel, ids = this.routeGateIds(), rows = [];\n    for (const id of ids) {\n      const g = this.s.objects[id], approach = this.idx(g.x, p.y1 + 1), inside = this.idx(g.x, p.y1);\n      const path = this.bfs([start], (n) => n === approach, (n) => this.vehNbr(n, id));\n      if (!path || !this.vehicleReachForGate(id)[inside] || (ids.length > 1 && !this.gateCanServeVisit(id, visit))) continue;\n      rows.push({ id, n: path.length });\n    }\n    rows.sort((a, b) => (a.n - b.n) || (a.id - b.id));\n    return rows[0]?.id ?? null;\n  }\n  isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }\n"
+        },
+        {
+          "before": "\n  vehNbr(i) {\n    const s = this.s, W = s.W, D = this.D, out = [];\n",
+          "after": "\n  vehNbr(i, gateId = null) {\n    const s = this.s, W = s.W, D = this.D, out = [];\n"
+        },
+        {
+          "before": "      if ((y === p.y1 && ny === p.y1 + 1) || (y === p.y1 + 1 && ny === p.y1)) {\n        if (!D.gate || Math.abs(nx - D.gate.x) > 1) continue;\n      }\n",
+          "after": "      if ((y === p.y1 && ny === p.y1 + 1) || (y === p.y1 + 1 && ny === p.y1)) {\n        const ids = gateId == null ? this.routeGateIds() : [gateId];\n        if (!ids.some((id) => { const g = s.objects[id]; return g && Math.abs(nx - g.x) <= 1; })) continue;\n      }\n"
+        },
+        {
+          "before": "    if (mod < ACCESS_HOURS[0] * 60 || mod > ACCESS_HOURS[1] * 60 - 30) { this.schedule(v, this.randomAccessTime(this.day + 1)); return; }\n    if (!this.D.gate) { this.schedule(v, s.t + 240); return; }\n    if (v.unit && !s.objects[v.unit]) return;\n",
+          "after": "    if (mod < ACCESS_HOURS[0] * 60 || mod > ACCESS_HOURS[1] * 60 - 30) { this.schedule(v, this.randomAccessTime(this.day + 1)); return; }\n    if (!this.routeGateIds().length) { this.schedule(v, s.t + 240); return; }\n    if (v.unit && !s.objects[v.unit]) return;\n"
+        },
+        {
+          "before": "    const sx = fromEast ? s.W - 1 : 0, sy = fromEast ? p.y1 + 2 : p.y1 + 3;\n    const veh = { id: this.id(), type: vtype, x: sx + 0.5, y: sy + 0.5, hx: fromEast ? -1 : 1, hy: 0, path: null, pi: 0, color: this.pick(['#c8ccd0', '#2e3a4a', '#8a2f2f', '#f2f2ee', '#3d5a3f', '#6b7a8f', '#a8834e', '#1e1f22']), parked: null };\n    const needCart = u && u.access === 'interior' ? (v.kind === 'movein' || v.kind === 'moveout' ? true : v.kind === 'bigaccess' ? this.rnd() < 0.8 : this.rnd() < 0.25) : false;\n    const gateId = primaryGateId(s);\n    const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, gateId, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,\n",
+          "after": "    const sx = fromEast ? s.W - 1 : 0, sy = fromEast ? p.y1 + 2 : p.y1 + 3;\n    const gateId = this.selectGateForTrip(this.idx(sx, sy), v);\n    if (gateId == null) { this.schedule(v, s.t + 240); return; }\n    const veh = { id: this.id(), type: vtype, x: sx + 0.5, y: sy + 0.5, hx: fromEast ? -1 : 1, hy: 0, path: null, pi: 0, color: this.pick(['#c8ccd0', '#2e3a4a', '#8a2f2f', '#f2f2ee', '#3d5a3f', '#6b7a8f', '#a8834e', '#1e1f22']), parked: null };\n    const needCart = u && u.access === 'interior' ? (v.kind === 'movein' || v.kind === 'moveout' ? true : v.kind === 'bigaccess' ? this.rnd() < 0.8 : this.rnd() < 0.25) : false;\n    const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, gateId, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,\n"
+        },
+        {
+          "before": "    const goal = this.idx(gx, p.y1 + 1);\n    const path = this.bfs([this.idx(sx, sy)], (n) => n === goal, (n) => this.vehNbr(n));\n    this.setVehPath(veh, path);\n",
+          "after": "    const goal = this.idx(gx, p.y1 + 1);\n    const path = this.bfs([this.idx(sx, sy)], (n) => n === goal, (n) => this.vehNbr(n, gateId));\n    this.setVehPath(veh, path);\n"
+        },
+        {
+          "before": "          veh.dest = dest; veh.moving = true;\n          this.setVehPath(veh, this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === dest, (n) => this.vehNbr(n)));\n          if (!veh.path) { ag.failed = true; this.depart(ag); break; }\n",
+          "after": "          veh.dest = dest; veh.moving = true;\n          this.setVehPath(veh, this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === dest, (n) => this.vehNbr(n, ag.gateId)));\n          if (!veh.path) { ag.failed = true; this.depart(ag); break; }\n"
+        },
+        {
+          "before": "  chooseDest(ag, veh) {\n    const s = this.s, D = this.D, u = ag.unit && s.objects[ag.unit];\n    const taken = new Set(s.vehicles.filter((v) => v !== veh && (v.dest != null)).map((v) => v.dest));\n    const free = (i) => !taken.has(i) && D.vehReach[i];\n    if (ag.vt === 'prospect') {\n",
+          "after": "  chooseDest(ag, veh) {\n    const s = this.s, D = this.D, u = ag.unit && s.objects[ag.unit], reach = ag.gateId != null ? this.vehicleReachForGate(ag.gateId) : D.vehReach;\n    const taken = new Set(s.vehicles.filter((v) => v !== veh && (v.dest != null)).map((v) => v.dest));\n    const free = (i) => !taken.has(i) && reach[i];\n    if (ag.vt === 'prospect') {\n"
+        },
+        {
+          "before": "      const cands = [];\n      for (let i = 0; i < s.ground.length; i++) if (s.ground[i] === G.PARKING && D.vehReach[i]) cands.push(i);\n      const d = this.distField([oi], (n) => this.pedNbr(n));\n",
+          "after": "      const cands = [];\n      for (let i = 0; i < s.ground.length; i++) if (s.ground[i] === G.PARKING && reach[i]) cands.push(i);\n      const d = this.distField([oi], (n) => this.pedNbr(n));\n"
+        },
+        {
+          "before": "      // fall back: any asphalt near office\n      return this.nearestVehCell(oi, taken);\n    }\n",
+          "after": "      // fall back: any asphalt near office\n      return this.nearestVehCell(oi, taken, reach);\n    }\n"
+        },
+        {
+          "before": "    if (u.access === 'drive') {\n      const fr = this.unitFront(u).map((c) => this.idx(c.x, c.y)).filter((i) => D.vehReach[i]);\n      return fr.find(free) ?? fr[0] ?? null;\n",
+          "after": "    if (u.access === 'drive') {\n      const fr = this.unitFront(u).map((c) => this.idx(c.x, c.y)).filter((i) => reach[i]);\n      return fr.find(free) ?? fr[0] ?? null;\n"
+        },
+        {
+          "before": "    for (let i = 0; i < s.ground.length; i++) {\n      if (!D.vehReach[i] || !d.has(i)) continue;\n      if (s.ground[i] === G.LOADING) load.push(i); else if (s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT) park.push(i);\n",
+          "after": "    for (let i = 0; i < s.ground.length; i++) {\n      if (!reach[i] || !d.has(i)) continue;\n      if (s.ground[i] === G.LOADING) load.push(i); else if (s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT) park.push(i);\n"
+        },
+        {
+          "before": "  }\n  nearestVehCell(i0, taken) {\n    const p = this.bfs([i0], (n) => this.D.vehReach[n] && !taken.has(n) && VEH_GROUND.has(this.s.ground[n]), (n) => {\n      const W = this.s.W, x = n % W, y = (n / W) | 0; return DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => this.inb(a, b)).map(([a, b]) => this.idx(a, b));\n",
+          "after": "  }\n  nearestVehCell(i0, taken, reach = this.D.vehReach) {\n    const p = this.bfs([i0], (n) => reach[n] && !taken.has(n) && VEH_GROUND.has(this.s.ground[n]), (n) => {\n      const W = this.s.W, x = n % W, y = (n / W) | 0; return DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => this.inb(a, b)).map(([a, b]) => this.idx(a, b));\n"
+        },
+        {
+          "before": "    const goal = this.idx(toEast ? s.W - 1 : 0, toEast ? p.y1 + 3 : p.y1 + 2);\n    const path = this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === goal, (n) => this.vehNbr(n));\n    this.setVehPath(veh, path || [goal]);\n",
+          "after": "    const goal = this.idx(toEast ? s.W - 1 : 0, toEast ? p.y1 + 3 : p.y1 + 2);\n    const path = this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === goal, (n) => this.vehNbr(n, ag.gateId));\n    this.setVehPath(veh, path || [goal]);\n"
+        }
+      ]
+    }
+  }
+}

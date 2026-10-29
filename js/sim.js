@@ -141,6 +141,55 @@ export class Sim {
   gateServing(id = primaryGateId(this.s)) { return gateServing(this.s, id); }
   gateConnection(id = primaryGateId(this.s)) { return gateConnection(this.s, id); }
   gateStatus(id = primaryGateId(this.s)) { return gateStatus(this.s, id); }
+  routeGateIds() {
+    const s = this.s, ids = s.gateAccess?.gateIds || [];
+    const connected = ids.filter((id) => {
+      const g = s.objects[id], c = gateConnection(s, id);
+      return !!g && g.type === 'gate' && g.cstate === 'operating' && c?.kind === 'front-street' && c.boundary === 'front';
+    });
+    const healthy = connected.filter((id) => gateStatus(s, id) === 'operating');
+    if (healthy.length) return healthy;
+    // Preserve established single-gate failure/buzz behavior until Stage 3B owns rerouting.
+    return connected.length === 1 ? connected : [];
+  }
+  vehicleReachForGate(id) {
+    this.ensure(); const D = this.D, k = String(id);
+    D.gateReach ||= {}; if (D.gateReach[k]) return D.gateReach[k];
+    const seen = new Uint8Array(this.s.W * this.s.H), p = this.s.parcel, q = [];
+    for (let x = 0; x < this.s.W; x++) { const i = this.idx(x, p.y1 + 2); seen[i] = 1; q.push(i); }
+    while (q.length) { const i = q.pop(); for (const j of this.vehNbr(i, id)) if (!seen[j]) { seen[j] = 1; q.push(j); } }
+    return (D.gateReach[k] = seen);
+  }
+  gateCanServeVisit(id, visit) {
+    if (!visit) return true;
+    const s = this.s, reach = this.vehicleReachForGate(id), u = visit.unit && s.objects[visit.unit];
+    if (u) {
+      if (u.access === 'drive') return this.unitFront(u).some((c) => reach[this.idx(c.x, c.y)]);
+      const fc = this.unitFront(u).find((c) => s.hall[u.f || 0][this.idx(c.x, c.y)] === 1);
+      if (!fc) return false;
+      const d = this.distField([this.node(u.f || 0, fc.x, fc.y)], (n) => this.pedNbr(n));
+      for (let i = 0; i < s.ground.length; i++) if (reach[i] && d.has(i) && (s.ground[i] === G.LOADING || s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT)) return true;
+      return false;
+    }
+    if (visit.kind === 'prospect') {
+      const office = this.objs('office')[0]; if (!office) return false;
+      const d = this.distField([this.idx(office.door.x, office.door.y)], (n) => this.pedNbr(n));
+      for (let i = 0; i < s.ground.length; i++) if (reach[i] && d.has(i) && (s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT)) return true;
+      return false;
+    }
+    return true;
+  }
+  selectGateForTrip(start, visit = null) {
+    const p = this.s.parcel, ids = this.routeGateIds(), rows = [];
+    for (const id of ids) {
+      const g = this.s.objects[id], approach = this.idx(g.x, p.y1 + 1), inside = this.idx(g.x, p.y1);
+      const path = this.bfs([start], (n) => n === approach, (n) => this.vehNbr(n, id));
+      if (!path || !this.vehicleReachForGate(id)[inside] || (ids.length > 1 && !this.gateCanServeVisit(id, visit))) continue;
+      rows.push({ id, n: path.length });
+    }
+    rows.sort((a, b) => (a.n - b.n) || (a.id - b.id));
+    return rows[0]?.id ?? null;
+  }
   isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }
 
   money(amt, cat, note) {
@@ -320,7 +369,7 @@ export class Sim {
   markDirty() { this.dirty = true; this.s.structV++; }
   ensure() { if (this.dirty) this.rebuild(); }
 
-  vehNbr(i) {
+  vehNbr(i, gateId = null) {
     const s = this.s, W = s.W, D = this.D, out = [];
     const x = i % W, y = (i / W) | 0, p = s.parcel;
     for (const [dx, dy] of DIRS) {
@@ -328,7 +377,8 @@ export class Sim {
       const j = this.idx(nx, ny);
       if (!VEH_GROUND.has(s.ground[j]) || D.solid[j]) continue;
       if ((y === p.y1 && ny === p.y1 + 1) || (y === p.y1 + 1 && ny === p.y1)) {
-        if (!D.gate || Math.abs(nx - D.gate.x) > 1) continue;
+        const ids = gateId == null ? this.routeGateIds() : [gateId];
+        if (!ids.some((id) => { const g = s.objects[id]; return g && Math.abs(nx - g.x) <= 1; })) continue;
       }
       if (ny <= p.y1 && (nx < p.x0 || nx > p.x1)) continue;
       out.push(j);
@@ -2098,7 +2148,7 @@ export class Sim {
     if (v.kind === 'online') { this.decideLease(v, null); return; }
     const mod = this.mod;
     if (mod < ACCESS_HOURS[0] * 60 || mod > ACCESS_HOURS[1] * 60 - 30) { this.schedule(v, this.randomAccessTime(this.day + 1)); return; }
-    if (!this.D.gate) { this.schedule(v, s.t + 240); return; }
+    if (!this.routeGateIds().length) { this.schedule(v, s.t + 240); return; }
     if (v.unit && !s.objects[v.unit]) return;
     if (s.agents.filter((a) => a.kind === 'cust').length > 60) {
       // Crowd cap. Routine access visits now happen off-screen instead of queueing: at 500+ tenants the queue used to grow
@@ -2110,15 +2160,16 @@ export class Sim {
     const vtype = v.kind === 'movein' || v.kind === 'moveout' ? this.pick(['van', 'box', 'box', 'pickup', 'suv']) : this.pick(['sedan', 'sedan', 'suv', 'suv', 'pickup', 'van']);
     const fromEast = this.rnd() < 0.5; const p = s.parcel;
     const sx = fromEast ? s.W - 1 : 0, sy = fromEast ? p.y1 + 2 : p.y1 + 3;
+    const gateId = this.selectGateForTrip(this.idx(sx, sy), v);
+    if (gateId == null) { this.schedule(v, s.t + 240); return; }
     const veh = { id: this.id(), type: vtype, x: sx + 0.5, y: sy + 0.5, hx: fromEast ? -1 : 1, hy: 0, path: null, pi: 0, color: this.pick(['#c8ccd0', '#2e3a4a', '#8a2f2f', '#f2f2ee', '#3d5a3f', '#6b7a8f', '#a8834e', '#1e1f22']), parked: null };
     const needCart = u && u.access === 'interior' ? (v.kind === 'movein' || v.kind === 'moveout' ? true : v.kind === 'bigaccess' ? this.rnd() < 0.8 : this.rnd() < 0.25) : false;
-    const gateId = primaryGateId(s);
     const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, gateId, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,
       exp: { gate: 0, cart: 0, elev: 0, office: 0, walk: 0, dirt: 0, dirtN: 0, dark: false, noCart: false, door: 0 }, t0: s.t, look: Math.floor(this.rnd() * 1e6) };
     s.vehicles.push(veh); s.agents.push(ag);
     const gx = s.objects[gateId]?.x ?? this.D.gate.x;
     const goal = this.idx(gx, p.y1 + 1);
-    const path = this.bfs([this.idx(sx, sy)], (n) => n === goal, (n) => this.vehNbr(n));
+    const path = this.bfs([this.idx(sx, sy)], (n) => n === goal, (n) => this.vehNbr(n, gateId));
     this.setVehPath(veh, path);
     this.emit('arrive', { ag: ag.id });
   }
@@ -2290,7 +2341,7 @@ export class Sim {
           const dest = this.chooseDest(ag, veh);
           if (!dest) { ag.failed = true; this.thought(ag, "I can't get to my unit from here.", 'bad'); this.depart(ag); break; }
           veh.dest = dest; veh.moving = true;
-          this.setVehPath(veh, this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === dest, (n) => this.vehNbr(n)));
+          this.setVehPath(veh, this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === dest, (n) => this.vehNbr(n, ag.gateId)));
           if (!veh.path) { ag.failed = true; this.depart(ag); break; }
           ag.st = 'drive';
         }
@@ -2422,24 +2473,24 @@ export class Sim {
   }
   custName(ag) { const tn = ag.tenant && this.s.tenants[ag.tenant]; return tn ? tn.name : 'A prospect'; }
   chooseDest(ag, veh) {
-    const s = this.s, D = this.D, u = ag.unit && s.objects[ag.unit];
+    const s = this.s, D = this.D, u = ag.unit && s.objects[ag.unit], reach = ag.gateId != null ? this.vehicleReachForGate(ag.gateId) : D.vehReach;
     const taken = new Set(s.vehicles.filter((v) => v !== veh && (v.dest != null)).map((v) => v.dest));
-    const free = (i) => !taken.has(i) && D.vehReach[i];
+    const free = (i) => !taken.has(i) && reach[i];
     if (ag.vt === 'prospect') {
       const office = this.objs('office')[0]; if (!office) return null;
       const oi = this.idx(office.door.x, office.door.y);
       const cands = [];
-      for (let i = 0; i < s.ground.length; i++) if (s.ground[i] === G.PARKING && D.vehReach[i]) cands.push(i);
+      for (let i = 0; i < s.ground.length; i++) if (s.ground[i] === G.PARKING && reach[i]) cands.push(i);
       const d = this.distField([oi], (n) => this.pedNbr(n));
       cands.sort((a, b) => (d.get(a) ?? 999) - (d.get(b) ?? 999));
       const c = cands.find(free) ?? cands[0];
       if (c != null) return c;
       // fall back: any asphalt near office
-      return this.nearestVehCell(oi, taken);
+      return this.nearestVehCell(oi, taken, reach);
     }
     if (!u) return null;
     if (u.access === 'drive') {
-      const fr = this.unitFront(u).map((c) => this.idx(c.x, c.y)).filter((i) => D.vehReach[i]);
+      const fr = this.unitFront(u).map((c) => this.idx(c.x, c.y)).filter((i) => reach[i]);
       return fr.find(free) ?? fr[0] ?? null;
     }
     const fc = this.unitFront(u).find((c) => s.hall[u.f || 0][this.idx(c.x, c.y)] === 1);
@@ -2447,7 +2498,7 @@ export class Sim {
     const d = this.distField([this.node(u.f || 0, fc.x, fc.y)], (n) => this.pedNbr(n));
     const load = [], park = [];
     for (let i = 0; i < s.ground.length; i++) {
-      if (!D.vehReach[i] || !d.has(i)) continue;
+      if (!reach[i] || !d.has(i)) continue;
       if (s.ground[i] === G.LOADING) load.push(i); else if (s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT) park.push(i);
     }
     load.sort((a, b) => d.get(a) - d.get(b)); park.sort((a, b) => d.get(a) - d.get(b));
@@ -2458,8 +2509,8 @@ export class Sim {
     if (load.length) this.thought(ag, 'Loading bays are full.', 'bad', {location:{obj:u.id,building:D.shellAt[this.idx(u.x,u.y)]||null,x:load[0]%s.W,y:Math.floor(load[0]/s.W),f:0},loadingBays:load.length,overflowAvailable:false});
     return load[0] ?? null;
   }
-  nearestVehCell(i0, taken) {
-    const p = this.bfs([i0], (n) => this.D.vehReach[n] && !taken.has(n) && VEH_GROUND.has(this.s.ground[n]), (n) => {
+  nearestVehCell(i0, taken, reach = this.D.vehReach) {
+    const p = this.bfs([i0], (n) => reach[n] && !taken.has(n) && VEH_GROUND.has(this.s.ground[n]), (n) => {
       const W = this.s.W, x = n % W, y = (n / W) | 0; return DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => this.inb(a, b)).map(([a, b]) => this.idx(a, b));
     }, 3000);
     return p ? p[p.length - 1] : null;
@@ -2574,7 +2625,7 @@ export class Sim {
     veh.parked = null; veh.dest = null; veh.moving = true;
     const p = s.parcel, toEast = this.rnd() < 0.5;
     const goal = this.idx(toEast ? s.W - 1 : 0, toEast ? p.y1 + 3 : p.y1 + 2);
-    const path = this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === goal, (n) => this.vehNbr(n));
+    const path = this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === goal, (n) => this.vehNbr(n, ag.gateId));
     this.setVehPath(veh, path || [goal]);
   }
   recordExperience(ag) {
