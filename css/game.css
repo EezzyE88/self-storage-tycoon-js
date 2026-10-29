@@ -1175,6 +1175,10 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 /* B/F review presentation: readable setup line and phone-sized touch targets. */
 /* The cash chip's property line adds 16px; preserve the existing second control row. */
 @media (max-width:700px) {
+ /* Exact-asset removal review must remain inside the phone viewport from its
+    first rendered frame; the generic centered slide-in briefly translates it
+    left after the mobile layout has already replaced centering with insets. */
+ #ui .actionbar.enter:has(.operation-review) { animation:fin 0.2s ease-out; }
  #ui .hud .speed { top:67px; }
  #ui .viewctl { top:calc(73px + var(--safe-t)); }
  #ui .hud .career-goal { margin-top:70px; }

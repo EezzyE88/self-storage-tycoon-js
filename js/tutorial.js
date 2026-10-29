@@ -284,7 +284,7 @@ export function lessonTick(sim) {
   // offers: at most one at a time, checked hourly, never during tutorial
   if (sim.mod % 60 !== 0 || s.creative) return;
   if (s.mode === 'tutorial' && !(s.tut && s.tut.done)) return;
-  s.lessonsDone = s.lessonsDone || {}; s.lessonsSeen = s.lessonsSeen || {};
+  const lessonsDone = s.lessonsDone || {}, lessonsSeen = s.lessonsSeen || {};
   if (s.lessonOffer) return;
-  for (const L of LESSONS) if (!s.lessonsDone[L.id] && !s.lessonsSeen[L.id] && lessonAllowed(sim, L) && L.offer && L.offer(sim)) { s.lessonOffer = L.id; sim.emit('lesson_offer', { id: L.id }); break; }
+  for (const L of LESSONS) if (!lessonsDone[L.id] && !lessonsSeen[L.id] && lessonAllowed(sim, L) && L.offer && L.offer(sim)) { s.lessonOffer = L.id; sim.emit('lesson_offer', { id: L.id }); break; }
 }

@@ -1070,7 +1070,7 @@ export class UI {
   replan() {
     if (!this.tool || !this.planArgs) { this.renderActionBar(); return; }
     const T = TOOLS[this.tool];
-    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, rotation:this.buildRotation, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush };
+    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, rotation:this.buildRotation, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush, targetId:this.planArgs.targetId };
     if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
     if (this.tool.startsWith('du')) a.f = 0;
     Object.assign(a,this.upgradeOptions||{});
@@ -1125,6 +1125,9 @@ export class UI {
     const box = this.$('abar'); if (this.verticalPreviewing && !this.tool) { const h = this.verticalBarHtml(); if (box.innerHTML !== h) box.innerHTML = h; return; } if (!this.tool) { box.innerHTML = ''; return; }
     const T = TOOLS[this.tool], R0 = this.plan; const rush = this.canRush() && this.rush && R0 && R0.dur;
     const R = R0 && rush ? { ...R0, cost: Math.round(R0.cost * 1.25), dur: R0.dur * 0.5 } : R0;
+    // Once a demolition review is open, retain its exact target across UI-only
+    // requotes. Active pointer placement is intentionally left unpinned.
+    if (!this.buildPlacing && this.tool === 'demolish' && this.planArgs && R?.operation?.target?.id != null) this.planArgs.targetId = R.operation.target.id;
     if (this.buildPlacing) {
       box.innerHTML = `<div class="actionbar placing" aria-live="polite"><b>${R?.count || 0}${T.unit ? ' units' : ' cells'} · ${money(R?.cost || 0)}</b><span>${R?.status === 'valid' ? 'Valid' : R?.status === 'incomplete' ? 'Needs setup' : 'Invalid'} · Lift finger to review</span></div>`;
       return;
