@@ -1182,6 +1182,14 @@
         ],
         "timeout": 180,
         "evidence": "production handlers, in-memory companies, exact inverse preservation and financial categories; no rendered-device claim"
+      },
+      {
+        "id": "tunfinished_demolition",
+        "command": ["@node", "tests/headless/tunfinished_demolition.mjs"],
+        "completion": "ALL PASS: 10 unfinished-demolition groups",
+        "minimum_pass_lines": 10,
+        "timeout": 60,
+        "evidence": "production planning/dispatch, disposable construction and save fixtures; exact refusal preservation, refunds and references; no rendered-device claim"
       }
     ],
     "historical": [

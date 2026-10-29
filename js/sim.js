@@ -741,6 +741,7 @@ export class Sim {
         if (!o) { const dd = this.objs('door').find((d) => d.x === x && d.y === y); if (dd) o = dd; }
         if (!o) { failItem('Nothing removable here'); return R; }
         R.target = o.id; R.label = 'Demolish ' + this.objName(o);
+        if (o.cstate === 'construction' || o.keypad === 'pending') { failItem('Construction or installation is unfinished. Use Cancel construction for the applicable refund.'); return R; }
         const attached=mountedOn(this,o.id);if(attached.length)R.warn=[`Removes ${attached.length} attached fixtures; neighboring shared lighting and security coverage may be lost.`];
         if(o.retrofitOrder){failItem('Cancel this unit’s upgrade installation before demolition');return R;}
         if (o.type === 'unit' && (o.lease || o.commercial === 'reserved')) { failItem('Occupied - the lease must end before demolition'); return R; }
