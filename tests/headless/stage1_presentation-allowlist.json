@@ -1,0 +1,41 @@
+{
+  "commit": "827cc8adb0d02e44b91be5fc4821942bb38b110c",
+  "parent_commit": "cd4bb7b4254a7bd0a560babab4ad0046be7d5e39",
+  "tree": "73f4e9ac001ca7b7698091a4a9e196b1e6f6004e",
+  "files": {
+    "css/game.css": {
+      "parent_sha256": "1b23cf250fed476ee4247ed1d50b4cf984d55549cef5852ef65ba8e4fa55fa1e",
+      "current_sha256": "b033a7da094171a6b936dd861bb85f71fbdcd4041373bb85fe93c17f34567c5a",
+      "hunks": [
+        {
+          "before": "/* B/F review presentation: readable setup line and phone-sized touch targets. */\n/* The cash chip's property line adds 16px; preserve the existing second control row. */\n@media (max-width:700px) {\n #ui .hud .speed { top:67px; }\n #ui .viewctl { top:calc(73px + var(--safe-t)); }\n #ui .hud .career-goal { margin-top:70px; }\n",
+          "after": "/* B/F review presentation: readable setup line and phone-sized touch targets. */\n/* The cash chip's property line adds 16px; preserve the existing second control row. */\n@media (max-width:700px) {\n /* Exact-asset removal review must remain inside the phone viewport from its\n    first rendered frame; the generic centered slide-in briefly translates it\n    left after the mobile layout has already replaced centering with insets. */\n #ui .actionbar.enter:has(.operation-review) { animation:fin 0.2s ease-out; }\n #ui .hud .speed { top:67px; }\n #ui .viewctl { top:calc(73px + var(--safe-t)); }\n #ui .hud .career-goal { margin-top:70px; }\n"
+        }
+      ]
+    },
+    "js/tutorial.js": {
+      "parent_sha256": "964513d6b818b2c3f7e60956f34edfb32564f5f4720e93ffb078ab53b99d4b34",
+      "current_sha256": "6973aa89e21e2e89b90823c94046777b711fd31e1866998fa04d156fae124a89",
+      "hunks": [
+        {
+          "before": "  // offers: at most one at a time, checked hourly, never during tutorial\n  if (sim.mod % 60 !== 0 || s.creative) return;\n  if (s.mode === 'tutorial' && !(s.tut && s.tut.done)) return;\n  s.lessonsDone = s.lessonsDone || {}; s.lessonsSeen = s.lessonsSeen || {};\n  if (s.lessonOffer) return;\n  for (const L of LESSONS) if (!s.lessonsDone[L.id] && !s.lessonsSeen[L.id] && lessonAllowed(sim, L) && L.offer && L.offer(sim)) { s.lessonOffer = L.id; sim.emit('lesson_offer', { id: L.id }); break; }\n}\n",
+          "after": "  // offers: at most one at a time, checked hourly, never during tutorial\n  if (sim.mod % 60 !== 0 || s.creative) return;\n  if (s.mode === 'tutorial' && !(s.tut && s.tut.done)) return;\n  const lessonsDone = s.lessonsDone || {}, lessonsSeen = s.lessonsSeen || {};\n  if (s.lessonOffer) return;\n  for (const L of LESSONS) if (!lessonsDone[L.id] && !lessonsSeen[L.id] && lessonAllowed(sim, L) && L.offer && L.offer(sim)) { s.lessonOffer = L.id; sim.emit('lesson_offer', { id: L.id }); break; }\n}\n"
+        }
+      ]
+    },
+    "js/ui.js": {
+      "parent_sha256": "4ce4e0ebbc1ebbfd90c02745e839582ddfbf2f8a8915c9a7ccfff5f6ecec99a0",
+      "current_sha256": "57cc9cae7f174afe9d0d1163bd4e54c0aa42cc8d448e93ecce790e4d263a39a9",
+      "hunks": [
+        {
+          "before": "  replan() {\n    if (!this.tool || !this.planArgs) { this.renderActionBar(); return; }\n    const T = TOOLS[this.tool];\n    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, rotation:this.buildRotation, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush };\n    if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;\n    if (this.tool.startsWith('du')) a.f = 0;\n    Object.assign(a,this.upgradeOptions||{});\n",
+          "after": "  replan() {\n    if (!this.tool || !this.planArgs) { this.renderActionBar(); return; }\n    const T = TOOLS[this.tool];\n    const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, rotation:this.buildRotation, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush, targetId:this.planArgs.targetId };\n    if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;\n    if (this.tool.startsWith('du')) a.f = 0;\n    Object.assign(a,this.upgradeOptions||{});\n"
+        },
+        {
+          "before": "    const box = this.$('abar'); if (this.verticalPreviewing && !this.tool) { const h = this.verticalBarHtml(); if (box.innerHTML !== h) box.innerHTML = h; return; } if (!this.tool) { box.innerHTML = ''; return; }\n    const T = TOOLS[this.tool], R0 = this.plan; const rush = this.canRush() && this.rush && R0 && R0.dur;\n    const R = R0 && rush ? { ...R0, cost: Math.round(R0.cost * 1.25), dur: R0.dur * 0.5 } : R0;\n    if (this.buildPlacing) {\n      box.innerHTML = `<div class=\"actionbar placing\" aria-live=\"polite\"><b>${R?.count || 0}${T.unit ? ' units' : ' cells'} \u00b7 ${money(R?.cost || 0)}</b><span>${R?.status === 'valid' ? 'Valid' : R?.status === 'incomplete' ? 'Needs setup' : 'Invalid'} \u00b7 Lift finger to review</span></div>`;\n      return;\n",
+          "after": "    const box = this.$('abar'); if (this.verticalPreviewing && !this.tool) { const h = this.verticalBarHtml(); if (box.innerHTML !== h) box.innerHTML = h; return; } if (!this.tool) { box.innerHTML = ''; return; }\n    const T = TOOLS[this.tool], R0 = this.plan; const rush = this.canRush() && this.rush && R0 && R0.dur;\n    const R = R0 && rush ? { ...R0, cost: Math.round(R0.cost * 1.25), dur: R0.dur * 0.5 } : R0;\n    // Once a demolition review is open, retain its exact target across UI-only\n    // requotes. Active pointer placement is intentionally left unpinned.\n    if (!this.buildPlacing && this.tool === 'demolish' && this.planArgs && R?.operation?.target?.id != null) this.planArgs.targetId = R.operation.target.id;\n    if (this.buildPlacing) {\n      box.innerHTML = `<div class=\"actionbar placing\" aria-live=\"polite\"><b>${R?.count || 0}${T.unit ? ' units' : ' cells'} \u00b7 ${money(R?.cost || 0)}</b><span>${R?.status === 'valid' ? 'Valid' : R?.status === 'incomplete' ? 'Needs setup' : 'Invalid'} \u00b7 Lift finger to review</span></div>`;\n      return;\n"
+        }
+      ]
+    }
+  }
+}

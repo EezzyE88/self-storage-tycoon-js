@@ -1,10 +1,12 @@
 // Exact inverse of Stage 4A player-buildable second entrance gate changes only.
 import assert from 'node:assert/strict';
+import {normalizePostStage4A} from './post_stage4a_baseline.mjs';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 const hash=t=>createHash('sha256').update(t).digest('hex');
 const declared=JSON.parse(readFileSync(new URL('./stage4a-allowlist.json',import.meta.url),'utf8'));
 export function normalizeStage4A(text,file){
+ text=normalizePostStage4A(text,file);
  const entry=declared.files[file]; if(!entry)return text;
  const identity=hash(text); if(identity===entry.parent_sha256)return text;
  assert.equal(identity,entry.current_sha256,`exact Stage 4A ${file} identity`);

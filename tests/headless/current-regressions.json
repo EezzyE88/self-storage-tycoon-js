@@ -5,6 +5,26 @@
   "profiles": {
     "current": [
       {
+        "id": "tpreservation_chain",
+        "command": [
+          "@node",
+          "tests/headless/tpreservation_chain.mjs"
+        ],
+        "completion": "4 preservation normalization groups passed",
+        "minimum_pass_lines": 4,
+        "timeout": 180,
+        "required_objects": [
+          "827cc8adb0d02e44b91be5fc4821942bb38b110c",
+          "0dd93cb67946a7400dcfe898e5a49c1ba54b1aa0",
+          "f5c88fae3cacdda5a2618dd2e3c7e78a087bde6d",
+          "fff6294f6abc7c1ed9f3a2dd791e42b7b00ed478",
+          "284d45a9e80db30b5db69d2694c2dbb7c7ec8284",
+          "d03bbcdb7245f379512b0c13041b004742133d83"
+        ],
+        "evidence": "immutable Git objects, complete-file inverse checks and negative undeclared-source probes; no gameplay or device qualification",
+        "scope": "restore omitted exact runtime layers without weakening existing baseline assertions"
+      },
+      {
         "id": "tfinancial_context",
         "command": [
           "@node",

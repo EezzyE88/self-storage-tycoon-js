@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {normalizeStage2A} from './stage2a_baseline.mjs';
+import {normalizeStage1Presentation} from './stage1_presentation_baseline.mjs';
 const hash=t=>createHash('sha256').update(t).digest('hex');
 const declared=JSON.parse(readFileSync(new URL('./stage1-allowlist.json',import.meta.url),'utf8'));
 export function normalizeStage1(text,file){
- text=normalizeStage2A(text,file);
+ text=normalizeStage1Presentation(normalizeStage2A(text,file),file);
  const entry=declared.files[file]; if(!entry)return text;
  const identity=hash(text); if(identity===entry.parent_sha256)return text;
  assert.equal(identity,entry.current_sha256,`exact Stage 1 ${file} identity`);
