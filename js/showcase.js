@@ -356,7 +356,7 @@ export function installShowcase(game) {
   }
   sc.auctionCrowd = auctionCrowd; sc.clearCrowd = clearCrowd;
   function milestoneSub(k) {
-    return { first_retention: 'A tenant who was leaving decided to stay.', first_auction: 'A delinquent account resolved through a lien sale.', first_loan: 'Borrowed capital is working for the property.', first_makeready: 'A vacant unit is clean and back on the market.', first_lease_after_turnover: 'Turnover to new lease: the core loop works.', first_expansion: 'More doors, more rent.', first_cart_trip: 'Carts are moving goods indoors.', first_repair: 'Broken equipment is back in service.', first_delegated: 'Your staff finished a job without you.', first_climate: 'Climate-controlled storage is open.', first_upper: 'Your first upper floor is open.' }[k] || '';
+    return { first_retention: 'A tenant who was leaving decided to stay.', first_auction: 'A delinquent account resolved through a lien sale.', first_loan: 'Borrowed capital is working for the property.', first_makeready: 'A vacant unit is clean and back on the market.', first_lease_after_turnover: 'Turnover to new lease: the core loop works.', first_expansion: 'Your first additional units are rent-ready.', first_cart_trip: 'Carts are moving goods indoors.', first_repair: 'Broken equipment is back in service.', first_delegated: 'Your staff finished a job without you.', first_climate: 'Climate-controlled storage is open.', first_upper: 'Your first upper floor is open.' }[k] || '';
   }
   function checkFull() {
     const sim = game.sim, o = yardInventory(sim), full = fullyOccupied(sim);
