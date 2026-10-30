@@ -1,37 +1,47 @@
 # Integration summary — October 30, 2026
 
-## Current result
+## Completed integration
 
-Development was explicitly authorized and fast-forwarded from fff6294f6abc7c1ed9f3a2dd791e42b7b00ed478 to 284d45a9e80db30b5db69d2694c2dbb7c7ec8284. Before updating, GitHub development/candidate identities, exact tree c3fc1085b496c3b78bc495fadaaacbd3f27d4008, sole parent fff6294 and one-commit fast-forward ancestry were verified. Afterward remote development and candidate resolved to 284d45a; master remained d03bbcdb7245f379512b0c13041b004742133d83. No merge commit, master update, deployment, spending or acceptance change occurred in that integration.
+Master was fast-forwarded from d03bbcdb7245f379512b0c13041b004742133d83 to 4ed4a282fa9debe591fa823010be8511a6bcd816, exact tree 13f6810cf91e392457ff63b036ee51d89ba856a6, after explicit authorization and remote identity/tree/ancestry checks. Compare showed 24 ahead, zero behind, merge base equal to old master. Remote master, development and candidate/native-contracts-20261030 were verified at the target afterward. No deployment, spending or acceptance change.
 
-The records update was prepared as isolated local candidate 6eeb44ab5d8394e494b22a60b34a6823d8d9a730, then preserved on GitHub as e81b66e0252b116c8ad466c227afe1efce6e52bb. Both have exact tree 3e004e0c741252ddb8d4f0c9db2af575cc3e8aa9 and sole parent 284d45a9e80db30b5db69d2694c2dbb7c7ec8284; game/test bytes are unchanged. This is preparation and preservation history, not a claim that later successors are unpublished or unintegrated. Refresh remote refs before any subsequent branch operation.
+Development had first advanced from 284d45a through e81b66e → 10238f0 (documentation), then 92b5d93 → 3f417d7 → 4ed4a28 (test-only). Runtime remains identical to 284d45a. Master promotion incorporates previously reviewed financial, placeable and bounded multi-gate runtime work; see [current status](CURRENT-STATUS.md).
 
-## Recent preserved and integrated chain
+## Original-to-preserved identities
 
-| Work | Original local commit | GitHub identity in development ancestry |
+| Work | Original local | Equivalent GitHub |
 | --- | --- | --- |
-| Stage 4A, two front player gates | 47473de932157ecc344cbc46cb63311c4dbe901f | Same commit; parent 739a0efa94d5e48608ba8e5db990350b1fa028e2 |
-| Growth direct details selection | 22c48734fa4928336b60754b7532c803ea6f0ea6 | 0dd93cb67946a7400dcfe898e5a49c1ba54b1aa0; parent 47473de |
-| Closed-property units-ready notification | 5c4e303325e2b0c171cd6c775b40295f1b43b546 | f5c88fae3cacdda5a2618dd2e3c7e78a087bde6d; parent 0dd93cb |
-| First-expansion rent-ready copy | 2c6980f557f3f2b7562a995778f06836427307f9 | fff6294f6abc7c1ed9f3a2dd791e42b7b00ed478; parent f5c88fa |
-| Safe removal-only gate stage | 7bc8ab265448c81822745258569864b7d4fbb50e | 284d45a9e80db30b5db69d2694c2dbb7c7ec8284; parent fff6294 |
+| Growth | 22c4873 | 0dd93cb |
+| Opening notification | 5c4e303 | f5c88fa |
+| Milestone copy | 2c6980f | fff6294 |
+| Gate removal | 7bc8ab2 | 284d45a |
+| Records reconciliation | 6eeb44a | e81b66e |
+| Records wording | dc9ded6 | 10238f0 |
+| Normalization repair | 81418a0 | 92b5d93 |
+| Showcase normalization | 0b9ae39 | 3f417d7 |
+| Native qualification contracts | a530cd3 | 4ed4a28 |
 
-Equivalent GitHub commits preserve exact original trees and sole parents; changed commit metadata means they are not the identical original commit object. Original local commits and evidence remain in retained recovery packages. See [recovery index](RECOVERY-INDEX.md). Earlier integrated history remains in Git; this table is the recent chain, not an exhaustive ancestry account.
+Exact trees are preserved; corresponding sole-parent chains are retained. Metadata changes SHA. Original objects and evidence remain in complete recovery archives; see [index](RECOVERY-INDEX.md).
 
-## Gate-removal scope and evidence
+## Verification and qualification
 
-Runtime diff at 284d45a versus fff6294: js/placeableops.js and js/ui.js. Three test/registration files accompany it. Existing $100/no-salvage removal quote, shared review and commit path are reused. Counterfactual access analysis uses a copied simulation; target trips, access obligations and required routes block unsafe removal. Empty closed unobligated redesign is allowed. Quotes revalidate before one-time commit. Movement, upgrades, administrative closure and economy changes are excluded.
+The registered CURRENT native gate ran once on original a530cd3fc6e28692e21a29d8b5991270eae8601f, exact tree 13f6810cf91e392457ff63b036ee51d89ba856a6: **114/114 PASS**, zero failures/errors/blocked/timeouts/not-run. GitHub equivalent 4ed4a282fa9debe591fa823010be8511a6bcd816 has the identical tree and sole parent 3f417d717de2b6056048acc90aea52875bf167db; metadata changed the commit SHA. No test rerun was needed solely for metadata replacement.
 
-65 fully passing native groups plus six additional transaction behavior groups are retained. The historical source guard then fails on unchanged parent and candidate; the full transaction suite and full current registered gate are NOT PASS. All 12 focused removal groups also passed from independent complete-bundle recovery. Phone fixtures at 375×667 and 390×844 used real UI/Sim with stub renderer/audio, no persistence adapter and locator clicks, not physical touch.
+All 15 immutable dependencies and required fixtures passed fail-fast preflight. Original historical stage assertions remain byte-for-byte required alongside current-game migration, placement, routing and removal coverage. Complete-state comparisons and strict completion requirements remain. No failure was waived and no gameplay was changed to satisfy tests.
 
-Eddie reported focused physical-iPhone PASS for active-trip and last-access blocking, cancellation/reopen, one $100 charge, gate removal/fence closure, surviving-gate customer traffic and Save/reload/Continue retaining gate/cash/Pause. IMG_4074/4075 show Frank Diaz toward Unit 1010 and later driving away. Paving retention and Pause immediately after removal/message disappearance were not explicitly reported physically; native/fixture evidence applies. Exact-minute pausing was unnecessary. See [current status](CURRENT-STATUS.md) for evidence-source distinctions.
+The earlier run on 81418a0 remains **108 PASS / 4 FAIL / 1 ERROR / 1 BLOCKED**, with subsequent review-space and recovered floor-context focused passes recorded separately. The later 114/114 run supersedes that qualification blocker; it does not erase or relabel the earlier failed rows. Original older 67/10/18, 94/1 and 95/95 checkpoints remain historical, not current results.
 
-## Hosting is separate
+Native results are not new rendered-browser, physical Safari, intended-font, VoiceOver, enjoyment, force-kill or broad device-performance certification. Retained physical-iPhone PASS covers reported gate blocking/cancellation, one $100 charge, fence closure, surviving-gate traffic and Save/reload/Continue with cash, gate removal and Pause retained. Paving retention and Pause immediately after removal/message dismissal were not explicitly confirmed physically; native/fixture evidence covers them. Earlier phone fixtures used stub renderer/audio, locator clicks and no persistence adapter. Independent full served-asset comparison and signed-out access remain unverified. Unfamiliar-player comprehension/enjoyment and broader beta/release acceptance remain incomplete and unchanged.
 
-Existing temporary Stage 4A Site version 4 packages game 284d45a under hosting commit 01d661960583aabbab0800945008fbb6e0dfdbf1. Prior version 3 is retained. Native deployment succeeded; all 53 packaged runtime bytes matched immutable source and the served identity manifest was observed. Independent comparison of every served runtime asset and signed-out access remain unverified. This records update does not republish anything. URL/title/build labels are not exact commit proof.
+## Deployment and remaining work
 
-## Historical evidence and open work
+[Existing temporary Stage 4A playtest](https://sst-stage4a-47473de-playtest.rainy-ash-3714.chatgpt.site) remains at the last retained deployment: version 4, game source 284d45a9e80db30b5db69d2694c2dbb7c7ec8284, hosting commit 01d661960583aabbab0800945008fbb6e0dfdbf1. Master promotion did not deploy anything. Runtime is unchanged between that game source and the promoted checkpoint; intervening changes are documentation/test-only. The Site does not contain the later repository documentation/tests.
 
-The older 0d5dd49 95/95 report remains a historical native result, not certification of 284d45a. Original borrowing failures, the rejected six-unit >18-month assertion decision, later test corrections and prior package-integrity cautions are preserved in the [verbatim prior summary](history/before-records-reconciliation-20261030/INTEGRATION-SUMMARY.md) and [historical native report](qa/rejected-payback-cutoff-20261025/REVIEW.md). No historical guard was waived in this update. Undelivered collaborator results are not invented or asserted to be running.
+Project appgprj_6ae44d18da6881918e415a2d6cfdbf18; saved version appgprj_6ae44d18da6881918e415a2d6cfdbf18~appgver_6932b776b7088191a1ee116f9e4b4962; deployment appgdep_6ae4972625e48191b87d349d9a545fb7. Stored archive sha256:eff694f1bf9b42ce0b3237c2fdaa5b4eefa1f95df8d58454e400ddd301e58a6d. Prior versions retained, URL/origin/public audience unchanged. All 53 packaged runtime files were matched to immutable source and served source-proof was observed; full independent served-asset verification remains limited. No new Site query or gameplay run was performed for these records. Normal saves were not accessed.
 
-Header-name loss on reload and stale build-label findings remain separate, unrepaired. The earlier unexplained $100 observation remains PARKED and unconfirmed. The removal fee is not its diagnosis. Qualification, integration, publication and owner acceptance remain separate. Further roadmap work is not authorized by this summary.
+| Finding | Current boundary |
+| --- | --- |
+| Single-property custom header name lost after Continue | Confirmed separate finding; existing bare-state save path omits company name. Unrepaired; any fix needs compatible save roundtrips. |
+| Stale v62-career-camera-clearance-20261023 build label | Confirmed hardcoded label, not exact commit proof. Unrepaired; packaging/source identity design remains separate. |
+| Earlier unexplained $100 difference | PARKED by Eddie, cause unconfirmed. Investigate only if it recurs or Eddie requests. Gate-removal fee is unrelated. |
+
+Master integration is complete, not broad release acceptance. No fresh native/browser test was run for this documentation-only successor. Prior summaries, original borrowing/payback decisions and failed rows remain in historical snapshots/QA. No historical assertion or qualification was silently removed. See the [previous summary](history/before-master-promotion-records-20261030/docs/INTEGRATION-SUMMARY.md) for the detailed gate-removal integration history and earlier links.

@@ -1,45 +1,32 @@
 # Project overview and finish target
 
-Reconciled October 30, 2026, America/Los_Angeles. Exact identities, evidence and open findings: [current status](CURRENT-STATUS.md). This is orientation, not release or acceptance authority.
+Reconciled October 30, 2026, America/Los_Angeles. [Current status](CURRENT-STATUS.md) supplies exact evidence and limits.
 
 ## Goal
 
-A satisfying self-storage ownership game for iPhone Safari. The property is the game board: build useful capacity, operate it, understand economics and grow through deliberate investments with visible payoff. Meaningful choices and useful delegation should replace repetitive interruptions and empty waiting. Manual Pause, 1x, 2x and 4x remain essential. Automatic eligible-unit readiness/opening is separate from the player's decision to open a property.
+A satisfying iPhone Safari self-storage ownership game: build useful capacity, understand costs/customers, delegate routine work and invest for visible payoff. Preserve manual Pause/1x/2x/4x, trustworthy finance and saves. Automatic unit readiness/opening remains separate from the player's decision to open a property.
 
-## Existing foundation
+## Current checkpoint
 
-The JavaScript/Three.js project includes scenarios and Sandbox, construction and four-way placement, multi-floor facilities, leasing/billing, finance/reserves and investment guidance, staff and Owner work, restoration, career/portfolio systems and local save/Continue/recovery. Earlier scoped evidence remains valid only for its named source and tested states. This records update does not freshly certify every subsystem or floor configuration.
+Master and development were verified at 4ed4a282fa9debe591fa823010be8511a6bcd816, tree 13f6810cf91e392457ff63b036ee51d89ba856a6, after authorized master fast-forward. The complete registered current native gate passed 114/114 on the exact tree. Runtime is identical to gate-removal source 284d45a; intervening work corrected documentation and test qualification. Integration is complete; broader beta/release acceptance remains HOLD.
 
-## Current integrated work
+The foundation includes scenarios/Sandbox, construction/four-way placement, multi-floor facilities, leasing/billing, finance/reserves/investment guidance, staff/Owner work, restoration, career/portfolio and local save/Continue/recovery. Newer integrated work includes reviewed finance, representative placeable safety, bounded gate migration/routing/failure handling, two front gates and removal-only management, Growth direct details and truthful readiness notifications. This is not blanket certification of every subsystem.
 
-At the October 30 reconciliation, the integrated game checkpoint on development was 284d45a9e80db30b5db69d2694c2dbb7c7ec8284, including the bounded multi-gate foundation, two player-built front gates, direct Growth details selection, truthful closed/open-property unit notifications, first-expansion rent-ready wording and removal-only gate management. [Integration summary](INTEGRATION-SUMMARY.md) records the recent ancestry and distinguishes original local commits from equivalent GitHub preservation commits.
+## Remaining roadmap and decision
 
-Gate removal now uses the existing $100 quote, exact target/revalidation, counterfactual access checks and active-trip/last-access safeguards. Safe empty closed-property redesign is supported. This is not all-placeables lifecycle completion: gate movement, upgrades and administrative closure remain separate. Optional unit lighting/security, Office and financial-review work remain in the foundation; planning proposals do not become implemented features by appearing here.
-
-## Remaining roadmap
-
-| Stage / area | Bounded status |
+| Area | Remaining scope |
 | --- | --- |
-| Safety/shared operations and gate identity | Representative exact-target foundation and legacy migration implemented with scoped evidence |
-| Routing and player placement | Bounded multi-gate routing/queues/failure handling and two functional front gates implemented; broader Stage 4 incomplete |
-| Gate lifecycle | Removal-only stage integrated; movement/upgrades/administrative closure remain separate |
-| Broader placeables | Attachments, surfaces, services and office/building management packages remain; inspect existing inventory and specify each operation first |
-| Integrated qualification | Wider integrated feature validation, device performance, accessibility, novice comprehension and long-term balance remain; no full roadmap PASS |
+| Gate lifecycle | Movement, upgrades and administrative closure remain separate |
+| Broader placeables | Attachments, surfaces, services and office/building packages require bounded inventories/design decisions |
+| Phone usability | Older gestures, camera, guidance and request findings retain original status; reproduce selectively before repairs |
+| Product qualification | Integrated device/accessibility, novice comprehension/enjoyment, sustained performance and long-term balance remain |
 
-The [October 28 implementation brief](https://chatgpt.com/library?file_id=libfile_36f7082525f081919c3b405983b9841a&account_id=personal) and [repair plan](https://chatgpt.com/library?file_id=libfile_8f3017534d988191bc85d7cf19afa89a&account_id=personal) retain original requirements, unresolved design details and exclusions. They are not blanket work authorization. Side/rear public roads, arbitrary player gate counts and staff commuting are not delivered by gate removal. Older request/guidance/camera/gesture findings need current reproduction before implementation claims.
+Confirmed header-name loss and stale build-label findings are separate next-task candidates, not newly fixed. The $100 observation stays parked. Next work should be one bounded task selected from these findings or the retained roadmap, not another rerun of settled native checks. No next feature or deployment is authorized by this record.
 
-## Current priority and evidence limits
+Native results are not new rendered-browser, physical Safari, intended-font, VoiceOver, enjoyment, force-kill or broad device-performance certification. Retained physical-iPhone PASS covers reported gate blocking/cancellation, one $100 charge, fence closure, surviving-gate traffic and Save/reload/Continue with cash, gate removal and Pause retained. Paving retention and Pause immediately after removal/message dismissal were not explicitly confirmed physically; native/fixture evidence covers them. Earlier phone fixtures used stub renderer/audio, locator clicks and no persistence adapter. Independent full served-asset comparison and signed-out access remain unverified. Unfamiliar-player comprehension/enjoyment and broader beta/release acceptance remain incomplete and unchanged.
 
-Finish records reconciliation before choosing another feature. Separate header-name loss on single-property reload and stale build identification are confirmed findings, not gate-removal repairs. The earlier unexplained $100 observation remains PARKED; do not investigate unless it recurs or Eddie requests it.
+## Finish target and exclusions
 
-The focused gate-removal iPhone playtest passed its reported observations, including surviving-gate traffic and paused reload. Paving retention and immediate post-removal/message-dismissal Pause were not explicitly confirmed physically; native/fixture checks cover them. 65 scoped native groups passed; six additional transaction behavior groups passed before an inherited source-identity guard failed on both parent and candidate. The full current gate is not qualified as passing. Independent full served-byte and signed-out-access checks remain unverified. [Current status](CURRENT-STATUS.md) carries the full qualification.
+Clear beginning, understandable operating choices, comfortable placement/navigation, trustworthy finance/Pause/saves, visible investment benefit and satisfying sustained iPhone play. No launch date, completion percentage or general-release certification is established. Eddie enjoys building/expanding and visible payoff; extended waiting drags. Preserve that feedback without inventing an economy requirement. Coastal remains rejected, draft PR #2 excluded; deferred flood/rival/insurance/auction/expansion goals are neither resumed nor erased.
 
-## Product evidence and exclusions
-
-Eddie enjoys building/expanding and visible payoff while extended waiting drags. Preserve that feedback without repeating the whole playtest for documentation. No new economics rule, mandatory hire or arbitrary Office upgrade is implied. Office, sustained dense-yard device performance and broad usability checks retain their source-specific limits; no blanket completion is asserted. Coastal remains rejected; the stylized comparison and draft PR #2 remain unaccepted/excluded. Deferred flood, rival, insurance, auction and expansion goals are neither resumed nor erased.
-
-## Finish target
-
-A clear beginning, understandable operating choices, comfortable placement/navigation, trustworthy finance/Pause/saves, visible work and investment benefit, stable sustained iPhone play and a satisfying reason to return. No launch date, completion percentage, $59.99 readiness or blanket release certification is established.
-
-Prior overview preserved [verbatim](history/before-records-reconciliation-20261030/PROJECT-OVERVIEW.md). The original local records candidate 6eeb44ab5d8394e494b22a60b34a6823d8d9a730 was subsequently preserved on GitHub as e81b66e0252b116c8ad466c227afe1efce6e52bb with the same tree and sole parent. This dated provenance does not establish the current integration status of later successors; refresh Git refs before acting. The records correction changes no runtime, deployment or acceptance state.
+See [handoff](HANDOFF.md), [integration summary](INTEGRATION-SUMMARY.md), [recovery](RECOVERY-INDEX.md), and unchanged [implementation brief](https://chatgpt.com/library?file_id=libfile_36f7082525f081919c3b405983b9841a&account_id=personal) / [repair plan](https://chatgpt.com/library?file_id=libfile_8f3017534d988191bc85d7cf19afa89a&account_id=personal). Plans are not blanket authorization. Prior overview is [archived verbatim](history/before-master-promotion-records-20261030/docs/PROJECT-OVERVIEW.md).
