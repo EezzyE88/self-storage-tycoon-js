@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/game.css"></head><body><canvas id="view"></canvas><div id="ui"></div><div id="bubbles"></div>
+<script type="module">
+import {UI} from '/js/ui.js';
+import {saveAPI,makeMaple,localsave} from './api.mjs';
+const main=await (await fetch('/js/main.js')).text();
+class FixtureUI extends UI {showTitle(){}}
+function game(){const g=saveAPI(main);g.sim=makeMaple(99);g.sim.s.speed=0;g.sim.s.convos=[];g.rend={view:'ext'};g.beginSaveSession=()=>{};
+ g.company={props:[{name:'Gate Removal Test — disposable',sim:g.sim}],active:0,feed:[]};
+ g.ui=new FixtureUI(g);g.ui.title=false;g.attach=function(sim,kind,{view}={}){this.sim=sim;this.rend.view=view;this.ui.setMeta(this.metaName(),this.modeLabel(sim.s));};
+ return g;}
+const first=game(),before=JSON.stringify(first.sim.s),name=first.metaName();
+localsave.put(first.rawSaveCode(first.saveJSON()),first.saveMeta());
+const fresh=game();await fresh.loadCode(localsave.get().main.code,true);
+const code=await fresh.saveCode(),prep=await fresh.prepareLoad(code);
+fresh.ui.setMeta(fresh.metaName(),fresh.modeLabel(fresh.sim.s));
+for(const btn of document.querySelectorAll('#speed button'))btn.classList.toggle('on',btn.dataset.v==='0');
+document.documentElement.dataset.check=JSON.stringify({name:fresh.metaName(),expected:name,stateSame:JSON.stringify(fresh.sim.s)===before,importName:prep.company.props[0].name,pause:fresh.sim.s.speed});
+</script></body></html>

@@ -130,7 +130,7 @@ const game = {
     const C = this.company, view = this.ui && this.rend ? this.rend.view : null;
     // The selected floor/exterior view is the only save-owned UI state; it rides beside (not inside) the simulation state.
     const own = (s) => view == null || s !== this.sim.s ? s : { ...s, uiView: view };
-    return C && C.props.length > 1 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));
+    return C && C.props.length > 0 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));
   },
   rawSaveCode(json) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); },
   async saveCode(json = this.saveJSON()) {

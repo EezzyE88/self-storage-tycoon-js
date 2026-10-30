@@ -1,0 +1,8 @@
+{
+  "parent_commit": "4ffb204de7fe61e1f7691b8426bb072a875ca134",
+  "file": "js/main.js",
+  "parent_sha256": "4ae0b11617bc1a4c76c4f0fb7911d606fc3476860fecac494d89cc9e2c925407",
+  "current_sha256": "d54092f60adc20608ec0db24aad5a9f15e34a17d7aceaa919ac1b4a530a2f7d6",
+  "before": "    return C && C.props.length > 1 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));\n",
+  "after": "    return C && C.props.length > 0 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));\n"
+}

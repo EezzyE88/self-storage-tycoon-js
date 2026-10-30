@@ -154,7 +154,7 @@ await test('actual paused loan keeps synchronous legacy fallback and acknowledge
   const {g,ui,sim,S,D}=await gameFixture(),t=sim.s.t; S.hold=true;
   assert.ok(ui.do({type:'borrow',amt:50000}).ok);
   assert.equal(sim.s.cash,300000); assert.equal(sim.s.t,t); assert.equal(sim.s.speed,0);
-  assert.equal(JSON.parse(await g.decodeSave(localsave.get().main.code)).cash,300000);
+  assert.equal(JSON.parse(await g.decodeSave(localsave.get().main.code)).props[0].s.cash,300000);
   await turns(); assert.equal(D.status,'pending'); S.held.shift()(); await D.idle();
   assert.equal(D.status,'saved'); const prep=await g.prepareLoad(S.data.main.code); assert.ok(prep.ok);
   assert.equal(prep.company.props[0].sim.s.cash,300000);
@@ -172,7 +172,7 @@ await test('actual imported Load replaces durable generation without changing ma
   g.sim.s.cash=777; const incoming=g.rawSaveCode(g.saveJSON()); g.sim.s.cash=250000;
   const prep=await g.prepareLoad(incoming); assert.ok(prep.ok); g.applyLoad(prep); await g.autosave(true); await D.idle();
   assert.equal(S.data.control.epoch,1); assert.equal(S.data.backup,null); assert.notEqual(S.data.main.code,outgoing);
-  assert.equal(JSON.parse(await g.decodeSave(S.data.main.code)).cash,777); assert.ok(S.data.main.code.startsWith('SST0.'));
+  assert.equal(JSON.parse(await g.decodeSave(S.data.main.code)).props[0].s.cash,777); assert.ok(S.data.main.code.startsWith('SST0.'));
   assert.equal(memory.get('sst.kept.previous'),'manual sentinel');
 });
 await test('actual legacy clear dispatches the durable tombstone and invalidates old compression', async () => {

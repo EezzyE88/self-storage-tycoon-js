@@ -5,6 +5,24 @@
   "profiles": {
     "current": [
       {
+        "id": "tsave_name",
+        "command": [
+          "@node",
+          "tests/headless/tsave_name.mjs"
+        ],
+        "completion": "8 single-property name persistence groups passed",
+        "minimum_pass_lines": 8,
+        "timeout": 180,
+        "required_objects": [
+          "4ffb204de7fe61e1f7691b8426bb072a875ca134"
+        ],
+        "required_files": [
+          "tests/fixtures/save-name/api.mjs",
+          "tests/headless/save_name-allowlist.json"
+        ],
+        "scope": "single-property name/feed, raw/compressed export/import, Save reload Continue, old bare saves, multi-property exact parity, complete states, Pause and strict source inverse"
+      },
+      {
         "id": "tpreservation_chain",
         "command": [
           "@node",
