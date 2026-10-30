@@ -696,10 +696,10 @@ export class Sim {
       case 'gate': {
         const p = s.parcel;
         if (y !== p.y1) { failItem('Gates go on the front fence line (street frontage)'); return R; }
-        if (this.objs('gate').length) failItem('This property already has an entrance gate');
+        if (this.objs('gate').length >= 2) failItem('This property already has two entrance gates');
         if (x - 1 < p.x0 || x + 1 > p.x1) failItem('Too close to the property corner');
         R.items = [-1, 0, 1].map((k) => ({ x: x + k, y, f: 0, ok: R.status !== 'invalid' }));
-        for (let k = -1; k <= 1; k++) { const j = this.idx(x + k, y); if (!this.cellFree(j)) { bad('Blocked: gate lane overlaps a structure'); } R.tiles.push({ k: 'ground', i: j, v: G.ASPHALT }, { k: 'ground', i: this.idx(x + k, y + 1), v: G.ASPHALT }); }
+        for (let k = -1; k <= 1; k++) { const j = this.idx(x + k, y); if (!this.cellFree(j) || (D.at.get(j) || []).length) { bad('Blocked: gate lane overlaps a structure'); } R.tiles.push({ k: 'ground', i: j, v: G.ASPHALT }, { k: 'ground', i: this.idx(x + k, y + 1), v: G.ASPHALT }); }
         const inside = [-1, 0, 1].some((k) => { const j = this.idx(x + k, y - 1); return this.groundAt(j) === G.ASPHALT; });
         if (!inside) inc('Gate has no drive aisle behind it yet');
         R.cost = T.cost; R.dur = 480; R.count = 1;

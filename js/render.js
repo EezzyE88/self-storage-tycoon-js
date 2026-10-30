@@ -858,12 +858,21 @@ export class Renderer {
   }
   signTex(t) { this.tx.signs ||= {}; return (this.tx.signs[t] ||= signTexture(t)); }
   buildFence() {
-    const s = this.sim.s, p = s.parcel, gate = this.sim.objs('gate')[0];
+    const s = this.sim.s, p = s.parcel;
     const segs = [];
-    const gx0 = gate ? gate.x - 1 : -99, gx1 = gate ? gate.x + 2 : -99;
     const run = (x0, z0, x1, z1) => segs.push([x0, z0, x1, z1]);
     run(p.x0, p.y0, p.x1 + 1, p.y0); run(p.x0, p.y0, p.x0, p.y1 + 1); run(p.x1 + 1, p.y0, p.x1 + 1, p.y1 + 1);
-    if (gate) { run(p.x0, p.y1 + 1, gx0, p.y1 + 1); run(gx1, p.y1 + 1, p.x1 + 1, p.y1 + 1); } else run(p.x0, p.y1 + 1, p.x1 + 1, p.y1 + 1);
+    const frontGaps = (s.gateAccess?.gateIds || []).map((id) => {
+      const gate = s.objects[id], connection = s.gateAccess?.connections?.[String(id)];
+      return gate?.type === 'gate' && connection?.kind === 'front-street' && connection.boundary === 'front' ? [gate.x - 1, gate.x + 2] : null;
+    }).filter(Boolean).sort((a, b) => a[0] - b[0]);
+    let frontX = p.x0;
+    for (const [gap0, gap1] of frontGaps) {
+      const x0 = Math.max(p.x0, gap0), x1 = Math.min(p.x1 + 1, gap1);
+      if (x0 > frontX) run(frontX, p.y1 + 1, x0, p.y1 + 1);
+      frontX = Math.max(frontX, x1);
+    }
+    if (frontX < p.x1 + 1) run(frontX, p.y1 + 1, p.x1 + 1, p.y1 + 1);
     const H = 1.2;
     for (const [x0, z0, x1, z1] of segs) {
       const len = Math.hypot(x1 - x0, z1 - z0); if (len < 0.1) continue;

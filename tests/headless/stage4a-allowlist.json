@@ -1,0 +1,29 @@
+{
+  "base_commit": "739a0efa94d5e48608ba8e5db990350b1fa028e2",
+  "files": {
+    "js/sim.js": {
+      "parent_sha256": "fbe3ffb1d352e51142ae4cf28638ccc8d96dbc42fba0ffa0815a8919c2b19c1c",
+      "current_sha256": "be6f497be90bcfdbb46fd0df2c2452f946023a000412f7bc1a401c8437a51b24",
+      "hunks": [
+        {
+          "before": "        if (this.objs('gate').length) failItem('This property already has an entrance gate');\n",
+          "after": "        if (this.objs('gate').length >= 2) failItem('This property already has two entrance gates');\n"
+        },
+        {
+          "before": "        for (let k = -1; k <= 1; k++) { const j = this.idx(x + k, y); if (!this.cellFree(j)) { bad('Blocked: gate lane overlaps a structure'); } R.tiles.push({ k: 'ground', i: j, v: G.ASPHALT }, { k: 'ground', i: this.idx(x + k, y + 1), v: G.ASPHALT }); }\n",
+          "after": "        for (let k = -1; k <= 1; k++) { const j = this.idx(x + k, y); if (!this.cellFree(j) || (D.at.get(j) || []).length) { bad('Blocked: gate lane overlaps a structure'); } R.tiles.push({ k: 'ground', i: j, v: G.ASPHALT }, { k: 'ground', i: this.idx(x + k, y + 1), v: G.ASPHALT }); }\n"
+        }
+      ]
+    },
+    "js/render.js": {
+      "parent_sha256": "329c0dc6b5e201429148d03d8a1b90fd76366b2f38861428cd1a30f69b9a2f72",
+      "current_sha256": "4c7d232706329a07d9d3c161dd0ec52bd65022f4a728919f769e9334091da565",
+      "hunks": [
+        {
+          "before": "  buildFence() {\n    const s = this.sim.s, p = s.parcel, gate = this.sim.objs('gate')[0];\n    const segs = [];\n    const gx0 = gate ? gate.x - 1 : -99, gx1 = gate ? gate.x + 2 : -99;\n    const run = (x0, z0, x1, z1) => segs.push([x0, z0, x1, z1]);\n    run(p.x0, p.y0, p.x1 + 1, p.y0); run(p.x0, p.y0, p.x0, p.y1 + 1); run(p.x1 + 1, p.y0, p.x1 + 1, p.y1 + 1);\n    if (gate) { run(p.x0, p.y1 + 1, gx0, p.y1 + 1); run(gx1, p.y1 + 1, p.x1 + 1, p.y1 + 1); } else run(p.x0, p.y1 + 1, p.x1 + 1, p.y1 + 1);\n",
+          "after": "  buildFence() {\n    const s = this.sim.s, p = s.parcel;\n    const segs = [];\n    const run = (x0, z0, x1, z1) => segs.push([x0, z0, x1, z1]);\n    run(p.x0, p.y0, p.x1 + 1, p.y0); run(p.x0, p.y0, p.x0, p.y1 + 1); run(p.x1 + 1, p.y0, p.x1 + 1, p.y1 + 1);\n    const frontGaps = (s.gateAccess?.gateIds || []).map((id) => {\n      const gate = s.objects[id], connection = s.gateAccess?.connections?.[String(id)];\n      return gate?.type === 'gate' && connection?.kind === 'front-street' && connection.boundary === 'front' ? [gate.x - 1, gate.x + 2] : null;\n    }).filter(Boolean).sort((a, b) => a[0] - b[0]);\n    let frontX = p.x0;\n    for (const [gap0, gap1] of frontGaps) {\n      const x0 = Math.max(p.x0, gap0), x1 = Math.min(p.x1 + 1, gap1);\n      if (x0 > frontX) run(frontX, p.y1 + 1, x0, p.y1 + 1);\n      frontX = Math.max(frontX, x1);\n    }\n    if (frontX < p.x1 + 1) run(frontX, p.y1 + 1, p.x1 + 1, p.y1 + 1);\n"
+        }
+      ]
+    }
+  }
+}
