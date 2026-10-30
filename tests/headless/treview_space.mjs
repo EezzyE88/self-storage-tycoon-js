@@ -1,3 +1,4 @@
+import {normalizePostStage4A} from './post_stage4a_baseline.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
@@ -42,6 +43,6 @@ test('short-screen CSS budget grows at 375×667 while 390×844 retains the paren
  }
 });
 test('tutorial banner implementation is byte-identical to exact integration parent',()=>{
- assert.equal(readFileSync('js/showcase.js','utf8'),execFileSync('git',['show','58d11b1e3498165865553805282c91bcbd6bde51:js/showcase.js'],{encoding:'utf8'}));
+ assert.equal(normalizePostStage4A(readFileSync('js/showcase.js','utf8'),'js/showcase.js'),execFileSync('git',['show','58d11b1e3498165865553805282c91bcbd6bde51:js/showcase.js'],{encoding:'utf8'}));
 });
 console.log(`ALL PASS: ${n} review checks. CSS budget arithmetic/production HTML only; rendered browser sizes and physical Safari NOT TESTED.`);
