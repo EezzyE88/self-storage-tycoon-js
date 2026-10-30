@@ -12,7 +12,7 @@ The JavaScript/Three.js project includes scenarios and Sandbox, construction and
 
 ## Current integrated work
 
-Development is 284d45a9e80db30b5db69d2694c2dbb7c7ec8284, including the bounded multi-gate foundation, two player-built front gates, direct Growth details selection, truthful closed/open-property unit notifications, first-expansion rent-ready wording and removal-only gate management. [Integration summary](INTEGRATION-SUMMARY.md) records the recent ancestry and distinguishes original local commits from equivalent GitHub preservation commits.
+At the October 30 reconciliation, the integrated game checkpoint on development was 284d45a9e80db30b5db69d2694c2dbb7c7ec8284, including the bounded multi-gate foundation, two player-built front gates, direct Growth details selection, truthful closed/open-property unit notifications, first-expansion rent-ready wording and removal-only gate management. [Integration summary](INTEGRATION-SUMMARY.md) records the recent ancestry and distinguishes original local commits from equivalent GitHub preservation commits.
 
 Gate removal now uses the existing $100 quote, exact target/revalidation, counterfactual access checks and active-trip/last-access safeguards. Safe empty closed-property redesign is supported. This is not all-placeables lifecycle completion: gate movement, upgrades and administrative closure remain separate. Optional unit lighting/security, Office and financial-review work remain in the foundation; planning proposals do not become implemented features by appearing here.
 
@@ -42,4 +42,4 @@ Eddie enjoys building/expanding and visible payoff while extended waiting drags.
 
 A clear beginning, understandable operating choices, comfortable placement/navigation, trustworthy finance/Pause/saves, visible work and investment benefit, stable sustained iPhone play and a satisfying reason to return. No launch date, completion percentage, $59.99 readiness or blanket release certification is established.
 
-Prior overview preserved [verbatim](history/before-records-reconciliation-20261030/PROJECT-OVERVIEW.md). Current local records successor is not pushed/integrated; runtime, master, deployment and acceptance remain unchanged.
+Prior overview preserved [verbatim](history/before-records-reconciliation-20261030/PROJECT-OVERVIEW.md). The original local records candidate 6eeb44ab5d8394e494b22a60b34a6823d8d9a730 was subsequently preserved on GitHub as e81b66e0252b116c8ad466c227afe1efce6e52bb with the same tree and sole parent. This dated provenance does not establish the current integration status of later successors; refresh Git refs before acting. The records correction changes no runtime, deployment or acceptance state.

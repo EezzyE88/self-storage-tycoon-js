@@ -2,7 +2,7 @@
 
 Reconciled October 30, 2026, America/Los_Angeles.
 
-This document describes integrated game checkpoint 284d45a and its retained evidence. The current local documentation-only successor is NOT PUSHED or INTEGRATED. It does not replace the governing runtime, authorize work, certify a release or change acceptance. No runtime/test bytes, remote refs, Site versions, access policies or original evidence were changed by this records update. Remote observations below are dated October 30, not a promise of future branch state.
+This document describes integrated game checkpoint 284d45a and its retained evidence. The original documentation candidate 6eeb44ab5d8394e494b22a60b34a6823d8d9a730 was prepared locally, then preserved on GitHub as e81b66e0252b116c8ad466c227afe1efce6e52bb with the same tree and sole parent. These are dated provenance facts, not a claim about the publication or integration status of a later successor; refresh Git refs before a consequential action. It does not replace the governing runtime, authorize work, certify a release or change acceptance. No runtime/test bytes, remote refs, Site versions, access policies or original evidence were changed by this records update. Remote observations below are dated October 30, not a promise of future branch state.
 
 ## Where the project stands
 
@@ -102,4 +102,4 @@ See [project overview](PROJECT-OVERVIEW.md), [integration summary](INTEGRATION-S
 
 The historical 95/95 result at 0d5dd49 is not a current full-gate result for 284d45a. Earlier source/status statements remain historical records, not current integration claims. Coastal remains rejected and draft PR #2 excluded; this cleanup does not resume them or any other deferred work. Historical collaborator activity is not asserted to be currently running or complete without delivered evidence.
 
-Next decision is review and durable preservation of this documentation-only successor, followed by separate authorization for any GitHub preservation or integration. Header-name and build-label repairs, further gate lifecycle stages and wider integrated validation require their own scoped work. The parked $100 observation is not a blocker or investigation task.
+Any later GitHub preservation or integration requires its own applicable authorization and fresh identity checks; this dated record does not assert that a later successor is unpublished or unintegrated. Header-name and build-label repairs, further gate lifecycle stages and wider integrated validation require their own scoped work. The parked $100 observation is not a blocker or investigation task.

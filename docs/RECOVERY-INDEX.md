@@ -12,7 +12,7 @@ Reconciled October 30, 2026, America/Los_Angeles. [Current status](CURRENT-STATU
 | Original local candidate | 7bc8ab265448c81822745258569864b7d4fbb50e; same tree/parent, different metadata |
 | Master, unchanged | d03bbcdb7245f379512b0c13041b004742133d83 |
 
-The documentation-only successor containing this page is local and not pushed/integrated. Its complete recovery receipt is supplied separately with the candidate rather than attempting to embed a commit's own final SHA into itself. No original recovery material is overwritten.
+Original documentation candidate 6eeb44ab5d8394e494b22a60b34a6823d8d9a730 was prepared locally and preserved on GitHub as e81b66e0252b116c8ad466c227afe1efce6e52bb, with exact tree 3e004e0c741252ddb8d4f0c9db2af575cc3e8aa9 and sole parent 284d45a9e80db30b5db69d2694c2dbb7c7ec8284. The [original complete recovery and evidence](https://chatgpt.com/library?file_id=libfile_a57d24100e608191a1a2d6dbd645ce31&account_id=personal) remains intact; its original local-only labels describe preparation time. Any later successor has its own separate recovery receipt. This dated provenance does not assert current publication/integration status; verify Git refs before use. No original recovery material is overwritten.
 
 ## Current gate recovery and test material
 

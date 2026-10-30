@@ -4,7 +4,7 @@
 
 Development was explicitly authorized and fast-forwarded from fff6294f6abc7c1ed9f3a2dd791e42b7b00ed478 to 284d45a9e80db30b5db69d2694c2dbb7c7ec8284. Before updating, GitHub development/candidate identities, exact tree c3fc1085b496c3b78bc495fadaaacbd3f27d4008, sole parent fff6294 and one-commit fast-forward ancestry were verified. Afterward remote development and candidate resolved to 284d45a; master remained d03bbcdb7245f379512b0c13041b004742133d83. No merge commit, master update, deployment, spending or acceptance change occurred in that integration.
 
-The current records update is an isolated documentation-only successor to 284d45a. It is NOT PUSHED or INTEGRATED and does not change game/test bytes. Do not confuse its local HEAD with the last verified remote development head.
+The records update was prepared as isolated local candidate 6eeb44ab5d8394e494b22a60b34a6823d8d9a730, then preserved on GitHub as e81b66e0252b116c8ad466c227afe1efce6e52bb. Both have exact tree 3e004e0c741252ddb8d4f0c9db2af575cc3e8aa9 and sole parent 284d45a9e80db30b5db69d2694c2dbb7c7ec8284; game/test bytes are unchanged. This is preparation and preservation history, not a claim that later successors are unpublished or unintegrated. Refresh remote refs before any subsequent branch operation.
 
 ## Recent preserved and integrated chain
 
