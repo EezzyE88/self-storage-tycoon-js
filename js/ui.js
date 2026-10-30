@@ -455,7 +455,7 @@ export class UI {
   }
 
   // ------------------------------------------------------------ tabs / sheets
-  setTab(t, expanded = false) {
+  setTab(t, expanded = t === 'growth') {
     if(this.retrofitReview)this.endRetrofit();
     this.reserveWait?.interrupt('Navigation paused waiting.');
     this.sectionMenuKey = null; this.sectionChoice = null;
