@@ -1,0 +1,19 @@
+{
+  "base_commit": "486acebb8b5ff75e8c5dc77b34c53465ae4fef90",
+  "files": {
+    "js/sim.js": {
+      "parent_sha256": "9be19846a4f606459263a889a1086fdc600ef4cd46fea95cc4e6b502fef130d8",
+      "current_sha256": "85905282c5bbb552dbdc7a1580b59a0c1addada92baf62c91b6df38b650411b4",
+      "hunks": [
+        {
+          "before": "  updateGate() {\n    const s = this.s, gate = this.D.gate; if (!gate) return;\n    const serving = gateServing(s, gate.id);\n    // exit sensor opens automatically; keypad controls entry\n    const near = s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);\n    const target = near || serving ? 1 : 0;\n    if (target && gate.open < 1) { if (gate.open === 0) this.emit('gate', { x: gate.x, y: gate.y }); gate.open = Math.min(1, gate.open + 0.25); }\n    else if (!target && gate.open > 0) gate.open = Math.max(0, gate.open - 0.2);\n  }\n",
+          "after": "  updateGate() {\n    const s = this.s, ids = s.gateAccess?.gateIds?.length ? s.gateAccess.gateIds : (this.D.gate ? [this.D.gate.id] : []);\n    for (const id of ids) {\n      const gate = s.objects[id]; if (!gate || gate.type !== 'gate') continue;\n      const serving = gateServing(s, gate.id);\n      // Each gate owns its own exit sensor and keypad-service opening state.\n      const near = s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);\n      const target = near || serving ? 1 : 0;\n      if (target && gate.open < 1) { if (gate.open === 0) this.emit('gate', { x: gate.x, y: gate.y }); gate.open = Math.min(1, gate.open + 0.25); }\n      else if (!target && gate.open > 0) gate.open = Math.max(0, gate.open - 0.2);\n    }\n  }\n"
+        },
+        {
+          "before": "      case 'gateq': {\n        const gate = s.objects[ag.gateId] || this.D.gate; ag.exp.gate++;\n        const q = gateQueue(s, gate.id), qi = q.indexOf(ag.id);\n",
+          "after": "      case 'gateq': {\n        const gate = s.objects[ag.gateId]; ag.exp.gate++;\n        if (!gate || gate.type !== 'gate') { ag.failed = true; this.depart(ag); break; }\n        const q = gateQueue(s, gate.id); let qi = q.indexOf(ag.id);\n        if (qi < 0) { enqueueGate(s, gate.id, ag.id); qi = q.indexOf(ag.id); }\n"
+        }
+      ]
+    }
+  }
+}

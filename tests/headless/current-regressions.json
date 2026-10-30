@@ -1225,6 +1225,15 @@
         "timeout": 180,
         "evidence": "native production routing with disposable synthetic two-/three-gate fixtures and real raw/compressed save codecs; no normal-save, rendered-device or player-placement claim",
         "scope": "deterministic compatible-gate selection, selected boundary crossing, failed/disconnected exclusion, retained trip gateId, routed departure, in-flight save reload, one-gate preservation"
+      },
+      {
+        "id": "tgate_stage3b1",
+        "command": ["@node", "tests/headless/tgate_stage3b1.mjs"],
+        "completion": "6\\ gate\\ Stage\\ 3B-1\\ lifecycle-isolation\\ groups\\ passed",
+        "minimum_pass_lines": 6,
+        "timeout": 180,
+        "evidence": "native production customer/gate lifecycle with disposable synthetic two-gate fixtures and real raw/compressed save codecs; no normal-save, live-reroute, player-placement or rendered-device claim",
+        "scope": "retained gateId authority, independent queue/service/opening state, failure isolation, missing-gate no-primary-fallback, in-flight save reload, one-gate preservation"
       }
     ],
     "historical": [

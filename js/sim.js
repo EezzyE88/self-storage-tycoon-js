@@ -2290,13 +2290,16 @@ export class Sim {
 
   // ---------------- gate
   updateGate() {
-    const s = this.s, gate = this.D.gate; if (!gate) return;
-    const serving = gateServing(s, gate.id);
-    // exit sensor opens automatically; keypad controls entry
-    const near = s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);
-    const target = near || serving ? 1 : 0;
-    if (target && gate.open < 1) { if (gate.open === 0) this.emit('gate', { x: gate.x, y: gate.y }); gate.open = Math.min(1, gate.open + 0.25); }
-    else if (!target && gate.open > 0) gate.open = Math.max(0, gate.open - 0.2);
+    const s = this.s, ids = s.gateAccess?.gateIds?.length ? s.gateAccess.gateIds : (this.D.gate ? [this.D.gate.id] : []);
+    for (const id of ids) {
+      const gate = s.objects[id]; if (!gate || gate.type !== 'gate') continue;
+      const serving = gateServing(s, gate.id);
+      // Each gate owns its own exit sensor and keypad-service opening state.
+      const near = s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);
+      const target = near || serving ? 1 : 0;
+      if (target && gate.open < 1) { if (gate.open === 0) this.emit('gate', { x: gate.x, y: gate.y }); gate.open = Math.min(1, gate.open + 0.25); }
+      else if (!target && gate.open > 0) gate.open = Math.max(0, gate.open - 0.2);
+    }
   }
   keypadServiceTime(g = this.D.gate) { return Math.round(4 + (1 - g.cond) * 14); }
 
@@ -2312,8 +2315,10 @@ export class Sim {
         break;
       }
       case 'gateq': {
-        const gate = s.objects[ag.gateId] || this.D.gate; ag.exp.gate++;
-        const q = gateQueue(s, gate.id), qi = q.indexOf(ag.id);
+        const gate = s.objects[ag.gateId]; ag.exp.gate++;
+        if (!gate || gate.type !== 'gate') { ag.failed = true; this.depart(ag); break; }
+        const q = gateQueue(s, gate.id); let qi = q.indexOf(ag.id);
+        if (qi < 0) { enqueueGate(s, gate.id, ag.id); qi = q.indexOf(ag.id); }
         // queue position on the street behind the apron
         if (qi > 0) { const tx = gate.x + 0.5 + (veh.hx < 0 ? 0 : 0), ty = p.y1 + 1.5 + Math.min(qi, 1) * 1.0; veh.x += (tx + (qi > 1 ? (qi - 1) * 2.4 * (veh.hx < 0 ? 1 : -1) : 0) - veh.x) * 0.2; veh.y += (ty - veh.y) * 0.2; if (qi >= 2 && ag.exp.gate === 20) this.thought(ag, 'Gate line is backing up.', 'bad'); break; }
         if (!gateServing(s, gate.id)) { setGateServing(s, gate.id, ag.id); ag.gateT = this.keypadServiceTime(gate); ag.gateFail = gate.cond < 0.2 || !!gate.unpowered; this.emit('keypad', { x: gate.x, y: gate.y }); }
