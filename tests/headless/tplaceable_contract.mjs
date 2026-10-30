@@ -27,7 +27,7 @@ test('representative reports are pure and classify unit, fixture, attachment and
   assert.equal(rows[0].classification,'allowed with disclosed effects');
   assert.equal(rows[1].classification,'allowed');
   assert.equal(rows[2].classification,'blocked');assert.match(rows[2].prerequisites.join(' '),/hosted-attachment/);
-  assert.equal(rows[3].classification,'blocked');assert.match(rows[3].prerequisites.join(' '),/alternate-route/);
+  assert.equal(rows[3].classification,'blocked');assert.match(rows[3].prerequisites.join(' '),/Last necessary access/);
 });
 
 test('exact target disambiguates overlapping fixture and unit and quotes authoritative money',()=>{

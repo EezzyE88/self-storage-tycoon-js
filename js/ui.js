@@ -265,6 +265,8 @@ export class UI {
     switch (a) {
       case 'speed': this.requestSpeed(v); this.sfx('click'); break;
       case 'finances': this.showFinances(); this.sfx('click'); break;
+      case 'gateRemove': this.showGateRemoval(Number(v)); break;
+      case 'gateRemoveConfirm': this.confirmGateRemoval(); break;
       case 'careerGoal':
         if (!this.title && careerEligibility(this.sim.s).eligible && this.g.tierInfo?.().cur) {
           this.select(null); this.setTab('growth', true); this.jumpSection('Operator career'); this.sfx('click');
@@ -605,7 +607,7 @@ export class UI {
     if(title==='Growth')body=body.replace(/<button\b[^>]*data-a="previewFirstGate"[^>]*>[\s\S]*?<\/button>/g,button=>{actions.push(button);return '';});
     if (this.sel != null && !office) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
       const cmd = button.match(/data-cmd='([^']*)'/);
-      if (!cmd) { if (/data-a="(?:staffHelp|verticalReview)"/.test(button)) { actions.push(button); return ''; } return button; }
+      if (!cmd) { if (/data-a="(?:staffHelp|verticalReview|gateRemove)"/.test(button)) { actions.push(button); return ''; } return button; }
       let type; try { type = JSON.parse(cmd[1]).type; } catch { return button; }
       if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor'].includes(type)) return button; // construction cancel is kept apart from routine actions
       actions.push(button); return '';
@@ -1432,7 +1434,7 @@ export class UI {
       }
       case 'gate': {
         const q = sim.gateQueue(o.id).length;
-        return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class="kv"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}`);
+        return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class="kv"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}<button class="btn danger" data-a="gateRemove" data-v="${o.id}">Remove gate…</button>`);
       }
       case 'door': {
         const ord = o.keypad === 'pending' && s.orders.find(q => q.id === o.keypadOrder && q.keypadDoor === o.id && q.st === 'construction');
@@ -2811,6 +2813,26 @@ export class UI {
       <details class="explanation"><summary>Forecast assumptions &amp; payment risk</summary><p class="note">${F.averageBill ? `If one average tenant misses a scheduled payment: ${money(F.downside)} net cash movement, ${money(F.averageBill)} less cushion.` : 'No current-tenant bills scheduled; there is no payment cushion to model.'} Current leases only. New rentals, overdue collections and optional future spending excluded; existing staffing/assets held constant. Scheduled payments are not guaranteed collections.</p></details>`;
   }
   cashWindow(days) { return this.sim.cashWindow(days); }
+  showGateRemoval(id, notice = '') {
+    const o = this.sim.s.objects[id];
+    if (!o || o.type !== 'gate') { this.closeModal(); this.toast('That gate no longer exists. Select a gate again.', 'bad'); return; }
+    this.pauseForPopup('modal');
+    const args = {tool:'demolish',targetId:id,a:{x:o.x,y:o.y},b:{x:o.x,y:o.y},f:o.f||0};
+    const q = this.sim.plan(args), operation = q.operation;
+    this.gateRemovalReview = {sim:this.sim,args:{...args,quoteStamp:operation?.stamp}};
+    const blockers = operation?.prerequisites || q.reasons || [];
+    const affordable = this.sim.unlimited() || this.sim.s.cash >= q.cost;
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Remove Gate #${id}</h2><button class="x" data-a="modalClose" aria-label="Cancel gate removal">${I.x}</button></div><p>Paused · review removal before confirming.</p>${notice?`<p class="note">${esc(notice)}</p>`:''}<div class="kv"><span>Removal charge</span><b>${money(q.cost)}</b><span>Cash after removal</span><b>${money(operation?.cashAfter ?? this.sim.s.cash-q.cost)}</b><span>Salvage refund</span><b>$0</b></div><p>Immediate removal.</p>${this.sim.s.sb?.unlimited && this.sim.s.cash<q.cost?`<p>Free Build funds cover ${money(q.cost-this.sim.s.cash)}.</p>`:''}<div class="list">${(operation?.effects||[]).map(t=>`<p>${esc(t)}</p>`).join('')}${blockers.map(t=>`<p class="note">${esc(t)}</p>`).join('')}${!affordable?'<p class="note">Not enough cash for removal.</p>':''}</div><div class="row wrap"><button class="btn" data-a="modalClose">Keep gate</button><button class="btn danger" data-a="gateRemoveConfirm" ${q.status==='invalid'||!affordable?'disabled':''}>Confirm removal · ${money(q.cost)}</button></div></div></div>`;
+  }
+  confirmGateRemoval() {
+    const review = this.gateRemovalReview;
+    if (!review) return;
+    if (review.sim !== this.sim) { this.closeModal(); this.toast('Property changed. Select the gate again.', 'bad'); return; }
+    const result = this.do({type:'build',...review.args});
+    if (!result.ok) { this.showGateRemoval(review.args.targetId,result.msg || 'Review changed. Check the updated conditions.'); return; }
+    this.gateRemovalReview = null;
+    this.closeModal(); this.select(null); this.toast('Gate removed. Fence crossing closed; paving retained.', 'good');
+  }
   showFinances() {
     const sim = this.sim, s = sim.s, rcv = sim.receivables();
     const W = [1, 7, 30].map((d) => [d, this.cashWindow(d)]);
@@ -2934,7 +2956,7 @@ export class UI {
     return `<div class="actionbar vpreview"><div class="top"><div class="nm">Proposed F${R.f+1} · Building ${R.shell}<small>Preview only — not built · ${money(R.cost)} complete package</small></div></div><div class="bot"><button class="btn" data-a="verticalBack" data-qa="vp-back">Back to review</button><button class="btn pri" data-a="verticalConfirm" data-qa="vp-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button><button class="btn" data-a="verticalCancel" data-qa="vp-discard">Discard preview</button></div></div>`;
   }
   modalOpen() { return !!this.$('modal').firstChild; }
-  closeModal() { this.acquisitionReview=null; this.creditReview=null; this.termLoanReview=null; this.transferReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
+  closeModal() { this.gateRemovalReview=null; this.acquisitionReview=null; this.creditReview=null; this.termLoanReview=null; this.transferReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
   showMenu() {
     this.acquisitionReview = null; this.creditReview = null; this.termLoanReview = null; this.transferReview = null;
     const a = this.g.audio;

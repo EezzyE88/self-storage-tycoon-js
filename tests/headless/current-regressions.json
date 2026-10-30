@@ -1252,6 +1252,15 @@
         "timeout": 180,
         "evidence": "native player-build planning/commit, routing/reroute and production save codecs with disposable fixtures; rendered phone and physical Safari qualification separate",
         "scope": "second-gate preview/purity, frontage/corner/overlap/third-gate rejection, exact cost/timing, Pause, registration/completion, two-gate routing, queued failure reroute, Save→reload→Continue"
+      },
+      {
+        "id": "tgate_removal",
+        "command": ["@node", "tests/headless/tgate_removal.mjs"],
+        "completion": "12 focused gate-removal groups passed",
+        "minimum_pass_lines": 12,
+        "timeout": 180,
+        "evidence": "native production access/removal, save codecs and disposable UI; rendered phone and physical Safari qualification separate",
+        "scope": "pure counterfactual access, required-route and traffic blockers, exact-target charge once, stale reviews, empty closed redesign, fence geometry, saves and Pause"
       }
     ],
     "historical": [
