@@ -190,6 +190,32 @@ export class Sim {
     rows.sort((a, b) => (a.n - b.n) || (a.id - b.id));
     return rows[0]?.id ?? null;
   }
+  queuedGateAlternate(ag, veh) {
+    const s = this.s, p = s.parcel, start = this.idx(Math.floor(veh.x), Math.floor(veh.y)), rows = [];
+    const visit = { kind: ag.vt, tenant: ag.tenant, unit: ag.unit, size: ag.size, climate: ag.climate, keen: ag.keen, ad: ag.ad };
+    for (const id of s.gateAccess?.gateIds || []) {
+      if (id === ag.gateId || gateStatus(s, id) !== 'operating') continue;
+      const g = s.objects[id], c = gateConnection(s, id);
+      if (!g || g.type !== 'gate' || g.cstate !== 'operating' || c?.kind !== 'front-street' || c.boundary !== 'front') continue;
+      const approach = this.idx(g.x, p.y1 + 1), inside = this.idx(g.x, p.y1);
+      const path = this.bfs([start], (n) => n === approach, (n) => this.vehNbr(n, id));
+      if (!path || !this.vehicleReachForGate(id)[inside] || !this.gateCanServeVisit(id, visit)) continue;
+      rows.push({ id, path, n: path.length });
+    }
+    rows.sort((a, b) => (a.n - b.n) || (a.id - b.id));
+    return rows[0] || null;
+  }
+  reassignFailedQueuedGate(ag, veh, gate) {
+    const s = this.s;
+    if (ag.st !== 'gateq' || ag.gateRerouted || gateStatus(s, gate.id) !== 'failed' || gateServing(s, gate.id) === ag.id) return false;
+    if (!gateQueue(s, gate.id).includes(ag.id)) return false;
+    const alt = this.queuedGateAlternate(ag, veh); if (!alt) return false;
+    removeGateAgent(s, gate.id, ag.id);
+    ag.gateId = alt.id; ag.gateRerouted = true; ag.gateT = 0; ag.gateFail = false; ag.gateCalled = false; ag.buzzed = false;
+    enqueueGate(s, alt.id, ag.id);
+    this.setVehPath(veh, alt.path); veh.moving = true; ag.st = 'gateroute';
+    return true;
+  }
   isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }
 
   money(amt, cat, note) {
@@ -2314,10 +2340,17 @@ export class Sim {
         if (this.moveVeh(veh, VS)) { veh.moving = false; ag.st = 'gateq'; enqueueGate(s, ag.gateId, ag.id); }
         break;
       }
+      case 'gateroute': {
+        const gate = s.objects[ag.gateId];
+        if (!gate || gate.type !== 'gate') { removeGateAgent(s, ag.gateId, ag.id); ag.failed = true; this.depart(ag); break; }
+        if (this.moveVeh(veh, VS)) { veh.moving = false; ag.st = 'gateq'; }
+        break;
+      }
       case 'gateq': {
         const gate = s.objects[ag.gateId]; ag.exp.gate++;
         if (!gate || gate.type !== 'gate') { ag.failed = true; this.depart(ag); break; }
         const q = gateQueue(s, gate.id); let qi = q.indexOf(ag.id);
+        if (qi >= 0 && this.reassignFailedQueuedGate(ag, veh, gate)) break;
         if (qi < 0) { enqueueGate(s, gate.id, ag.id); qi = q.indexOf(ag.id); }
         // queue position on the street behind the apron
         if (qi > 0) { const tx = gate.x + 0.5 + (veh.hx < 0 ? 0 : 0), ty = p.y1 + 1.5 + Math.min(qi, 1) * 1.0; veh.x += (tx + (qi > 1 ? (qi - 1) * 2.4 * (veh.hx < 0 ? 1 : -1) : 0) - veh.x) * 0.2; veh.y += (ty - veh.y) * 0.2; if (qi >= 2 && ag.exp.gate === 20) this.thought(ag, 'Gate line is backing up.', 'bad'); break; }

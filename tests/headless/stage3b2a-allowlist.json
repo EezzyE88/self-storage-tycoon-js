@@ -1,0 +1,19 @@
+{
+  "base_commit": "c98b91673ce855a556c9c790ec86de98bd62a469",
+  "files": {
+    "js/sim.js": {
+      "parent_sha256": "85905282c5bbb552dbdc7a1580b59a0c1addada92baf62c91b6df38b650411b4",
+      "current_sha256": "fbe3ffb1d352e51142ae4cf28638ccc8d96dbc42fba0ffa0815a8919c2b19c1c",
+      "hunks": [
+        {
+          "before": "  isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }\n",
+          "after": "  queuedGateAlternate(ag, veh) {\n    const s = this.s, p = s.parcel, start = this.idx(Math.floor(veh.x), Math.floor(veh.y)), rows = [];\n    const visit = { kind: ag.vt, tenant: ag.tenant, unit: ag.unit, size: ag.size, climate: ag.climate, keen: ag.keen, ad: ag.ad };\n    for (const id of s.gateAccess?.gateIds || []) {\n      if (id === ag.gateId || gateStatus(s, id) !== 'operating') continue;\n      const g = s.objects[id], c = gateConnection(s, id);\n      if (!g || g.type !== 'gate' || g.cstate !== 'operating' || c?.kind !== 'front-street' || c.boundary !== 'front') continue;\n      const approach = this.idx(g.x, p.y1 + 1), inside = this.idx(g.x, p.y1);\n      const path = this.bfs([start], (n) => n === approach, (n) => this.vehNbr(n, id));\n      if (!path || !this.vehicleReachForGate(id)[inside] || !this.gateCanServeVisit(id, visit)) continue;\n      rows.push({ id, path, n: path.length });\n    }\n    rows.sort((a, b) => (a.n - b.n) || (a.id - b.id));\n    return rows[0] || null;\n  }\n  reassignFailedQueuedGate(ag, veh, gate) {\n    const s = this.s;\n    if (ag.st !== 'gateq' || ag.gateRerouted || gateStatus(s, gate.id) !== 'failed' || gateServing(s, gate.id) === ag.id) return false;\n    if (!gateQueue(s, gate.id).includes(ag.id)) return false;\n    const alt = this.queuedGateAlternate(ag, veh); if (!alt) return false;\n    removeGateAgent(s, gate.id, ag.id);\n    ag.gateId = alt.id; ag.gateRerouted = true; ag.gateT = 0; ag.gateFail = false; ag.gateCalled = false; ag.buzzed = false;\n    enqueueGate(s, alt.id, ag.id);\n    this.setVehPath(veh, alt.path); veh.moving = true; ag.st = 'gateroute';\n    return true;\n  }\n  isDaylight() { const h = this.hour; return h >= 6.5 && h < 19; }\n"
+        },
+        {
+          "before": "      case 'gateq': {\n        const gate = s.objects[ag.gateId]; ag.exp.gate++;\n        if (!gate || gate.type !== 'gate') { ag.failed = true; this.depart(ag); break; }\n        const q = gateQueue(s, gate.id); let qi = q.indexOf(ag.id);\n",
+          "after": "      case 'gateroute': {\n        const gate = s.objects[ag.gateId];\n        if (!gate || gate.type !== 'gate') { removeGateAgent(s, ag.gateId, ag.id); ag.failed = true; this.depart(ag); break; }\n        if (this.moveVeh(veh, VS)) { veh.moving = false; ag.st = 'gateq'; }\n        break;\n      }\n      case 'gateq': {\n        const gate = s.objects[ag.gateId]; ag.exp.gate++;\n        if (!gate || gate.type !== 'gate') { ag.failed = true; this.depart(ag); break; }\n        const q = gateQueue(s, gate.id); let qi = q.indexOf(ag.id);\n        if (qi >= 0 && this.reassignFailedQueuedGate(ag, veh, gate)) break;\n"
+        }
+      ]
+    }
+  }
+}
