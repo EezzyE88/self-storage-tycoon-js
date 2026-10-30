@@ -1,3 +1,5 @@
+import {runHistorical} from './historical_gate_contract.mjs';
+await runHistorical('tgate_stage2a','a30d1465ca1d501cb7f54f3687d0db836081feae');
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {makeMaple} from '../../js/maple.js';
@@ -42,9 +44,9 @@ await test('gate state classifies pending, failed and operating without changing
  g.cstate='construction';assert.equal(gateStatus(sim.s,g),'pending');g.cstate='operating';g.cond=.1;assert.equal(gateStatus(sim.s,g),'failed');g.cond=1;g.unpowered=true;assert.equal(gateStatus(sim.s,g),'failed');delete g.unpowered;assert.equal(gateStatus(sim.s,g),'operating');
 });
 
-await test('ordinary play still refuses a second player-built gate',()=>{
+await test('current second-gate preview permits placement without registration',()=>{
  const sim=makeMaple(),g=sim.objs('gate')[0],p=sim.s.parcel;
- const R=sim.plan({tool:'gate',a:{x:g.x+4,y:p.y1},b:{x:g.x+4,y:p.y1},f:0});assert.equal(R.status,'invalid');assert.match(R.reasons.join(' '),/one gate|already has/i);assert.deepEqual(sim.s.gateAccess.gateIds,[g.id]);
+ const before=JSON.stringify(sim.s);const R=sim.plan({tool:'gate',a:{x:g.x+4,y:p.y1},b:{x:g.x+4,y:p.y1},f:0});assert.notEqual(R.status,'invalid');assert.equal(JSON.stringify(sim.s),before,'preview leaves complete state unchanged');assert.deepEqual(sim.s.gateAccess.gateIds,[g.id]);
 });
 
 // Real main.js raw/compressed codecs + prepareLoad path, without touching browser storage.

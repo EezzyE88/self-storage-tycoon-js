@@ -1205,7 +1205,10 @@
       },
       {
         "id": "tkeypad_cancel_ui",
-        "command": ["@node", "tests/headless/tkeypad_cancel_ui.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tkeypad_cancel_ui.mjs"
+        ],
         "completion": "ALL PASS: 8 keypad cancellation UI groups",
         "minimum_pass_lines": 8,
         "timeout": 60,
@@ -1213,7 +1216,10 @@
       },
       {
         "id": "tunfinished_demolition",
-        "command": ["@node", "tests/headless/tunfinished_demolition.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tunfinished_demolition.mjs"
+        ],
         "completion": "ALL PASS: 11 unfinished-demolition groups",
         "minimum_pass_lines": 11,
         "timeout": 60,
@@ -1221,7 +1227,10 @@
       },
       {
         "id": "tplaceable_contract",
-        "command": ["@node", "tests/headless/tplaceable_contract.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tplaceable_contract.mjs"
+        ],
         "completion": "6\\ placeable\\ Stage\\ 1\\ contract\\ groups\\ passed",
         "minimum_pass_lines": 6,
         "timeout": 180,
@@ -1230,16 +1239,29 @@
       },
       {
         "id": "tgate_stage2a",
-        "command": ["@node", "tests/headless/tgate_stage2a.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tgate_stage2a.mjs"
+        ],
         "completion": "8\\ gate\\ Stage\\ 2A\\ migration/state-integrity\\ groups\\ passed",
-        "minimum_pass_lines": 8,
+        "minimum_pass_lines": 16,
         "timeout": 180,
         "evidence": "native production migration/save state with disposable legacy and new-format raw/compressed fixtures; no rendered-device claim",
-        "scope": "single-gate identity/collection/connection metadata, authoritative queue/trip state, legacy/new-format save reload, deterministic continuation, no duplication, second-gate refusal"
+        "scope": "single-gate identity/collection/connection metadata, authoritative queue/trip state, legacy/new-format save reload, deterministic continuation, no duplication, second-gate refusal",
+        "required_objects": [
+          "a30d1465ca1d501cb7f54f3687d0db836081feae"
+        ],
+        "required_files": [
+          "tests/headless/historical_gate_contract.mjs",
+          "tests/headless/tgate_stage2a_historical.mjs"
+        ]
       },
       {
         "id": "tgate_stage3a",
-        "command": ["@node", "tests/headless/tgate_stage3a.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tgate_stage3a.mjs"
+        ],
         "completion": "11\\ gate\\ Stage\\ 3A\\ route-selection\\ groups\\ passed",
         "minimum_pass_lines": 11,
         "timeout": 180,
@@ -1248,16 +1270,29 @@
       },
       {
         "id": "tgate_stage3b1",
-        "command": ["@node", "tests/headless/tgate_stage3b1.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tgate_stage3b1.mjs"
+        ],
         "completion": "6\\ gate\\ Stage\\ 3B-1\\ lifecycle-isolation\\ groups\\ passed",
-        "minimum_pass_lines": 6,
+        "minimum_pass_lines": 12,
         "timeout": 180,
         "evidence": "native production customer/gate lifecycle with disposable synthetic two-gate fixtures and real raw/compressed save codecs; no normal-save, live-reroute, player-placement or rendered-device claim",
-        "scope": "retained gateId authority, independent queue/service/opening state, failure isolation, missing-gate no-primary-fallback, in-flight save reload, one-gate preservation"
+        "scope": "retained gateId authority, independent queue/service/opening state, failure isolation, missing-gate no-primary-fallback, in-flight save reload, one-gate preservation",
+        "required_objects": [
+          "c98b91673ce855a556c9c790ec86de98bd62a469"
+        ],
+        "required_files": [
+          "tests/headless/historical_gate_contract.mjs",
+          "tests/headless/tgate_stage3b1_historical.mjs"
+        ]
       },
       {
         "id": "tgate_stage3b2a",
-        "command": ["@node", "tests/headless/tgate_stage3b2a.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tgate_stage3b2a.mjs"
+        ],
         "completion": "11\\ gate\\ Stage\\ 3B-2A\\ pre-service\\ reroute\\ groups\\ passed",
         "minimum_pass_lines": 11,
         "timeout": 180,
@@ -1266,17 +1301,23 @@
       },
       {
         "id": "tgate_stage4a",
-        "command": ["@node", "tests/headless/tgate_stage4a.mjs"],
+        "command": [
+          "@node",
+          "tests/headless/tgate_stage4a.mjs"
+        ],
         "completion": "5\\ gate\\ Stage\\ 4A\\ player-build\\ groups\\ passed",
         "minimum_pass_lines": 5,
         "timeout": 180,
         "evidence": "native player-build planning/commit, routing/reroute and production save codecs with disposable fixtures; rendered phone and physical Safari qualification separate",
-        "scope": "second-gate preview/purity, frontage/corner/overlap/third-gate rejection, exact cost/timing, Pause, registration/completion, two-gate routing, queued failure reroute, Save→reload→Continue"
+        "scope": "second-gate preview/purity, frontage/corner/overlap/third-gate rejection, exact cost/timing, Pause, registration/completion, two-gate routing, queued failure reroute, Save\u2192reload\u2192Continue"
       },
       {
         "id": "tgate_removal",
-        "command": ["@node", "tests/headless/tgate_removal.mjs"],
-        "completion": "12 focused gate-removal groups passed",
+        "command": [
+          "@node",
+          "tests/headless/tgate_removal.mjs"
+        ],
+        "completion": "12 focused gate-removal groups passed; native/disposable UI, physical-iPhone verification pending",
         "minimum_pass_lines": 12,
         "timeout": 180,
         "evidence": "native production access/removal, save codecs and disposable UI; rendered phone and physical Safari qualification separate",

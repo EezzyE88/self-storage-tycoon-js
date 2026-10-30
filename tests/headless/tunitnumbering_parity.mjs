@@ -32,12 +32,25 @@ function comparable(v){
  if(v&&typeof v==='object')return Object.fromEntries(Object.entries(v).filter(([k])=>!['unitNumbering','unitRoles','unitNo','unitNumber','num'].includes(k)).map(([k,x])=>[k,comparable(x)]));
  return v;
 }
+// Independent complete expected schema for the exact single-gate legacy fixtures.
+function expectedLegacyGateMigration(raw){
+ const e=copy(raw), gates=Object.values(e.objects).filter(o=>o.type==='gate');
+ assert.equal(gates.length,1);const g=gates[0];assert.equal(g.y,e.parcel.y1);
+ const q=e.gateQ;assert.ok(Array.isArray(q));assert.equal(new Set(q).size,q.length);
+ for(const id of q)assert.ok(e.agents.some(a=>a.id===id));
+ const serving=g.serving??null;if(serving!==null)assert.ok(q.includes(serving));
+ const legacy=Object.hasOwn(e,'gateQ')||Object.hasOwn(g,'serving');
+ for(const a of e.agents)if(a.kind==='cust'&&a.veh){assert.equal(a.gateId,undefined);a.gateId=g.id;}
+ delete e.gateQ;delete g.serving;
+ e.gateAccess={v:1,gateIds:[g.id],connections:{[g.id]:{gateId:g.id,kind:'front-street',boundary:'front',x:g.x,y:g.y,outside:{x:g.x,y:g.y+1}}},queues:{[g.id]:q},serving:{[g.id]:serving},migration:{legacy,issues:[]}};
+ return e;
+}
 function migrate(raw,label,days){
  const untouched=JSON.stringify(raw);
  const direct=new Sim(copy(raw));
  // Independent reference: established original numbering migration, then current load.
  const viaNumbering=new Sim(copy(new NumberedSim(copy(raw)).s));
- assert.deepEqual(comparable(direct.s),comparable(raw),label+' loading preserves legacy gameplay');
+ assert.deepEqual(comparable(direct.s),comparable(expectedLegacyGateMigration(raw)),label+' loading preserves legacy gameplay');
  assert.deepEqual(direct.s,viaNumbering.s,label+' direct/two-stage migration exact state');
  // JSON saves omit undefined object properties; compare their complete serialized representation.
  let reloaded=new Sim(copy(direct.s));assert.deepEqual(copy(reloaded.s),copy(direct.s),label+' load is idempotent');

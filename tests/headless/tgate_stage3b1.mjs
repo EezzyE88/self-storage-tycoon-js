@@ -1,3 +1,5 @@
+import {runHistorical} from './historical_gate_contract.mjs';
+await runHistorical('tgate_stage3b1','c98b91673ce855a556c9c790ec86de98bd62a469');
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {makeMaple} from '../../js/maple.js';
@@ -16,7 +18,7 @@ await test('each gate opens from only its own serving/sensor lifecycle',()=>{con
 
 await test('two gate queues and serving slots are consumed independently',()=>{const sim=fixture(),g1=sim.objs('gate')[0],g2=addGate(sim,34),a1=gateqAgent(sim,g1),a2=gateqAgent(sim,g2);assert.deepEqual(gateQueue(sim.s,g1.id),[a1.id]);assert.deepEqual(gateQueue(sim.s,g2.id),[a2.id]);sim.updateCustomer(a1);a1.gateT=1;sim.updateCustomer(a1);assert.equal(gateQueue(sim.s,g1.id).includes(a1.id),false);assert.equal(gateQueue(sim.s,g2.id).includes(a2.id),true);assert.equal(gateServing(sim.s,g2.id),null);sim.updateCustomer(a2);a2.gateT=1;sim.updateCustomer(a2);assert.equal(gateQueue(sim.s,g2.id).includes(a2.id),false);});
 
-await test('failed retained gate cannot consume or stall healthy gate service',()=>{const sim=fixture(),g1=sim.objs('gate')[0],g2=addGate(sim,34);g1.cond=.1;const bad=gateqAgent(sim,g1),good=gateqAgent(sim,g2);sim.updateCustomer(bad);bad.gateT=1;bad.gateFail=true;sim.updateCustomer(good);good.gateT=1;sim.updateCustomer(good);assert.equal(gateQueue(sim.s,g2.id).includes(good.id),false);assert.equal(gateQueue(sim.s,g1.id).includes(bad.id),true);sim.updateCustomer(bad);assert.equal(bad.gateCalled,true);assert.equal(gateQueue(sim.s,g2.id).length,0);});
+await test('failed retained gate with incompatible alternate cannot consume or stall healthy gate service',()=>{const sim=fixture(),g1=sim.objs('gate')[0],g2=addGate(sim,34);g1.cond=.1;const bad=gateqAgent(sim,g1),good=gateqAgent(sim,g2);const canServe=sim.gateCanServeVisit.bind(sim);sim.gateCanServeVisit=(id,v)=>id===g2.id&&v.kind==='shopper'?false:canServe(id,v);sim.updateCustomer(bad);bad.gateT=1;bad.gateFail=true;sim.updateCustomer(good);good.gateT=1;sim.updateCustomer(good);assert.equal(gateQueue(sim.s,g2.id).includes(good.id),false);assert.equal(gateQueue(sim.s,g1.id).includes(bad.id),true);sim.updateCustomer(bad);assert.equal(bad.gateCalled,true);assert.equal(gateQueue(sim.s,g2.id).length,0);});
 
 
 await test('missing retained gate never falls back into the primary gate lifecycle',()=>{const sim=fixture(),g1=sim.objs('gate')[0],g2=addGate(sim,34),a=gateqAgent(sim,g2);const primaryQ=[...gateQueue(sim.s,g1.id)],primaryServing=gateServing(sim.s,g1.id);delete sim.s.objects[g2.id];sim.markDirty();sim.rebuild();sim.updateCustomer(a);assert.equal(a.failed,true);assert.deepEqual(gateQueue(sim.s,g1.id),primaryQ);assert.equal(gateServing(sim.s,g1.id),primaryServing);});
