@@ -1,29 +1,45 @@
 # Project overview and finish target
 
-Reconciled October 25, 2026, America/Los_Angeles. Exact source and evidence: [CURRENT-STATUS.md](CURRENT-STATUS.md).
+Reconciled October 30, 2026, America/Los_Angeles. Exact identities, evidence and open findings: [current status](CURRENT-STATUS.md). This is orientation, not release or acceptance authority.
 
 ## Goal
 
-A satisfying self-storage ownership game for iPhone Safari. The property is the game board: build useful capacity, operate it, understand economics and grow through deliberate investments with visible payoff. Meaningful choices and useful delegation should replace repetitive interruptions and empty waiting. Manual Pause, 1x, 2x and 4x remain essential.
+A satisfying self-storage ownership game for iPhone Safari. The property is the game board: build useful capacity, operate it, understand economics and grow through deliberate investments with visible payoff. Meaningful choices and useful delegation should replace repetitive interruptions and empty waiting. Manual Pause, 1x, 2x and 4x remain essential. Automatic eligible-unit readiness/opening is separate from the player's decision to open a property.
 
 ## Existing foundation
 
-The JavaScript/Three.js game includes scenarios and Sandbox, construction and four-way placement, three playable floors, leasing and bills, finance/reserves and investment guidance, staff and Owner work capacity, restoration, career/portfolio systems and local save/Continue/recovery. Open House work improved the existing foundation. Scoped earlier iPhone acceptances remain valid for the states and builds actually tested; they do not certify every successor.
+The JavaScript/Three.js project includes scenarios and Sandbox, construction and four-way placement, multi-floor facilities, leasing/billing, finance/reserves and investment guidance, staff and Owner work, restoration, career/portfolio systems and local save/Continue/recovery. Earlier scoped evidence remains valid only for its named source and tested states. This records update does not freshly certify every subsystem or floor configuration.
 
-## Latest integrated candidate work
+## Current integrated work
 
-Exact 137909c follows the Office panel, waiting-count repair and entrance-route preview repair. It requires review and explicit confirmation for expansion loans and bank-conversation draws using existing financial terms and commands. Runtime source remains exact while Office planning/docs are reconciled. Proposals for priorities, observable delegation and new authority controls remain unimplemented.
+Development is 284d45a9e80db30b5db69d2694c2dbb7c7ec8284, including the bounded multi-gate foundation, two player-built front gates, direct Growth details selection, truthful closed/open-property unit notifications, first-expansion rent-ready wording and removal-only gate management. [Integration summary](INTEGRATION-SUMMARY.md) records the recent ancestry and distinguishes original local commits from equivalent GitHub preservation commits.
 
-## Current priority
+Gate removal now uses the existing $100 quote, exact target/revalidation, counterfactual access checks and active-trip/last-access safeguards. Safe empty closed-property redesign is supported. This is not all-placeables lifecycle completion: gate movement, upgrades and administrative closure remain separate. Optional unit lighting/security, Office and financial-review work remain in the foundation; planning proposals do not become implemented features by appearing here.
 
-Finish the already-authorized source integration responsibly. The required native gate is red (67 PASS, 10 FAIL, 18 ERROR); master merge is held pending triage. Preserve earlier scoped passes, inspect complete captured output and repair confirmed issues without retuning economics or weakening tests. Claude's ongoing browser work and public-host access diagnosis remain separate; neither is a completed acceptance result.
+## Remaining roadmap
 
-## Product evidence and limits
+| Stage / area | Bounded status |
+| --- | --- |
+| Safety/shared operations and gate identity | Representative exact-target foundation and legacy migration implemented with scoped evidence |
+| Routing and player placement | Bounded multi-gate routing/queues/failure handling and two functional front gates implemented; broader Stage 4 incomplete |
+| Gate lifecycle | Removal-only stage integrated; movement/upgrades/administrative closure remain separate |
+| Broader placeables | Attachments, surfaces, services and office/building management packages remain; inspect existing inventory and specify each operation first |
+| Integrated qualification | Wider integrated feature validation, device performance, accessibility, novice comprehension and long-term balance remain; no full roadmap PASS |
 
-Eddie enjoys building/expanding and visible payoff while extended waiting drags. Preserve that completed feedback; documentation changes do not justify repeating the whole playtest. Annual collaborator reports apply to their older named source, with later repairs considered separately. Avoid inventing a new economics rule, mandatory hire or arbitrary Office upgrade to manufacture progress.
+The [October 28 implementation brief](https://chatgpt.com/library?file_id=libfile_36f7082525f081919c3b405983b9841a&account_id=personal) and [repair plan](https://chatgpt.com/library?file_id=libfile_8f3017534d988191bc85d7cf19afa89a&account_id=personal) retain original requirements, unresolved design details and exclusions. They are not blanket work authorization. Side/rear public roads, arbitrary player gate counts and staff commuting are not delivered by gate removal. Older request/guidance/camera/gesture findings need current reproduction before implementation claims.
 
-Sustained dense-yard device performance, broad accessibility, novice comprehension and long-term balance still require evidence. Office layout/touch review remains open. Coastal is rejected; the stylized comparison and PR #2 are unaccepted/excluded. Do not restart parked visual experiments as part of this cleanup.
+## Current priority and evidence limits
+
+Finish records reconciliation before choosing another feature. Separate header-name loss on single-property reload and stale build identification are confirmed findings, not gate-removal repairs. The earlier unexplained $100 observation remains PARKED; do not investigate unless it recurs or Eddie requests it.
+
+The focused gate-removal iPhone playtest passed its reported observations, including surviving-gate traffic and paused reload. Paving retention and immediate post-removal/message-dismissal Pause were not explicitly confirmed physically; native/fixture checks cover them. 65 scoped native groups passed; six additional transaction behavior groups passed before an inherited source-identity guard failed on both parent and candidate. The full current gate is not qualified as passing. Independent full served-byte and signed-out-access checks remain unverified. [Current status](CURRENT-STATUS.md) carries the full qualification.
+
+## Product evidence and exclusions
+
+Eddie enjoys building/expanding and visible payoff while extended waiting drags. Preserve that feedback without repeating the whole playtest for documentation. No new economics rule, mandatory hire or arbitrary Office upgrade is implied. Office, sustained dense-yard device performance and broad usability checks retain their source-specific limits; no blanket completion is asserted. Coastal remains rejected; the stylized comparison and draft PR #2 remain unaccepted/excluded. Deferred flood, rival, insurance, auction and expansion goals are neither resumed nor erased.
 
 ## Finish target
 
-A clear beginning, understandable operating choices, comfortable placement/navigation, trustworthy finance/Pause/saves, visible work and investment benefit, stable sustained iPhone play and a satisfying reason to return. No launch date, completion percentage or blanket release certification is established.
+A clear beginning, understandable operating choices, comfortable placement/navigation, trustworthy finance/Pause/saves, visible work and investment benefit, stable sustained iPhone play and a satisfying reason to return. No launch date, completion percentage, $59.99 readiness or blanket release certification is established.
+
+Prior overview preserved [verbatim](history/before-records-reconciliation-20261030/PROJECT-OVERVIEW.md). Current local records successor is not pushed/integrated; runtime, master, deployment and acceptance remain unchanged.

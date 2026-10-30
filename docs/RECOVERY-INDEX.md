@@ -1,49 +1,54 @@
 # Recovery and evidence index
 
-October 25, 2026, America/Los_Angeles. Current truth: [CURRENT-STATUS.md](CURRENT-STATUS.md). Source recovery does not recover Eddie's normal company saves.
+Reconciled October 30, 2026, America/Los_Angeles. [Current status](CURRENT-STATUS.md), [overview](PROJECT-OVERVIEW.md), [integration summary](INTEGRATION-SUMMARY.md). Source recovery does not recover Eddie's normal browser company saves.
 
-## Latest exact identities
+## Current exact source
 
-| Item | Identity / recovery |
+| Item | Identity |
 | --- | --- |
-| Master before held integration | ee39e0986718ce33fb84018a2c108249f793e3f8; reverify live |
-| Exact borrowing source | 137909c1fe88b90d14af725854672d87c2ec2acd |
-| Borrowing parent | d84fb59171152e670a5d3d2940830310fd7cc1d9 |
-| Waiting-count repair | 84fe72cb645941465e369cff57715fe38b2f8294 |
-| Documentation checkpoint retained | fef20fca0405d6f20dfd2bab05e41c5e4160acee |
-| Original repair history | [Incremental Git bundle](checkpoints/20261025-borrowing/borrowing-repairs-exact.bundle), prerequisite b7092e08d89fcd882c5d2d82db6ac1eb7631af42 |
-| Original failed native gate | [Complete assessed evidence archive](checkpoints/20261025-borrowing/native-gate-evidence.tar.gz), 67 PASS / 10 FAIL / 18 ERROR |
-| Integration inventory | [INVENTORY.json](checkpoints/20261025-borrowing/INVENTORY.json) |
+| Last verified development and candidate/gate-removal-20261030 | 284d45a9e80db30b5db69d2694c2dbb7c7ec8284 |
+| Game tree | c3fc1085b496c3b78bc495fadaaacbd3f27d4008 |
+| Sole parent | fff6294f6abc7c1ed9f3a2dd791e42b7b00ed478 |
+| Original local candidate | 7bc8ab265448c81822745258569864b7d4fbb50e; same tree/parent, different metadata |
+| Master, unchanged | d03bbcdb7245f379512b0c13041b004742133d83 |
 
-In a separate clone containing b7092e0, verify the incremental bundle, then fetch its advertised refs/heads/candidate/borrowing-review-20261025 into a new recovery branch. Confirm original SHA, parent and tree before use. Connector integration has a separate Git identity; the bundle preserves the originals without recreating them.
+The documentation-only successor containing this page is local and not pushed/integrated. Its complete recovery receipt is supplied separately with the candidate rather than attempting to embed a commit's own final SHA into itself. No original recovery material is overwritten.
 
-## Consolidated successor and gate evidence
+## Current gate recovery and test material
 
-| Item | Identity / evidence |
+[Gate-removal complete recovery and evidence ZIP](https://chatgpt.com/library?file_id=libfile_73fd56d878688191ab0cc488ffdddade&account_id=personal) contains the original local 7bc8ab2 commit, full history bundle, diff, fixture and raw evidence. Complete bundle SHA256: 4466c7e9ba505dc3b6e189a157630b6f794ac71f6a66b4379cd8555f2b7c2e47. It was cloned into an empty directory, fsck/identities/clean state verified and focused 12 groups rerun. No prerequisite bundle is needed. Its original NOT PUSHED/NOT INTEGRATED labels record creation-time state, not the subsequent GitHub preservation/integration.
+
+After extracting, clone the original with `git clone --branch candidate/gate-removal-20261030 SST_Gate_Removal_COMPLETE.bundle recovered`. Verify HEAD 7bc8ab265448c81822745258569864b7d4fbb50e, tree and parent above. Run `node tests/headless/tgate_removal.mjs` from the recovered root for its focused checks. GitHub 284d45a is separately recoverable from the repository's candidate/development history; verify exact objects before use. Bundle recovery is not gameplay qualification or proof of collaborator accessibility.
+
+[Disposable .sst test save](https://chatgpt.com/library?file_id=libfile_69248ecff4e081918226dd1c72993b7f&account_id=personal): generated Maple-based property, open, two working gates, starts paused at 3:54 PM with $55,500 and an active trip at Gate #85. Load through the game's reviewed file-import path; export the current game first for an independent backup. The normal import keeps current/previous games according to existing storage capability and its confirmation disclosures. The assistant did not access normal saves. The fixture uses production save codecs; it is not natural progression evidence.
+
+Physical-iPhone observations and corrections are recorded in CURRENT-STATUS. Gate reviews: [IMG_4072](https://chatgpt.com/library?file_id=libfile_b03a2395e48c8191a15ba496d839353a&account_id=personal), [IMG_4073](https://chatgpt.com/library?file_id=libfile_e380f1643f8c819185c5d060dd392707&account_id=personal). Surviving-gate trip: [IMG_4074](https://chatgpt.com/library?file_id=libfile_62a3ba11ca38819198527daef8896488&account_id=personal), [IMG_4075](https://chatgpt.com/library?file_id=libfile_8a83dbe4fa108191a75cb380684f685f&account_id=personal).
+
+## Earlier original candidates and governing records
+
+| Record | Retained artifact |
 | --- | --- |
-| Passing assessed source | 0d5dd499ffa6edd720d6e8d7cc4ee5460ee1395c |
-| Assessed tree | c6c2bf295bb9fa0599c44fc4c2a5697bdd410d05 |
-| Local evidence successor before records refresh | 1778a2ae304d0710dcf33e9cc2bab09ddd760293; same game/test bytes |
-| Full native PASS | [95/95 report, logs and hashes](qa/rejected-payback-cutoff-20261025/REVIEW.md) |
-| Previous consolidated failure | [e8e29e7: 94 PASS / 1 FAIL](qa/full-gate-e8e29e7-20261025/REVIEW.md) |
-| Payback diagnosis | [Exact b89d711 / 6e278d6 comparison](qa/payback-pair-20261025/REVIEW.md) |
-| Historical/current migration and yard correction | [Results and retained attempts](qa/yard-numbering-20261025/REVIEW.md) |
-| Earlier focused repairs | qa/cpu-renderer-loader-20261025/, qa/performance-fixture-20261025/, qa/floor-context-baseline-20261025/, qa/menu-borrowing-review-20261025/, qa/floor-price-expectations-20261025/, qa/commissioning-b6-20261025/ |
-| Current integration explanation | [INTEGRATION-SUMMARY.md](INTEGRATION-SUMMARY.md) |
-| Prior orientation bytes | [Archived records](history/before-native-pass-records-20261025/) |
+| Growth original 22c4873, equivalent GitHub 0dd93cb | [Complete recovery and evidence](https://chatgpt.com/library?file_id=libfile_fd45d68371b48191b93a70cde1195dd3&account_id=personal) |
+| Opening notification original 5c4e303, equivalent GitHub f5c88fa | [Complete recovery and evidence](https://chatgpt.com/library?file_id=libfile_17f17d95e6b08191ba0e0e477358ff90&account_id=personal) |
+| Milestone copy original 2c6980f, equivalent GitHub fff6294 | [Complete recovery and evidence](https://chatgpt.com/library?file_id=libfile_acc5657f3ddc8191b75609fbf99983bb&account_id=personal) |
+| Original Stage 4A evidence | [Historical evidence](https://chatgpt.com/library?file_id=libfile_5b210e7e45a08191ba3c456f8f1a3025&account_id=personal); incremental bundle requires 739a0efa94d5e48608ba8e5db990350b1fa028e2, not standalone recovery |
+| Governing runtime | [SST Project Runtime v3 revision 4](https://chatgpt.com/library?file_id=libfile_874372c370748191bfd3dd51d4a2d630&account_id=personal), unchanged |
+| October 28 placeables/gates plan | [Implementation brief](https://chatgpt.com/library?file_id=libfile_36f7082525f081919c3b405983b9841a&account_id=personal), planning authority only within separately authorized scope |
+| October 28 repair plan | [Consolidated plan](https://chatgpt.com/library?file_id=libfile_8f3017534d988191bc85d7cf19afa89a&account_id=personal), historical findings/limits retained |
+| Reconciled orientation source | [October 30 checkpoint](https://chatgpt.com/library?file_id=libfile_7d75140818b8819185f0e2ac3d049720&account_id=personal), not a replacement runtime |
 
-The older incremental borrowing bundle recovers original 137909c/repair ancestry only; it does not include later native-test corrections or the passing successor. Those currently live in the local consolidated Git history and have not been pushed. Preserve that history; do not claim the remote c229683 contains these repairs. Last session remote master/integration identities are recorded in CURRENT-STATUS; reverify before use. No new portable history bundle is created by this documentation-only update.
+## Hosting recovery is separate from game source
 
-Native PASS does not resolve rendered browser/Safari acceptance, the retained anonymous 403, exact anonymous served-source verification or Claude/Perplexity access. Historical package-integrity cautions below remain applicable.
+Current temporary Site saved version 4: appgprj_6ae44d18da6881918e415a2d6cfdbf18~appgver_6932b776b7088191a1ee116f9e4b4962; hosting commit 01d661960583aabbab0800945008fbb6e0dfdbf1; deployed game 284d45a. Previous version 3 retained: appgprj_6ae44d18da6881918e415a2d6cfdbf18~appgver_af1f58644ad881918d384d2687753391; hosting ccfb761b37741207d78d5454c24787d2cc0f0746; game f5c88fa. Restoring/publishing a hosted version is a separately authorized operation. No rollback or redeployment occurred here.
 
-## Earlier preserved checkpoints
+## Historical evidence remains intact
 
-Original Office 17f49f9d677931460e39ac18aff0db356ae49e45, parent d6abaa382c5f495203e6efab6eaacf416e84c301, has identical complete tree e01001568901f3554163e5d5919ff9a678a629d2 to GitHub snapshot b7092e0. The original [Office bundle](checkpoints/20261024-sync/SST_Office_17f49f9.bundle) and [October 24 inventory](checkpoints/20261024-sync/INVENTORY.json) are unchanged. Protected V62 0385af259c35058da69ed7d6cbb29e2ab7619abb, solid-build 2096ef6bcae9ddf4d2dc5b71c40e2beb5e21429d and historical V60 original/snapshot relationships remain historical evidence; do not reset or rewrite them.
+The four immediately preceding orientation files are preserved byte-for-byte under [before-records-reconciliation-20261030](history/before-records-reconciliation-20261030/). Their original relative links refer to the docs-root context. The [prior recovery index](history/before-records-reconciliation-20261030/RECOVERY-INDEX.md) retains the exact Office/borrowing identity mappings, incremental prerequisites, original failure/passing checkpoints and package cautions. They are historical records, not fresh remote verification. Older history folders and QA files remain untouched.
 
-Complete older orientation/recovery records are retained under history/before-borrowing-sync-20261025/ and history/before-project-sync-20261024/. The Office brainstorm and one-page brief remain intact under design/office/. Original adopted runtime documents and their historical transcripts were not edited.
+Useful original docs-root paths remain: [Office inventory](checkpoints/20261024-sync/INVENTORY.json), [borrowing inventory](checkpoints/20261025-borrowing/INVENTORY.json), [historical 95/95 evidence](qa/rejected-payback-cutoff-20261025/REVIEW.md), [94/1 failure](qa/full-gate-e8e29e7-20261025/REVIEW.md), [payback comparison](qa/payback-pair-20261025/REVIEW.md), [migration/yard evidence](qa/yard-numbering-20261025/REVIEW.md).
 
-## Package caution
+The older incremental borrowing bundle requires b7092e08d89fcd882c5d2d82db6ac1eb7631af42 and covers only its advertised older history. It is not a recovery package for current development. The historical large borrowing ZIP had a receipt/stored-size mismatch and failed ZIP validation; do not certify it or silently replace it. Claude's reported recovery does not establish delivery of independently checked artifacts. The [verified small Grok package](https://chatgpt.com/library?file_id=libfile_d9e987e31d5c819187f7d79d8c994729&account_id=personal) is scoped runtime/evidence, not complete history or access proof.
 
-The large borrowing ZIP stored copy differs in size from its original receipt and the matching local copy fails ZIP validation. Preserve that evidence; do not certify the archive or silently replace it. Claude reported restoring missing files from its Git bundle; completed recovered artifacts/results have not been supplied. The verified [small Grok package](https://chatgpt.com/library?file_id=libfile_d9e987e31d5c819187f7d79d8c994729&account_id=personal) retains exact runtime, parent comparison and scoped evidence; it is not full history or proof of external access.
+## Qualification carried forward
 
-All prior QA records remain unchanged. Both failed whole-gate checkpoints and subsequent passing results remain separately dated. Current public Site metadata, native checks, browser rendering, physical Safari, owner acceptance and master merge are distinct statuses. No normal saves were accessed.
+65 scoped native groups passed; six additional transaction behavior groups passed before an inherited source-identity guard failure on both parent/candidate. Full transaction suite/current registered gate NOT PASS. Phone fixtures used stub rendering/audio and no persistence adapter. Focused iPhone PASS applies to reported checks; paving retention and Pause immediately after removal/message dismissal were not explicitly confirmed physically, though paused reload was. Independent full served-byte and signed-out-access checks remain unverified. No broad performance, interruption/force-kill, full-release or acceptance claim. Header-name and stale-label findings remain open, separately. The unexplained earlier $100 observation remains PARKED, not diagnosed by the existing removal charge.
