@@ -36,7 +36,7 @@ ui.schedulePlacementFrame();frame();ui.schedulePlacementFrame();assert.equal(fra
 ui.schedulePlacementFrame(true);frame();assert.equal(frames,2);
 ui.plan.args.b.x=3;ui.pointerBusy=true;ui.schedulePlacementFrame();frame();assert.equal(frames,2);
 ui.pointerBusy=false;ui.schedulePlacementFrame();frame();assert.equal(frames,3);
-console.log('PASS review framing is once per plan, explicit resize/details request, and deferred past active pointer gestures');
+console.log('PASS explicit review framing is once per plan, forceable, and deferred past active pointer gestures');
 
 // Both modal timings matter: already open at request, or opened before queued work runs.
 for(const opensAfterQueue of [false,true]) {
@@ -45,7 +45,7 @@ for(const opensAfterQueue of [false,true]) {
   const u=Object.create(UI.prototype);u.root={querySelector:()=>null};u.title=false;u.tool='du5x10';
   u.plan={args:{a:{x:1,y:1},b:{x:1,y:12},f:0}};u.modalOpen=()=>modal;
   u.framePlacementReview=()=>{fits++;return true};
-  // Resize may arrive after this same placement already fitted before the modal opened.
+  // An explicit request may arrive after this placement already fitted before the modal opened.
   if(!opensAfterQueue) u.placementFrameKey=JSON.stringify([u.tool,u.plan.args]);
   u.schedulePlacementFrame(true);
   if(opensAfterQueue){assert.ok(queued);modal=true;queued();}
@@ -85,14 +85,14 @@ console.log('PASS final bounds detect zoom-floor and pan-limit obstruction, pres
       rect({width:180,height:48,bottom:105}),rect({width:150,height:92,bottom:157}),
       ...(selector.includes('.viewextra')?[rect(expanded?{width:150,height:60,bottom:219}:{width:0,height:0,bottom:0})]:[])],
     querySelector:()=>null};
-  u.schedulePlacementFrame=force=>{assert.equal(force,true);reframes++};
+  u.schedulePlacementFrame=()=>reframes++;
   u.syncControlLayout();assert.equal(values.get('--controls-bottom'),'227px');
-  assert.equal(values.get('--review-top'),'227px');assert.equal(reframes,1);
-  u.syncControlLayout();assert.equal(reframes,1,'unchanged measured controls never force recurring correction');
+  assert.equal(values.get('--review-top'),'227px');assert.equal(reframes,0);
+  u.syncControlLayout();assert.equal(reframes,0,'unchanged measured controls preserve the camera');
   expanded=false;u.syncControlLayout();assert.equal(values.get('--controls-bottom'),'165px');
-  assert.equal(values.get('--review-top'),'165px');assert.equal(reframes,2,'closing controls refreshes the usable region');
+  assert.equal(values.get('--review-top'),'165px');assert.equal(reframes,0,'closing controls refreshes layout without framing');
 }
-console.log('PASS visible expanded controls reserve their true extent; open/close reframes once and stable layout does not');
+console.log('PASS visible expanded controls reserve their true extent; open/close and stable layout never request framing');
 
 {
   let queued,attempts=0;

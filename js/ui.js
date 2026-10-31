@@ -163,7 +163,7 @@ export class UI {
     }, true);
     this.root.addEventListener('pointercancel',()=>{sw=null;},true);
     this.root.addEventListener('input', (e) => this.onInput(e));
-    window.addEventListener('resize', () => { this.syncControlLayout(); this.schedulePlacementFrame(true); });
+    window.addEventListener('resize', () => this.syncControlLayout());
     if (typeof ResizeObserver !== 'undefined') {
       this.controlLayoutObserver = new ResizeObserver(() => this.syncControlLayout());
       for (const el of this.root.querySelectorAll('.hud, #speed, .viewctl, .viewextra')) this.controlLayoutObserver.observe(el);
@@ -171,12 +171,8 @@ export class UI {
     this.root.addEventListener('toggle', e => {
       if (e.target.closest?.('#abar')) {
         this.revealBuildTerms(e.target);
-        this.schedulePlacementFrame(true);
       }
     }, true);
-    this.root.addEventListener('animationend', e => {
-      if (e.target.matches?.('.actionbar')) this.schedulePlacementFrame(true);
-    });
     this.syncControlLayout();
     this.showTitle();
   }
@@ -1178,10 +1174,9 @@ export class UI {
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
       ${this.tool==='demolish'?'<button class="btn" data-a="cancelTool">Cancel review</button>':''}
       <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
-    this.schedulePlacementFrame();
   }
 
-  // Frame review once per placement/change, never continuously against a player's pan.
+  // Explicit framing helper; ordinary review/layout updates preserve the player's camera.
   schedulePlacementFrame(force = false) {
     if (typeof requestAnimationFrame !== 'function' || !this.root?.querySelector ||
         !this.tool || !this.plan || this.buildPlacing || this.title) return;
@@ -1245,15 +1240,13 @@ export class UI {
       const r=el.getBoundingClientRect(); if(r.width&&r.height) bottom=Math.max(bottom,r.bottom);
     }
     const value=Math.ceil(bottom+8)+'px';
-    let changed=this.root.style.getPropertyValue('--controls-bottom')!==value;
-    if(changed) this.root.style.setProperty('--controls-bottom',value);
+    if(this.root.style.getPropertyValue('--controls-bottom')!==value) this.root.style.setProperty('--controls-bottom',value);
     const card=this.root.querySelector('#tut > .tut');
     const cr=card?.getBoundingClientRect();
     const reviewTop=Math.ceil(cr?.width && cr.height && cr.top < innerHeight/2 ? Math.max(bottom+8,cr.bottom+8) : bottom+8)+'px';
     if(this.root.style.getPropertyValue('--review-top')!==reviewTop) {
-      this.root.style.setProperty('--review-top',reviewTop); changed=true;
+      this.root.style.setProperty('--review-top',reviewTop);
     }
-    if(changed) this.schedulePlacementFrame(true);
   }
 
   // ------------------------------------------------------------ INSPECTOR
@@ -2554,7 +2547,7 @@ export class UI {
     if (now - this.lastSheet > 400) { this.lastSheet = now; if (!this.pointerBusy && !this.menuTouch && now >= (this.menuScrollUntil || 0)) this.renderSheet(); this.renderFeed(); this.renderTut(); if (this.tool && this.plan && s.structV !== this.planV) { this.planV = s.structV; this.replan(); } }
     if (now - (this.lastTutR || 0) > 150) { this.lastTutR = now; this.syncOrientation(); this.renderTut(); if (this.floorsOpen) this.refreshFloors(); }
     if (now - (this.lastCoach || 0) > 450) { this.lastCoach = now; this.slowHud(); this.renderCoach(); this.computePins(); }
-    this.syncControlLayout(); this.schedulePlacementFrame();
+    this.syncControlLayout();
     this.updateBubbles(); this.updatePins(); this.frameStep(); this.updateGuide(); this.updateBlueprint();
   }
   setMeta(name, mode) {
