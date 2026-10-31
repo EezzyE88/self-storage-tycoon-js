@@ -459,7 +459,7 @@ game.startupReady = (async () => {
 })();
 
 // ---------------------------------------------------------------- input
-const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null; let lastMapTap = null; let mapTapTimer = null;
+const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null; let lastMapTap = null; let mapTapTimer = null; let releaseGuard = null;
 const BUILD_HOLD_MS = 240;
 const DOUBLE_TAP_MS = 320, DOUBLE_TAP_PX = 28;
 const cancelMapTap = () => { if (mapTapTimer) clearTimeout(mapTapTimer); mapTapTimer = null; lastMapTap = null; };
@@ -492,7 +492,13 @@ const mapTap = (e) => {
   }, DOUBLE_TAP_MS);
 };
 // A UI interaction breaks the map gesture sequence; the listener never intercepts controls.
-document.addEventListener('pointerdown', e => { if (e.target !== canvas) cancelMapTap(); }, { capture: true, passive: true });
+document.addEventListener('pointerdown', e => { releaseGuard = null; if (e.target !== canvas) cancelMapTap(); }, { capture: true, passive: true });
+window.addEventListener('click', (e) => {
+  const g = releaseGuard; if (!g) return;
+  if (stamp(e) - g.t <= 1000 && Math.hypot(e.clientX - g.x, e.clientY - g.y) <= DOUBLE_TAP_PX) {
+    e.preventDefault(); e.stopPropagation(); releaseGuard = null;
+  }
+}, { capture: true, passive: false });
 const cancelBuildHold = () => { if (buildHold) clearTimeout(buildHold); buildHold = null; };
 canvas.addEventListener('pointerdown', (e) => {
   game.audio.unlock(); canvas.setPointerCapture(e.pointerId);
@@ -541,6 +547,10 @@ function up(e) {
   const cancelled = e.type === 'pointercancel' || e.type === 'lostpointercapture';
   if (cancelled) cancelMapTap();
   const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
+  if (!cancelled && e.type === 'pointerup' && drag && drag.pointerId === e.pointerId && drag.holdArmed && drag.mode === 'build') {
+    const g = { t: stamp(e), x: e.clientX, y: e.clientY }; releaseGuard = g;
+    setTimeout(() => { if (releaseGuard === g) releaseGuard = null; }, 1000);
+  }
   if (ptrs.size === 0) { game.ui.pointerBusy = false; if (cancelled) game.ui.cancelPlacement(); else game.ui.finishPlacement(); }
   if (pinch) { if (ptrs.size < 2) pinch = null; cancelBuildHold(); drag = null; return; }
   // A hitch can fire the hold timer before a short tap's pointerup is handled. Judge the
