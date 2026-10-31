@@ -463,14 +463,23 @@ const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null;
 const BUILD_HOLD_MS = 240;
 const DOUBLE_TAP_MS = 320, DOUBLE_TAP_PX = 28;
 const cancelMapTap = () => { if (mapTapTimer) clearTimeout(mapTapTimer); mapTapTimer = null; lastMapTap = null; };
-const normalMap = () => !game.ui.tool && !game.ui.title && !game.ui.modalOpen();
+const mapOpen = () => !game.ui.title && !game.ui.modalOpen();
+const normalMap = () => !game.ui.tool && mapOpen();
+const stamp = (e) => Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
 const mapTap = (e) => {
-  if (!normalMap()) { cancelMapTap(); return; }
+  if (!mapOpen()) { cancelMapTap(); return; }
   const now = performance.now(), prev = lastMapTap;
   const isDouble = prev && now - prev.t <= DOUBLE_TAP_MS && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) <= DOUBLE_TAP_PX;
   if (isDouble) {
     cancelMapTap();
+    // Double-tap zooms even while a build tool is armed. It never selects or places.
     game.rend.doubleTapZoom(e.clientX, e.clientY, game.ui.safeRect());
+    return;
+  }
+  if (game.ui.tool) {
+    if (prev) clearTimeout(mapTapTimer);
+    const tap = { t: now, x: e.clientX, y: e.clientY }; lastMapTap = tap;
+    mapTapTimer = setTimeout(() => { if (lastMapTap === tap) lastMapTap = null; mapTapTimer = null; }, DOUBLE_TAP_MS);
     return;
   }
   // Delay selection until a second tap is ruled out. A double-tap never opens an inspector.
@@ -492,9 +501,9 @@ canvas.addEventListener('pointerdown', (e) => {
   if (ptrs.size >= 2) { cancelMapTap(); cancelBuildHold(); const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; drag = null; return; }
   const panBtn = e.button === 1 || e.button === 2 || e.shiftKey;
   const building = !!game.ui.tool && !panBtn;
-  if (building || panBtn || !normalMap()) cancelMapTap();
+  if (panBtn || !mapOpen()) cancelMapTap();
   const holdBuild = building && (e.pointerType === 'touch' || e.pointerType === 'pen');
-  drag = { mode: holdBuild ? 'buildPending' : building ? 'build' : 'pan', moved: false, x: e.clientX, y: e.clientY, pointerId: e.pointerId, navigation: !panBtn && !building && (e.button == null || e.button === 0) };
+  drag = { mode: holdBuild ? 'buildPending' : building ? 'build' : 'pan', moved: false, x: e.clientX, y: e.clientY, pointerId: e.pointerId, navigation: !panBtn && !building && (e.button == null || e.button === 0), downStamp: stamp(e), holdArmed: false };
   if (building && !holdBuild) game.ui.placeStart(game.rend.cellAt(e.clientX, e.clientY));
   if (holdBuild) {
     cancelBuildHold();
@@ -503,6 +512,8 @@ canvas.addEventListener('pointerdown', (e) => {
       const p = ptrs.get(e.pointerId);
       if (!p || !drag || drag.pointerId !== e.pointerId || drag.mode !== 'buildPending') return;
       drag.mode = 'build';
+      drag.holdArmed = true;
+      cancelMapTap();
       game.ui.placeStart(game.rend.cellAt(p.x0, p.y0));
       game.ui.placeMove(game.rend.cellAt(p.x, p.y));
     }, BUILD_HOLD_MS);
@@ -532,8 +543,18 @@ function up(e) {
   const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
   if (ptrs.size === 0) { game.ui.pointerBusy = false; if (cancelled) game.ui.cancelPlacement(); else game.ui.finishPlacement(); }
   if (pinch) { if (ptrs.size < 2) pinch = null; cancelBuildHold(); drag = null; return; }
+  // A hitch can fire the hold timer before a short tap's pointerup is handled. Judge the
+  // finger's real contact time, and put a tap back so double-tap can still zoom.
+  if (drag && drag.pointerId === e.pointerId && drag.holdArmed && drag.mode === 'build' && e.type === 'pointerup') {
+    if (stamp(e) - drag.downStamp < BUILD_HOLD_MS) {
+      game.ui.cancelPlacement();
+      drag.mode = 'buildPending';
+      drag.moved = false;
+      drag.holdArmed = false;
+    }
+  }
   if (drag && drag.pointerId === e.pointerId && drag.mode === 'buildPending') cancelBuildHold();
-  if (drag && drag.mode === 'pan' && drag.navigation && !drag.moved && p && e.type === 'pointerup') mapTap(e);
+  if (drag && drag.pointerId === e.pointerId && !drag.moved && e.type === 'pointerup' && ((drag.mode === 'pan' && drag.navigation) || drag.mode === 'buildPending')) mapTap(e);
   drag = null;
 }
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); canvas.addEventListener('lostpointercapture', up);
@@ -577,7 +598,7 @@ window.addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------- test hooks
 window.render_game_to_text = () => {
   const t = JSON.parse(game.sim.toText());
-  t.view = game.rend.view; t.tab = game.ui.tab; t.tool = game.ui.tool; t.plan = game.ui.plan ? { status: game.ui.plan.status, reasons: game.ui.plan.reasons, missing: game.ui.plan.missing, cost: game.ui.plan.cost } : null;
+  t.view = game.rend.view; t.tab = game.ui.tab; t.tool = game.ui.tool; t.zoom = game.rend.zoom; t.plan = game.ui.plan ? { status: game.ui.plan.status, reasons: game.ui.plan.reasons, missing: game.ui.plan.missing, cost: game.ui.plan.cost } : null;
   t.selected = game.ui.sel; t.title = game.ui.title;
   return JSON.stringify(t);
 };
