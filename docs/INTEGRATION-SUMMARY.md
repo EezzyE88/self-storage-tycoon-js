@@ -2,9 +2,9 @@
 
 ## Completed integration
 
-Master was fast-forwarded from d03bbcdb7245f379512b0c13041b004742133d83 to 4ed4a282fa9debe591fa823010be8511a6bcd816, exact tree 13f6810cf91e392457ff63b036ee51d89ba856a6, after explicit authorization and remote identity/tree/ancestry checks. Compare showed 24 ahead, zero behind, merge base equal to old master. Remote master, development and candidate/native-contracts-20261030 were verified at the target afterward. No deployment, spending or acceptance change.
+The earlier master promotion to 4ed4a282fa9debe591fa823010be8511a6bcd816 remains part of retained history. Subsequent authorized integration advanced master and development through d155a92590a938005b00c16ec52d92b812205736 to exact runtime checkpoint **1765465b6b4ec7fafbf636919da19b1ae1f944cd**, tree **74129ffa4906aad471da9398901cdaee1c1c2be0**, sole parent **d155a92590a938005b00c16ec52d92b812205736**. Immediately before this documentation-only reconciliation, both remote master and development were verified at 1765465. No deployment, spending or acceptance change accompanied those integrations.
 
-Development had first advanced from 284d45a through e81b66e → 10238f0 (documentation), then 92b5d93 → 3f417d7 → 4ed4a28 (test-only). Runtime remains identical to 284d45a. Master promotion incorporates previously reviewed financial, placeable and bounded multi-gate runtime work; see [current status](CURRENT-STATUS.md).
+d155a925 fixes single-property custom-name persistence by using the existing company save envelope whenever a company has at least one property. Older saves remain loadable; multi-property serialization is unchanged; names already absent from old bare saves cannot be reconstructed. 1765465 adds the bounded hold-to-build/double-tap repair: Build-armed short taps can participate in double-tap zoom without selecting or placing, the touch/pen hold threshold remains 240 ms, and movement over 7 px before the hold converts to pan. The player-facing guidance now matches that behavior.
 
 ## Original-to-preserved identities
 
@@ -19,29 +19,34 @@ Development had first advanced from 284d45a through e81b66e → 10238f0 (documen
 | Normalization repair | 81418a0 | 92b5d93 |
 | Showcase normalization | 0b9ae39 | 3f417d7 |
 | Native qualification contracts | a530cd3 | 4ed4a28 |
+| Single-property name persistence | — | d155a925 |
+| Hold-build/double-tap repair | — | 1765465 |
 
-Exact trees are preserved; corresponding sole-parent chains are retained. Metadata changes SHA. Original objects and evidence remain in complete recovery archives; see [index](RECOVERY-INDEX.md).
+Exact historical trees and corresponding parent chains remain retained. Original objects and evidence remain in complete recovery archives; see [index](RECOVERY-INDEX.md).
 
 ## Verification and qualification
 
-The registered CURRENT native gate ran once on original a530cd3fc6e28692e21a29d8b5991270eae8601f, exact tree 13f6810cf91e392457ff63b036ee51d89ba856a6: **114/114 PASS**, zero failures/errors/blocked/timeouts/not-run. GitHub equivalent 4ed4a282fa9debe591fa823010be8511a6bcd816 has the identical tree and sole parent 3f417d717de2b6056048acc90aea52875bf167db; metadata changed the commit SHA. No test rerun was needed solely for metadata replacement.
+The registered CURRENT native gate ran once on original a530cd3fc6e28692e21a29d8b5991270eae8601f, exact tree 13f6810cf91e392457ff63b036ee51d89ba856a6: **114/114 PASS**, zero failures/errors/blocked/timeouts/not-run. GitHub equivalent 4ed4a282fa9debe591fa823010be8511a6bcd816 has the identical tree and sole parent 3f417d717de2b6056048acc90aea52875bf167db. That result is retained as exact-tree parent qualification and is not relabeled as a run on d155a925 or 1765465.
 
-All 15 immutable dependencies and required fixtures passed fail-fast preflight. Original historical stage assertions remain byte-for-byte required alongside current-game migration, placement, routing and removal coverage. Complete-state comparisons and strict completion requirements remain. No failure was waived and no gameplay was changed to satisfy tests.
+d155a925 records **80 focused native groups PASS**: name 8, paused autosave 14, durable checkpoint 17, production-autosave recovery 15, transaction safety 8, financial context 14 and preservation chain 4. Its own record explicitly says no full registered gate was rerun and the 114/114 evidence remains parent-only.
 
-The earlier run on 81418a0 remains **108 PASS / 4 FAIL / 1 ERROR / 1 BLOCKED**, with subsequent review-space and recovered floor-context focused passes recorded separately. The later 114/114 run supersedes that qualification blocker; it does not erase or relabel the earlier failed rows. Original older 67/10/18, 94/1 and 95/95 checkpoints remain historical, not current results.
+1765465 records **13/13 focused gesture checks PASS**. Bounded rendered touch at **375×667** and **390×844**, DPR 2, confirmed: double-tap zooms while Build is armed without creating a plan/order, quick drag pans without creating a plan/order, and hold produces the placement plan with Confirm. Cash stayed $60,000. Earlier contacts lasting 340 ms and 508 ms correctly crossed the 240 ms hold threshold; a second tap handled 694 ms after the first correctly stayed outside the 320 ms double-tap window and did not place.
 
-Native results are not new rendered-browser, physical Safari, intended-font, VoiceOver, enjoyment, force-kill or broad device-performance certification. Retained physical-iPhone PASS covers reported gate blocking/cancellation, one $100 charge, fence closure, surviving-gate traffic and Save/reload/Continue with cash, gate removal and Pause retained. Paving retention and Pause immediately after removal/message dismissal were not explicitly confirmed physically; native/fixture evidence covers them. Earlier phone fixtures used stub renderer/audio, locator clicks and no persistence adapter. Independent full served-asset comparison and signed-out access remain unverified. Unfamiliar-player comprehension/enjoyment and broader beta/release acceptance remain incomplete and unchanged.
+The earlier run on 81418a0 remains **108 PASS / 4 FAIL / 1 ERROR / 1 BLOCKED**, with subsequent focused passes recorded separately. Original older 67/10/18, 94/1 and 95/95 checkpoints remain historical. No failure was waived or silently relabeled.
+
+These results are not broad physical-Safari, intended-font, VoiceOver, enjoyment, force-kill or broad device-performance certification. The new phone-size evidence is bounded rendered touch, not a physical-iPhone claim. Independent full served-asset comparison and signed-out access remain unverified. Unfamiliar-player comprehension/enjoyment and broader beta/release acceptance remain incomplete and unchanged.
 
 ## Deployment and remaining work
 
-[Existing temporary Stage 4A playtest](https://sst-stage4a-47473de-playtest.rainy-ash-3714.chatgpt.site) remains at the last retained deployment: version 4, game source 284d45a9e80db30b5db69d2694c2dbb7c7ec8284, hosting commit 01d661960583aabbab0800945008fbb6e0dfdbf1. Master promotion did not deploy anything. Runtime is unchanged between that game source and the promoted checkpoint; intervening changes are documentation/test-only. The Site does not contain the later repository documentation/tests.
+[Existing temporary Stage 4A playtest](https://sst-stage4a-47473de-playtest.rainy-ash-3714.chatgpt.site) remains at the last retained deployment: version 4, game source 284d45a9e80db30b5db69d2694c2dbb7c7ec8284, hosting commit 01d661960583aabbab0800945008fbb6e0dfdbf1. No deployment followed d155a925 or 1765465. The Site therefore does not contain the current integrated runtime.
 
-Project appgprj_6ae44d18da6881918e415a2d6cfdbf18; saved version appgprj_6ae44d18da6881918e415a2d6cfdbf18~appgver_6932b776b7088191a1ee116f9e4b4962; deployment appgdep_6ae4972625e48191b87d349d9a545fb7. Stored archive sha256:eff694f1bf9b42ce0b3237c2fdaa5b4eefa1f95df8d58454e400ddd301e58a6d. Prior versions retained, URL/origin/public audience unchanged. All 53 packaged runtime files were matched to immutable source and served source-proof was observed; full independent served-asset verification remains limited. No new Site query or gameplay run was performed for these records. Normal saves were not accessed.
+Project appgprj_6ae44d18da6881918e415a2d6cfdbf18; saved version appgprj_6ae44d18da6881918e415a2d6cfdbf18~appgver_6932b776b7088191a1ee116f9e4b4962; deployment appgdep_6ae4972625e48191b87d349d9a545fb7. Stored archive sha256:eff694f1bf9b42ce0b3237c2fdaa5b4eefa1f95df8d58454e400ddd301e58a6d. Prior versions retained, URL/origin/public audience unchanged. No new Site query or gameplay run was performed for this records reconciliation. Normal saves were not accessed.
 
 | Finding | Current boundary |
 | --- | --- |
-| Single-property custom header name lost after Continue | Confirmed separate finding; existing bare-state save path omits company name. Unrepaired; any fix needs compatible save roundtrips. |
+| Single-property custom header name lost after Continue | **FIXED in d155a925 and integrated through 1765465.** Older saves remain loadable; names already absent from old bare saves cannot be reconstructed. |
+| Build-armed double-tap previously failed to zoom | **FIXED in 1765465 and integrated.** 13/13 focused gesture checks PASS plus bounded 375×667 / 390×844 rendered touch PASS. |
 | Stale v62-career-camera-clearance-20261023 build label | Confirmed hardcoded label, not exact commit proof. Unrepaired; packaging/source identity design remains separate. |
 | Earlier unexplained $100 difference | PARKED by Eddie, cause unconfirmed. Investigate only if it recurs or Eddie requests. Gate-removal fee is unrelated. |
 
-Master integration is complete, not broad release acceptance. No fresh native/browser test was run for this documentation-only successor. Prior summaries, original borrowing/payback decisions and failed rows remain in historical snapshots/QA. No historical assertion or qualification was silently removed. See the [previous summary](history/before-master-promotion-records-20261030/docs/INTEGRATION-SUMMARY.md) for the detailed gate-removal integration history and earlier links.
+Runtime integration through 1765465 is complete, not broad release acceptance. Historical borrowing/payback decisions, prior failures and original qualification evidence remain intact. See the [previous summary](history/before-master-promotion-records-20261030/docs/INTEGRATION-SUMMARY.md) for earlier integration history.
