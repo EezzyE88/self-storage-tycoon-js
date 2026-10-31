@@ -8,9 +8,11 @@ A satisfying iPhone Safari self-storage ownership game: build useful capacity, u
 
 ## Current checkpoint
 
-Master and development were verified at 4ed4a282fa9debe591fa823010be8511a6bcd816, tree 13f6810cf91e392457ff63b036ee51d89ba856a6, after authorized master fast-forward. The complete registered current native gate passed 114/114 on the exact tree. Runtime is identical to gate-removal source 284d45a; intervening work corrected documentation and test qualification. Integration is complete; broader beta/release acceptance remains HOLD.
+Exact integrated runtime checkpoint: **1765465b6b4ec7fafbf636919da19b1ae1f944cd**, tree **74129ffa4906aad471da9398901cdaee1c1c2be0**, sole parent **d155a92590a938005b00c16ec52d92b812205736**. Immediately before this documentation-only reconciliation, master and development were verified together at that source.
 
-The foundation includes scenarios/Sandbox, construction/four-way placement, multi-floor facilities, leasing/billing, finance/reserves/investment guidance, staff/Owner work, restoration, career/portfolio and local save/Continue/recovery. Newer integrated work includes reviewed finance, representative placeable safety, bounded gate migration/routing/failure handling, two front gates and removal-only management, Growth direct details and truthful readiness notifications. This is not blanket certification of every subsystem.
+Qualification is intentionally proportional and source-specific. The older complete registered native gate passed **114/114** on tree **13f6810cf91e392457ff63b036ee51d89ba856a6** and remains historical parent qualification, not a run on the current runtime. d155a925 has **80 focused native groups PASS** for the single-property custom-name save repair and preserved save/transaction behavior. 1765465 has **13/13 focused gesture checks PASS** plus bounded rendered touch PASS at **375×667** and **390×844** for hold-to-place, double-tap zoom without placement and quick-drag pan. Integration is complete; broader beta/release acceptance remains HOLD.
+
+The foundation includes scenarios/Sandbox, construction/four-way placement, multi-floor facilities, leasing/billing, finance/reserves/investment guidance, staff/Owner work, restoration, career/portfolio and local save/Continue/recovery. Newer integrated work includes reviewed finance, representative placeable safety, bounded gate migration/routing/failure handling, two front gates and removal-only management, Growth direct details, truthful readiness notifications, single-property custom-name persistence, and the corrected Build-armed hold/double-tap/pan interaction model. This is not blanket certification of every subsystem.
 
 ## Remaining roadmap and decision
 
@@ -18,12 +20,12 @@ The foundation includes scenarios/Sandbox, construction/four-way placement, mult
 | --- | --- |
 | Gate lifecycle | Movement, upgrades and administrative closure remain separate |
 | Broader placeables | Attachments, surfaces, services and office/building packages require bounded inventories/design decisions |
-| Phone usability | Older gestures, camera, guidance and request findings retain original status; reproduce selectively before repairs |
+| Phone usability | The hold-to-build/double-tap conflict is fixed; other older camera, guidance, overlay and request findings retain their own source-specific status |
 | Product qualification | Integrated device/accessibility, novice comprehension/enjoyment, sustained performance and long-term balance remain |
 
-Confirmed header-name loss and stale build-label findings are separate next-task candidates, not newly fixed. The $100 observation stays parked. Next work should be one bounded task selected from these findings or the retained roadmap, not another rerun of settled native checks. No next feature or deployment is authorized by this record.
+The single-property custom-name loss is no longer an open defect; it is fixed in d155a925 and integrated through 1765465, with the limitation that names already absent from old bare saves cannot be reconstructed. The stale build-label finding remains open. The $100 observation stays parked. Next work should be one bounded task selected from the retained roadmap or still-open findings, not another rerun of settled gesture/save checks. No next feature or deployment is authorized by this record.
 
-Native results are not new rendered-browser, physical Safari, intended-font, VoiceOver, enjoyment, force-kill or broad device-performance certification. Retained physical-iPhone PASS covers reported gate blocking/cancellation, one $100 charge, fence closure, surviving-gate traffic and Save/reload/Continue with cash, gate removal and Pause retained. Paving retention and Pause immediately after removal/message dismissal were not explicitly confirmed physically; native/fixture evidence covers them. Earlier phone fixtures used stub renderer/audio, locator clicks and no persistence adapter. Independent full served-asset comparison and signed-out access remain unverified. Unfamiliar-player comprehension/enjoyment and broader beta/release acceptance remain incomplete and unchanged.
+Current evidence is not broad physical-Safari, intended-font, VoiceOver, enjoyment, force-kill or broad device-performance certification. The new 375×667 / 390×844 evidence is bounded rendered touch, not a physical-iPhone claim. Independent full served-asset comparison and signed-out access remain unverified. Unfamiliar-player comprehension/enjoyment and broader beta/release acceptance remain incomplete and unchanged.
 
 ## Finish target and exclusions
 
