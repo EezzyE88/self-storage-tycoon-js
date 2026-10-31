@@ -40,6 +40,16 @@ for(const [width,height] of [[375,667],[390,844]]) {
   u.placeStart({x:13,y:8});assert.equal(u.buildPlacing,true);assert.equal(u.plan.count,1);
   assert.notEqual(u.plan.status,'invalid');u.finishPlacement();
   assert.match(u.$('abar').innerHTML,/data-a="confirm"/);
+  assert.match(u.$('abar').innerHTML,/actionbar unit-review/);
+  assert.match(u.$('abar').innerHTML,/<details class="build-details unit-options" >/,'options start collapsed');
+  assert.match(u.$('abar').innerHTML,/aria-label="Stop building"/);
+  assert.match(u.$('abar').innerHTML,/Cash after build:.*Committed bills.*reserve.*Available after bills.*Added costs:/s,'financial consequences retained');
+  assert.match(u.$('abar').innerHTML,/Will build, but not earn yet/,'missing infrastructure warning retained');
+  u.$('abar').querySelector=()=>({});
+  u.renderActionBar();
+  assert.match(u.$('abar').innerHTML,/<details class="build-details unit-options" open>/,'open options survive requote rendering');
+  delete u.$('abar').querySelector;
+
   u.update(0);flush();
   const review=snapshot();assert.deepEqual(review,before,'ordinary review never changes camera');
   assert.equal(JSON.stringify(sim.s),state,'preview and UI update preserve simulation state');
