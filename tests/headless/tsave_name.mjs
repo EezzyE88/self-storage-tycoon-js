@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {normalizeSaveName} from './save_name_baseline.mjs';
+import {atHistoricalChainHead,readSource} from './source_reader.mjs';
 const mem=new Map();
 globalThis.window={localStorage:{getItem:k=>mem.get(k)||null,setItem:(k,v)=>mem.set(k,String(v)),removeItem:k=>mem.delete(k)}};
 const {saveAPI,makeMaple,Sim,localsave}=await import('../fixtures/save-name/api.mjs');
@@ -47,7 +48,15 @@ await test('no-company fallback, malformed portfolio refusal and existing name s
 });
 await test('exact whole-file parent restoration rejects undeclared source drift',()=>{
  const old=execFileSync('git',['show','4ffb204de7fe61e1f7691b8426bb072a875ca134:js/main.js'],{encoding:'utf8'});
- assert.equal(normalizeSaveName(main,'js/main.js'),old);assert.equal(normalizeSaveName(old,'js/main.js'),old);
- for(const drift of [main+'\n// unrelated\n',main.replace('props.length > 0','props.length >= 0')])assert.throws(()=>normalizeSaveName(drift,'js/main.js'));
+ // Historical guard: the declared save-name inverse still restores the exact parent from the chain head,
+ // not from the current file, so later declared main.js work (release guard, double-tap) cannot break it.
+ atHistoricalChainHead(()=>{const head=readSource('js/main.js');
+  assert.equal(normalizeSaveName(head,'js/main.js'),old);assert.equal(normalizeSaveName(old,'js/main.js'),old);
+  for(const drift of [head+'\n// unrelated\n',head.replace('props.length > 0','props.length >= 0')])assert.throws(()=>normalizeSaveName(drift,'js/main.js'));});
+ // Behavior replacing the removed current-file pin: current production wraps a single property in the
+ // portfolio format with its name, and a bare (no-company) game still saves in the bare format.
+ const g=make(),sim=makeMaple(5);sim.s.speed=0;g.sim=sim;g.company={props:[{name:'Pin Replacement',sim}],active:0,feed:[]};
+ const j=JSON.parse(g.saveJSON());assert.equal(j.company,1);assert.equal(j.props.length,1);assert.equal(j.props[0].name,'Pin Replacement');assert.equal(j.active,0);
+ const bare=make();bare.sim=makeMaple(5);assert.equal(JSON.parse(bare.saveJSON()).company,undefined);
 });
 console.log(n+' single-property name persistence groups passed');

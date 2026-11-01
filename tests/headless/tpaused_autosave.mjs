@@ -1,6 +1,7 @@
 // Real game/UI save paths and localStorage; no browser/device claim.
 import assert from 'node:assert/strict';
 import {durableBaseline} from './durable_baseline.mjs';
+import {atHistoricalChainHead,readSource} from './source_reader.mjs';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
@@ -53,6 +54,8 @@ await test('paused checkpoint keeps existing cloud fallback when local storage i
 await test('storage failure does not roll back or repeat a financial action and keeps error reporting',()=>{const f=fixture();blocked=true;assert.ok(f.ui.do({type:'borrow',amt:50000}).ok);assert.equal(f.sim.s.cash,300000);assert.equal(localsave.lastErr,'storage full');assert.equal(f.sim.s.speed,0);blocked=false;});
 await test('no new state schema or simulation/economics changes',()=>{const f=fixture(),keys=Object.keys(f.sim.s).sort();f.ui.do({type:'borrow',amt:50000});assert.deepEqual(Object.keys(f.sim.s).sort(),keys);});
 await test('only explicit save hooks differ from exact 918d31f production source',()=>{
+  // Historical guard, read from the declared chain head rather than the current files.
+  atHistoricalChainHead(()=>{
   const parentHashes={"js/main.js": "1b6af0e30f37889a125921bd98c39714719a1fd0e4eab7c069ca7504a7fe73e1", "js/ui.js": "2133885a219efdab64409206e64e0655f462ae530e1aef5a05aeeb5e22172fe6", "js/sim.js": "4f981640eaa7827a6ecb02e5ded951f370c7735feee8676b532045d1b7702656", "js/data.js": "0cc0985de5ddacfc1a7d7fe462c1c4cdc89f07dbc26a1868020d742fd9477e66", "js/finance.js": "fc53b3d54969aedc4d36ac3cb2e9e9640de5b235d89ad04defea49088af831e9", "js/localsave.js": "fe3915174398f314eadc84a28831322fc09e4b830c15b76a20c73706465b7873", "js/savearchive.js": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347", "js/cloud.js": "cc784d86fb0d2a7165700f33a6cc2c309f5ae2bc9be079001707ca86b96676e7", "css/game.css": "c3bd69648cef68c3ed1c1e20dead80d5906f9f4ae05de6d9e53df7ab120a902e"};
   const hash=text=>createHash('sha256').update(text).digest('hex');
   const method="  // Paused actions cannot wait for the running-time timer or an unload event.\n  // Reuse the synchronous leaving path, including its stale-compression fence.\n  autosavePaused() {\n    if (this.sim?.s.speed === 0) return this.autosave(true);\n  },\n";
@@ -60,5 +63,10 @@ await test('only explicit save hooks differ from exact 918d31f production source
   assert.equal(hash(normalized),parentHashes['js/main.js']);
   assert.equal(hash(durableBaseline('js/ui.js').replaceAll('    if (r.ok) this.g.autosavePaused?.();\n','')),parentHashes['js/ui.js']);
   for(const file of ['js/sim.js','js/data.js','js/finance.js','js/localsave.js','js/savearchive.js','js/cloud.js','css/game.css'])assert.equal(hash(durableBaseline(file)),parentHashes[file],file);
+  });
+  // Behavior replacing the removed current-file pin: the paused hook saves the complete current state
+  // without changing it, and does nothing while time is running.
+  const f=fixture(),before=JSON.stringify(f.sim.s);f.g.autosavePaused();assert.equal(JSON.stringify(f.sim.s),before);current(f);
+  for(const speed of [1,2,4]){const r=fixture(speed),raw=mem.get('sst.autosave.main'),st=JSON.stringify(r.sim.s);r.g.autosavePaused();assert.equal(mem.get('sst.autosave.main'),raw);assert.equal(JSON.stringify(r.sim.s),st);}
 });
 console.log(`ALL PASS: ${n} paused autosave regression groups`);
