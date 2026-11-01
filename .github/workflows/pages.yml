@@ -1,5 +1,6 @@
 # Deploy the game to GitHub Pages from master, stamped with the exact deployed commit.
 # The title screen then shows "Build <short sha>" on https://eezzye88.github.io/self-storage-tycoon-js/
+# The current native regression gate must pass on the exact commit before anything is deployed.
 # Requires Settings -> Pages -> Source: "GitHub Actions". Public repository: standard runners are free.
 name: Deploy to GitHub Pages
 
@@ -10,17 +11,41 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the gate reads exact historical commits
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Current regression gate (exact commit)
+        run: |
+          set -o pipefail
+          python3 tests/headless/run_current_regressions.py --profile current --output "$RUNNER_TEMP/sst-current-qa" 2>&1 | tail -40
+      - name: Gate summary
+        if: always()
+        run: cat "$RUNNER_TEMP/sst-current-qa/SUMMARY.txt" || true
+
   deploy:
+    needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -28,7 +53,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Build stamped site
         run: |
           node tools/build-pages-site.mjs "$GITHUB_SHA" _site

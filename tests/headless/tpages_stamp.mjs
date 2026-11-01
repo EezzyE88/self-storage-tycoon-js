@@ -64,5 +64,11 @@ try{
 const wf=readFileSync('.github/workflows/pages.yml','utf8');
 assert.match(wf,/node tools\/build-pages-site\.mjs "\$GITHUB_SHA" _site/);assert.match(wf,/branches: \[master\]/);assert.match(wf,/path: _site/);assert.doesNotMatch(wf,/pull_request/);
 pass('workflow deploys master only, stamping $GITHUB_SHA');
+const gate=wf.slice(wf.indexOf('\n  gate:'),wf.indexOf('\n  deploy:')),deploy=wf.slice(wf.indexOf('\n  deploy:'));
+assert.ok(gate.length>20&&deploy.length>20,'gate and deploy jobs present');assert.match(deploy,/\n    needs: gate\n/);
+assert.match(gate,/fetch-depth: 0/);assert.match(gate,/run_current_regressions\.py --profile current/);assert.match(gate,/set -o pipefail/);
+assert.doesNotMatch(gate,/continue-on-error|pages: write|deploy-pages/);assert.match(deploy,/deploy-pages/);
+assert.ok(wf.indexOf('run_current_regressions')<wf.indexOf('build-pages-site'),'gate runs before the site is built');
+pass('deploy needs the current gate on full history; gate cannot be skipped or deploy');
 groups++;
 console.log(`${groups} pages stamp groups passed`);
