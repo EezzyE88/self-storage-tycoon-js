@@ -555,7 +555,7 @@ function up(e) {
     }
   }
   // A completed touch/pen hold that left a review open arms the one-click release guard.
-  if (!cancelled && e.type === 'pointerup' && (e.pointerType === 'touch' || e.pointerType === 'pen') && drag && drag.pointerId === e.pointerId && drag.holdArmed && drag.mode === 'build' && game.ui.tool && game.ui.plan && !game.ui.buildPlacing) game.releaseGuard?.arm(e.clientX, e.clientY);
+  if (!cancelled && e.type === 'pointerup' && (e.pointerType === 'touch' || e.pointerType === 'pen') && drag && drag.pointerId === e.pointerId && drag.holdArmed && drag.mode === 'build' && game.ui.tool && game.ui.plan && !game.ui.buildPlacing) game.releaseGuard?.arm(e.clientX, e.clientY, e.pointerId, e.pointerType);
   if (drag && drag.pointerId === e.pointerId && drag.mode === 'buildPending') cancelBuildHold();
   if (drag && drag.pointerId === e.pointerId && !drag.moved && e.type === 'pointerup' && ((drag.mode === 'pan' && drag.navigation) || drag.mode === 'buildPending')) mapTap(e);
   drag = null;
@@ -563,7 +563,9 @@ function up(e) {
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); canvas.addEventListener('lostpointercapture', up);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 // Swallow only the browser's click from the hold release that opened a review (see releaseguard.js).
-game.releaseGuard = createReleaseGuard({ now: () => performance.now(), isReviewTarget: (t) => !!(t && t.closest && t.closest('#abar .unit-review')) });
+game.releaseGuard = createReleaseGuard({ now: () => performance.now(), isReviewTarget: (t) => !!(t && t.closest && t.closest('#abar .unit-review')), isReviewOpen: () => !!document.querySelector('#abar .unit-review') });
+// Closing the review (Confirm, Stop building, cancel, tool change) disarms explicitly.
+{ const abar = document.getElementById('abar'); if (abar) new MutationObserver(() => { if (!abar.querySelector('.unit-review')) game.releaseGuard.clear(); }).observe(abar, { childList: true, subtree: true }); }
 for (const ev of ['pointerdown', 'keydown', 'pointercancel']) window.addEventListener(ev, () => game.releaseGuard.clear(), { capture: true, passive: true });
 window.addEventListener('blur', (e) => { if (e.target === window) game.releaseGuard.clear(); }, { capture: true, passive: true });
 document.addEventListener('visibilitychange', () => game.releaseGuard.clear());

@@ -5,12 +5,17 @@
 // click disarms the guard without swallowing.
 export const RELEASE_GUARD_MS = 700, RELEASE_GUARD_PX = 28;
 
-export function createReleaseGuard({ now, isReviewTarget, ms = RELEASE_GUARD_MS, px = RELEASE_GUARD_PX }) {
+export function createReleaseGuard({ now, isReviewTarget, isReviewOpen, ms = RELEASE_GUARD_MS, px = RELEASE_GUARD_PX }) {
   let armed = null;
   return {
-    arm(x, y) { armed = { x, y, at: now() }; },
+    // Arms only while the rendered review sheet exists; keeps the originating pointer's identity.
+    arm(x, y, pointerId, pointerType) {
+      if (!isReviewOpen()) { armed = null; return false; }
+      armed = { pointerId, pointerType, x, y, at: now() }; return true;
+    },
     clear() { armed = null; },
     isArmed() { return !!armed; },
+    armedFrom() { return armed ? { pointerId: armed.pointerId, pointerType: armed.pointerType, x: armed.x, y: armed.y } : null; },
     // Decides the first click after arming; returns true only when it must be swallowed.
     // The guard is spent either way, so at most one click is ever considered.
     click(e) {
