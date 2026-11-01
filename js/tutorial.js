@@ -125,11 +125,12 @@ export const BEATS = [
       { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', sel: PLAY, done: (sim) => !!sim.s.milestones.first_delegated },
     ],
     check: (sim) => !!sim.s.milestones.first_delegated },
-  { id: 'grad', chapter: 'Graduation', title: 'Maple Street graduates',
-    body: 'You turned over a unit, leased it, read the money, expanded, fixed a failure and hired help. Maple Street is yours now. From here the market pushes back: seasons, competitors and reviews.',
+  // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
+  { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true,
+    body: 'You’ve taken Maple Street from a property you barely knew into one you can operate, improve and grow. You understand how customers, staff, buildings and money fit together. There is still plenty to master, but the property is yours now. <b>Maple Street is paused.</b> Take your time, look around, and start the clock when you’re ready.',
     why: 'Optional <b>lessons</b> (interior carts, security, climate, building up, collections, loans) are offered when the situation comes up, or anytime from <b>Growth &rarr; Lessons</b>. A <b>report card</b> arrives every 30 days in <b>Business</b>.',
-    steps: [{ t: 'Tap <b>Keep playing</b>', d: 'The tutorial closes and every tool is unlocked.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.grad }],
-    button: 'Keep playing', check: (sim) => sim.s.tut.flags.grad },
+    steps: [{ t: 'Tap <b>Finish tutorial</b>', d: 'The tutorial closes and every tool is unlocked. Time stays paused until you choose a speed.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.grad }],
+    button: 'Finish tutorial', check: (sim) => sim.s.tut.flags.grad },
 ];
 
 // Campaign progression is identified by stable beat ids (sim.s.tut.beatId), never by position alone.
@@ -299,16 +300,19 @@ export function unlockBeat(tool) { for (const [id, tools] of UNLOCK) if (tools.i
 export function installTutorial(sim) {
   sim.onTick = (S) => { tutorialTick(S); lessonTick(S); };
 }
+// A pausing beat (graduation) holds time at 0 from the moment it becomes current until it completes.
+function holdPause(sim) { if (sim.s.speed !== 0) { sim.s.speed = 0; sim.emit('speed', { v: 0, beat: true }); } }
 export function tutorialTick(sim) {
-  const s = sim.s; if (!s.tut.on || s.tut.done) return;
+  const s = sim.s; if (!s.tut.on || s.tut.done) { if (s.tut) { delete s.tut.beatId; delete s.tut.beatAt; } return; } // a finished or skipped tutorial carries no id
   syncTutBeat(s.tut);
   const b = BEATS[s.tut.beat]; if (!b) return;
+  if (b.pause) holdPause(sim);
   if (!s.tut.entered) { s.tut.entered = true; s.tut.enteredAt = s.t; if (b.enter) b.enter(sim); sim.emit('tut_beat', { beat: s.tut.beat }); }
   if (b.check(sim)) {
     sim.emit('tut_done', { beat: s.tut.beat });
     s.tut.beat++; s.tut.entered = false; s.tut.idMark = s.nextId;
     if (s.tut.beat >= BEATS.length) { s.tut.done = true; s.tut.on = false; s.tut.gradDay = sim.day; delete s.tut.beatId; delete s.tut.beatAt; sim.releaseHeld(); sim.milestone('graduated'); }
-    else { s.tut.beatId = BEATS[s.tut.beat].id; s.tut.beatAt = s.tut.beat; }
+    else { s.tut.beatId = BEATS[s.tut.beat].id; s.tut.beatAt = s.tut.beat; if (BEATS[s.tut.beat].pause) holdPause(sim); }
   }
 }
 
