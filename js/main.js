@@ -19,6 +19,7 @@ import { savearchive } from './savearchive.js';
 import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
 import { createStartupRenderer } from './startup.js';
+import { createReleaseGuard } from './releaseguard.js';
 
 Renderer.prototype.setSim = function (sim) {
   if (this.projectMark) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); this.projectMark = null; }
@@ -459,7 +460,7 @@ game.startupReady = (async () => {
 })();
 
 // ---------------------------------------------------------------- input
-const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null; let lastMapTap = null; let mapTapTimer = null; let releaseGuard = null;
+const ptrs = new Map(); let drag = null; let pinch = null; let buildHold = null; let lastMapTap = null; let mapTapTimer = null;
 const BUILD_HOLD_MS = 240;
 const DOUBLE_TAP_MS = 320, DOUBLE_TAP_PX = 28;
 const cancelMapTap = () => { if (mapTapTimer) clearTimeout(mapTapTimer); mapTapTimer = null; lastMapTap = null; };
@@ -492,13 +493,7 @@ const mapTap = (e) => {
   }, DOUBLE_TAP_MS);
 };
 // A UI interaction breaks the map gesture sequence; the listener never intercepts controls.
-document.addEventListener('pointerdown', e => { releaseGuard = null; if (e.target !== canvas) cancelMapTap(); }, { capture: true, passive: true });
-window.addEventListener('click', (e) => {
-  const g = releaseGuard; if (!g) return;
-  if (stamp(e) - g.t <= 1000 && Math.hypot(e.clientX - g.x, e.clientY - g.y) <= DOUBLE_TAP_PX) {
-    e.preventDefault(); e.stopPropagation(); releaseGuard = null;
-  }
-}, { capture: true, passive: false });
+document.addEventListener('pointerdown', e => { if (e.target !== canvas) cancelMapTap(); }, { capture: true, passive: true });
 const cancelBuildHold = () => { if (buildHold) clearTimeout(buildHold); buildHold = null; };
 canvas.addEventListener('pointerdown', (e) => {
   game.audio.unlock(); canvas.setPointerCapture(e.pointerId);
@@ -547,10 +542,6 @@ function up(e) {
   const cancelled = e.type === 'pointercancel' || e.type === 'lostpointercapture';
   if (cancelled) cancelMapTap();
   const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
-  if (!cancelled && e.type === 'pointerup' && drag && drag.pointerId === e.pointerId && drag.holdArmed && drag.mode === 'build') {
-    const g = { t: stamp(e), x: e.clientX, y: e.clientY }; releaseGuard = g;
-    setTimeout(() => { if (releaseGuard === g) releaseGuard = null; }, 1000);
-  }
   if (ptrs.size === 0) { game.ui.pointerBusy = false; if (cancelled) game.ui.cancelPlacement(); else game.ui.finishPlacement(); }
   if (pinch) { if (ptrs.size < 2) pinch = null; cancelBuildHold(); drag = null; return; }
   // A hitch can fire the hold timer before a short tap's pointerup is handled. Judge the
@@ -563,12 +554,20 @@ function up(e) {
       drag.holdArmed = false;
     }
   }
+  // A completed touch/pen hold that left a review open arms the one-click release guard.
+  if (!cancelled && e.type === 'pointerup' && (e.pointerType === 'touch' || e.pointerType === 'pen') && drag && drag.pointerId === e.pointerId && drag.holdArmed && drag.mode === 'build' && game.ui.tool && game.ui.plan && !game.ui.buildPlacing) game.releaseGuard?.arm(e.clientX, e.clientY);
   if (drag && drag.pointerId === e.pointerId && drag.mode === 'buildPending') cancelBuildHold();
   if (drag && drag.pointerId === e.pointerId && !drag.moved && e.type === 'pointerup' && ((drag.mode === 'pan' && drag.navigation) || drag.mode === 'buildPending')) mapTap(e);
   drag = null;
 }
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up); canvas.addEventListener('lostpointercapture', up);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+// Swallow only the browser's click from the hold release that opened a review (see releaseguard.js).
+game.releaseGuard = createReleaseGuard({ now: () => performance.now(), isReviewTarget: (t) => !!(t && t.closest && t.closest('#abar .unit-review')) });
+for (const ev of ['pointerdown', 'keydown', 'pointercancel']) window.addEventListener(ev, () => game.releaseGuard.clear(), { capture: true, passive: true });
+window.addEventListener('blur', (e) => { if (e.target === window) game.releaseGuard.clear(); }, { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => game.releaseGuard.clear());
+window.addEventListener('click', (e) => { if (game.releaseGuard.click(e)) { e.preventDefault(); e.stopPropagation(); } }, { capture: true, passive: false });
 // iPhone Safari ignores user-scalable=no: block page pinch/double-tap zoom so gestures drive the camera only
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
