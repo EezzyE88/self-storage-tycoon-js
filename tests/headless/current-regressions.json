@@ -1386,6 +1386,17 @@
         "minimum_pass_lines": 54,
         "timeout": 120,
         "evidence": "native parser and saveMeta structure; no rendered or physical-device claim"
+      },
+      {
+        "id": "tpages_stamp",
+        "command": [
+          "@node",
+          "tests/headless/tpages_stamp.mjs"
+        ],
+        "completion": "5\\ pages\\ stamp\\ groups\\ passed",
+        "minimum_pass_lines": 36,
+        "timeout": 120,
+        "evidence": "native parser, stamp writer and site assembly; no live Pages deploy or physical-device claim"
       }
     ],
     "historical": [
