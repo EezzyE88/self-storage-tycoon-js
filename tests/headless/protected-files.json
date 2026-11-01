@@ -1,0 +1,29 @@
+{
+  "purpose": "Announced-change guard for save and money files. A pull request that intentionally changes one of these files must update its sha256 here in the same pull request, so the change is visible in review. This replaces the old per-file historical inverse chains for these files; behavior tests still run separately.",
+  "files": {
+    "js/localsave.js": {
+      "sha256": "d22f865dcde082975544e467753333ffec07549f64a35df446eb7151503ceeba",
+      "protects": "browser save slots (Continue, kept copy)"
+    },
+    "js/durablesave.js": {
+      "sha256": "721a2de2a039266f43e176188500449fdf37b8373e3533ad83acaafc14b71434",
+      "protects": "durable save checkpoints"
+    },
+    "js/savearchive.js": {
+      "sha256": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
+      "protects": "save archive and restore"
+    },
+    "js/cloud.js": {
+      "sha256": "cc784d86fb0d2a7165700f33a6cc2c309f5ae2bc9be079001707ca86b96676e7",
+      "protects": "cloud save fallback"
+    },
+    "js/finance.js": {
+      "sha256": "fc53b3d54969aedc4d36ac3cb2e9e9640de5b235d89ad04defea49088af831e9",
+      "protects": "loans, credit and financial calculations"
+    },
+    "js/data.js": {
+      "sha256": "0cc0985de5ddacfc1a7d7fe462c1c4cdc89f07dbc26a1868020d742fd9477e66",
+      "protects": "economy numbers: prices, rents, costs, wages"
+    }
+  }
+}
