@@ -108,7 +108,7 @@ await test('4. tutorial step is the first incomplete step; restored lessons neve
 await test('4. an already-selected tab or category completes its navigation step',()=>{
   assert.equal(alreadyShowing({sel:'#tabs [data-v="build"]'},{tab:'build',sel:null}),true);assert.equal(alreadyShowing({sel:'#tabs [data-v="build"]'},{tab:'build',sel:5}),false);
   assert.equal(alreadyShowing({sel:'.cats [data-v="units"]'},{tab:'build',cat:'units',sel:null}),true);assert.equal(alreadyShowing({sel:'.cats [data-v="units"]'},{tab:'operate',cat:'units',sel:null}),false);
-  const m=makeMaple(3);m.s.tut.beat=BEATS.findIndex(b=>b.id==='expand');assert.equal(stepState(m,{tab:'build',cat:'units',sel:null}).cur,2,'Units already chosen: next action is the Drive-Up card');});
+  const m=makeMaple(3);m.s.tut.beat=BEATS.findIndex(b=>b.id==='expand');const card=BEATS.find(b=>b.id==='expand').steps.findIndex(st=>/data-a="tool"/.test(st.sel||''));assert.ok(card>0);assert.equal(stepState(m,{tab:'build',cat:'units',sel:null}).cur,card,'Units already chosen: next action is the Drive-Up card');});
 await test('4. clock steps never target an inert 1x: an expanded panel redirects to Back to map, then 1x works',()=>{
   const {ui,sim,boxes}=fixture();const step=BEATS.find(b=>b.id==='makeready').steps[2];
   ui.popupBlocks=new Set(['tutorial']);assert.equal(ui.resolveStep(step),step,'tutorial card pause alone leaves 1x usable');

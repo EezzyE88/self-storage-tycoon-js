@@ -42,6 +42,9 @@ function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f 
   // A later build group only counts as progressing once the previous group is placed.
   return after ? steps.map((st) => ({ ...st, done: (sim, ui) => placed(sim) || (after(sim) && st.done(sim, ui)) })) : steps;
 }
+// Expand beat pricing stop: reads UI state only. Past it once Build is open or the row is armed/ordered.
+const rentsShowing = (ui) => tabIs(ui, 'business') && ui.sectionChoice?.tab === 'business' && ui.sectionChoice?.label === 'Asking rents';
+const rentsPast = (sim, ui) => tabIs(ui, 'build') || toolIs(ui, 'du10x10') || ordered(sim, 'du10x10') || !!sim.s.milestones.first_expansion;
 const waitBuild = (label, doneFn) => ({ t: label || 'Let construction finish', d: 'Construction takes game hours. Tap <b>4x</b> at the top to speed up. A progress ring shows over the site.', sel: FAST, done: doneFn });
 
 export const BEATS = [
@@ -85,10 +88,15 @@ export const BEATS = [
     button: 'Got it', buttonWhen: (sim) => sim.s.tut.flags.businessOpened, flag: 'moneyAck',
     check: (sim) => sim.s.tut.flags.businessOpened && sim.s.tut.flags.moneyAck },
   { id: 'expand', chapter: 'Add Capacity', title: 'Maple Street is full',
-    body: 'Every unit is leased and prospects are still asking. Build a new row of drive-up units on the empty grass east of the main aisle.',
-    why: 'Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. Eligible units open for rental automatically when construction finishes.',
+    body: 'Every unit is leased and prospects are still asking. First look at your asking rents, then build a new row of drive-up units on the empty grass east of the main aisle.',
+    why: 'Asking rents set what each <b>new lease</b> pays; signed leases keep their rent. Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. Eligible units open for rental automatically when construction finishes.',
     focus: () => ({ tool: 'du10x10', cell: { x: 13, y: 22 } }),
     steps: [
+      // Pricing comprehension (read-only): no rent change is asked for or made. Opening Build or starting the row counts
+      // as past this stop, so the build sequence below is never blocked by it.
+      { t: 'Open <b>Business</b>', d: 'Before you build, see what new customers pay. Tap <b>Business</b> in the bottom bar (the bar-chart icon).', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || rentsPast(sim, ui) },
+      { t: 'Choose <b>Pricing</b>', d: 'In the Business panel, open the section selector at the top and choose <b>Pricing</b>. It shows your <b>Asking rents</b>.', sel: '.sheet [data-section-picker]', lbl: 'Choose Pricing', done: (sim, ui) => rentsShowing(ui) || rentsPast(sim, ui) },
+      { t: 'Asking rents apply to <b>future leases</b>', d: 'Each row is a unit size with your asking rent, the market rent and how many are vacant. Changing an asking rent only affects <b>leases signed after the change</b>. Tenants with signed leases keep their current rent. You don\'t need to change anything now. When you\'re ready, tap <b>Build</b> in the bottom bar.', sel: TAB('build'), lbl: 'Open Build', done: rentsPast },
       ...buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, end: { x: 13, y: 28 }, axis: 'y', placed: (sim) => ordered(sim, 'du10x10'),
         place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.' }),
       waitBuild('Let construction finish and the units open', (sim) => !!sim.s.milestones.first_expansion),
