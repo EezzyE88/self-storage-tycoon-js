@@ -68,7 +68,7 @@ test('UI: Pause is selected, a run speed keeps the card up, and Finish never res
   ui.pauseForPopup('panel'); assert.equal(ui.popupResume, 4, 'a panel opened while running would restore 4x');
   tutorialTick(sim); ui.renderTut(true);
   assert.equal(sim.s.speed, 0); assert.equal(ui.tutMin, false); assert.ok(ui.popupBlocks.has('tutorial')); assert.equal(ui.popupResume, 0);
-  assert.match(ui.renderTutBox.innerHTML, /Maple Street is yours/); assert.match(ui.renderTutBox.innerHTML, /data-a="tutNext">Finish tutorial/);
+  assert.match(ui.renderTutBox.innerHTML, /Maple Street is yours/); assert.match(ui.renderTutBox.innerHTML, /class="tut  has-btn final"/); assert.match(ui.renderTutBox.innerHTML, /<p class="intro">[^<]*Maple Street from a property[^]*Maple Street is paused/); assert.match(ui.renderTutBox.innerHTML, /data-a="tutNext">Finish tutorial/);
   assert.ok(!/data-a="tutSkip"/.test(ui.renderTutBox.innerHTML), 'no Skip on the final card'); assert.ok(!/data-a="tutMin"/.test(ui.renderTutBox.innerHTML), 'the final card cannot be minimized');
   for (const v of [1, 2, 4]) { ui.requestSpeed(v); assert.equal(sim.s.speed, 0); assert.ok(curBeat(sim)); assert.equal(ui.tutMin, false); }
   ui.onClick({ target: { closest: () => ({ dataset: { a: 'tutNext' } }) } });

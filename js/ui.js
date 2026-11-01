@@ -2184,7 +2184,7 @@ export class UI {
     const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details><span class="how-line">${x.d}</span>` : ''}</span></li>`;
     let items = '';
     b.steps.forEach((x, i) => { if (i === cur) items += li(step, i, 'cur');  });
-    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${tutBeatIndex(s) + 1} of ${BEATS.length}`}</span>${b.pause ? '' : `<button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button>`}</div>
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${b.pause ? ' final' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${tutBeatIndex(s) + 1} of ${BEATS.length}`}</span>${b.pause ? '' : `<button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button>`}</div>
       <div class="tut-body"><h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
