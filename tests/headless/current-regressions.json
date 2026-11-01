@@ -1061,6 +1061,18 @@
         "scope": "Maple expand beat Business -> Asking rents read-only stop: order, progression, skip-safety, unchanged trigger, no state writes, save/reload"
       },
       {
+        "id": "tcampaign_state",
+        "command": [
+          "@node",
+          "tests/headless/tcampaign_state.mjs"
+        ],
+        "completion": "11 campaign state checks passed",
+        "minimum_pass_lines": 11,
+        "timeout": 300,
+        "evidence": "native current behavior: id helpers, save migration matrix, real Maple tutorial to graduation with and without the id path, mid-beat save/reload",
+        "scope": "Campaign Unit 1: stable tutorial beat ids; legacy 12-part remap, graduated saves, beat-99 sentinels, preserved beat state, numeric writers, reorder, unlocks"
+      },
+      {
         "id": "tsection_menu_ring",
         "command": [
           "@node",
