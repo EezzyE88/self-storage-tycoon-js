@@ -4,7 +4,7 @@ import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from
 import { normalizeYardLoop, yardFocus, yardLease, updateYardLoop } from './yardloop.js';
 import { normalizeProjects, projectOffers, matchesProject, startProject, reconcileProject, projectLease } from './propertyprojects.js';
 import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';
-import { lessonAllowed, lessonById } from './tutorial.js';
+import { lessonAllowed, lessonById, syncTutBeat } from './tutorial.js';
 import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';
 import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
@@ -92,6 +92,7 @@ export class Sim {
     if (!state.mkt && state.tut && state.tut.on && !state.tut.done && state.tut.beat > 4) {
       state.tut.beat = [0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 7][Math.min(11, state.tut.beat)] ?? 7; state.tut.entered = false; state.tut.migrated = 11;
     }
+    syncTutBeat(state.tut); // after the 12-part remap: an active tutorial is identified by beat id
     if (Array.isArray(state.tasks) && Array.isArray(state.dirt)) state.tasks = state.tasks.filter((t) => t.f == null || (Number.isInteger(t.f) && t.f >= 0 && t.f < state.dirt.length)); // heal saves hit by the old ownerClean bug
     state.mkt ||= { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [] }; state.mkt.adHistory ||= []; if (state.mkt.ad === undefined) state.mkt.ad = null; if (state.coTier == null) state.coTier = 1;
     // Legacy expenses and billing already ran at midnight. Do not run that day again.
