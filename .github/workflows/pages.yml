@@ -1,0 +1,42 @@
+# Deploy the game to GitHub Pages from master, stamped with the exact deployed commit.
+# The title screen then shows "Build <short sha>" on https://eezzye88.github.io/self-storage-tycoon-js/
+# Requires Settings -> Pages -> Source: "GitHub Actions". Public repository: standard runners are free.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build stamped site
+        run: |
+          node tools/build-pages-site.mjs "$GITHUB_SHA" _site
+          grep -q "\"sha\":\"$GITHUB_SHA\"" _site/js/build-stamp.js
+          git diff --exit-code -- js/build-stamp.js
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
