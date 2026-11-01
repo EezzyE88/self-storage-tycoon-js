@@ -1073,6 +1073,18 @@
         "scope": "Campaign Unit 1: stable tutorial beat ids; legacy 12-part remap, graduated saves, beat-99 sentinels, preserved beat state, numeric writers, reorder, unlocks"
       },
       {
+        "id": "treview_hold",
+        "command": [
+          "@node",
+          "tests/headless/treview_hold.mjs"
+        ],
+        "completion": "12 owner review hold checks passed",
+        "minimum_pass_lines": 12,
+        "timeout": 300,
+        "evidence": "native current behavior: hold predicate, frozen expiry/age, cap ordering, save/reload, release at lesson end, tutorial skip and graduation, chapter release with stale retirement, Manager handling",
+        "scope": "Campaign Unit 2: owner-review hold/release while a tutorial or lesson is active; stale reviews retired without a decision or default"
+      },
+      {
         "id": "tsection_menu_ring",
         "command": [
           "@node",
