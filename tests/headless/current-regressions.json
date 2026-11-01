@@ -1049,6 +1049,18 @@
         "evidence": "native current behavior; maintained fixture/assertion mapping in docs/TEST-MAINTENANCE.md"
       },
       {
+        "id": "tmaple_pricing_stop",
+        "command": [
+          "@node",
+          "tests/headless/tmaple_pricing_stop.mjs"
+        ],
+        "completion": "5 Maple pricing stop checks passed",
+        "minimum_pass_lines": 5,
+        "timeout": 180,
+        "evidence": "native current behavior: real Maple tutorial to the expand beat, stubbed UI states, twin-sim state purity",
+        "scope": "Maple expand beat Business -> Asking rents read-only stop: order, progression, skip-safety, unchanged trigger, no state writes, save/reload"
+      },
+      {
         "id": "tclimate33",
         "command": [
           "@node",
