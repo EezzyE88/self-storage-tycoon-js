@@ -1061,6 +1061,18 @@
         "scope": "Maple expand beat Business -> Asking rents read-only stop: order, progression, skip-safety, unchanged trigger, no state writes, save/reload"
       },
       {
+        "id": "tsection_menu_ring",
+        "command": [
+          "@node",
+          "tests/headless/tsection_menu_ring.mjs"
+        ],
+        "completion": "10 section-menu ring checks passed \\(stubbed DOM \\+ stylesheet source, not Safari\\)",
+        "minimum_pass_lines": 10,
+        "timeout": 180,
+        "evidence": "native UI methods over a stubbed DOM plus stylesheet source; rendered taps are covered by separate Playwright reruns",
+        "scope": "Tutorial ring goes to the section-menu option (Pricing, Hire, Overlays, Collections) while the menu is open; menu shrinks/scrolls inside the sheet; step trigger and state untouched"
+      },
+      {
         "id": "tclimate33",
         "command": [
           "@node",
