@@ -19,7 +19,7 @@ import { complaintCopy, requestCopy } from './feedbackcopy.js';
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK, BILLING_CYCLE_DAYS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
-import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed } from './tutorial.js';
+import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed, tutBeatIndex } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
@@ -1885,7 +1885,7 @@ export class UI {
     h += `<h3>Milestones</h3><div class="list">${Object.entries(MILESTONES).map(([k, n]) => `<div class="item"><div class="grow"><b>${n}</b>${s.milestones[k] != null ? `<small>Day ${dayOf(s.milestones[k])}</small>` : ''}</div><span class="pill ${s.milestones[k] != null ? 'g' : ''}">${s.milestones[k] != null ? 'Done' : '—'}</span></div>`).join('')}</div>`;
     if (s.mode === 'tutorial') {
       const chapters = [...new Set(BEATS.map((b) => b.chapter))];
-      h += `<h3>Tutorial</h3><div class="list">${chapters.map((c) => { const idx = BEATS.map((b, i) => b.chapter === c ? i : -1).filter((i) => i >= 0); const done = s.tut.done || idx.every((i) => i < s.tut.beat); const cur = !done && idx.includes(s.tut.beat); return `<div class="item"><div class="grow"><b>${c}</b></div><span class="pill ${done ? 'g' : cur ? 'a' : ''}">${done ? 'Done' : cur ? 'Now' : 'Later'}</span></div>`; }).join('')}</div>`;
+      h += `<h3>Tutorial</h3><div class="list">${chapters.map((c) => { const idx = BEATS.map((b, i) => b.chapter === c ? i : -1).filter((i) => i >= 0); const at = tutBeatIndex(s); const done = s.tut.done || idx.every((i) => i < at); const cur = !done && idx.includes(at); return `<div class="item"><div class="grow"><b>${c}</b></div><span class="pill ${done ? 'g' : cur ? 'a' : ''}">${done ? 'Done' : cur ? 'Now' : 'Later'}</span></div>`; }).join('')}</div>`;
     }
     if (careerEligibility(s).eligible && !(s.tut && s.tut.on)) {
       const avail = LESSONS.filter((L) => lessonAllowed(sim, L)); s.lessonsDone = s.lessonsDone || {};
@@ -2162,7 +2162,7 @@ export class UI {
     const isLesson = !!s.lesson;
     const st = stepState(this.sim, this); const cur = st.cur, step = this.resolveStep(b.steps[cur]);
     const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim));
-    const bk = isLesson ? 'L' + s.lesson.id : s.tut.beat;
+    const bk = isLesson ? 'L' + s.lesson.id : tutBeatIndex(s);
     const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || ''].join(':');
     this.guideStep = step; this.guideKey = bk + ':' + cur + (step?.redirect || '');
     if (!force && key === this.tutKey) return; this.tutKey = key;
@@ -2176,7 +2176,7 @@ export class UI {
     const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details><span class="how-line">${x.d}</span>` : ''}</span></li>`;
     let items = '';
     b.steps.forEach((x, i) => { if (i === cur) items += li(step, i, 'cur');  });
-    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${s.tut.beat + 1} of ${BEATS.length}`}</span><button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button></div>
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${tutBeatIndex(s) + 1} of ${BEATS.length}`}</span><button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button></div>
       <div class="tut-body"><h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
@@ -2394,7 +2394,7 @@ export class UI {
     const g = this.$('guide'); if (!g) return;
     if (this.menuTouch || this.pointerBusy || performance.now() < (this.menuScrollUntil || 0)) { g.hidden = true; return; }
     const s = this.sim.s;
-    if (s.tut && s.tut.on && s.tut.beat === 0 && !this.title) { const sig = [this.rend.zoom.toFixed(3), this.rend.rot, this.rend.center.x.toFixed(2), this.rend.center.z.toFixed(2)].join(','); if (this.lookSig == null) this.lookSig = sig; else if (performance.now() - (this.lookT0 || (this.lookT0 = performance.now())) < 2500) this.lookSig = sig; else if (sig !== this.lookSig) this.tutLooked = true; }
+    if (s.tut && s.tut.on && tutBeatIndex(s) === 0 && !this.title) { const sig = [this.rend.zoom.toFixed(3), this.rend.rot, this.rend.center.x.toFixed(2), this.rend.center.z.toFixed(2)].join(','); if (this.lookSig == null) this.lookSig = sig; else if (performance.now() - (this.lookT0 || (this.lookT0 = performance.now())) < 2500) this.lookSig = sig; else if (sig !== this.lookSig) this.tutLooked = true; }
     const t = curBeat(this.sim) ? this.guideTarget() : null;
     if (!t) { if (!g.hidden) g.hidden = true; this.guidePos = null; return; }
     let x, y, w, h;

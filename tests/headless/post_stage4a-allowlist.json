@@ -128,6 +128,27 @@
           ]
         }
       }
+    },
+    {
+      "commit": "64b8ee7c53d61fb7cf95f3292a533698a91cd9df",
+      "parent_commit": "f85d37214ba75bc8b1c9045a3dc1938be4468382",
+      "tree": "009324c26d2acaf7ab8b5e913281b93b79a63f71",
+      "files": {
+        "js/sim.js": {
+          "parent_sha256": "256f17cfc205f7532ba011ea74af002c67a4452ac8136de04c788d827bd77e08",
+          "current_sha256": "4d2624e3fc1a020482874e595f0aa6fe196548b4d07f03f6c2f6ddb83c8a2e7a",
+          "hunks": [
+            {
+              "before": "import { lessonAllowed, lessonById } from './tutorial.js';\n",
+              "after": "import { lessonAllowed, lessonById, syncTutBeat } from './tutorial.js';\n"
+            },
+            {
+              "before": "state.tut.migrated = 11;\n    }\n",
+              "after": "state.tut.migrated = 11;\n    }\n    syncTutBeat(state.tut); // after the 12-part remap: an active tutorial is identified by beat id\n"
+            }
+          ]
+        }
+      }
     }
   ]
 }

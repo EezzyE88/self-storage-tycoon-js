@@ -132,6 +132,33 @@ export const BEATS = [
     button: 'Keep playing', check: (sim) => sim.s.tut.flags.grad },
 ];
 
+// Campaign progression is identified by stable beat ids (sim.s.tut.beatId), never by position alone.
+// `tut.beat` is kept as the derived position so older readers and older builds still work; `tut.beatAt`
+// records the position the id was synced at. Rules: a numeric position written without its id (an older
+// build, a legacy save or a test) wins and the id follows it; once BEATS are reordered, the id wins.
+// Never reuse or rename a beat id: a retired id maps forward here.
+export const BEAT_ALIASES = {};
+export function beatIndex(id) {
+  if (typeof id !== 'string') return -1;
+  const seen = new Set(); while (BEAT_ALIASES[id] && !seen.has(id)) { seen.add(id); id = BEAT_ALIASES[id]; }
+  return BEATS.findIndex((b) => b.id === id);
+}
+// Read-only: the current tutorial position for any tut state (falls back to the numeric position).
+export function tutBeatIndex(s) {
+  const t = s && s.tut; if (!t) return -1;
+  const i = beatIndex(t.beatId);
+  if (i < 0) return t.beat;
+  if (Number.isInteger(t.beat) && t.beat !== t.beatAt) return t.beat; // position changed without the id
+  return i;
+}
+// Mutating sync, used when a game is loaded and on each tutorial tick. Only an active tutorial carries an id.
+export function syncTutBeat(t) {
+  if (!t || !t.on || t.done) return;
+  const i = tutBeatIndex({ tut: t });
+  if (!Number.isInteger(i) || !BEATS[i]) return; // unknown position: leave untouched (nothing to resolve to)
+  t.beat = i; t.beatId = BEATS[i].id; t.beatAt = i;
+}
+
 // Optional lessons: offered when the situation comes up (or anytime from Growth -> Lessons) after graduation.
 // Maple-specific lessons (coordinates) run only on the original Maple Street layout.
 export const LESSONS = [
@@ -230,7 +257,7 @@ export function tutorialText(sim, value) {
   }) : value;
 }
 export function curBeat(sim) {
-  const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[sim.s.tut.beat] : null;
+  const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[tutBeatIndex(sim.s)] : null;
   if(!b)return null;
   const text = value => tutorialText(sim, value);
   return {...b,title:text(b.title),body:text(b.body),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
@@ -253,28 +280,30 @@ export function stepState(sim, ui) {
 
 // Tool unlocks are problem-earned in the tutorial (GDD §42). Sandbox: everything.
 const UNLOCK = [
-  [4, ['aisle', 'du5x5', 'du5x10', 'du10x10', 'du10x20', 'demolish', 'walk', 'parking']],
-  [5, ['light']],
+  ['expand', ['aisle', 'du5x5', 'du5x10', 'du10x10', 'du10x20', 'demolish', 'walk', 'parking']],
+  ['repair', ['light']],
 ]; // everything else unlocks at graduation
 export function toolUnlocked(sim, tool) {
   const s = sim.s; if (!s.tut.on) return true;
   if (tool === 'office' || tool === 'gate') return false;
-  for (const [beat, tools] of UNLOCK) if (tools.includes(tool)) return s.tut.beat >= beat;
+  for (const [id, tools] of UNLOCK) if (tools.includes(tool)) return tutBeatIndex(s) >= beatIndex(id);
   return false;
 }
-export function unlockBeat(tool) { for (const [beat, tools] of UNLOCK) if (tools.includes(tool)) return beat; return BEATS.length - 1; }
+export function unlockBeat(tool) { for (const [id, tools] of UNLOCK) if (tools.includes(tool)) return beatIndex(id); return BEATS.length - 1; }
 
 export function installTutorial(sim) {
   sim.onTick = (S) => { tutorialTick(S); lessonTick(S); };
 }
 export function tutorialTick(sim) {
   const s = sim.s; if (!s.tut.on || s.tut.done) return;
+  syncTutBeat(s.tut);
   const b = BEATS[s.tut.beat]; if (!b) return;
   if (!s.tut.entered) { s.tut.entered = true; s.tut.enteredAt = s.t; if (b.enter) b.enter(sim); sim.emit('tut_beat', { beat: s.tut.beat }); }
   if (b.check(sim)) {
     sim.emit('tut_done', { beat: s.tut.beat });
     s.tut.beat++; s.tut.entered = false; s.tut.idMark = s.nextId;
-    if (s.tut.beat >= BEATS.length) { s.tut.done = true; s.tut.on = false; s.tut.gradDay = sim.day; sim.milestone('graduated'); }
+    if (s.tut.beat >= BEATS.length) { s.tut.done = true; s.tut.on = false; s.tut.gradDay = sim.day; delete s.tut.beatId; delete s.tut.beatAt; sim.milestone('graduated'); }
+    else { s.tut.beatId = BEATS[s.tut.beat].id; s.tut.beatAt = s.tut.beat; }
   }
 }
 
