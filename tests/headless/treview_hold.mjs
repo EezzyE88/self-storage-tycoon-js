@@ -8,6 +8,7 @@ import { makeMaple } from '../../js/maple.js';
 import { Sim } from '../../js/sim.js';
 import { BEATS, tutorialTick } from '../../js/tutorial.js';
 import { OFFICE_HOURS } from '../../js/data.js';
+import { UI } from '../../js/ui.js';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('PASS', name); };
@@ -148,6 +149,13 @@ test('a request the active beat owns is lesson content: shown, not held', () => 
     assert.equal(sim.reviewHeld(own), false); assert.equal(sim.reviewHeld(other), true);
     run(sim, 70); assert.equal(sim.s.tut.flags.def_own, true, 'owned request follows normal timing'); assert.ok(sim.s.convos.some((x) => x.id === other.id));
   } finally { delete b.ownsRequest; }
+});
+
+test('the Office decisions row does not count or preview a held review', () => {
+  const sim = tutorial(); ask(sim, 'h1'); run(sim, 5);
+  const ui = Object.create(UI.prototype); ui.g = { sim };
+  let h = ui.officePanelHtml(); assert.match(h, /Your decisions · 0/); assert.ok(!h.includes('Test h1'));
+  sim.dispatch({ type: 'tutSkip' }); h = ui.officePanelHtml(); assert.match(h, /Your decisions · 1/);
 });
 
 console.log(`${passed} owner review hold checks passed`);

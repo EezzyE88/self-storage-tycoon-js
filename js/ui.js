@@ -1295,6 +1295,7 @@ export class UI {
   }
   officePanelHtml() {
     const sim = this.sim, s = sim.s, p = officePanelState(sim);
+    p.decisions = p.decisions.filter((c) => !sim.reviewHeld(c)); // held owner reviews wait for the lesson/tutorial to end
     const jump = (label, tab, section) => `<button class="btn sm" data-a="officeSection" data-v="${tab}" data-section="${section}">${label}</button>`;
     const first = p.decisions[0];
     const reason = first?.sev === 'critical' ? 'Critical' : first?.ownerReview === 'failed' ? 'Staff response failed' :

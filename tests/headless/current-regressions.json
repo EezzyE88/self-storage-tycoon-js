@@ -1078,10 +1078,10 @@
           "@node",
           "tests/headless/treview_hold.mjs"
         ],
-        "completion": "12 owner review hold checks passed",
-        "minimum_pass_lines": 12,
+        "completion": "13 owner review hold checks passed",
+        "minimum_pass_lines": 13,
         "timeout": 300,
-        "evidence": "native current behavior: hold predicate, frozen expiry/age, cap ordering, save/reload, release at lesson end, tutorial skip and graduation, chapter release with stale retirement, Manager handling",
+        "evidence": "native current behavior: hold predicate, frozen expiry/age, cap ordering, save/reload, release at lesson end, tutorial skip and graduation, chapter release with stale retirement, Manager handling, Office decisions row",
         "scope": "Campaign Unit 2: owner-review hold/release while a tutorial or lesson is active; stale reviews retired without a decision or default"
       },
       {
