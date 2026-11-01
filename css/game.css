@@ -1235,4 +1235,9 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  #ui .unit-review .spending br { display:none; }
  #ui .unit-review .bot { flex-wrap:wrap; padding:0; }
  #ui .unit-review .bot .btn, #ui .unit-review .x { min-height:44px; min-width:44px; }
+ #ui .unit-review .peek-toggle { min-height:44px; min-width:44px; flex:none; }
+ #ui .unit-review.peek-review { gap:0; overflow:hidden; }
+ #ui .unit-review.peek-review .top { min-height:44px; width:100%; }
+ #ui .unit-review.peek-review .nm { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+ #ui .unit-review.peek-review .nm small { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 }

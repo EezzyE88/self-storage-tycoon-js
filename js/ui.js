@@ -105,7 +105,7 @@ const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanl
 export class UI {
   constructor(game) {
     this.g = game; this.root = document.getElementById('ui'); this.bubRoot = document.getElementById('bubbles');
-    this.tab = null; this.cat = 'units'; this.tool = null; this.plan = null; this.planArgs = null; this.climate = false; this.flip = false;
+    this.tab = null; this.cat = 'units'; this.tool = null; this.plan = null; this.planArgs = null; this.placementPeek = false; this.climate = false; this.flip = false;
     this.sel = null; this.toasts = []; this.bubbles = []; this.lastSheet = 0; this.tutMin = true; this.modal = null; this.title = true;
     this.root.innerHTML = `
       <div id="pins"></div><svg id="blueprint" aria-label="Suggested building placement"></svg>
@@ -280,6 +280,7 @@ export class UI {
       case 'tool': this.pickTool(v); break;
       case 'goTool': if (TOOLS[v]) { this.select(null); this.cat = TOOLS[v].cat; this.setTab('build'); this.pickTool(v); } break; // opening checklist shortcuts
       case 'cancelTool': this.pickTool(null); break;
+      case 'placementPeek': this.placementPeek = !this.placementPeek; this.renderActionBar(); this.sfx('click'); break;
       case 'confirm': this.confirmPlan(); break;
       case 'returnGrowthProposal': this.returnGrowthProposal(); break;
       case 'rotateBuild': this.rotateBuild(); break;
@@ -994,7 +995,7 @@ export class UI {
       this.pauseForPopup('sandboxBuild'); this.notePause(0);
     }
     if (!k) this.resumePopup('sandboxBuild');
-    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
+    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.placementPeek = false; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
   }
@@ -1054,9 +1055,9 @@ export class UI {
     return `<button class="btn sm build-rotate" data-a="rotateBuild" aria-label="Rotate placement clockwise">↻ Rotate${side?' · '+side:''}</button>`;
   }
   toolFloor() { const v = this.rend.view; return Number.isInteger(v)?v:0; }
-  placeStart(cell) { if (!this.tool || !cell) return; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
+  placeStart(cell) { if (!this.tool || !cell) return; this.placementPeek = false; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
   finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.renderActionBar(); }
-  cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.rend.setPreview(null); this.renderActionBar(); }
+  cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.rend.setPreview(null); this.renderActionBar(); }
   placeMove(cell) {
     if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { this.planArgs.a = this.planArgs.b = { x: cell.x, y: cell.y }; this.replan(); return; }
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
@@ -1093,7 +1094,7 @@ export class UI {
     if (r.ok) this.g.autosavePaused?.();
     if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
     if(r.ok&&(finishesWait||finishesResult)){this.reserveResult=null;this.reserveNotice=null;this.renderTut(true);}
-    if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
+    if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); this.replan(); }
     this.renderActionBar();
   }
@@ -1168,7 +1169,13 @@ export class UI {
     const authorization = T.unit && this.sim.autoOpenEnabled() ? '<p class="note build-authorization">Confirm authorizes construction. Units open automatically when ready. Opening the property remains your decision.</p>' : '';
     const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after ${this.tool==='demolish'?'removal':'build'}: <b>${money(P.cash)}</b><br> Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br> Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br> Added costs: ${money(daily, true)}/day when operating.</p>` : ''}${authorization}</div>`;
     const wasOpen = !!box.firstChild;
-    box.innerHTML = `<div class="actionbar${isUnit?' unit-review':''}${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
+    const peek = isUnit && !!this.placementPeek;
+    const peekState = R.status === 'invalid' ? 'Needs changes' : (R.warn?.length ? 'Review warning' : 'Preview only');
+    if (peek) {
+      box.innerHTML = `<div class="actionbar unit-review peek-review${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${peekState} · show review to confirm</small></div><button class="btn sm peek-toggle" data-a="placementPeek">Show review</button><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div></div>`;
+      return;
+    }
+    box.innerHTML = `<div class="actionbar${isUnit?' unit-review':''}${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div>${isUnit?'<button class="btn sm peek-toggle" data-a="placementPeek">Peek</button>':''}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
       ${commitment}<div class="bot">
       ${this.rotationHtml()}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
