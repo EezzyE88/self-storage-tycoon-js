@@ -1375,6 +1375,17 @@
         "minimum_pass_lines": 28,
         "timeout": 180,
         "evidence": "native production methods; no physical-device claim"
+      },
+      {
+        "id": "tbuild_identity",
+        "command": [
+          "@node",
+          "tests/headless/tbuild_identity.mjs"
+        ],
+        "completion": "5\\ build\\ identity\\ groups\\ passed",
+        "minimum_pass_lines": 54,
+        "timeout": 120,
+        "evidence": "native parser and saveMeta structure; no rendered or physical-device claim"
       }
     ],
     "historical": [
