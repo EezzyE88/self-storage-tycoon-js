@@ -1054,7 +1054,9 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .request-handling { background:var(--paper); border-radius:12px; box-shadow:var(--shadow); border-left-color:var(--green); color:var(--ink); text-align:left; }
 
 /* Stable section choices: explicit close, no native picker dismissed by panel refresh. */
-#ui .section-menu { flex-shrink:0; padding:8px 12px 12px; background:var(--paper); border-bottom:1px solid var(--line); max-height:45dvh; overflow:auto; touch-action:pan-y; }
+/* On a short phone the open menu is taller than the sheet. The panel body behind it gives way first (heavy shrink weight), then the menu scrolls inside the sheet, so its options never spill under the bottom tab bar where taps would hit Build/Operate/Business/Growth. */
+#ui .section-menu { flex:0 1 auto; min-height:0; padding:8px 12px 12px; background:var(--paper); border-bottom:1px solid var(--line); max-height:45dvh; overflow:auto; touch-action:pan-y; }
+#ui .sheet:has([data-section-menu]) .body { flex-shrink:50; }
 #ui .section-menu-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
 #ui .section-menu-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 #ui .section-menu-options button { min-height:48px; padding:8px; border-radius:8px; background:var(--paper2); color:var(--ink); font:inherit; font-weight:700; }

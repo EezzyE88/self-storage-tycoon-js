@@ -102,6 +102,9 @@ const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control'
 export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion ready', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate', first_retention: 'Kept a tenant from leaving', first_auction: 'First lien auction', first_loan: 'Financed growth' };
 const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanliness', security: 'Security', climate: 'Climate', service: 'Service', value: 'Value', comfort: 'Comfort' };
 
+// The panel section a control lives in, as [tab, section heading (menu option value), short label]; null when none.
+// Hire, Overlays and Collections targets sit inside a section that the section selector may be hiding.
+const sectionOfSel = (sel) => { sel = sel || ''; return /"role":"porter"/.test(sel) ? ['operate', 'Hire capacity', 'Hire'] : /data-a="overlay"/.test(sel) ? ['operate', 'Overlays', 'Overlays'] : sel === '.ladder' ? ['business', 'Collections', 'Collections'] : null; };
 export class UI {
   constructor(game) {
     this.g = game; this.root = document.getElementById('ui'); this.bubRoot = document.getElementById('bubbles');
@@ -2109,10 +2112,10 @@ export class UI {
       return { ...step, redirect: 'held', sel: null, lbl: '' }; // never ring a control that cannot respond
     }
     // The panels use a section selector: when the required control is not on screen yet, the instruction names the section.
-    const section = /"role":"porter"/.test(sel) ? ['operate', 'Hire capacity', 'Hire'] : /data-a="overlay"/.test(sel) ? ['operate', 'Overlays', 'Overlays'] : sel === '.ladder' ? ['business', 'Collections', 'Collections'] : null;
+    const section = sectionOfSel(sel);
     if (section && this.tab === section[0] && typeof document !== 'undefined' && this.root.querySelector) {
       const el = this.root.querySelector(sel), picker = this.root.querySelector('.sheet [data-section-picker]');
-      if (picker && !(el && this.guideVisible(el))) return { ...step, redirect: 'section', t: `Choose <b>${section[2]}</b> in the section selector`, d: `The ${section[0] === 'operate' ? 'Operate' : 'Business'} panel is split into sections. Choose <b>${section[2]}</b> in the selector at the top of the panel; then ${step.t.replace(/<[^>]+>/g, '')}.`, sel: '.sheet [data-section-picker]', lbl: 'Choose ' + section[2] };
+      if (picker && !(el && this.guideVisible(el))) return { ...step, redirect: 'section', section, t: `Choose <b>${section[2]}</b> in the section selector`, d: `The ${section[0] === 'operate' ? 'Operate' : 'Business'} panel is split into sections. Choose <b>${section[2]}</b> in the selector at the top of the panel; then ${step.t.replace(/<[^>]+>/g, '')}.`, sel: '.sheet [data-section-picker]', lbl: 'Choose ' + section[2] };
     }
     // An armed tool that differs from the step's tool, or the right tool on the wrong floor: following the map target
     // would quote the wrong thing, so point at the one-tap fix (it arms the right tool on the right floor).
@@ -2315,6 +2318,18 @@ export class UI {
     R.pan((r.left+r.right)/2-(b.x0+b.x1)/2,(r.top+r.bottom)/2-(b.y0+b.y1)/2);
     return true;
   }
+  // Section step with the chooser open: the ring target is the step's own menu option (e.g. Pricing), not the selector.
+  // `el` is what the step's selector currently resolves to: when that is the selector itself (a step that asks for a
+  // section) or a control the open menu hides, the option is the real next tap. Null when the menu is not open.
+  sectionMenuOption(step, el) {
+    const sec = step.section || sectionOfSel(step.sel);
+    if (!sec || this.tab !== sec[0] || !this.sectionMenuKey || this.sectionMenuKey !== this.tab) return null;
+    if (el && !/data-section-picker/.test(step.sel || '')) return null; // the real control is on screen and tappable
+    const opt = [...this.root.querySelectorAll('.sheet [data-section-menu] [data-a="section"]')].find((b) => b.dataset.v === sec[1]);
+    if (!opt) return null;
+    if (!this.guideVisible(opt)) this.revealGuideEl(opt); // a short sheet scrolls the menu: bring the option into view
+    return this.guideVisible(opt) ? { el: opt, lbl: 'Tap ' + sec[2] } : null;
+  }
   // Coach ring: points at the current step's DOM control, or the control that leads to it, or its map spot.
   guideTarget() {
     const step = this.guideStep; if (!step || this.title || this.modalOpen()) return null;
@@ -2324,6 +2339,8 @@ export class UI {
     if (sel) {
       let el = q(sel);
       if (!el && this.revealedKey !== this.guideKey) { const raw = this.root.querySelector(sel); if (raw) { this.revealedKey = this.guideKey; if (this.revealGuideEl(raw)) el = q(sel); } }
+      // The section menu is already open: the next tap is on its option, so the ring goes there, never back on the selector.
+      const target = this.sectionMenuOption(step, el); if (target) return target;
       const tm = /data-a="tool"\]\[data-v="(\w+)"/.exec(sel);
       if (!el && tm) { // walk the menu path: Build tab -> category -> tool
         const T = TOOLS[tm[1]];
@@ -2335,7 +2352,7 @@ export class UI {
       if (!el && /data-cmd\*='"role"/.test(sel) && this.tab !== 'operate') { el = q('#tabs [data-v="operate"]'); if (el) return { el, lbl: 'Open Operate' }; }
       if (!el && /overlay/.test(sel) && this.tab !== 'operate') { el = q('#tabs [data-v="operate"]'); if (el) return { el, lbl: 'Open Operate' }; }
       // The current panels use a section selector instead of one long scroll: point at it, naming the section.
-      const section = /"role":"porter"/.test(sel) ? ['operate', 'Hire capacity', 'Hire'] : /data-a="overlay"/.test(sel) ? ['operate', 'Overlays', 'Overlays'] : sel === '.ladder' ? ['business', 'Collections', 'Collections'] : null;
+      const section = sectionOfSel(sel);
       if (!el && section && this.tab === section[0]) { el = q('.sheet [data-section-picker]'); if (el) return { el, lbl: 'Choose ' + section[2] }; }
       if (el) return { el, lbl: step.lbl || (sel === '#speed [data-v="4"]' ? 'Speed up' : 'Tap here') };
     }
