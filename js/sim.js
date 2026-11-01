@@ -1238,7 +1238,12 @@ export class Sim {
     if (!ag) { this.emit('refuse'); return { ok: false, msg: 'The Owner needs an operating office first - call a vendor instead' }; }
     if (t.vendor) return { ok: false, msg: 'A vendor is already booked for this' };
     if (t.assigned && t.assigned !== owner.id) return { ok: false, msg: 'Already assigned to someone else' };
-    if (ag.task === t.id) return { ok: false, msg: 'Owner is already on it' };
+    // Asking again for work the Owner already holds succeeds without touching progress, queue, capacity or cost.
+    if (ag.task === t.id) return { ok: true, already: true, msg: 'Owner is already on it' };
+    if (t.assigned === owner.id && t.queued && (ag.queue || []).includes(t.id)) {
+      if (a.forceOwner) t.ownerOverride = true;
+      return { ok: true, already: true, msg: 'Owner already has this queued' };
+    }
     if (this.s.objects[t.obj]?.type === 'light') t.unreachable = null;
     const delegated = a.forceOwner ? null : this.assignStaffFirst(t);
     if (delegated) {
