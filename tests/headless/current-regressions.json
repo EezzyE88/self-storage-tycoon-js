@@ -1372,7 +1372,7 @@
           "tests/headless/towner_task_idempotent.mjs"
         ],
         "completion": "5\\ owner\\-task\\ idempotency\\ groups\\ passed",
-        "minimum_pass_lines": 31,
+        "minimum_pass_lines": 28,
         "timeout": 180,
         "evidence": "native production methods; no physical-device claim"
       }

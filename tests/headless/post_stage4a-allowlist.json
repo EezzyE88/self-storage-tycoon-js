@@ -111,6 +111,23 @@
           ]
         }
       }
+    },
+    {
+      "commit": "0ad14edaf60227bea4058f429dd06726f4f7a2d4",
+      "parent_commit": "b0cff926a22d2a598a3218488027c20a977e4d1d",
+      "tree": "b3196551fac2197e237674ca7e7609139c8cac4a",
+      "files": {
+        "js/sim.js": {
+          "parent_sha256": "be6f497be90bcfdbb46fd0df2c2452f946023a000412f7bc1a401c8437a51b24",
+          "current_sha256": "256f17cfc205f7532ba011ea74af002c67a4452ac8136de04c788d827bd77e08",
+          "hunks": [
+            {
+              "before": "    if (ag.task === t.id) return { ok: false, msg: 'Owner is already on it' };\n",
+              "after": "    // Asking again for work the Owner already holds succeeds without touching progress, queue, capacity or cost.\n    if (ag.task === t.id) return { ok: true, already: true, msg: 'Owner is already on it' };\n    if (t.assigned === owner.id && t.queued && (ag.queue || []).includes(t.id)) {\n      if (a.forceOwner) t.ownerOverride = true;\n      return { ok: true, already: true, msg: 'Owner already has this queued' };\n    }\n"
+            }
+          ]
+        }
+      }
     }
   ]
 }
