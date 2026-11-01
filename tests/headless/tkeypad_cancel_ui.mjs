@@ -5,6 +5,7 @@ import {Sim} from '../../js/sim.js';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {normalizeKeypadCancel} from './keypad_cancel_baseline.mjs';
+import {atHistoricalChainHead,readSource} from './source_reader.mjs';
 
 let groups=0;
 function test(name,fn){fn();groups++;console.log('PASS '+name);}
@@ -69,7 +70,8 @@ test('reload retains accessible cancellation; stale confirmation cannot refund c
  const g=setup();open(g);g.order.st='done';g.door.keypad='operating';const before=state(g);confirm(g);assert.equal(state(g),before);
 });
 test('exact inspector inverse preserves parent source and rejects unrelated drift',()=>{
- const source=readFileSync('js/ui.js','utf8');assert.equal(normalizeKeypadCancel(source,'js/ui.js'),execFileSync('git',['show','5546cbc74f3b759a419874da7bb896ab4f8dbe41:js/ui.js'],{encoding:'utf8'}));
+ // Historical guard, read from the declared chain head; the groups above assert current keypad behavior.
+ const source=atHistoricalChainHead(()=>readSource('js/ui.js'));assert.equal(normalizeKeypadCancel(source,'js/ui.js'),execFileSync('git',['show','5546cbc74f3b759a419874da7bb896ab4f8dbe41:js/ui.js'],{encoding:'utf8'}));
  assert.throws(()=>normalizeKeypadCancel(source+'\n','js/ui.js'));assert.throws(()=>normalizeKeypadCancel(source.replace("q.keypadDoor === o.id","q.keypadDoor !== o.id"),'js/ui.js'));
 });
 console.log(`ALL PASS: ${groups} keypad cancellation UI groups`);

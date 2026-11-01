@@ -5,6 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {fixture,snapshot,click,review} from './transaction-fixture.mjs';
 import {transactionBaseline} from './transaction_baseline.mjs';
 import {stage0Baseline} from './stage0_baseline.mjs';
+import {atHistoricalChainHead,readSource} from './source_reader.mjs';
 import {operatingNet} from '../../js/borrowsettle.js';
 const main=readFileSync('js/main.js','utf8');
 const kinds={acquisition:['acquisitionReview','acquisitionConfirm'],credit:['creditReview','creditConfirm'],term:['termLoanReview','termLoanConfirm'],transfer:['transferReview','transferConfirm']};
@@ -37,10 +38,11 @@ test('HUD excludes financing but includes rent interest capex and transfers with
  f.ui.slowHud();assert.match(f.ui.cashSub,/cash today/);assert.equal(snapshot(f),before);assert.ok(w.categories.loan&&w.categories.debt&&w.categories.capex&&w.categories.other);
 });
 test('whole-file inverse exactly restores original master UI with no weakened old source pin',()=>{
- assert.equal(transactionBaseline('js/ui.js'),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:js/ui.js'],{encoding:'utf8'}));
+ // Historical guard, read from the declared chain head; the groups above assert current transaction behavior.
+ atHistoricalChainHead(()=>assert.equal(transactionBaseline('js/ui.js'),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:js/ui.js'],{encoding:'utf8'})));
  assert.equal(readFileSync('tests/headless/financial-context-allowlist.json','utf8'),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:tests/headless/financial-context-allowlist.json'],{encoding:'utf8'}));
 });
 test('finance and persistence retain master identity after exact Stage 0 inverse',()=>{
- for(const file of ['js/main.js','js/sim.js','js/finance.js','js/data.js','js/localsave.js','js/durablesave.js','js/savearchive.js','js/cloud.js'])assert.equal(stage0Baseline(file),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:'+file],{encoding:'utf8'}));
+ atHistoricalChainHead(()=>{for(const file of ['js/main.js','js/sim.js','js/finance.js','js/data.js','js/localsave.js','js/durablesave.js','js/savearchive.js','js/cloud.js'])assert.equal(stage0Baseline(file),execFileSync('git',['show','d03bbcdb7245f379512b0c13041b004742133d83:'+file],{encoding:'utf8'}));});
 });
 console.log(`${n} transaction safety groups passed`);

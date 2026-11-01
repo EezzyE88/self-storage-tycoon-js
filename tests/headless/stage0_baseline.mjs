@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {normalizeKeypadCancel} from './keypad_cancel_baseline.mjs';
 import {normalizeStage1} from './stage1_baseline.mjs';
-import {readFileSync} from 'node:fs';
+import {readSource} from './source_reader.mjs';
 import {createHash} from 'node:crypto';
 const hash=t=>createHash('sha256').update(t).digest('hex');
 const insertion="        if (o.cstate === 'construction' || o.keypad === 'pending') { failItem('Construction or installation is unfinished. Use Cancel construction for the applicable refund.'); return R; }\n";
@@ -20,6 +20,6 @@ function invertStage0(text){
 export function stage0Baseline(file){
  // Keypad normalization already runs the shared Stage 1 chain. Do not run the
  // destructive inverse twice; each existing identity/hunk assertion runs once.
- const text=normalizeKeypadCancel(readFileSync(file,'utf8'),file);
+ const text=normalizeKeypadCancel(readSource(file),file);
  return file==='js/sim.js'?invertStage0(text):text;
 }

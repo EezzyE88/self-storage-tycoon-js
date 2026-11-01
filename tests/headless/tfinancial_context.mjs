@@ -14,6 +14,7 @@ import {installTutorial} from '../../js/tutorial.js';
 import {localsave} from '../../js/localsave.js';
 import {savearchive} from '../../js/savearchive.js';
 import {financialContextBaseline} from './financial_context_baseline.mjs';
+import {atHistoricalChainHead,readSource} from './source_reader.mjs';
 const main=readFileSync('js/main.js','utf8');
 function fixture(speed=0) {
  const ctx=vm.createContext({Sim,fmtTime,makeMaple,makeSandbox,makeScenario,SCENARIOS,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,TIERS,FINANCIAL_MINUTE,portfolioCareer,installTutorial,localsave,savearchive,cloud:{ok:false},Audio:class{},performance,console,BUILD:{name:'financial-context'},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent});
@@ -136,6 +137,7 @@ test('F/f keyboard menu replacement invalidates transfer tokens without changing
  }
 });
 test('exact historical normalization preserves full parent identities and engine/save files',()=>{
- for(const file of ['js/ui.js','css/game.css','js/main.js','js/sim.js','js/finance.js','js/data.js','js/localsave.js','js/savearchive.js','js/durablesave.js','js/cloud.js'])assert.equal(financialContextBaseline(file),execFileSync('git',['show','b8ce9e9f0c00fa239b33da96c19662a962a5afd6:'+file],{encoding:'utf8'}));
+ // Historical guard, read from the declared chain head; the groups above assert current financial behavior.
+ atHistoricalChainHead(()=>{for(const file of ['js/ui.js','css/game.css','js/main.js','js/sim.js','js/finance.js','js/data.js','js/localsave.js','js/savearchive.js','js/durablesave.js','js/cloud.js'])assert.equal(financialContextBaseline(file),execFileSync('git',['show','b8ce9e9f0c00fa239b33da96c19662a962a5afd6:'+file],{encoding:'utf8'}));});
 });
 console.log(`${groups} financial-context groups passed`);

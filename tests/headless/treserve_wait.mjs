@@ -92,7 +92,8 @@ console.log('PASS actionable interruptions, delegated work, quote/demand/placeme
 }
 for(const event of ['blur','pagehide']){
  const sim=fresh(),h=harness(sim);arm(sim,h);h.ui.g.audio={setBackground(){}};h.ui.g.autosave=()=>{};
- const line=source.split('\n').find(l=>l.startsWith(`window.addEventListener('${event}'`));let handler;
+ // main.js has more than one window listener per event (the release guard also listens to blur); use the reserve-wait one.
+ const line=source.split('\n').find(l=>l.startsWith(`window.addEventListener('${event}'`)&&l.includes('reserveWait'));assert.ok(line,'reserve-wait '+event+' listener exists');let handler;
  vm.runInNewContext(line,{window:{addEventListener:(type,fn)=>handler=fn},game:h.ui.g,document:{hidden:false}});handler();assert.equal(h.wait.active,null);assert.equal(sim.s.speed,0);
 }
 console.log('PASS production UI arming, exact-target completion preview, already-funded/stale offers, blockers, blur and pagehide');

@@ -62,7 +62,9 @@ for(const event of ['visibilitychange','blur','pagehide']){
    const ctx=vm.createContext({game,document,cancelMapTap(){},cancelBuildHold(){},ptrs:new Set(),drag:null,pinch:null,last:0,performance:{now:()=>0},diagnostics:{reset(){}},diagnosticMode:null});
    vm.runInContext(body,ctx);document.hidden=false;vm.runInContext(body,ctx);
  }else{
-   let handler;vm.runInNewContext(main.split('\n').find(l=>l.startsWith(`window.addEventListener('${event}'`)),{window:{addEventListener:(type,fn)=>handler=fn},game,document});handler();
+   // main.js has more than one window listener per event (the release guard also listens to blur); use the reserve-wait one.
+   const line=main.split('\n').find(l=>l.startsWith(`window.addEventListener('${event}'`)&&l.includes('reserveWait'));assert.ok(line,'reserve-wait '+event+' listener exists');
+   let handler;vm.runInNewContext(line,{window:{addEventListener:(type,fn)=>handler=fn},game,document});handler();
  }
  assert.equal(game.sim.s.speed,0);assert.equal(f.wait.active,null);assert.ok(f.wait.pending);
  const start=f.wait.pending.started;assert.equal(f.ui.resumeReserveWait(),true);assert.equal(f.wait.active.started,start);

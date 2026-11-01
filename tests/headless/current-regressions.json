@@ -14,7 +14,8 @@
         "minimum_pass_lines": 8,
         "timeout": 180,
         "required_objects": [
-          "4ffb204de7fe61e1f7691b8426bb072a875ca134"
+          "4ffb204de7fe61e1f7691b8426bb072a875ca134",
+          "d155a92590a938005b00c16ec52d92b812205736"
         ],
         "required_files": [
           "tests/fixtures/save-name/api.mjs",
@@ -37,7 +38,8 @@
           "f5c88fae3cacdda5a2618dd2e3c7e78a087bde6d",
           "fff6294f6abc7c1ed9f3a2dd791e42b7b00ed478",
           "284d45a9e80db30b5db69d2694c2dbb7c7ec8284",
-          "d03bbcdb7245f379512b0c13041b004742133d83"
+          "d03bbcdb7245f379512b0c13041b004742133d83",
+          "d155a92590a938005b00c16ec52d92b812205736"
         ],
         "evidence": "immutable Git objects, complete-file inverse checks and negative undeclared-source probes; no gameplay or device qualification",
         "scope": "restore omitted exact runtime layers without weakening existing baseline assertions"
@@ -51,7 +53,8 @@
         "completion": "14 financial-context groups passed",
         "minimum_pass_lines": 14,
         "required_objects": [
-          "b8ce9e9f0c00fa239b33da96c19662a962a5afd6"
+          "b8ce9e9f0c00fa239b33da96c19662a962a5afd6",
+          "d155a92590a938005b00c16ec52d92b812205736"
         ],
         "timeout": 180,
         "evidence": "actual current UI review handlers and unchanged engine; historical exact-byte normalization checked separately; no rendered-device claim"
@@ -457,7 +460,7 @@
         "required_objects": [
           "1339648652cf61bfce23a96a60cbb54a7006c32a",
           "3c92a5eb6a8d906264e9019e26fa24a100bffb31",
-          "d84fb59171152e670a5d3d2940830310fd7cc1d9"
+          "d155a92590a938005b00c16ec52d92b812205736"
         ],
         "allowed_notes": [
           "^LIMIT:.*"
@@ -491,8 +494,8 @@
           "@node",
           "tests/headless/tgestures.mjs"
         ],
-        "completion": "12\\ executed\\ checks\\ passed;\\ physical\\ Safari\\ acceptance\\ pending",
-        "minimum_pass_lines": 12,
+        "completion": "13\\ executed\\ checks\\ passed;\\ physical\\ Safari\\ acceptance\\ pending",
+        "minimum_pass_lines": 13,
         "timeout": 180,
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
       },
@@ -1150,7 +1153,10 @@
         "completion": "ALL PASS: 14 paused autosave regression groups",
         "minimum_pass_lines": 14,
         "timeout": 180,
-        "evidence": "production game/UI save paths and localStorage double; no abrupt-browser or physical-device claim"
+        "evidence": "production game/UI save paths and localStorage double; no abrupt-browser or physical-device claim",
+        "required_objects": [
+          "d155a92590a938005b00c16ec52d92b812205736"
+        ]
       },
       {
         "id": "tdurable_checkpoint",
@@ -1216,7 +1222,8 @@
         "completion": "8 transaction safety groups passed",
         "minimum_pass_lines": 8,
         "required_objects": [
-          "d03bbcdb7245f379512b0c13041b004742133d83"
+          "d03bbcdb7245f379512b0c13041b004742133d83",
+          "d155a92590a938005b00c16ec52d92b812205736"
         ],
         "timeout": 180,
         "evidence": "production handlers, in-memory companies, exact inverse preservation and financial categories; no rendered-device claim"
@@ -1230,7 +1237,10 @@
         "completion": "ALL PASS: 8 keypad cancellation UI groups",
         "minimum_pass_lines": 8,
         "timeout": 60,
-        "evidence": "production inspector, click handler, refund confirmation and dispatch with disposable state; no rendered-device claim"
+        "evidence": "production inspector, click handler, refund confirmation and dispatch with disposable state; no rendered-device claim",
+        "required_objects": [
+          "d155a92590a938005b00c16ec52d92b812205736"
+        ]
       },
       {
         "id": "tunfinished_demolition",
@@ -1408,6 +1418,12 @@
         "blocked_reason": "Invocation missing required immutable parent argument; no valid financing-parity result. No arbitrary parent substituted.; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
         "declared_prerequisite": "Invocation missing required immutable parent argument; no valid financing-parity result. No arbitrary parent substituted.",
         "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+      },
+      {
+        "id": "tfloor_context_sim_d84fb59",
+        "blocked_reason": "historical simulation reconstruction from d84fb59171152e670a5d3d2940830310fd7cc1d9, which is not present in the repository or any fetched branch; preserved verbatim in tests/headless/tfloor_context_sim_d84fb59.mjs. No substitute or fetch.",
+        "declared_prerequisite": "requires immutable object d84fb59171152e670a5d3d2940830310fd7cc1d9",
+        "original_source": "tests/headless/tfloor_context.mjs"
       }
     ],
     "stress": [
@@ -1506,6 +1522,12 @@
       "blocked_reason": "Invocation missing required immutable parent argument; no valid financing-parity result. No arbitrary parent substituted.; original candidate/parent invocation and fixture hashes must be registered before enabling this historical entry. No substitute or fetch.",
       "declared_prerequisite": "Invocation missing required immutable parent argument; no valid financing-parity result. No arbitrary parent substituted.",
       "original_source": "734bc879ed6b92222989e2dc479f8fb507655135"
+    },
+    {
+      "id": "tfloor_context_sim_d84fb59",
+      "blocked_reason": "historical simulation reconstruction from d84fb59171152e670a5d3d2940830310fd7cc1d9, which is not present in the repository or any fetched branch; preserved verbatim in tests/headless/tfloor_context_sim_d84fb59.mjs. No substitute or fetch.",
+      "declared_prerequisite": "requires immutable object d84fb59171152e670a5d3d2940830310fd7cc1d9",
+      "original_source": "tests/headless/tfloor_context.mjs"
     }
   ],
   "coverage_notes": [

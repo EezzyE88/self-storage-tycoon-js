@@ -25,5 +25,7 @@ assert.ok(g.sim.dispatch({type:'hire',role:'porter'}).ok);assert.ok(g.sim.dispat
 for(let i=0;i<6000&&g.sim.s.scenario.status==='active';i++){const t=g.sim.s.tasks.find(t=>!t.assigned&&g.sim.s.scenario.targets.some(x=>x.ids.includes(t.obj)));if(t)g.sim.dispatch({type:'delegateTask',task:t.id});g.sim.step();}
 assert.equal(g.sim.s.scenario.status,'won');assert.equal(comebackProgress(g.sim).restored,6);await roundtrip('completed rescue');
 assert.ok(g.sim.dispatch({type:'comebackAck'}).ok);await roundtrip('acknowledged rescue');g.sim.poll();assert.equal(g.sim.events.some(e=>e.type==='scenario_end'),false);assert.equal(g.sim.s.scenario.acknowledged,true);
-const damaged=JSON.parse(g.saveJSON());damaged.scenario.targets=null;const cash=g.sim.s.cash;assert.ok(await g.loadCode(g.rawSaveCode(JSON.stringify(damaged))));assert.equal(g.sim.s.scenario.status,'unavailable');assert.equal(g.sim.s.cash,cash);assert.ok(g.sim.s.scenario.notice);
+// Single-property saves use the portfolio wrapper since d155a92; read the saved property state through it.
+const stateOf=j=>j&&j.company?j.props[j.active??0].s:j;
+const damaged=JSON.parse(g.saveJSON());stateOf(damaged).scenario.targets=null;const cash=g.sim.s.cash;assert.ok(await g.loadCode(g.rawSaveCode(JSON.stringify(damaged))));assert.equal(g.sim.s.scenario.status,'unavailable');assert.equal(g.sim.s.cash,cash);assert.ok(g.sim.s.scenario.notice);
 console.log(`${n} production save checkpoints passed; malformed progress retains property with notice`);

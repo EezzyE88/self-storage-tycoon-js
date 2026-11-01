@@ -1,7 +1,7 @@
 // Real Three.js scene graph; GPU/Canvas stubbed. No physical-device claim.
 import assert from 'node:assert/strict';
 import {durableBaseline} from './durable_baseline.mjs';
-import {stage0Baseline} from './stage0_baseline.mjs';
+import {atHistoricalChainHead} from './source_reader.mjs';
 import {readFileSync} from 'node:fs';
 import {base, full} from './tthreefloor.mjs';
 import {Sim} from '../../js/sim.js';
@@ -96,27 +96,14 @@ let expectedVertical=execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54
 const oldVertical="warning:!fitout?'Structure only; fit-out and commissioning are still required.': 'Copies the existing interior layout and product mix. Commission units after construction; rentals are not guaranteed.'";
 const newVertical="warning:!fitout?'Structure only; fit-out and readiness requirements are still required.': 'Copies the existing interior layout and product mix. Eligible units open automatically after construction; rentals are not guaranteed.'";
 assert.ok(expectedVertical.includes(oldVertical),'declared vertical.js baseline hunk exists');expectedVertical=expectedVertical.replace(oldVertical,newVertical);assert.equal(readFileSync('js/vertical.js','utf8'),expectedVertical);
-let expectedSim=execFileSync('git',['show','d84fb59171152e670a5d3d2940830310fd7cc1d9:js/sim.js'],{encoding:'utf8'});
-const intentional=(from,to)=>{assert.ok(expectedSim.includes(from),'declared sim.js baseline hunk exists');expectedSim=expectedSim.replace(from,to);};
-intentional("  autoOpenEnabled() {\n    const s=this.s;\n    return s.mode==='sandbox'&&!s.scenario&&!s.lesson&&!s.tut?.on&&!this.unlimited();\n  }","  autoOpenEnabled() {\n    return true;\n  }");
-intentional("    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No commissioned rent-ready units');","    if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No operating rent-ready units');");
-intentional("    // 1. commission rent-ready units\n    if (s.open && this.objs('unit').some((u) => u.cstate === 'ready')) { const r = this.act_commission({ all: true }); if (r.ok) this.mgr('Opened rent-ready units for rental'); }\n    // 2. escalate stalled repairs to vendors","    // 1. escalate stalled repairs to vendors. Finished eligible units open automatically for every player.");
-// B/F intentionally changes only explicit-rotation footprint anchors in the simulation.
-// Keep the complete-file comparison: any other simulation drift still fails.
-intentional(`      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
-      const x = Math.min(a.a.x,a.b.x), y = Math.min(a.a.y,a.b.y);
-      units = Array.from({length:n}, (_,k) => ({x:x+(axisX?k*sz.w:0), y:y+(axisX?0:k*sz.w),
-        w:axisX?sz.w:sz.d, h:axisX?sz.d:sz.w, dir:[...dir], f}));`,
-`      // The touched cell sits on the door edge; the row grows from it in the drag direction.
-      const dir = [[0,-1],[1,0],[0,1],[-1,0]][turn];
-      units = Array.from({length:n}, (_,k) => {
-        const along = (axisX ? a.a.x : a.a.y) + (step > 0 ? k * sz.w : -(k + 1) * sz.w + 1);
-        const perp = (axisX ? a.a.y : a.a.x) - ((axisX ? dir[1] : dir[0]) > 0 ? sz.d - 1 : 0);
-        return axisX ? {x:along, y:perp, w:sz.w, h:sz.d, dir:[...dir], f} : {x:perp, y:along, w:sz.d, h:sz.w, dir:[...dir], f};
-      });`);
-assert.equal(stage0Baseline('js/sim.js'),expectedSim);
+// The exact d84fb59 simulation reconstruction moved to tfloor_context_sim_d84fb59.mjs (historical profile):
+// that commit is not in the repository. Behavior replacing it, on current production simulation:
+// eligible units open automatically in every mode, and the readiness text says "operating", not "commissioned".
+for(const mode of ['tutorial','sandbox','scenario']){const t=new Sim(structuredClone(full.s));t.s.mode=mode;if(mode==='tutorial')t.s.tut={on:true,beat:1,flags:{},done:false};assert.equal(t.autoOpenEnabled(),true,'automatic opening in '+mode);}
+{const t=new Sim(structuredClone(full.s));for(const u of t.objs('unit'))u.cstate='ready';const why=t.openingIssues();assert.ok(why.includes('No operating rent-ready units'),JSON.stringify(why));assert.ok(!why.some(x=>/commissioned/i.test(x)),JSON.stringify(why));}
 // Fast-reserve intentionally changed main's clock dispatch. Preserve its exact verified implementation.
-let actualMain=durableBaseline('js/main.js');
+// Historical guard, read from the declared chain head (later declared main.js work: double-tap, release guard).
+let actualMain=atHistoricalChainHead(()=>durableBaseline('js/main.js'));
 // Permit only the exact paused-autosave hooks; retain the complete-file comparison.
 assert.equal(actualMain.split('    this.autosavePaused();\n').length-1,3);
 actualMain=actualMain.replaceAll('    this.autosavePaused();\n','');

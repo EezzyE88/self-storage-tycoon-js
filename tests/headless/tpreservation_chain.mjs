@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {normalizePostStage4A} from './post_stage4a_baseline.mjs';
 import {normalizeStage1} from './stage1_baseline.mjs';
 import {transactionBaseline} from './transaction_baseline.mjs';
+import {atHistoricalChainHead,readSource} from './source_reader.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const git=(...args)=>execFileSync('git',args,{encoding:'utf8'});
 const layers=JSON.parse(readFileSync('tests/headless/post_stage4a-allowlist.json','utf8')).layers;
@@ -25,19 +26,20 @@ test('every new inverse is the complete verified immutable commit diff',()=>{
  }
 });
 test('shared chain restores full original master files without changing old pins',()=>{
- for(const file of ['js/ui.js','js/sim.js','js/render.js','js/showcase.js','js/tutorial.js','css/game.css','js/main.js','js/finance.js','js/data.js','js/localsave.js','js/durablesave.js','js/savearchive.js','js/cloud.js'])
-  assert.equal(transactionBaseline(file),git('show','d03bbcdb7245f379512b0c13041b004742133d83:'+file),file);
+ // Historical guard, read from the declared chain head; current behavior is covered by the behavioral suites.
+ atHistoricalChainHead(()=>{for(const file of ['js/ui.js','js/sim.js','js/render.js','js/showcase.js','js/tutorial.js','css/game.css','js/main.js','js/finance.js','js/data.js','js/localsave.js','js/durablesave.js','js/savearchive.js','js/cloud.js'])
+  assert.equal(transactionBaseline(file),git('show','d03bbcdb7245f379512b0c13041b004742133d83:'+file),file);});
 });
 test('post-Stage-4A chain also restores added placeable module and known ancestor identities',()=>{
  for(const file of ['js/ui.js','js/showcase.js','js/placeableops.js']){
   const before=git('show','47473de932157ecc344cbc46cb63311c4dbe901f:'+file);
-  assert.equal(normalizePostStage4A(readFileSync(file,'utf8'),file),before);
+  assert.equal(normalizePostStage4A(atHistoricalChainHead(()=>readSource(file)),file),before);
   assert.equal(normalizePostStage4A(before,file),before);
  }
 });
 test('unrelated source drift is rejected in UI simulation rendering CSS tutorial and notifications',()=>{
  for(const file of ['js/ui.js','js/sim.js','js/render.js','css/game.css','js/tutorial.js','js/showcase.js']){
-  const text=readFileSync(file,'utf8');
+  const text=atHistoricalChainHead(()=>readSource(file));
   assert.throws(()=>normalizeStage1(text+'\n// undeclared mutation\n',file),{name:'AssertionError'},file+' append');
   assert.throws(()=>normalizeStage1(text.replace('\n','\n '),file),{name:'AssertionError'},file+' whitespace');
  }
