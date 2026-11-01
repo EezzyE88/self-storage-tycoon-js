@@ -149,6 +149,51 @@
           ]
         }
       }
+    },
+    {
+      "commit": "3f7b6703b665e08b57530bfe874c173be6379b52",
+      "parent_commit": "ec2e00e4ca152e97c6a4d910562be926e8671244",
+      "tree": "1b8b39c56bd079ff7da022e9ba53adbd54302039",
+      "files": {
+        "js/sim.js": {
+          "parent_sha256": "4d2624e3fc1a020482874e595f0aa6fe196548b4d07f03f6c2f6ddb83c8a2e7a",
+          "current_sha256": "1a4630ea2d9c2a731adbbd770d5f9c709c9bbf3d75deb8b80a9255915b3e5974",
+          "hunks": [
+            {
+              "before": "import { lessonAllowed, lessonById, syncTutBeat } from './tutorial.js';\n",
+              "after": "import { lessonAllowed, lessonById, syncTutBeat, beatOwnsRequest } from './tutorial.js';\n"
+            },
+            {
+              "before": "    if (a.op === 'end') { s.lesson = null; return { ok: true }; }\n",
+              "after": "    if (a.op === 'end') { s.lesson = null; this.releaseHeld(); return { ok: true }; }\n"
+            },
+            {
+              "before": "  act_tutSkip() { this.s.tut.on = false; this.s.tut.done = true; this.emit('tut_skip'); return { ok: true }; }\n",
+              "after": "  act_tutSkip() { this.s.tut.on = false; this.s.tut.done = true; this.releaseHeld(); this.emit('tut_skip'); return { ok: true }; }\n"
+            },
+            {
+              "before": "",
+              "after": "  // ------------------------------------------------ owner-review hold (Maple campaign Unit 2)\n  // While a tutorial or lesson is teaching, owner reviews still arise from normal play but wait: they are not shown,\n  // cannot expire or take a default, and are never dropped by the request cap. Generation and staff handling are unchanged.\n  // Held time is excluded from a review's age, so its timer resumes where it stopped. Before a held review is shown,\n  // it is rechecked; one that normal play already resolved is retired with no decision and no default applied.\n  reviewsHeld() { const s = this.s; return !!(s.lesson || (s.tut && s.tut.on && !s.tut.done)); }\n  reviewHeld(c) {\n    if (!c || c.staffHandling || c.released) return false;\n    if (beatOwnsRequest(this, c)) return false; // the active beat teaches this request: it is lesson content\n    return c.heldSince != null || this.reviewsHeld();\n  }\n  convoAge(c) { const s = this.s; return s.t - c.t - (c.heldMin || 0) - (c.heldSince != null ? s.t - c.heldSince : 0); }\n  heldReviews() { return this.s.convos.filter((c) => this.reviewHeld(c)); }\n  syncReviewHold() {\n    const s = this.s, held = this.reviewsHeld();\n    if (!held && s.convos.some((c) => c.heldSince != null)) { this.releaseHeld(); return; }\n    for (const c of s.convos) {\n      const on = this.reviewHeld(c);\n      if (on && c.heldSince == null) c.heldSince = s.t - c.t <= 5 ? c.t : s.t; // started holding at creation or at this check\n      else if (!on && c.heldSince != null) this.unholdReview(c);\n    }\n  }\n  unholdReview(c) { c.heldMin = (c.heldMin || 0) + this.s.t - c.heldSince; c.heldSince = null; c.wasHeld = true; }\n  // Is the decision behind a held review still open? Only types with a safe check can be retired; others are shown.\n  reviewActionable(c) {\n    const s = this.s, k = String(c.key || ''), rest = (p) => k.slice(p.length);\n    if (k.startsWith('light')) { const o = s.objects[rest('light')]; return !!o && o.cstate === 'operating' && !this.works(o); }\n    if (k.startsWith('mo')) { const tn = s.tenants[rest('mo')]; return !!tn && !!tn.leaving && !!s.leases[tn.lease]; }\n    if (k.startsWith('size')) { const id = rest('size'), ag = s.agents.find((x) => String(x.id) === id); return !!ag && ag.st === 'office' && !!ag.sizeQ; }\n    if (k.startsWith('lien')) { const L = s.leases[rest('lien')]; return !!L && L.status === 'lien'; }\n    if (k.startsWith('rate')) return !!s.leases[rest('rate')];\n    return true;\n  }\n  // Release held reviews in their saved order. `chapter`: release now even though the campaign continues (chapter-break\n  // Continue); released reviews then show through the normal flow and are not held again. Without it, releases what the\n  // ended lesson/tutorial held. Stale ones are retired: removed with no player decision and no default action.\n  releaseHeld({ chapter = false } = {}) {\n    const s = this.s; let shown = 0, retired = 0;\n    for (const c of [...s.convos]) {\n      if (c.staffHandling) { if (c.heldSince != null) this.unholdReview(c); continue; } // staff answer it as normal\n      if (!(c.heldSince != null || (chapter && this.reviewHeld(c)))) continue;\n      if (c.heldSince != null) this.unholdReview(c); else c.wasHeld = true;\n      if (!this.reviewActionable(c)) { s.convos = s.convos.filter((x) => x !== c); retired++; this.mgr(`No longer needed: ${c.who || 'Request'} - ${c.text}`, { request: true, retired: true }); continue; }\n      if (chapter) c.released = true;\n      shown++;\n    }\n    return { shown, retired };\n  }\n  act_reviewRelease() { return { ok: true, ...this.releaseHeld({ chapter: true }) }; }\n  releasedPending() { return this.s.convos.filter((c) => c.released).length; }\n"
+            },
+            {
+              "before": "",
+              "after": "    this.syncReviewHold();\n"
+            },
+            {
+              "before": "      const age = s.t - c.t, handler = c.staffHandling;\n",
+              "after": "      const age = this.convoAge(c), handler = c.staffHandling;\n"
+            },
+            {
+              "before": "",
+              "after": "      if (this.reviewHeld(c)) continue; // a held owner review never expires or takes its default while a lesson holds it\n"
+            },
+            {
+              "before": "    s.convos.push({ id: this.id(), t: s.t, ttl: 12 * 60, ...c }); if (s.convos.length > 8) s.convos.shift();\n",
+              "after": "    s.convos.push({ id: this.id(), t: s.t, ttl: 12 * 60, ...c });\n    if (s.convos.length > 8) { const i = s.convos.findIndex((x) => !this.reviewHeld(x)); if (i >= 0) s.convos.splice(i, 1); } // a held owner review is never dropped\n"
+            }
+          ]
+        }
+      }
     }
   ]
 }

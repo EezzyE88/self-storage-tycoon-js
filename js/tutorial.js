@@ -159,6 +159,11 @@ export function syncTutBeat(t) {
   t.beat = i; t.beatId = BEATS[i].id; t.beatAt = i;
 }
 
+// A beat or lesson may declare `ownsRequest(sim, c)`: that owner request is the lesson's own content and is shown, not held.
+export function beatOwnsRequest(sim, c) {
+  const s = sim.s, b = s.lesson ? lessonById(s.lesson.id) : s.tut && s.tut.on && !s.tut.done ? BEATS[tutBeatIndex(s)] : null;
+  return !!(b && b.ownsRequest && b.ownsRequest(sim, c));
+}
 // Optional lessons: offered when the situation comes up (or anytime from Growth -> Lessons) after graduation.
 // Maple-specific lessons (coordinates) run only on the original Maple Street layout.
 export const LESSONS = [
@@ -302,7 +307,7 @@ export function tutorialTick(sim) {
   if (b.check(sim)) {
     sim.emit('tut_done', { beat: s.tut.beat });
     s.tut.beat++; s.tut.entered = false; s.tut.idMark = s.nextId;
-    if (s.tut.beat >= BEATS.length) { s.tut.done = true; s.tut.on = false; s.tut.gradDay = sim.day; delete s.tut.beatId; delete s.tut.beatAt; sim.milestone('graduated'); }
+    if (s.tut.beat >= BEATS.length) { s.tut.done = true; s.tut.on = false; s.tut.gradDay = sim.day; delete s.tut.beatId; delete s.tut.beatAt; sim.releaseHeld(); sim.milestone('graduated'); }
     else { s.tut.beatId = BEATS[s.tut.beat].id; s.tut.beatAt = s.tut.beat; }
   }
 }
@@ -315,7 +320,7 @@ export function lessonTick(sim) {
     const b = lessonById(ls.id); if (!b) { s.lesson = null; return; }
     if (!lessonAllowed(sim, b)) return;
     if (!ls.entered) { ls.entered = true; if (b.enter) b.enter(sim); sim.emit('tut_beat', { lesson: ls.id }); }
-    if (b.check(sim)) { s.lessonsDone = s.lessonsDone || {}; s.lessonsDone[ls.id] = sim.day; s.lesson = null; sim.emit('lesson_done', { id: ls.id, title: b.title }); }
+    if (b.check(sim)) { s.lessonsDone = s.lessonsDone || {}; s.lessonsDone[ls.id] = sim.day; s.lesson = null; sim.releaseHeld(); sim.emit('lesson_done', { id: ls.id, title: b.title }); }
     return;
   }
   // offers: at most one at a time, checked hourly, never during tutorial

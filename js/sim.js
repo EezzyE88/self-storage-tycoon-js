@@ -4,7 +4,7 @@ import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from
 import { normalizeYardLoop, yardFocus, yardLease, updateYardLoop } from './yardloop.js';
 import { normalizeProjects, projectOffers, matchesProject, startProject, reconcileProject, projectLease } from './propertyprojects.js';
 import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';
-import { lessonAllowed, lessonById, syncTutBeat } from './tutorial.js';
+import { lessonAllowed, lessonById, syncTutBeat, beatOwnsRequest } from './tutorial.js';
 import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';
 import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
@@ -1419,7 +1419,7 @@ export class Sim {
   act_lesson(a) { // optional lessons after graduation (tutorial.js LESSONS)
     const s = this.s;
     if (a.op === 'start') { if ((s.tut && s.tut.on) || !lessonAllowed(this, lessonById(a.id))) return { ok: false, msg: 'This lesson is not available at this property' }; s.lesson = { id: a.id, idMark: s.nextId, built: [], flags: {}, entered: false }; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
-    if (a.op === 'end') { s.lesson = null; return { ok: true }; }
+    if (a.op === 'end') { s.lesson = null; this.releaseHeld(); return { ok: true }; }
     if (a.op === 'dismiss') { s.lessonsSeen = s.lessonsSeen || {}; s.lessonsSeen[a.id] = this.day; if (s.lessonOffer === a.id) s.lessonOffer = null; return { ok: true }; }
     return { ok: false };
   }
@@ -1429,7 +1429,7 @@ export class Sim {
     if (!isComeback(this.s) || c.status !== 'won') return { ok: false };
     c.acknowledged = true; return { ok: true };
   }
-  act_tutSkip() { this.s.tut.on = false; this.s.tut.done = true; this.emit('tut_skip'); return { ok: true }; }
+  act_tutSkip() { this.s.tut.on = false; this.s.tut.done = true; this.releaseHeld(); this.emit('tut_skip'); return { ok: true }; }
   milestone(k) { if (!this.s.milestones[k]) { this.s.milestones[k] = this.s.t; this.emit('milestone', { k }); } }
 
   // ============================================================ TICK
@@ -2091,11 +2091,62 @@ export class Sim {
   requestHistory() {
     return this.s.mgrLog.filter((l) => l.request || /^(Clerk|Manager) answered /.test(l.msg)).slice(0, 5);
   }
+  // ------------------------------------------------ owner-review hold (Maple campaign Unit 2)
+  // While a tutorial or lesson is teaching, owner reviews still arise from normal play but wait: they are not shown,
+  // cannot expire or take a default, and are never dropped by the request cap. Generation and staff handling are unchanged.
+  // Held time is excluded from a review's age, so its timer resumes where it stopped. Before a held review is shown,
+  // it is rechecked; one that normal play already resolved is retired with no decision and no default applied.
+  reviewsHeld() { const s = this.s; return !!(s.lesson || (s.tut && s.tut.on && !s.tut.done)); }
+  reviewHeld(c) {
+    if (!c || c.staffHandling || c.released) return false;
+    if (beatOwnsRequest(this, c)) return false; // the active beat teaches this request: it is lesson content
+    return c.heldSince != null || this.reviewsHeld();
+  }
+  convoAge(c) { const s = this.s; return s.t - c.t - (c.heldMin || 0) - (c.heldSince != null ? s.t - c.heldSince : 0); }
+  heldReviews() { return this.s.convos.filter((c) => this.reviewHeld(c)); }
+  syncReviewHold() {
+    const s = this.s, held = this.reviewsHeld();
+    if (!held && s.convos.some((c) => c.heldSince != null)) { this.releaseHeld(); return; }
+    for (const c of s.convos) {
+      const on = this.reviewHeld(c);
+      if (on && c.heldSince == null) c.heldSince = s.t - c.t <= 5 ? c.t : s.t; // started holding at creation or at this check
+      else if (!on && c.heldSince != null) this.unholdReview(c);
+    }
+  }
+  unholdReview(c) { c.heldMin = (c.heldMin || 0) + this.s.t - c.heldSince; c.heldSince = null; c.wasHeld = true; }
+  // Is the decision behind a held review still open? Only types with a safe check can be retired; others are shown.
+  reviewActionable(c) {
+    const s = this.s, k = String(c.key || ''), rest = (p) => k.slice(p.length);
+    if (k.startsWith('light')) { const o = s.objects[rest('light')]; return !!o && o.cstate === 'operating' && !this.works(o); }
+    if (k.startsWith('mo')) { const tn = s.tenants[rest('mo')]; return !!tn && !!tn.leaving && !!s.leases[tn.lease]; }
+    if (k.startsWith('size')) { const id = rest('size'), ag = s.agents.find((x) => String(x.id) === id); return !!ag && ag.st === 'office' && !!ag.sizeQ; }
+    if (k.startsWith('lien')) { const L = s.leases[rest('lien')]; return !!L && L.status === 'lien'; }
+    if (k.startsWith('rate')) return !!s.leases[rest('rate')];
+    return true;
+  }
+  // Release held reviews in their saved order. `chapter`: release now even though the campaign continues (chapter-break
+  // Continue); released reviews then show through the normal flow and are not held again. Without it, releases what the
+  // ended lesson/tutorial held. Stale ones are retired: removed with no player decision and no default action.
+  releaseHeld({ chapter = false } = {}) {
+    const s = this.s; let shown = 0, retired = 0;
+    for (const c of [...s.convos]) {
+      if (c.staffHandling) { if (c.heldSince != null) this.unholdReview(c); continue; } // staff answer it as normal
+      if (!(c.heldSince != null || (chapter && this.reviewHeld(c)))) continue;
+      if (c.heldSince != null) this.unholdReview(c); else c.wasHeld = true;
+      if (!this.reviewActionable(c)) { s.convos = s.convos.filter((x) => x !== c); retired++; this.mgr(`No longer needed: ${c.who || 'Request'} - ${c.text}`, { request: true, retired: true }); continue; }
+      if (chapter) c.released = true;
+      shown++;
+    }
+    return { shown, retired };
+  }
+  act_reviewRelease() { return { ok: true, ...this.releaseHeld({ chapter: true }) }; }
+  releasedPending() { return this.s.convos.filter((c) => c.released).length; }
   convoTick() { // every 5 game minutes; staff still use the existing 15-minute response delay
     const s = this.s; if (!s.convos.length) return;
     this.syncRequestHandling();
+    this.syncReviewHold();
     for (const c of [...s.convos]) {
-      const age = s.t - c.t, handler = c.staffHandling;
+      const age = this.convoAge(c), handler = c.staffHandling;
       if (handler && !c.staffWaiting && age >= 15) {
         const act = c.actions[c.auto];
         s.convos = s.convos.filter((x) => x !== c);
@@ -2109,6 +2160,7 @@ export class Sim {
       // Automatic requests handed to the owner cannot expire while coverage is missing,
       // manual review is selected, or a staff response is still pending.
       if (c.auto != null || c.ownerReview || s.policies.manualRequests) continue;
+      if (this.reviewHeld(c)) continue; // a held owner review never expires or takes its default while a lesson holds it
       if (c.ttl && age >= c.ttl) {
         s.convos = s.convos.filter((x) => x !== c);
         const act = c.def != null && c.actions[c.def]; if (act && act.action) this.dispatch(act.action);
@@ -2316,7 +2368,8 @@ export class Sim {
   }
   convo(c) {
     const s = this.s; if (s.convos.some((x) => x.key && x.key === c.key)) return;
-    s.convos.push({ id: this.id(), t: s.t, ttl: 12 * 60, ...c }); if (s.convos.length > 8) s.convos.shift();
+    s.convos.push({ id: this.id(), t: s.t, ttl: 12 * 60, ...c });
+    if (s.convos.length > 8) { const i = s.convos.findIndex((x) => !this.reviewHeld(x)); if (i >= 0) s.convos.splice(i, 1); } // a held owner review is never dropped
     this.emit('convo', { sev: c.sev || 'attention' });
   }
 

@@ -623,7 +623,7 @@ export class UI {
     if(title==='Operate') pairs=[['Jobs',s.tasks.length],['Staff',s.staff.length],['Office queue',s.officeQ.length]];
     else if(title==='Business') {const o=sim.occupancy();pairs=[['Cash',money(s.cash)],['Occupied',`${o.occ}/${o.n}`],['Vacant ready',sim.objs('unit').filter(u=>u.cstate==='operating'&&u.commercial==='ready'&&!u.blocked).length]];}
     else if(title==='Growth') pairs=[['Reputation',pct(sim.reputation())],['Properties',this.g.company?.props.length||1]];
-    else if(title==='Customer feedback') pairs=[['Recent reports',s.thoughts.filter(t=>t.kind==='bad').length],['Requests',s.convos.length]];
+    else if(title==='Customer feedback') pairs=[['Recent reports',s.thoughts.filter(t=>t.kind==='bad').length],['Requests',s.convos.filter(c=>!this.sim.reviewHeld(c)).length]];
     else {const o=typeof this.sel==='number'&&s.objects[this.sel];const status=o?.cstate==='built'?'Built · not ready':o?.cstate==='ready'?'Opening automatically':o?.type==='unit'?UNIT_STATUS[unitStatus(o)].label:null;pairs=o?.type==='unit'?[['Status',status],['Size',o.access==='drive'?o.size:`${o.size} · ${floorName(o.f)}`]]:[['Selected',sub||title]];}
     return `<div class="dock-metrics">${pairs.map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(String(v))}</b></div>`).join('')}</div>`;
   }
@@ -1295,6 +1295,7 @@ export class UI {
   }
   officePanelHtml() {
     const sim = this.sim, s = sim.s, p = officePanelState(sim);
+    p.decisions = p.decisions.filter((c) => !sim.reviewHeld(c)); // held owner reviews wait for the lesson/tutorial to end
     const jump = (label, tab, section) => `<button class="btn sm" data-a="officeSection" data-v="${tab}" data-section="${section}">${label}</button>`;
     const first = p.decisions[0];
     const reason = first?.sev === 'critical' ? 'Critical' : first?.ownerReview === 'failed' ? 'Staff response failed' :
@@ -1533,7 +1534,7 @@ export class UI {
     const thoughts=[...this.sim.s.thoughts];
     if(this.feedbackFocus) { const key=complaintKey(this.feedbackFocus),idx=thoughts.findIndex(t=>complaintKey(t)===key && t.t===this.feedbackFocus.t); const focused=idx>=0 ? thoughts.splice(idx,1)[0] : this.feedbackFocus; thoughts.push(focused); }
     const rows=thoughts.map(th=>({th,d:diagnoseComplaint(this.sim,th)})).filter(x=>x.d).reverse();
-    const requests=[...this.sim.s.convos].sort((a,b)=>Number(b.id===this.feedbackRequest)-Number(a.id===this.feedbackRequest)).map(c=>({c,d:diagnoseRequest(this.sim,c)})).filter(x=>x.d).map(({c,d})=>{const copy=requestCopy(c,d);return `<article class="item"><div class="grow"><small>${c.staffHandling?'Staff handling now':'Decision needed now'}</small><b>${esc(c.text||'Customer request')}</b><small>${esc(d.category)} · ${esc(d.location)}</small><p><b>Why:</b> ${esc(copy.why)}</p><p><b>Next:</b> ${esc(copy.next)}</p><details class="explanation"><summary>Report context</summary><p>${esc(d.cause)}</p><p>${esc(d.remedy)}</p><small>Existing response choices retain their costs and consequences.</small></details><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`;}).join('');
+    const requests=this.sim.s.convos.filter(c=>!this.sim.reviewHeld(c)).sort((a,b)=>Number(b.id===this.feedbackRequest)-Number(a.id===this.feedbackRequest)).map(c=>({c,d:diagnoseRequest(this.sim,c)})).filter(x=>x.d).map(({c,d})=>{const copy=requestCopy(c,d);return `<article class="item"><div class="grow"><small>${c.staffHandling?'Staff handling now':'Decision needed now'}</small><b>${esc(c.text||'Customer request')}</b><small>${esc(d.category)} · ${esc(d.location)}</small><p><b>Why:</b> ${esc(copy.why)}</p><p><b>Next:</b> ${esc(copy.next)}</p><details class="explanation"><summary>Report context</summary><p>${esc(d.cause)}</p><p>${esc(d.remedy)}</p><small>Existing response choices retain their costs and consequences.</small></details><div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`;}).join('');
     const requestFirst=this.feedbackRequest!=null;
     return this.sheet('Customer feedback', 'Recent reports · current property', `<p class="note">Reports record past events. Check current conditions before spending.</p>${requestFirst?requests:''}${rows.length ? rows.map(({th,d})=>{const copy=complaintCopy(th,d);return `<article class="item"><div class="grow"><b>${esc(copy.what)}${th.n>1?' ×'+th.n:''}</b><small>${th.requestedSize?'Requested '+esc(th.requestedSize)+(th.requestedClimate?' climate':'')+' · ':''}${esc(d.category)} · Day ${dayOf(th.t)} ${fmtTime(th.t)}</small><small>${esc(d.location)}${d.legacy?' · older save: exact target unavailable':''}</small><p><b>Why then:</b> ${esc(copy.why)}</p><p><b>Next:</b> ${esc(copy.next)}</p><details class="explanation"><summary>Report context</summary><p>Customer report: ${esc(th.text)}${th.n>1?' ×'+th.n:''}</p><p>${esc(d.cause)}</p><p>${esc(d.remedy)}</p><small>The latest 40 thoughts are retained in the save.</small></details>${this.climateUnitsHtml(d)}<div class="row wrap">${this.complaintLocationButton(d)}<button class="btn sm" data-a="complaintReview" data-v="${d.tab}">Review ${esc(d.tab)}</button></div></div></article>`;}).join('') : requests ? '' : '<p>No recent customer complaints.</p>'}${requestFirst?'':requests}`);
   }
@@ -1906,14 +1907,15 @@ export class UI {
   renderFeed(force = false) {
     const s = this.sim.s; this.sim.syncRequestHandling();
     const officeOpen = this.sim.hour >= OFFICE_HOURS[0] && this.sim.hour < OFFICE_HOURS[1];
-    const key = officeOpen + ':' + s.convos.map((c) => `${c.id}:${c.staffHandling}:${c.staffWaiting}:${c.ownerReview}:${this.sim.requestOfferStatus(c)}`).join(',') + ':' + !!s.policies.manualRequests + ':' + (s.mgrLog[0]?.t ?? '') + ':' + (s.mgrLog[0]?.msg ?? '');
+    const key = officeOpen + ':' + s.convos.map((c) => `${c.id}:${c.staffHandling}:${c.staffWaiting}:${c.ownerReview}:${this.sim.reviewHeld(c)}:${this.sim.requestOfferStatus(c)}`).join(',') + ':' + !!s.policies.manualRequests + ':' + (s.mgrLog[0]?.t ?? '') + ':' + (s.mgrLog[0]?.msg ?? '');
     if (!force && key === this.convoKey) return; this.convoKey = key;
     const feed = this.$('feed');
     for (const el of feed.querySelectorAll('.convo, .request-handling')) el.remove();
     const frag = document.createDocumentFragment(); this.requestCards=[]; this.ownerRequestCards=[];
     // phone declutter: one request at a time, most urgent first (critical, then soonest to expire)
-    const urg = (c) => (c.sev === 'critical' ? 0 : 1e6) + (c.ttl ? Math.max(0, c.ttl - (s.t - c.t)) : 5e5);
-    const order = s.convos.slice().sort((a, b) => urg(a) - urg(b)); const cap = this.convoAll ? 3 : 1;
+    // Held owner reviews (a tutorial or lesson is teaching) are not shown and never pause time; they wait their turn.
+    const urg = (c) => (c.sev === 'critical' ? 0 : 1e6) + (c.ttl ? Math.max(0, c.ttl - this.sim.convoAge(c)) : 5e5);
+    const order = s.convos.filter((c) => !this.sim.reviewHeld(c)).sort((a, b) => urg(a) - urg(b)); const cap = this.convoAll ? 3 : 1;
     const ownerCount = order.filter((c) => !c.staffHandling).length, staffCount = order.length - ownerCount;
     if (ownerCount) this.pauseForPopup('convo'); else this.resumePopup('convo');
     if (false && order.length > cap) { const m = document.createElement('button'); m.className = 'convo more'; m.dataset.a = 'convoAll'; m.textContent = this.convoAll ? 'Show fewer' : `+${order.length - cap} more request${order.length - cap > 1 ? 's' : ''} waiting`; frag.appendChild(m); }
@@ -1921,7 +1923,7 @@ export class UI {
     for (const c of order) {
       const el = document.createElement('div'); el.className = 'convo ' + (c.sev || 'attention');
       // no countdowns (concept §9): say calmly what happens if the player leaves it; only collections keep a real-world date
-      const due = c.ttl ? c.t + c.ttl : null;
+      const due = c.ttl ? s.t + c.ttl - this.sim.convoAge(c) : null;
       const calm = c.staffHandling ? 'Pause or choose manual review whenever you want to intervene.' : c.key && String(c.key).startsWith('lien') && due ? `Lien decision due Day ${dayOf(due)}. Time stays paused while you review.` : 'No rush. Time stays paused until you choose.';
       const advice=diagnoseRequest(this.sim,c);
       const handling = c.staffHandling ? `${c.staffHandling} ${c.staffWaiting ? (!officeOpen ? "will handle this when the office opens" : "will handle this when staff are available") : "handling this"} · ${c.actions[c.auto].label}` : c.ownerReview === 'coverage' ? 'Staff coverage ended. Waiting for your decision.' : c.ownerReview === 'failed' ? 'Staff could not complete this. Waiting for your decision.' : 'Waiting for your decision · no rush';
@@ -2163,7 +2165,8 @@ export class UI {
     const st = stepState(this.sim, this); const cur = st.cur, step = this.resolveStep(b.steps[cur]);
     const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim));
     const bk = isLesson ? 'L' + s.lesson.id : tutBeatIndex(s);
-    const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || ''].join(':');
+    const heldN = this.sim.heldReviews().length;
+    const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || '', heldN].join(':');
     this.guideStep = step; this.guideKey = bk + ':' + cur + (step?.redirect || '');
     if (!force && key === this.tutKey) return; this.tutKey = key;
     // map focus follows the current step
@@ -2180,6 +2183,7 @@ export class UI {
       <div class="tut-body"><h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
+      ${heldN ? `<p class="note held-note">${heldN} owner request${heldN === 1 ? ' is' : 's are'} waiting. ${heldN === 1 ? 'It' : 'They'} will appear ${isLesson ? 'when this lesson ends' : 'at the next stopping point'}.</p>` : ''}
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
       </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
