@@ -122,4 +122,18 @@ test('Skip tutorial leaves no beat id behind (in play, and on an older skipped s
   assert.equal(re.s.tut.done, true); assert.equal(re.s.speed, 4);
 });
 
+test('graduation reached with the Operate panel open closes the panel so the full card shows', () => {
+  const sim = atHire(4), ui = uiFor(sim); let sheets = 0;
+  ui.g.rend.setSelection = () => {}; ui.renderSheet = () => { sheets++; }; ui.tab = 'operate'; ui.sel = null; // the hire beat leaves Operate open
+  tutorialTick(sim); const entered = sim.events.filter((e) => e.type === 'tut_beat');
+  assert.equal(curBeat(sim).id, 'grad'); assert.equal(entered.length, 0, 'entered on the next tick');
+  tutorialTick(sim); for (const e of sim.events.filter((x) => x.type === 'tut_beat')) ui.onEvent(e);
+  assert.equal(ui.tab, null); assert.equal(ui.sel, null); assert.ok(sheets > 0, 'the sheet was re-rendered closed');
+  assert.equal(sim.s.speed, 0); assert.equal(ui.tutMin, false);
+  assert.match(ui.renderTutBox.innerHTML, /<h4>Maple Street is yours<\/h4>/); assert.match(ui.renderTutBox.innerHTML, /Maple Street is paused/); assert.match(ui.renderTutBox.innerHTML, /Finish tutorial<\/button>/);
+  // Other beats keep their panel: only the pausing graduation beat closes it.
+  const other = makeMaple(78), u2 = uiFor(other); u2.g.rend.setSelection = () => {}; u2.renderSheet = () => {}; u2.tab = 'operate';
+  tutorialTick(other); for (const e of other.events.filter((x) => x.type === 'tut_beat')) u2.onEvent(e); assert.equal(u2.tab, 'operate');
+});
+
 console.log(`${passed} paused graduation checks passed`);
