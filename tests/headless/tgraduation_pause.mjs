@@ -39,7 +39,7 @@ test('the final card is "Maple Street is yours" with Finish tutorial, never Keep
   assert.equal(b.title, 'Maple Street is yours'); assert.equal(b.button, 'Finish tutorial'); assert.equal(b.pause, true);
   assert.match(b.body, /Maple Street is paused/); assert.match(b.body, /start the clock when you’re ready/);
   for (const x of BEATS) { assert.ok(!/Keep playing/.test(JSON.stringify(x) + x.steps.map((st) => st.t + st.d).join(''))); }
-  assert.equal(BEATS.filter((x) => x.pause).length, 1, 'only graduation pauses');
+  assert.equal(BEATS.filter((x) => x.pause && !x.brk).length, 1, 'only graduation pauses (besides chapter breaks, Unit 4)'); assert.ok(BEATS.filter((x) => x.pause).every((x) => x.id === 'grad' || x.brk));
 });
 
 for (const v of [1, 2, 4]) test(`graduation reached at ${v}x pauses the sim the moment it begins`, () => {

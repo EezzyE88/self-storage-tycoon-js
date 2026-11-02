@@ -19,7 +19,7 @@ import { complaintCopy, requestCopy } from './feedbackcopy.js';
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK, BILLING_CYCLE_DAYS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
-import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed, tutBeatIndex } from './tutorial.js';
+import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed, tutBeatIndex, beatHeader, beatGroup } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
@@ -578,6 +578,7 @@ export class UI {
   }
   jumpSection(label) {
     this.sectionMenuKey = null; this.sectionChoice = { tab: this.tab, label };
+    if (this.tab === 'business' && label === 'Asking rents' && this.sim.s.tut?.on) this.do({ type: 'tutFlag', flag: 'pricingSeen' }); // read-only: Beat 5 counts Pricing seen
     const body = this.$('sheet').querySelector('.body'); if (!body) return;
     if(!this.sheetTall) { this.sheetTall=true; this.renderSheet(true); return this.jumpSection(label); }
     const picker = this.$('sheet').querySelector('[data-section-picker]'); if (picker) { picker.textContent = label + ' ▾'; picker.setAttribute('aria-expanded', 'false'); }
@@ -1887,8 +1888,8 @@ export class UI {
     h += this.diagnosticHtml();
     h += `<h3>Milestones</h3><div class="list">${Object.entries(MILESTONES).map(([k, n]) => `<div class="item"><div class="grow"><b>${n}</b>${s.milestones[k] != null ? `<small>Day ${dayOf(s.milestones[k])}</small>` : ''}</div><span class="pill ${s.milestones[k] != null ? 'g' : ''}">${s.milestones[k] != null ? 'Done' : '—'}</span></div>`).join('')}</div>`;
     if (s.mode === 'tutorial') {
-      const chapters = [...new Set(BEATS.map((b) => b.chapter))];
-      h += `<h3>Tutorial</h3><div class="list">${chapters.map((c) => { const idx = BEATS.map((b, i) => b.chapter === c ? i : -1).filter((i) => i >= 0); const at = tutBeatIndex(s); const done = s.tut.done || idx.every((i) => i < at); const cur = !done && idx.includes(at); return `<div class="item"><div class="grow"><b>${c}</b></div><span class="pill ${done ? 'g' : cur ? 'a' : ''}">${done ? 'Done' : cur ? 'Now' : 'Later'}</span></div>`; }).join('')}</div>`;
+      const chapters = [...new Set(BEATS.map(beatGroup))];
+      h += `<h3>Tutorial</h3><div class="list">${chapters.map((c) => { const idx = BEATS.map((b, i) => beatGroup(b) === c ? i : -1).filter((i) => i >= 0); const at = tutBeatIndex(s); const done = s.tut.done || idx.every((i) => i < at); const cur = !done && idx.includes(at); return `<div class="item"><div class="grow"><b>${c}</b></div><span class="pill ${done ? 'g' : cur ? 'a' : ''}">${done ? 'Done' : cur ? 'Now' : 'Later'}</span></div>`; }).join('')}</div>`;
     }
     if (careerEligibility(s).eligible && !(s.tut && s.tut.on)) {
       const avail = LESSONS.filter((L) => lessonAllowed(sim, L)); s.lessonsDone = s.lessonsDone || {};
@@ -2185,11 +2186,11 @@ export class UI {
     const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details><span class="how-line">${x.d}</span>` : ''}</span></li>`;
     let items = '';
     b.steps.forEach((x, i) => { if (i === cur) items += li(step, i, 'cur');  });
-    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${b.pause ? ' final' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${tutBeatIndex(s) + 1} of ${BEATS.length}`}</span>${b.pause ? '' : `<button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button>`}</div>
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${b.pause ? ' final' : ''}${b.brk ? ' break' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : beatHeader(tutBeatIndex(s))}</span>${b.pause ? '' : `<button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button>`}</div>
       <div class="tut-body"><h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
-      ${heldN ? `<p class="note held-note">${heldN} owner request${heldN === 1 ? ' is' : 's are'} waiting. ${heldN === 1 ? 'It' : 'They'} will appear ${isLesson ? 'when this lesson ends' : b.pause ? 'after you finish the tutorial' : 'at the next stopping point'}.</p>` : ''}
+      ${heldN ? `<p class="note held-note">${heldN} owner request${heldN === 1 ? ' is' : 's are'} waiting. ${heldN === 1 ? 'It' : 'They'} will appear ${isLesson ? 'when this lesson ends' : b.brk ? 'after you tap Continue' : b.pause ? 'after you finish the tutorial' : 'at the next stopping point'}.</p>` : ''}
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
       </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : b.pause ? '' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
