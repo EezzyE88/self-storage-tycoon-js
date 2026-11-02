@@ -1061,6 +1061,18 @@
         "scope": "Maple Beat 5 (What should new tenants pay?) Business -> Asking rents read-only stop: order, progression, skip-safety, unchanged expand trigger, no state writes, live occupancy story, save/reload"
       },
       {
+        "id": "trepair_tap_shield",
+        "command": [
+          "@node",
+          "tests/headless/trepair_tap_shield.mjs"
+        ],
+        "completion": "6 repair tap shield checks passed",
+        "minimum_pass_lines": 6,
+        "timeout": 300,
+        "evidence": "native current behavior: real Maple tutorial to the repair beat, stubbed renderer, real UI.updateBubbles",
+        "scope": "Repair beat 'Tap the broken light': complaint bubbles stay visible but cannot take taps on that coached step only; unchanged before/after/outside the tutorial; UI-only; Asking rents '1 unit' plural"
+      },
+      {
         "id": "tcampaign_state",
         "command": [
           "@node",
