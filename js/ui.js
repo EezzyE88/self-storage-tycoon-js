@@ -579,6 +579,7 @@ export class UI {
   jumpSection(label) {
     this.sectionMenuKey = null; this.sectionChoice = { tab: this.tab, label };
     if (this.tab === 'business' && label === 'Asking rents' && this.sim.s.tut?.on) this.do({ type: 'tutFlag', flag: 'pricingSeen' }); // read-only: Beat 5 counts Pricing seen
+    if (this.tab === 'operate' && label === 'Work queue' && this.sim.s.tut?.on) this.do({ type: 'tutFlag', flag: 'jobsSeen' }); // read-only: Beat 7 counts Jobs seen
     const body = this.$('sheet').querySelector('.body'); if (!body) return;
     if(!this.sheetTall) { this.sheetTall=true; this.renderSheet(true); return this.jumpSection(label); }
     const picker = this.$('sheet').querySelector('[data-section-picker]'); if (picker) { picker.textContent = label + ' ▾'; picker.setAttribute('aria-expanded', 'false'); }
@@ -2174,7 +2175,7 @@ export class UI {
     }
     const isLesson = !!s.lesson;
     const st = stepState(this.sim, this); const cur = st.cur, step = this.resolveStep(b.steps[cur]);
-    const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim));
+    const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim, this));
     const bk = isLesson ? 'L' + s.lesson.id : tutBeatIndex(s);
     const heldN = this.sim.heldReviews().length;
     const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || '', heldN].join(':');

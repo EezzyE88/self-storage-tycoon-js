@@ -2,7 +2,7 @@ import { tutorialUnit } from './unitnumbering.js';
 import { careerEligibility } from './career.js';
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
-import { TOOLS } from './data.js';
+import { TOOLS, ROLES } from './data.js';
 import { verticalDone, verticalLayout, shaftHallState } from './blueprint.js';
 
 const unitByRole = (sim, role) => tutorialUnit(sim, role);
@@ -51,6 +51,19 @@ const pricingSeen = (sim) => !!sim.s.tut.flags.pricingSeen;
 // filled in by tutorialText() when the card is built (step texts stay plain strings).
 const occLine = (sim) => { const o = sim.occupancy(), vac = o.n - o.occ; return vac ? `<b>${o.occ} of ${o.n}</b> units are leased and <b>${vac}</b> ${vac === 1 ? 'is' : 'are'} vacant.` : `All <b>${o.n}</b> units are leased.`; };
 const pricingStory = (sim) => `${occLine(sim)} Prospects keep asking about space. Before you decide Maple Street needs more units, check what new customers pay.`;
+// Act II (campaign Unit 5). Beat 6 explains the build status and "cash after" once a green preview is showing (Got it).
+// Beat 7 shows the failure as a queued job in Operate -> Jobs before it is assigned (at 4x a sent Owner finishes in about
+// a real second, so the queue is shown first). The UI records `jobsSeen` (read-only, like `pricingSeen`); the card gives the
+// job's length from the live job ({repairHours}). The existing tap-the-light, Send Owner and fix steps follow unchanged. Beat 8 explains every role and wage on a paused Got-it card after the hire; only the Porter is required.
+const flag = (sim, f) => !!sim.s.tut.flags[f];
+const jobsShowing = (ui) => tabIs(ui, 'operate') && ui.sectionChoice?.tab === 'operate' && ui.sectionChoice?.label === 'Work queue';
+const fixed = (sim) => !!sim.s.milestones.first_repair;
+const sent = (sim) => !!(repairTask(sim, hallLight(sim)) || {}).assigned;
+const repairHours = (sim) => { const t = repairTask(sim, hallLight(sim)), h = t ? sim.taskHours(t) : null; return h ? `about <b>${h} game hour${h === 1 ? '' : 's'}</b>` : 'a short time'; };
+const wage = (r) => { const w = ROLES[r].wage; return `$${w % 1 ? w.toFixed(2) : w}/day`; };
+const porterHired = (sim) => sim.s.staff.some((x) => x.role === 'porter');
+// The move-out Beat 8 authors arrives 20 game minutes after the beat starts; the act does not end with it still on the way.
+const moveoutQueued = (sim) => { const u = unitByRole(sim, 'mapleInteriorMoveout'), L = u && u.lease && sim.s.leases[u.lease]; return !!L && sim.s.visits.some((v) => v.kind === 'moveout' && v.tenant === L.tenant); };
 const waitBuild = (label, doneFn) => ({ t: label || 'Let construction finish', d: 'Construction takes game hours. Tap <b>4x</b> at the top to speed up. A progress ring shows over the site.', sel: FAST, done: doneFn });
 
 // Generic chapter break: a paused card with a deliberate Continue. Continue (flag = id) releases the owner reviews held
@@ -122,39 +135,60 @@ export const BEATS = [
   chapterBreak({ id: 'actI_break', act: 'I', chapter: 'Take Over', next: 'Act II · Stabilize', title: 'You have control of Maple Street',
     body: 'The basics are working: units turn over, prospects sign leases, and rent comes in every month. <b>Maple Street is paused.</b> This is a good place to stop. Next, in <b>Act II · Stabilize</b>, demand keeps growing and you learn to grow without losing control of operations.',
     why: 'What you learned in Act I: a vacant unit needs a make-ready before it can lease; work takes game time; <b>Pause</b> and the speeds run the clock; prospects become tenants by signing leases; leases bring in rent every month; cash alone doesn\'t show how the business is doing; and asking rents set what <b>future</b> leases pay.' }),
-  { id: 'expand', chapter: 'Add Capacity', title: 'Maple Street is full',
+  // Act II "Stabilize" (campaign Unit 5): beats 6-8, then the Act II chapter break.
+  { id: 'expand', act: 'II', chapter: 'Stabilize', title: 'Maple Street is full',
     body: 'Every unit is leased and prospects are still asking. Build a new row of drive-up units on the empty grass east of the main aisle.',
-    why: 'Asking rents set what each <b>new lease</b> pays; signed leases keep their rent. Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. Eligible units open for rental automatically when construction finishes.',
+    why: 'Expansion is a <b>capital decision</b>: build when demand is proven, not before. Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. Construction takes cash now and game time to finish. Eligible units open for rental automatically when construction finishes.',
     focus: () => ({ tool: 'du10x10', cell: { x: 13, y: 22 } }),
-    steps: [
-      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, end: { x: 13, y: 28 }, axis: 'y', placed: (sim) => ordered(sim, 'du10x10'),
-        place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.' }),
-      waitBuild('Let construction finish and the units open', (sim) => !!sim.s.milestones.first_expansion),
-    ],
+    steps: (() => {
+      const placed = (sim) => ordered(sim, 'du10x10');
+      const steps = buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, end: { x: 13, y: 28 }, axis: 'y', placed,
+        place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.' });
+      // One added step between a green preview and Confirm: what the status colours and the "cash after" line mean.
+      // Phones hide step details while the build review is open, so the title carries the colours and the cash line.
+      const status = { placement: steps[steps.length - 1].placement, cell: steps[steps.length - 1].cell, f: 0, t: '<b>Green</b>: ready to build. <b>Amber</b>: can\'t earn yet. <b>Red</b>: can\'t go there. Check <b>cash after</b>', d: '<b>Green</b>: it can be built and can earn. <b>Amber</b>: it can be built but can\'t earn yet (for example, the doors don\'t reach an aisle). <b>Red</b>: it can\'t go there; the action bar says why. The action bar also shows the <b>cost</b> and your <b>cash after</b> construction, so you see what this row leaves in the bank. Tap <b>Got it</b> on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => placed(sim) || flag(sim, 'buildStatusAck') };
+      return [...steps.slice(0, -1), status, steps[steps.length - 1]];
+    })().concat([waitBuild('Let construction finish and the units open', (sim) => !!sim.s.milestones.first_expansion)]),
+    button: 'Got it', flag: 'buildStatusAck', buttonWhen: (sim, ui) => !flag(sim, 'buildStatusAck') && !ordered(sim, 'du10x10') && planOk(ui, 'du10x10'),
     check: (sim) => !!sim.s.milestones.first_expansion },
-  { id: 'repair', chapter: 'Keep the Property Working', title: 'A hallway light has failed',
+  { id: 'repair', act: 'II', chapter: 'Stabilize', title: 'A hallway light has failed',
     body: 'The main hallway in the interior building just went dark. Dark hallways feel unsafe and customers notice.',
-    why: 'Equipment wears out over time. Failures create jobs in the queue (<b>Operate &rarr; Jobs</b>). The Owner can fix simple things; a Tech or vendor handles the rest.',
+    why: 'Equipment wears out over time. Each failure becomes a <b>job</b> in the work queue (<b>Operate &rarr; Jobs</b>), with the hours of work it needs. The Owner does one job at a time and fixes simple things; a Tech or vendor handles the rest.',
     enter: (sim) => { const L = hallLight(sim); if (L) { sim.wear(L, L.cond - 0.1); sim.ensureRepairTask(L); sim.markDirty(); } },
     focus: (sim) => { const L = hallLight(sim); return { obj: L && L.id, view: 0 }; },
     steps: [
-      { t: 'Look inside: tap <b>F1</b>', d: 'On the right-hand rail, <b>EXT</b> shows roofs; <b>F1</b> lifts the roof so you see inside floor 1.', sel: '#floors [data-v="0"]', done: (sim, ui) => (ui && ui.rend && ui.rend.view === 0) || !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
-      { t: 'Tap the broken <b>light</b>', d: 'It\'s in the middle of the main hallway, under the orange wrench pin (the ring marks it).', clearMapTap: true, obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
-      { t: 'Tap <b>Send Owner</b>', d: 'In the light\'s panel, tap <b>Send Owner</b>. If the Owner is busy, the job waits its turn.', sel: `[data-cmd*='"ownerTask"']`, done: (sim) => !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
-      { t: 'Let the Owner fix it', d: 'Keep time running. The Owner walks in through the wide door and repairs the light (sparks when done).', sel: PLAY, done: (sim) => !!sim.s.milestones.first_repair },
+      { t: 'Look inside: tap <b>F1</b>', d: 'On the right-hand rail, <b>EXT</b> shows roofs; <b>F1</b> lifts the roof so you see inside floor 1.', sel: '#floors [data-v="0"]', done: (sim, ui) => (ui && ui.rend && ui.rend.view === 0) || sent(sim) || fixed(sim) },
+      // The failure is already a job: look at it in the queue first (time is paused while the panel is open), then assign it.
+      { t: 'Open <b>Operate</b> to see the job', d: 'The broken light is now a job in the work queue. Tap <b>Operate</b> in the bottom bar (the person icon).', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || flag(sim, 'jobsSeen') || sent(sim) || fixed(sim) },
+      { t: 'Choose <b>Jobs</b>', d: 'In the Operate panel, open the section selector at the top and choose <b>Jobs</b>. It lists every job waiting or in progress.', sel: '.sheet [data-section-picker]', section: ['operate', 'Work queue', 'Jobs'], lbl: 'Choose Jobs', done: (sim, ui) => jobsShowing(ui) || flag(sim, 'jobsSeen') || sent(sim) || fixed(sim) },
+      { t: 'Jobs wait in a <b>queue</b>', d: 'Each job shows who has it and the hours of work it needs. <b>Repair Light</b> needs {repairHours} of on-site work, plus walking time, and nobody has it yet. The Owner does one job at a time; anything else waits its turn. Tap <b>Got it</b> on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => flag(sim, 'jobsAck') || sent(sim) || fixed(sim) },
+      { t: 'Tap <b>Back to map</b>', d: 'Time stays paused while the panel is expanded. Tap <b>Back to map</b> at the top of the panel to see the hallway again.', sel: '.sheet [data-a="sheetGrow"][aria-expanded="true"]', lbl: 'Back to map', done: (sim, ui) => !(ui && ui.sheetTall && ui.tab) || (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || sent(sim) || fixed(sim) },
+      { t: 'Tap the broken <b>light</b>', d: 'It\'s in the middle of the main hallway, under the orange wrench pin (the ring marks it).', clearMapTap: true, obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || sent(sim) || fixed(sim) },
+      { t: 'Tap <b>Send Owner</b>', d: 'In the light\'s panel, tap <b>Send Owner</b>. If the Owner is busy, the job waits its turn.', sel: `[data-cmd*='"ownerTask"']`, done: (sim) => sent(sim) || fixed(sim) },
+      { t: 'Let the Owner fix it', d: 'Keep time running. The Owner walks in through the wide door and repairs the light (sparks when done). The job leaves the queue when it\'s finished.', sel: PLAY, done: fixed },
     ],
+    button: 'Got it', flag: 'jobsAck', buttonWhen: (sim) => flag(sim, 'jobsSeen') && !flag(sim, 'jobsAck') && !sent(sim) && !fixed(sim),
     check: (sim) => !!sim.s.milestones.first_repair },
-  { id: 'hire', chapter: 'Keep the Property Working', title: 'The Owner is the bottleneck',
+  { id: 'hire', act: 'II', chapter: 'Stabilize', title: 'The Owner is the bottleneck',
     body: 'Unit 203 just moved out and the loading area is dirty. Two jobs, and the Owner can only do one at a time.',
-    why: '<b>Hiring adds service capacity.</b> Porters clean and turn over units; Techs repair equipment; Clerks run the counter; Managers handle routine decisions. Each has a daily wage.',
+    why: `<b>Hiring adds service capacity at an ongoing cost.</b> Each role has a daily wage and its own work: a <b>Porter</b> (${wage('porter')}) cleans and turns over units; a <b>Tech</b> (${wage('tech')}) repairs equipment; a <b>Clerk</b> (${wage('clerk')}) runs the office counter; a <b>Manager</b> (${wage('manager')}) handles routine decisions. Only the Porter is needed now.`,
     enter: (sim) => { const u = unitByRole(sim, 'mapleInteriorMoveout'); if (u && u.lease) { const L = sim.s.leases[u.lease]; const tn = sim.s.tenants[L.tenant]; tn.leaving = true; sim.schedule({ kind: 'moveout', tenant: tn.id, unit: u.id }, sim.s.t + 20); } for (let x = 18; x <= 21; x++) sim.s.dirt[0][15 * sim.s.W + x] = 0.7; },
     focus: () => ({ tab: 'operate' }),
     steps: [
       { t: 'Open <b>Operate</b>', d: 'Tap <b>Operate</b> in the bottom bar (the person icon; the red badge counts waiting jobs).', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || sim.s.staff.some((x) => x.role === 'porter') },
       { t: 'Tap <b>Hire Porter</b>', d: 'In the Operate panel, choose <b>Hire</b> in the section selector at the top, then tap <b>Hire Porter</b>. The button shows the daily wage.', sel: `[data-cmd*='"role":"porter"']`, done: (sim) => sim.s.staff.some((x) => x.role === 'porter') },
+      // Explained, never required: read while the Hire list (with every role and wage) is still open and time is paused.
+      { t: `Other roles: <b>Tech</b> ${wage('tech')}, <b>Clerk</b> ${wage('clerk')}, <b>Manager</b> ${wage('manager')}`, d: `Each role adds a different kind of capacity for its daily wage: a <b>Tech</b> repairs equipment, a <b>Clerk</b> runs the office counter and a <b>Manager</b> handles routine decisions. They are listed under the Porter. You don't need them now. Tap <b>Got it</b> on this card.`, sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => flag(sim, 'rolesAck') || !!sim.s.milestones.first_delegated },
       { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', sel: PLAY, done: (sim) => !!sim.s.milestones.first_delegated },
     ],
-    check: (sim) => !!sim.s.milestones.first_delegated },
+    button: 'Got it', flag: 'rolesAck', buttonWhen: (sim) => porterHired(sim) && !flag(sim, 'rolesAck') && !sim.s.milestones.first_delegated,
+    // A Porter already on staff counts once delegated work happens (never fire and re-hire). The act ends after the authored move-out arrives.
+    check: (sim) => !!sim.s.milestones.first_delegated && !moveoutQueued(sim) },
+  // Act II chapter break: paused; Continue releases owner reviews held during Act II (stale ones retired), then graduation.
+  chapterBreak({ id: 'actII_break', act: 'II', chapter: 'Stabilize', next: 'Graduation', title: 'Maple Street is stable again',
+    body: 'The new row is open, the hallway light works and a Porter shares the work with you. <b>Maple Street is paused.</b> This is a good place to stop. Next, you finish the tutorial. After that, lessons show what customers actually experience when they use the property.',
+    why: 'What you learned in Act II: expansion solves a capacity problem; construction costs cash now and takes time; equipment needs maintenance; the Owner can only do so much each day; staff add capacity for a daily wage; and each role does different work.' }),
+
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
   { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true,
     body: 'You’ve taken Maple Street from a property you barely knew into one you can operate, improve and grow. You understand how customers, staff, buildings and money fit together. There is still plenty to master, but the property is yours now. <b>Maple Street is paused.</b> Take your time, look around, and start the clock when you’re ready.',
@@ -321,7 +355,7 @@ export function beatHeader(i) {
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
 export function tutorialText(sim, value) {
-  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/Unit (107|203)\b/g, (_, n) => {
+  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/Unit (107|203)\b/g, (_, n) => {
     const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
     return u ? `Unit ${u.num}` : 'the tutorial unit';
   }) : value;

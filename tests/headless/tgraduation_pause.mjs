@@ -13,15 +13,18 @@ let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('PASS', name); };
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const GRAD = beatIndex('grad');
-// A tutorial on the hire beat with a porter hired: the next tutorial tick completes it and enters graduation.
-function atHire(speed = 4) {
+// The step before graduation. Campaign Unit 5 put the Act II break between hire and graduation: the hire beat is completed
+// with a porter, then Continue is tapped on the break with nothing waiting, so the next tutorial tick enters graduation.
+// `speed` is the speed graduation is reached at (forced here; in play the break already holds Pause).
+function beforeGrad(speed = 4) {
   const sim = makeMaple(77), s = sim.s; s.cash = 1e6; s.open = true;
   s.tut.beat = beatIndex('hire'); s.tut.entered = true; tutorialTick(sim);
   assert.equal(curBeat(sim).id, 'hire');
   assert.equal(sim.dispatch({ type: 'hire', role: 'porter' }).ok, true); s.milestones.first_delegated = s.t; // the porter's first job, as in play
+  tutorialTick(sim); tutorialTick(sim); assert.equal(curBeat(sim).id, 'actII_break'); assert.equal(s.tut.entered, true); sim.dispatch({ type: 'tutFlag', flag: 'actII_break' });
   s.speed = speed; sim.events.length = 0; return sim;
 }
-const atGrad = (speed = 4) => { const sim = atHire(speed); tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad'); return sim; };
+const atGrad = (speed = 4) => { const sim = beforeGrad(speed); tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad'); return sim; };
 const finish = (sim) => { sim.dispatch({ type: 'tutFlag', flag: 'grad' }); tutorialTick(sim); };
 const ask = (sim, key) => { sim.convo({ key, who: 'Tester', sev: 'attention', ttl: 60, def: 0, text: 'Test ' + key, actions: [{ label: 'Default', action: { type: 'tutFlag', flag: 'def_' + key } }, { label: 'Other' }] }); return sim.s.convos.find((c) => c.key === key); };
 // A UI with just enough DOM to run the production speed, popup and tutorial-card paths.
@@ -43,7 +46,7 @@ test('the final card is "Maple Street is yours" with Finish tutorial, never Keep
 });
 
 for (const v of [1, 2, 4]) test(`graduation reached at ${v}x pauses the sim the moment it begins`, () => {
-  const sim = atHire(v); tutorialTick(sim);
+  const sim = beforeGrad(v); tutorialTick(sim);
   assert.equal(curBeat(sim).id, 'grad'); assert.equal(sim.s.speed, 0);
   assert.ok(sim.events.some((e) => e.type === 'speed' && e.v === 0));
   tutorialTick(sim); assert.equal(sim.s.tut.entered, true); assert.equal(sim.s.speed, 0);
@@ -64,7 +67,7 @@ test('Finish tutorial closes the tutorial with time still paused and no speed re
 });
 
 test('UI: Pause is selected, a run speed keeps the card up, and Finish never restores the earlier speed', () => {
-  const sim = atHire(4), ui = uiFor(sim);
+  const sim = beforeGrad(4), ui = uiFor(sim);
   ui.pauseForPopup('panel'); assert.equal(ui.popupResume, 4, 'a panel opened while running would restore 4x');
   tutorialTick(sim); ui.renderTut(true);
   assert.equal(sim.s.speed, 0); assert.equal(ui.tutMin, false); assert.ok(ui.popupBlocks.has('tutorial')); assert.equal(ui.popupResume, 0);
@@ -78,13 +81,14 @@ test('UI: Pause is selected, a run speed keeps the card up, and Finish never res
 });
 
 test('UI: a manual Pause before graduation stays paused through the card and Finish', () => {
-  const sim = atHire(0), ui = uiFor(sim); tutorialTick(sim); ui.renderTut(true);
+  const sim = beforeGrad(0), ui = uiFor(sim); tutorialTick(sim); ui.renderTut(true);
   assert.equal(sim.s.speed, 0); ui.onClick({ target: { closest: () => ({ dataset: { a: 'tutNext' } }) } }); ui.renderTut(true);
   assert.equal(sim.s.tut.done, true); assert.equal(sim.s.speed, 0);
 });
 
 test('held owner reviews wait through the card and appear only after Finish, with time still paused', () => {
-  const sim = atHire(4), early = ask(sim, 'h1'); sim.convoTick(); assert.ok(early.heldSince != null);
+  // Reviews raised before graduation are released at the Act II break (Unit 5, tact2); these arise on the card itself.
+  const sim = atGrad(4), early = ask(sim, 'h1'); sim.convoTick(); assert.ok(early.heldSince != null);
   tutorialTick(sim); const late = ask(sim, 'h2'); sim.convoTick();
   assert.equal(sim.heldReviews().length, 2, 'held on the graduation card'); assert.equal(sim.s.speed, 0);
   const ui = uiFor(sim); ui.renderTut(true); assert.match(ui.renderTutBox.innerHTML, /2 owner requests are waiting\. They will appear after you finish the tutorial/);
@@ -123,7 +127,7 @@ test('Skip tutorial leaves no beat id behind (in play, and on an older skipped s
 });
 
 test('graduation reached with the Operate panel open closes the panel so the full card shows', () => {
-  const sim = atHire(4), ui = uiFor(sim); let sheets = 0;
+  const sim = beforeGrad(4), ui = uiFor(sim); let sheets = 0;
   ui.g.rend.setSelection = () => {}; ui.renderSheet = () => { sheets++; }; ui.tab = 'operate'; ui.sel = null; // the hire beat leaves Operate open
   tutorialTick(sim); const entered = sim.events.filter((e) => e.type === 'tut_beat');
   assert.equal(curBeat(sim).id, 'grad'); assert.equal(entered.length, 0, 'entered on the next tick');

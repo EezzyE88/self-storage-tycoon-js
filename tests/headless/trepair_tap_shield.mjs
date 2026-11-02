@@ -24,6 +24,7 @@ function toRepair(seed = 20260929) {
   assert.equal(curBeat(sim).id, 'expand');
   d({ type: 'build', tool: 'du10x10', a: { x: 13, y: 18 }, b: { x: 13, y: 25 }, f: 0 }); s.speed = 4;
   until(() => curBeat(sim)?.id === 'repair', 1440 * 3);
+  for (const f of ['jobsSeen', 'jobsAck']) sim.dispatch({ type: 'tutFlag', flag: f }); // Unit 5: the Jobs queue look comes first
   return { sim, tick };
 }
 
@@ -44,13 +45,13 @@ const tapState = (ui) => { ui.updateBubbles(); return ui.bubbles.map((b) => b.el
 
 test('only the repair "Tap the broken light" step carries clearMapTap', () => {
   const flagged = BEATS.flatMap((b) => (b.steps || []).map((st, i) => ({ b: b.id, i, on: !!st.clearMapTap }))).filter((x) => x.on);
-  assert.deepEqual(flagged.map((x) => x.b + ':' + x.i), ['repair:1']);
-  assert.match(BEATS[beatIndex('repair')].steps[1].t, /broken <b>light<\/b>/);
+  assert.deepEqual(flagged.map((x) => x.b + ':' + x.i), ['repair:5']); // step 5 since campaign Unit 5 put the Jobs queue look first
+  assert.match(BEATS[beatIndex('repair')].steps[5].t, /broken <b>light<\/b>/);
 });
 
 test('on the coached light step an overlapping complaint bubble stays visible but cannot take the tap', () => {
   const { sim } = toRepair(); const ui = uiFor(sim, 0);
-  assert.equal(stepState(sim, ui).cur, 1, 'F1 shown: Tap the broken light');
+  assert.equal(stepState(sim, ui).cur, 5, 'F1 shown, queue seen: Tap the broken light');
   ui.bubbles.push(bubble(sim), bubble(sim, 'It is dark in here.'));
   assert.deepEqual(tapState(ui), ['none', 'none']);
   assert.ok(ui.bubbles.every((b) => b.el.style.opacity === 1), 'bubbles still shown');
@@ -61,8 +62,8 @@ test('the same bubble takes taps on the step before and after, and once the ligh
   const { sim } = toRepair(); const before = uiFor(sim, 'ext');
   assert.equal(stepState(sim, before).cur, 0, 'EXT view: Look inside (F1)');
   before.bubbles.push(bubble(sim)); assert.deepEqual(tapState(before), ['auto']);
-  const ui = uiFor(sim, 0); ui.sel = BEATS[beatIndex('repair')].steps[1].obj(sim);
-  assert.equal(stepState(sim, ui).cur, 2, 'light selected: Send Owner');
+  const ui = uiFor(sim, 0); ui.sel = BEATS[beatIndex('repair')].steps[5].obj(sim);
+  assert.equal(stepState(sim, ui).cur, 6, 'light selected: Send Owner');
   ui.bubbles.push(bubble(sim)); assert.deepEqual(tapState(ui), ['auto']);
 });
 

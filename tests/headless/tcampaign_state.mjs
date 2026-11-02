@@ -13,7 +13,8 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 const base = clone(makeMaple(7).s);
 const load = (tut, patch = {}) => { const st = clone(base); Object.assign(st, patch); st.tut = clone(tut); return new Sim(st); };
 // Campaign Unit 4 inserted Beat 5 (pricing) and the Act I break; ids never change, positions did.
-const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'grad'];
+// Campaign Unit 5 added the Act II break before graduation.
+const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'grad'];
 const IDS8 = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'grad']; // the layout saves had before ids
 
 test('beat ids are unique, stable and round-trip with positions', () => {
@@ -123,6 +124,9 @@ function play(strip, onBeat) {
   until(() => !!s.milestones.first_expansion); beat('expand');
   tick(2); const L = sim.objs('light').find((l) => l.x === 20 && l.y === 8); const t = s.tasks.find((x) => x.obj === L.id); d({ type: 'ownerTask', task: t.id }); beat('repair');
   d({ type: 'hire', role: 'porter' }); beat('hire');
+  // Act II break: Continue, then answer any owner reviews it released (first choice), still paused, until graduation.
+  d({ type: 'tutFlag', flag: 'actII_break' }); for (let i = 0; i < 20 && curBeat(sim)?.id === 'actII_break'; i++) { const c = s.convos.find((x) => x.released); if (c) d({ type: 'convo', id: c.id, i: 0 }); tt(); }
+  assert.equal(curBeat(sim).id, 'grad');
   d({ type: 'tutFlag', flag: 'grad' }); tick(2);
   return { sim, s, log };
 }
