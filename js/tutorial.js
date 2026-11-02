@@ -139,7 +139,7 @@ export const BEATS = [
     focus: (sim) => { const L = hallLight(sim); return { obj: L && L.id, view: 0 }; },
     steps: [
       { t: 'Look inside: tap <b>F1</b>', d: 'On the right-hand rail, <b>EXT</b> shows roofs; <b>F1</b> lifts the roof so you see inside floor 1.', sel: '#floors [data-v="0"]', done: (sim, ui) => (ui && ui.rend && ui.rend.view === 0) || !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
-      { t: 'Tap the broken <b>light</b>', d: 'It\'s in the middle of the main hallway, under the orange wrench pin (the ring marks it).', obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
+      { t: 'Tap the broken <b>light</b>', d: 'It\'s in the middle of the main hallway, under the orange wrench pin (the ring marks it).', clearMapTap: true, obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
       { t: 'Tap <b>Send Owner</b>', d: 'In the light\'s panel, tap <b>Send Owner</b>. If the Owner is busy, the job waits its turn.', sel: `[data-cmd*='"ownerTask"']`, done: (sim) => !!(repairTask(sim, hallLight(sim)) || {}).assigned || !!sim.s.milestones.first_repair },
       { t: 'Let the Owner fix it', d: 'Keep time running. The Owner walks in through the wide door and repairs the light (sparks when done).', sel: PLAY, done: (sim) => !!sim.s.milestones.first_repair },
     ],

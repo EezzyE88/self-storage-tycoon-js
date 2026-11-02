@@ -1814,7 +1814,7 @@ export class UI {
       const [sz, env] = k.split('|'); const mk = Math.round(sim.marketRent({ size: sz, env })); const ask = s.market.ask[k];
       const units = sim.objs('unit').filter((u) => productKey(u.size, u.env) === k && u.cstate === 'operating'); const vac = units.filter((u) => !u.lease).length;
       const d = ask / mk - 1;
-      h += `<div class="item"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>Market ${money(mk)} · ${units.length} units · ${vac} vacant ${Math.abs(d) > 0.02 ? `· <span class="pill ${d > 0 ? 'a' : 'b'}">${d > 0 ? '+' : ''}${Math.round(d * 100)}%</span>` : ''}</small></div>
+      h += `<div class="item"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>Market ${money(mk)} · ${units.length} unit${units.length === 1 ? '' : 's'} · ${vac} vacant ${Math.abs(d) > 0.02 ? `· <span class="pill ${d > 0 ? 'a' : 'b'}">${d > 0 ? '+' : ''}${Math.round(d * 100)}%</span>` : ''}</small></div>
         <div class="stepper"><button data-a="rent" data-k="${k}" data-v="-5" aria-label="Lower rent">-</button><b class="num" style="min-width:48px;text-align:center">${money(ask)}</b><button data-a="rent" data-k="${k}" data-v="5" aria-label="Raise rent">+</button></div></div>`;
     }
     h += `</div><p class="note">Asking rent affects how strongly the market responds. Existing leases keep their rent unless you run a rent review.</p>`;
@@ -2010,6 +2010,8 @@ export class UI {
   updateBubbles() {
     this.syncFeedbackProperty();
     const now = performance.now(), s = this.sim.s; const placed = [];
+    // A coached map tap (step flag clearMapTap) must reach its target: complaint bubbles stay visible but stop taking taps.
+    const shield = this.bubbles.length > 0 && this.coachClearsMapTap();
     for (const b of [...this.bubbles].reverse()) {
       const age = (now - b.t) / 1000;
       if (age > 4.5) { b.el.remove(); this.bubbles = this.bubbles.filter((x) => x !== b); continue; }
@@ -2020,7 +2022,7 @@ export class UI {
       let py = p.y; for (const q of placed) if (Math.abs(q.x - p.x) < 120 && Math.abs(q.y - py) < 26) py = q.y - 28;
       placed.push({ x: p.x, y: py });
       const half=Math.min(b.el.offsetWidth||220,innerWidth-16)/2; const px=Math.max(half+8,Math.min(innerWidth-half-8,p.x));
-      b.el.style.pointerEvents = hide || !p.vis || !this.mapPointClear({x:px,y:py}) || age>3.8 || !b.el.hasAttribute('role') ? 'none' : 'auto';
+      b.el.style.pointerEvents = shield || hide || !p.vis || !this.mapPointClear({x:px,y:py}) || age>3.8 || !b.el.hasAttribute('role') ? 'none' : 'auto';
       b.el.style.left = px + 'px'; b.el.style.top = py + 'px'; b.el.style.opacity = hide || !p.vis || !this.mapPointClear({x:px,y:py}) ? 0 : age > 3.8 ? 0 : 1;
     }
     for (const t of [...this.toasts]) if (now - t.t > 4200) { t.el.classList.add('out'); if (now - t.t > 4600) { t.el.remove(); this.toasts = this.toasts.filter((x) => x !== t); } }
@@ -2256,6 +2258,8 @@ export class UI {
     if (hit && !(hit.id === 'view' || (hit.closest && hit.closest('#pins, #blueprint, #bubbles')))) return false;
     return !['.tut','.sheet','.actionbar','.hud','.viewctl','.tabs','#feed .convo','.modal','#celebrate.on'].some(sel=>[...this.root.ownerDocument.querySelectorAll(sel)].some(el=>{const r=el.getBoundingClientRect();return r.width>0&&p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom;}));
   }
+  // True while the current tutorial step asks for a tap on a map object that bubbles must not intercept.
+  coachClearsMapTap() { if(this.title||!curBeat(this.sim)) return false; const raw=curBeat(this.sim).steps?.[stepState(this.sim,this).cur]; return !!raw?.clearMapTap; }
   // The lesson prerequisite currently holding the step (waiting on or missing a hallway), or null.
   lessonPrereq() { const step=stepState(this.sim,this).cur, raw=curBeat(this.sim)?.steps[step]; return raw?.prereq ? raw.prereq(this.sim) : null; }
   // Interface rectangles captions must not cover (HUD, instruction, panels, navigation, toasts, the coach ring).
