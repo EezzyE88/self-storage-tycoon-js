@@ -32,14 +32,15 @@ test('Beat 5 carries the three pricing steps; the expand build sequence follows 
   assert.deepEqual(BEATS.slice(PRICING - 1, EXPAND + 1).map((b) => b.id), ['money', 'pricing', 'actI_break', 'expand']);
   assert.equal(PRICING, 4, 'Beat 5'); assert.equal(pricing.title, 'What should new tenants pay?');
   assert.deepEqual(pricing.steps.map((st) => st.t), ['Open <b>Business</b>', 'Choose <b>Pricing</b>', 'Asking rents apply to <b>future leases</b>']);
-  assert.deepEqual(expand.steps.map((st) => st.t), ['Open <b>Build</b>', 'Choose <b>Units</b>', 'Pick <b>Drive-Up 10x10</b>', '<b>Drag</b> a row down the grass beside the main aisle', 'Tap <b>Confirm</b>', 'Let construction finish and the units open']);
+  assert.deepEqual(expand.steps.map((st) => st.t), ['Open <b>Build</b>', 'Choose <b>Units</b>', 'Pick <b>Drive-Up 10x10</b>', '<b>Drag</b> a row down the grass beside the main aisle', '<b>Green</b>: ready to build. <b>Amber</b>: can\'t earn yet. <b>Red</b>: can\'t go there. Check <b>cash after</b>', 'Tap <b>Confirm</b>', 'Let construction finish and the units open']);
   assert.match(pricing.steps[2].d, /future leases|leases signed after the change/); assert.match(pricing.steps[2].d, /keep their current rent/); assert.match(pricing.steps[2].d, /don't need to change anything/);
   assert.equal(pricing.steps[0].sel, '#tabs [data-v="business"]'); assert.equal(pricing.steps[1].sel, '.sheet [data-section-picker]'); assert.deepEqual(pricing.steps[1].section, ['business', 'Asking rents', 'Pricing']);
   assert.equal(pricing.steps[2].sel, '.tut [data-a="tutNext"]', 'read, then Got it (was: open Build)');
   assert.ok(pricing.steps.every((st) => !st.placement && !st.blueprint), 'no placement on pricing steps');
   // The beat is acknowledged like the money beat: Got it, offered once Pricing has been seen.
   assert.equal(pricing.button, 'Got it'); assert.equal(pricing.flag, 'pricingAck');
-  assert.equal(expand.button, undefined); assert.equal(expand.flag, undefined); assert.ok(!/Asking rents|Business/.test(expand.steps.map((st) => st.t + st.d).join('')), 'no pricing step left in expand');
+  // Campaign Unit 5: expand's only button is the build-status Got it (between a green preview and Confirm), not a pricing stop.
+  assert.equal(expand.button, 'Got it'); assert.equal(expand.flag, 'buildStatusAck'); assert.ok(!/Asking rents|Business/.test(expand.steps.map((st) => st.t + st.d).join('')), 'no pricing step left in expand');
   assert.ok(!/First look at your asking rents/.test(expand.body));
 });
 

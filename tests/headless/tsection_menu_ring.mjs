@@ -74,13 +74,13 @@ test('tutorial step is unchanged apart from naming its section: trigger, order, 
   assert.deepEqual(pricing.section, ['business', 'Asking rents', 'Pricing']); assert.equal(pricing.sel, PICKER); assert.equal(pricing.lbl, 'Choose Pricing');
   // Campaign Unit 4: the Pricing stop moved out of `expand` into its own Beat 5 (`pricing`); the step itself is unchanged.
   const beat = BEATS.find((b) => b.id === 'pricing'); assert.equal(BEATS.indexOf(beat), 4); assert.equal(beat.steps.length, 3);
-  assert.equal(BEATS.find((b) => b.id === 'expand').steps.length, 6, 'expand keeps only its build steps');
+  assert.equal(BEATS.find((b) => b.id === 'expand').steps.length, 7, 'expand keeps only its build steps plus the Unit 5 build-status step');
   const sim = makeMaple(20260929); sim.s.tut.beat = 4;
   assert.equal(curBeat(sim).id, 'pricing'); assert.equal(stepState(sim, { tab: 'business', sel: null, sectionChoice: { tab: 'business', label: 'Asking rents' } }).cur, 2);
   assert.equal(beat.check(sim), false); sim.s.tut.flags.pricingSeen = true; sim.s.tut.flags.pricingAck = true; assert.equal(beat.check(sim), true);
 });
 test('step section values are real menu options in the production Business and Operate panels', () => {
-  for (const [tab, wanted] of [['business', ['Asking rents', 'Collections']], ['operate', ['Hire capacity', 'Overlays']]]) {
+  for (const [tab, wanted] of [['business', ['Asking rents', 'Collections']], ['operate', ['Hire capacity', 'Overlays', 'Work queue']]]) {
     const sim = makeMaple(32); sim.s.tut = { on: false, done: true, flags: {} }; let html = '';
     const ui = Object.create(UI.prototype), box = { querySelector: () => null, querySelectorAll: () => [], firstChild: null };
     Object.defineProperty(box, 'innerHTML', { get: () => html, set: (v) => { html = v; box.firstChild = v ? { classList: { add() {} } } : null; } });
