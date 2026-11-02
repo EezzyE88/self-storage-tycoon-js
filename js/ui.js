@@ -234,6 +234,8 @@ export class UI {
     v = +v;
     // An explicit run choice ends the Sandbox building pause; Confirm never does.
     if (v > 0) this.resumePopup('sandboxBuild');
+    // Paused graduation: time stays paused until the player taps Finish tutorial, then chooses a speed.
+    if (v > 0 && this.pauseBeat()) { this.tutMin = false; this.renderTut(true); return; }
     if (v > 0 && this.popupBlocks?.size && [...this.popupBlocks].every((k) => k === 'tutorial' || k === 'scenario')) {
       this.tutMin = true; this.scMin = true; this.resumePopup('tutorial'); this.resumePopup('scenario'); this.renderTut(true);
     }
@@ -2061,7 +2063,8 @@ export class UI {
       case 'tier_up': { const T = TIERS[e.tier - 1]; if (T) { this.toast(`Promoted: ${T.name}. Unlocked ${T.perks.join('; ')}`, 'good'); this.sfx('milestone'); } break; }
       case 'lesson_offer': this.sfx('attention'); this.renderTut(true); break;
       case 'lesson_done': this.toast(`Lesson complete: ${e.title}`, 'good'); this.sfx('milestone'); this.renderTut(true); break;
-      case 'tut_beat': { const b = curBeat(this.sim); this.tutMin = true; if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
+      case 'tut_beat': { const b = curBeat(this.sim); this.tutMin = true; if (b && b.pause) { this.select(null); this.setTab(null); } // paused graduation: close panels so the full final card shows
+        if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
       case 'tut_done': this.sfx('milestone'); this.renderTut(true); break;
       case 'comp_announce': this.toast(`Competitor: ${e.name} is being built ${e.dist} mi away and opens Day ${e.opens}. See Business → Your market.`, 'bad'); this.sfx('attention'); break;
       case 'comp_open': this.toast(`${e.name} opened, pricing about ${Math.round((1 - e.price) * 100)}% under market`, 'bad'); break;
@@ -2132,10 +2135,13 @@ export class UI {
     if (this.tool && !buildStep && TOOLS[this.tool]) return { ...step, redirect: 'tool', t: 'Put away the build tool', d: `The <b>${TOOLS[this.tool].name}</b> tool is still armed, so map taps would place it. Tap <b>×</b> on the build bar first.`, sel: '#abar [data-a="cancelTool"]', lbl: 'Stop building' };
     return step;
   }
+  pauseBeat() { return !this.title && !!curBeat(this.sim)?.pause; }
   tutFocus() { const b = curBeat(this.sim); return b && b.focus ? b.focus(this.sim) : null; }
   renderTut(force = false) {
     const s = this.sim.s, box = this.$('tut');
-    if(!this.title && !this.tutMin && curBeat(this.sim)) this.pauseForPopup('tutorial'); else this.resumePopup('tutorial');
+    const hold = this.pauseBeat();
+    if (hold) { this.tutMin = false; this.pauseForPopup('tutorial'); this.popupResume = 0; } // closing it never restores a run speed
+    else if(!this.title && !this.tutMin && curBeat(this.sim)) this.pauseForPopup('tutorial'); else this.resumePopup('tutorial');
     if (s.scenario && !this.title && !(careerEligibility(s).eligible && (s.lesson || s.lessonOffer))) { this.renderScenario(force); return; }
     this.resumePopup('scenario');
     const b = this.title ? null : curBeat(this.sim);
@@ -2179,13 +2185,13 @@ export class UI {
     const li = (x, i, cls) => `<li class="${cls}"><span class="ck">${cls === 'done' ? '&#10003;' : i + 1}</span><span class="tx">${x.t}${cls === 'cur' && x.d ? `<details class="step-help"><summary>Instructions</summary><span class="how">${x.d}</span></details><span class="how-line">${x.d}</span>` : ''}</span></li>`;
     let items = '';
     b.steps.forEach((x, i) => { if (i === cur) items += li(step, i, 'cur');  });
-    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${tutBeatIndex(s) + 1} of ${BEATS.length}`}</span><button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button></div>
+    box.innerHTML = `<div class="tut ${this.tutMin ? 'min' : ''} ${showBtn ? 'has-btn' : ''}${b.pause ? ' final' : ''}${step?.redirect === 'switch' ? ' switching' : ''}"><div class="ch"><span>${isLesson ? 'Lesson' : `${b.chapter} · Part ${tutBeatIndex(s) + 1} of ${BEATS.length}`}</span>${b.pause ? '' : `<button class="mini" aria-expanded="${!this.tutMin}" aria-label="${this.tutMin ? 'Expand tutorial details' : 'Collapse tutorial details'}" data-a="tutMin">${this.tutMin ? 'Details' : 'Less'}</button>`}</div>
       <div class="tut-body"><h4>${b.title}</h4><p class="intro">${b.body}</p>
       <div class="prog"><i style="width:${Math.round(100 * doneN / n)}%"></i><span>Step ${Math.min(cur + 1, n)} of ${n}</span></div>
       <ol class="steps">${items}</ol>
-      ${heldN ? `<p class="note held-note">${heldN} owner request${heldN === 1 ? ' is' : 's are'} waiting. ${heldN === 1 ? 'It' : 'They'} will appear ${isLesson ? 'when this lesson ends' : 'at the next stopping point'}.</p>` : ''}
+      ${heldN ? `<p class="note held-note">${heldN} owner request${heldN === 1 ? ' is' : 's are'} waiting. ${heldN === 1 ? 'It' : 'They'} will appear ${isLesson ? 'when this lesson ends' : b.pause ? 'after you finish the tutorial' : 'at the next stopping point'}.</p>` : ''}
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
-      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
+      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : b.pause ? '' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
   // The placement the current RESOLVED step asks for. A step that is waiting on, or missing, a prerequisite (e.g. an
   // elevator committed before its hallways finished) asks for no placement, so nothing invites placing again.
