@@ -2123,7 +2123,9 @@ export class UI {
     const section = sectionOfSel(sel);
     if (section && this.tab === section[0] && typeof document !== 'undefined' && this.root.querySelector) {
       const el = this.root.querySelector(sel), picker = this.root.querySelector('.sheet [data-section-picker]');
-      if (picker && !(el && this.guideVisible(el))) return { ...step, redirect: 'section', section, t: `Choose <b>${section[2]}</b> in the section selector`, d: `The ${section[0] === 'operate' ? 'Operate' : 'Business'} panel is split into sections. Choose <b>${section[2]}</b> in the selector at the top of the panel; then ${step.t.replace(/<[^>]+>/g, '')}.`, sel: '.sheet [data-section-picker]', lbl: 'Choose ' + section[2] };
+      // Section already chosen and its control rendered but below a short screen's fold: keep the real step (the ring scrolls it into view).
+      const chosen = !!el && this.sectionMenuKey !== this.tab && this.sectionChoice?.tab === this.tab && this.sectionChoice?.label === section[1];
+      if (picker && !(el && (this.guideVisible(el) || chosen))) return { ...step, redirect: 'section', section, t: `Choose <b>${section[2]}</b> in the section selector`, d: `The ${section[0] === 'operate' ? 'Operate' : 'Business'} panel is split into sections. Choose <b>${section[2]}</b> in the selector at the top of the panel; then ${step.t.replace(/<[^>]+>/g, '')}.`, sel: '.sheet [data-section-picker]', lbl: 'Choose ' + section[2] };
     }
     // An armed tool that differs from the step's tool, or the right tool on the wrong floor: following the map target
     // would quote the wrong thing, so point at the one-tap fix (it arms the right tool on the right floor).
