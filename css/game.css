@@ -1246,3 +1246,11 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  #ui .unit-review.peek-review .nm { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
  #ui .unit-review.peek-review .nm small { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 }
+
+/* Act II build-status lesson: while the card's Got it shows, the review keeps only the row name and cost, the cash after
+   line, Rotate and Confirm, so the green footprint stays visible between the card and the review on short phones.
+   Nothing is removed: the full review returns as soon as the lesson is acknowledged or the row is confirmed. */
+#ui.tut-review-compact .unit-review .review-body,
+#ui.tut-review-compact .unit-review .nm > small,
+#ui.tut-review-compact .unit-review .spend-more,
+#ui.tut-review-compact .unit-review .build-authorization { display:none; }

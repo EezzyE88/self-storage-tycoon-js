@@ -146,7 +146,7 @@ export const BEATS = [
         place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.' });
       // One added step between a green preview and Confirm: what the status colours and the "cash after" line mean.
       // Phones hide step details while the build review is open, so the title carries the colours and the cash line.
-      const status = { placement: steps[steps.length - 1].placement, cell: steps[steps.length - 1].cell, f: 0, t: '<b>Green</b>: ready to build. <b>Amber</b>: can\'t earn yet. <b>Red</b>: can\'t go there. Check <b>cash after</b>', d: '<b>Green</b>: it can be built and can earn. <b>Amber</b>: it can be built but can\'t earn yet (for example, the doors don\'t reach an aisle). <b>Red</b>: it can\'t go there; the action bar says why. The action bar also shows the <b>cost</b> and your <b>cash after</b> construction, so you see what this row leaves in the bank. Tap <b>Got it</b> on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => placed(sim) || flag(sim, 'buildStatusAck') };
+      const status = { placement: steps[steps.length - 1].placement, cell: steps[steps.length - 1].cell, f: 0, t: '<b>Green</b>: ready to build. <b>Amber</b>: can\'t earn yet. <b>Red</b>: can\'t go there. Check <b>cash after</b>', d: '<b>Green</b>: it can be built and can earn. <b>Amber</b>: it can be built but can\'t earn yet (for example, the doors don\'t reach an aisle). <b>Red</b>: it can\'t go there; the action bar says why. The action bar also shows the <b>cost</b> and your <b>cash after</b> construction, so you see what this row leaves in the bank. Tap <b>Got it</b> on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', compactReview: true, done: (sim) => placed(sim) || flag(sim, 'buildStatusAck') };
       return [...steps.slice(0, -1), status, steps[steps.length - 1]];
     })().concat([waitBuild('Let construction finish and the units open', (sim) => !!sim.s.milestones.first_expansion)]),
     button: 'Got it', flag: 'buildStatusAck', buttonWhen: (sim, ui) => !flag(sim, 'buildStatusAck') && !ordered(sim, 'du10x10') && planOk(ui, 'du10x10'),
@@ -155,7 +155,8 @@ export const BEATS = [
     body: 'The main hallway in the interior building just went dark. Dark hallways feel unsafe and customers notice.',
     why: 'Equipment wears out over time. Each failure becomes a <b>job</b> in the work queue (<b>Operate &rarr; Jobs</b>), with the hours of work it needs. The Owner does one job at a time and fixes simple things; a Tech or vendor handles the rest.',
     enter: (sim) => { const L = hallLight(sim); if (L) { sim.wear(L, L.cond - 0.1); sim.ensureRepairTask(L); sim.markDirty(); } },
-    focus: (sim) => { const L = hallLight(sim); return { obj: L && L.id, view: 0 }; },
+    // Ring only: entering this beat never moves the camera or changes the floor view, so the F1 step is a real tap.
+    focus: (sim) => { const L = hallLight(sim); return { obj: L && L.id }; }, keepCamera: true,
     steps: [
       { t: 'Look inside: tap <b>F1</b>', d: 'On the right-hand rail, <b>EXT</b> shows roofs; <b>F1</b> lifts the roof so you see inside floor 1.', sel: '#floors [data-v="0"]', done: (sim, ui) => (ui && ui.rend && ui.rend.view === 0) || sent(sim) || fixed(sim) },
       // The failure is already a job: look at it in the queue first (time is paused while the panel is open), then assign it.
@@ -165,7 +166,7 @@ export const BEATS = [
       { t: 'Tap <b>Back to map</b>', d: 'Time stays paused while the panel is expanded. Tap <b>Back to map</b> at the top of the panel to see the hallway again.', sel: '.sheet [data-a="sheetGrow"][aria-expanded="true"]', lbl: 'Back to map', done: (sim, ui) => !(ui && ui.sheetTall && ui.tab) || (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || sent(sim) || fixed(sim) },
       { t: 'Tap the broken <b>light</b>', d: 'It\'s in the middle of the main hallway, under the orange wrench pin (the ring marks it).', clearMapTap: true, obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || sent(sim) || fixed(sim) },
       { t: 'Tap <b>Send Owner</b>', d: 'In the light\'s panel, tap <b>Send Owner</b>. If the Owner is busy, the job waits its turn.', sel: `[data-cmd*='"ownerTask"']`, done: (sim) => sent(sim) || fixed(sim) },
-      { t: 'Let the Owner fix it', d: 'Keep time running. The Owner walks in through the wide door and repairs the light (sparks when done). The job leaves the queue when it\'s finished.', sel: PLAY, done: fixed },
+      { t: 'Let the Owner fix it', d: 'Keep time running. The Owner walks in through the wide door and repairs the light (sparks when done). The job leaves the queue when it\'s finished.', sel: PLAY, run: true, done: fixed },
     ],
     button: 'Got it', flag: 'jobsAck', buttonWhen: (sim) => flag(sim, 'jobsSeen') && !flag(sim, 'jobsAck') && !sent(sim) && !fixed(sim),
     check: (sim) => !!sim.s.milestones.first_repair },
@@ -179,7 +180,7 @@ export const BEATS = [
       { t: 'Tap <b>Hire Porter</b>', d: 'In the Operate panel, choose <b>Hire</b> in the section selector at the top, then tap <b>Hire Porter</b>. The button shows the daily wage.', sel: `[data-cmd*='"role":"porter"']`, done: (sim) => sim.s.staff.some((x) => x.role === 'porter') },
       // Explained, never required: read while the Hire list (with every role and wage) is still open and time is paused.
       { t: `Other roles: <b>Tech</b> ${wage('tech')}, <b>Clerk</b> ${wage('clerk')}, <b>Manager</b> ${wage('manager')}`, d: `Each role adds a different kind of capacity for its daily wage: a <b>Tech</b> repairs equipment, a <b>Clerk</b> runs the office counter and a <b>Manager</b> handles routine decisions. They are listed under the Porter. You don't need them now. Tap <b>Got it</b> on this card.`, sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => flag(sim, 'rolesAck') || !!sim.s.milestones.first_delegated },
-      { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', sel: PLAY, done: (sim) => !!sim.s.milestones.first_delegated },
+      { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', sel: PLAY, run: true, done: (sim) => !!sim.s.milestones.first_delegated },
     ],
     button: 'Got it', flag: 'rolesAck', buttonWhen: (sim) => porterHired(sim) && !flag(sim, 'rolesAck') && !sim.s.milestones.first_delegated,
     // A Porter already on staff counts once delegated work happens (never fire and re-hire). The act ends after the authored move-out arrives.

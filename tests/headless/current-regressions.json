@@ -1138,8 +1138,8 @@
           "@node",
           "tests/headless/tact2.mjs"
         ],
-        "completion": "15 Act II checks passed",
-        "minimum_pass_lines": 15,
+        "completion": "18 Act II checks passed",
+        "minimum_pass_lines": 18,
         "timeout": 600,
         "evidence": "native current behavior: real Maple tutorial through Act II, sim tutorial ticks, production UI jumpSection over a stubbed DOM, save/reload",
         "scope": "Campaign Unit 5: Act II beat order and header, build-status step, Jobs queue and repair length, Porter-only hire with roles and wages, fail-forward table, paused Act II break with Continue, owner-review hold/release and stale retirement, reload mid-build/mid-repair/at the break, determinism"

@@ -1174,7 +1174,7 @@ export class UI {
     const daily = this.sim.planDailyCost(R);
     const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });
     const authorization = T.unit && this.sim.autoOpenEnabled() ? '<p class="note build-authorization">Confirm authorizes construction. Units open automatically when ready. Opening the property remains your decision.</p>' : '';
-    const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after ${this.tool==='demolish'?'removal':'build'}: <b>${money(P.cash)}</b><br> Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br> Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br> Added costs: ${money(daily, true)}/day when operating.</p>` : ''}${authorization}</div>`;
+    const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after ${this.tool==='demolish'?'removal':'build'}: <b>${money(P.cash)}</b><span class="spend-more"><br> Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br> Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br> Added costs: ${money(daily, true)}/day when operating.</span></p>` : ''}${authorization}</div>`;
     const wasOpen = !!box.firstChild;
     const peek = isUnit && !!this.placementPeek;
     const peekState = R.status === 'invalid' ? 'Needs changes' : (R.warn?.length ? 'Review warning' : 'Preview only');
@@ -2068,7 +2068,7 @@ export class UI {
       case 'lesson_offer': this.sfx('attention'); this.renderTut(true); break;
       case 'lesson_done': this.toast(`Lesson complete: ${e.title}`, 'good'); this.sfx('milestone'); this.renderTut(true); break;
       case 'tut_beat': { const b = curBeat(this.sim); this.tutMin = true; if (b && b.pause) { this.select(null); this.setTab(null); } // paused graduation: close panels so the full final card shows
-        if (b && b.focus) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
+        if (b && b.focus && !b.keepCamera) { const f = b.focus(this.sim); if (f && f.view != null && this.rend.view !== f.view) this.setView(f.view); if (f && (f.obj || f.cell)) { const o = f.obj && s.objects[f.obj]; const c = o || f.cell; if (c) this.rend.lookAt(c.x, c.y); } } this.autoPanKey = null; this.renderTut(true); break; }
       case 'tut_done': this.sfx('milestone'); this.renderTut(true); break;
       case 'comp_announce': this.toast(`Competitor: ${e.name} is being built ${e.dist} mi away and opens Day ${e.opens}. See Business → Your market.`, 'bad'); this.sfx('attention'); break;
       case 'comp_open': this.toast(`${e.name} opened, pricing about ${Math.round((1 - e.price) * 100)}% under market`, 'bad'); break;
@@ -2120,6 +2120,8 @@ export class UI {
       if (this.popupBlocks?.has('convo')) return { ...step, redirect: 'requests', t: 'Answer the waiting request', d: 'A customer request is holding time. Open <b>Requests</b> and choose a response; then use the time controls.', sel: '[data-a="requests"]', lbl: 'Requests' };
       return { ...step, redirect: 'held', sel: null, lbl: '' }; // never ring a control that cannot respond
     }
+    // A let-time-run step is satisfied by any running speed: never ring 1x while the game runs at 2x or 4x.
+    if (step.run && this.sim.s.speed > 0) return { ...step, redirect: 'running', sel: null, lbl: '' };
     // The panels use a section selector: when the required control is not on screen yet, the instruction names the section.
     const section = sectionOfSel(sel);
     if (section && this.tab === section[0] && typeof document !== 'undefined' && this.root.querySelector) {
@@ -2142,6 +2144,7 @@ export class UI {
     return step;
   }
   pauseBeat() { return !this.title && !!curBeat(this.sim)?.pause; }
+  tutKeepsCamera() { const s=this.sim.s; return !!(s.tut?.on && !s.lesson && curBeat(this.sim)?.act==='II'); }
   tutFocus() { const b = curBeat(this.sim); return b && b.focus ? b.focus(this.sim) : null; }
   renderTut(force = false) {
     const s = this.sim.s, box = this.$('tut');
@@ -2159,7 +2162,7 @@ export class UI {
       this.tutKey=null;return;
     }
     if (!b) {
-      this.guideStep = null;
+      this.guideStep = null; this.root?.classList?.remove('tut-review-compact');
       // one card at a time on phones: hold a new lesson offer while banners or notifications are up, but never longer than 12 s
       if (s.lessonOffer !== this.offerSeen) { this.offerSeen = s.lessonOffer; this.offerT = performance.now(); }
       const held = this.phone() && performance.now() - (this.offerT || 0) < 12000 && ((this.g.showcase && this.g.showcase.bannerBusy && this.g.showcase.bannerBusy()) || this.toasts.length > 0);
@@ -2180,6 +2183,8 @@ export class UI {
     const heldN = this.sim.heldReviews().length;
     const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || '', heldN].join(':');
     this.guideStep = step; this.guideKey = bk + ':' + cur + (step?.redirect || '');
+    // Build-status lesson: the review drops its optional sections so the footprint, cost and cash after show together.
+    this.root?.classList?.toggle('tut-review-compact', !!(step?.compactReview && showBtn));
     if (!force && key === this.tutKey) return; this.tutKey = key;
     // map focus follows the current step
     const oid = step && step.obj ? step.obj(this.sim) : null;
@@ -2226,8 +2231,10 @@ export class UI {
   }
   suggestPlacement() {
     const a=this.currentBlueprintPlan(); if(!a) { this.toast(this.sim.s.lesson?.id==='up' ? verticalCheck(this.sim) : 'The suggested spot is blocked. Choose another valid placement or clear the taught area.'); return; }
-    this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=!!a.climate;
-    this.planArgs={a:{...a.a},b:{...a.b},axis:a.axis,dir:a.dir}; this.replan(); this.showBlueprintTarget();
+    // Act II keeps the player's camera: the floor changes only when the armed floor is wrong; no pan, zoom or framing.
+    const keep=this.tutKeepsCamera();
+    if(!keep||this.toolFloor()!==(a.f||0)) this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=!!a.climate;
+    this.planArgs={a:{...a.a},b:{...a.b},axis:a.axis,dir:a.dir}; this.replan(); if(!keep) this.showBlueprintTarget();
   }
   showBlueprintTarget() {
     const a=this.currentBlueprintPlan(); if(!a) return;

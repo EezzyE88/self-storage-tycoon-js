@@ -6,6 +6,7 @@
 // the act and released at Continue in saved order, stale ones retired; reload mid-build, mid-repair and at the break;
 // save ids; guidance writes nothing; and a deterministic Act II run.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { makeMaple } from '../../js/maple.js';
 import { Sim } from '../../js/sim.js';
 import { ROLES } from '../../js/data.js';
@@ -243,6 +244,81 @@ test('save ids: expand, repair and hire keep their ids; a 36d53ce save on gradua
     tutorialTick(r); assert.equal(r.s.tut.beatId, id); assert.equal(r.s.tut.beat, beatIndex(id)); assert.equal(curBeat(r).id, id);
   }
   const st = clone(sim.s); st.tut.beatId = 'actII_break'; st.tut.beat = BREAK; st.tut.beatAt = BREAK; const r = new Sim(st); assert.equal(tutBeatIndex(r.s), BREAK);
+});
+
+// PR #21 repair (R1-R3). A production UI over the real game with a recording renderer: any camera or view call is logged.
+function camUI(sim, view = 'ext') {
+  const calls = [], u = Object.create(UI.prototype);
+  const rend = { view, zoom: 1, rot: 0, center: { x: 16, z: 16 }, setFocus() {}, setSelection() {}, setPreview() {}, project: () => ({ x: 195, y: 300, vis: true }),
+    setView(v) { calls.push('setView:' + v); this.view = v; }, lookAt(x, y) { calls.push('lookAt'); }, pan() { calls.push('pan'); }, zoomBy() { calls.push('zoomBy'); } };
+  Object.assign(u, { g: { sim, rend, audio: { play() {}, unlock() {} } }, title: false, sel: null, tab: null, tool: null, toasts: [], popupBlocks: new Set(), upgradeOptions: {} });
+  for (const k of ['renderTut', 'renderSheet', 'renderActionBar', 'renderFeed', 'sfx', 'toast', 'syncFloorUi', 'resumePopup', 'pauseForPopup', 'endRetrofit']) u[k] = () => {};
+  u.$ = () => ({ querySelector: () => null, firstChild: null }); u.root = { querySelector: () => null, querySelectorAll: () => [], classList: { toggle() {}, remove() {} } };
+  u.do = (a) => sim.dispatch(a); u.modalOpen = () => false;
+  return { u, rend, calls };
+}
+const cam = (r) => JSON.stringify([r.view, r.zoom, r.rot, r.center.x, r.center.z]);
+
+test('R1: entering Beat 7, Use suggested placement in Beat 6 and Continue at the Act II break leave the camera and floor view alone', () => {
+  // Entering the repair beat: the ring follows the light, but no view change or pan (the F1 step stays a real tap).
+  const a = play(20260929, { stopAt: 'repair' }), A = camUI(a.sim, 'ext'), before = cam(A.rend);
+  A.u.onEvent({ type: 'tut_beat', beat: REPAIR }); assert.deepEqual(A.calls, []); assert.equal(cam(A.rend), before);
+  assert.equal(repair.keepCamera, true); assert.equal(repair.focus(a.sim).view, undefined); assert.equal(repair.focus(a.sim).obj, hallLight(a.sim).id, 'ring target kept');
+  assert.equal(stepState(a.sim, A.u).cur, 0, 'reached on EXT: the F1 step is current, not skipped');
+  // Use suggested placement on Beat 6's drag step: the row is planned with no camera or view change, from EXT and from F1.
+  for (const view of ['ext', 0]) {
+    const b = play(20260929, { stopAt: 'expand' }), B = camUI(b.sim, view), b0 = cam(B.rend);
+    B.u.cat = 'units'; B.u.tab = 'build'; B.u.pickTool('du10x10'); B.calls.length = 0;
+    assert.equal(stepState(b.sim, B.u).cur, 3, 'drag step'); B.u.suggestPlacement();
+    assert.deepEqual(B.calls, [], 'no setView/lookAt/pan/zoom from ' + view); assert.equal(cam(B.rend), b0);
+    assert.equal(B.u.tool, 'du10x10'); assert.equal(B.u.plan?.status, 'valid', 'the suggested row is planned and green');
+    assert.equal(b.s.cash, play(20260929, { stopAt: 'expand' }).s.cash, 'nothing bought');
+  }
+  // Continue at the Act II break, and graduation entering: no camera call.
+  const c = play(20260929, { stopAt: 'actII_break' }), C = camUI(c.sim, 0), c0 = cam(C.rend);
+  C.u.onEvent({ type: 'tut_beat', beat: BREAK }); const btn = { dataset: { a: 'tutNext' } }; btn.closest = () => btn; C.u.onClick({ target: btn });
+  c.tick(); C.u.onEvent({ type: 'tut_beat', beat: GRAD }); assert.ok(c.s.tut.flags.actII_break);
+  assert.deepEqual(C.calls, []); assert.equal(cam(C.rend), c0);
+  // Unrelated framing is preserved: Act I's entry framing still runs, and Act I's suggested placement is unchanged code.
+  const m = makeMaple(20260929), M = camUI(m, 'ext'); m.s.tut.beat = beatIndex('makeready'); m.s.tut.beatId = 'makeready';
+  M.u.onEvent({ type: 'tut_beat', beat: beatIndex('makeready') }); assert.deepEqual(M.calls, ['lookAt'], 'Act I beat entry still frames its target');
+});
+
+test('R2: only the Beat 6 build-status step folds the review to name, cost, cash after, Rotate and Confirm', () => {
+  const flagged = BEATS.flatMap((b) => (b.steps || []).map((st, i) => (st.compactReview ? b.id + ':' + i : null))).filter(Boolean);
+  assert.deepEqual(flagged, ['expand:4']);
+  const css = readFileSync(new URL('../../css/game.css', import.meta.url), 'utf8');
+  const rule = css.slice(css.indexOf('#ui.tut-review-compact')); const sel = rule.slice(0, rule.indexOf('{'));
+  for (const k of ['.review-body', '.nm > small', '.spend-more', '.build-authorization']) assert.ok(sel.includes(k), k + ' folded');
+  for (const k of ['.spending', 'review-commitment', 'confirm', '.bot', '.cost', 'rotate', '.top,', '.top {']) assert.ok(!sel.includes(k), k + ' never hidden');
+  // The cash after figure sits outside the folded part of the spending line; the rest of the line is what folds.
+  const ui0 = readFileSync(new URL('../../js/ui.js', import.meta.url), 'utf8');
+  assert.match(ui0, /<p class="note spending">Cash after \$\{[^}]+\}: <b>\$\{money\(P\.cash\)\}<\/b><span class="spend-more">/);
+  assert.match(rule.slice(rule.indexOf('{'), rule.indexOf('}')), /^\{\s*display:none;\s*$/);
+  // The class follows the visible Got it: on while the card offers it, off once acknowledged.
+  const { sim } = play(20260929, { stopAt: 'expand' }), on = new Set();
+  const U = camUI(sim).u; U.root.classList = { toggle: (k, v) => (v ? on.add(k) : on.delete(k)), remove: (k) => on.delete(k) };
+  U.renderTut = UI.prototype.renderTut; U.$ = (id) => (id === 'tut' ? { innerHTML: '' } : { querySelector: () => null, firstChild: null }); U.rend.setFocus = () => {};
+  U.tool = 'du10x10'; U.plan = { status: 'valid' }; U.planArgs = null; U.currentBlueprintPlan = () => null; U.resolveStep = (st) => st;
+  U.renderTut(true); assert.ok(on.has('tut-review-compact'), 'status card showing Got it');
+  sim.dispatch({ type: 'tutFlag', flag: 'buildStatusAck' }); U.renderTut(true); assert.ok(!on.has('tut-review-compact'), 'after Got it: full review again');
+});
+
+test('R3: let-time-run steps count any running speed: 1x is ringed only from Pause, never at 1x/2x/4x, and no speed is changed', () => {
+  const runs = BEATS.flatMap((b) => (b.steps || []).map((st, i) => (st.run ? b.id + ':' + i : null))).filter(Boolean);
+  assert.deepEqual(runs, ['repair:7', 'hire:3'], 'Act II Owner and Porter work only; Act I clock steps unchanged');
+  for (const [beat, at] of [['repair', 7], ['hire', 3]]) {
+    const { sim } = play(20260929, { stopAt: beat }), U = camUI(sim).u, raw = BEATS[beatIndex(beat)].steps[at];
+    for (const sp of [0, 1, 2, 4]) {
+      sim.s.speed = sp; const before = JSON.stringify(sim.s), r = U.resolveStep(raw);
+      if (sp === 0) { assert.equal(r.sel, '#speed [data-v="1"]'); assert.equal(r.redirect, undefined); }
+      else { assert.equal(r.sel, null, beat + ' at ' + sp + 'x: nothing ringed'); assert.equal(r.redirect, 'running'); assert.ok(!/1x/.test(r.t + r.d)); }
+      assert.equal(sim.s.speed, sp, 'no automatic speed change'); assert.equal(JSON.stringify(sim.s), before);
+    }
+    // Time held by an expanded panel still points at the way out, as before.
+    sim.s.speed = 0; U.popupBlocks = new Set(['sheet']); U.sheetTall = true; U.$ = () => ({ querySelector: () => null, firstChild: {} });
+    assert.equal(U.resolveStep(raw).redirect, 'back');
+  }
 });
 
 test('guidance writes nothing: step states, buttons and card text leave the game state untouched', () => {
