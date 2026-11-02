@@ -1073,6 +1073,18 @@
         "scope": "Repair beat 'Tap the broken light': complaint bubbles stay visible but cannot take taps on that coached step only; unchanged before/after/outside the tutorial; UI-only; Asking rents '1 unit' plural"
       },
       {
+        "id": "thire_section_fold",
+        "command": [
+          "@node",
+          "tests/headless/thire_section_fold.mjs"
+        ],
+        "completion": "6 hire section fold checks passed \\(stubbed DOM, not Safari\\)",
+        "minimum_pass_lines": 6,
+        "timeout": 180,
+        "evidence": "native resolveStep/guideTarget over a stubbed DOM; rendered taps are covered by separate Playwright reruns",
+        "scope": "Tutorial Tap Hire Porter on short screens: chosen Hire section with the button below the fold keeps the real step and reveals it; PR #14 section-menu behaviour unchanged"
+      },
+      {
         "id": "tcampaign_state",
         "command": [
           "@node",
