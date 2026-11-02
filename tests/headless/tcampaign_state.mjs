@@ -13,9 +13,12 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 const base = clone(makeMaple(7).s);
 const load = (tut, patch = {}) => { const st = clone(base); Object.assign(st, patch); st.tut = clone(tut); return new Sim(st); };
 // Campaign Unit 4 inserted Beat 5 (pricing) and the Act I break; ids never change, positions did.
-// Campaign Unit 5 added the Act II break before graduation.
-const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'grad'];
+// Campaign Unit 5 added the Act II break before graduation; campaign Unit 6 added Act III (beats 9-12 and its break).
+const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'grad'];
 const IDS8 = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'grad']; // the layout saves had before ids
+// Where each pre-id position resumes: the same beat, except D4 (campaign Unit 6): the old graduation (index 7, not
+// graduated) resumes at the Act II break and then continues into Act III.
+const RESUME8 = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'actII_break'];
 
 test('beat ids are unique, stable and round-trip with positions', () => {
   assert.deepEqual(BEATS.map((b) => b.id), IDS);
@@ -31,14 +34,14 @@ test('a new tutorial game starts at welcome with an id', () => {
   assert.equal(curBeat({ s }).id, 'welcome');
 });
 
-test('every in-progress 8-part position (a save without ids) maps to the same beat and keeps its state', () => {
-  assert.deepEqual(LEGACY_BEATS, IDS8);
-  for (let i = 0; i < IDS8.length; i++) {
+test('every in-progress 8-part position (a save without ids) maps to the same beat (old graduation: the Act II break, D4) and keeps its state', () => {
+  assert.deepEqual(LEGACY_BEATS, RESUME8);
+  for (let i = 0; i < RESUME8.length; i++) {
     const tut = { on: true, beat: i, flags: { welcome: true, x: i }, done: false, entered: true, enteredAt: 123, idMark: 77, built: [{ tool: 'aisle', f: 0, id: 80 }] };
     const sim = load(tut), t = sim.s.tut;
-    assert.equal(t.beatId, IDS8[i]);
-    if (IDS8[i] === 'expand') { assert.equal(t.beat, 4); assert.equal(t.beatAt, 4); assert.equal(curBeat(sim).id, 'pricing', 'old expand, no row ordered: Beat 5'); }
-    else { assert.equal(t.beat, beatIndex(IDS8[i])); assert.equal(t.beatAt, t.beat); assert.equal(curBeat(sim).id, IDS8[i]); }
+    assert.equal(t.beatId, RESUME8[i]);
+    if (RESUME8[i] === 'expand') { assert.equal(t.beat, 4); assert.equal(t.beatAt, 4); assert.equal(curBeat(sim).id, 'pricing', 'old expand, no row ordered: Beat 5'); }
+    else { assert.equal(t.beat, beatIndex(RESUME8[i])); assert.equal(t.beatAt, t.beat); assert.equal(curBeat(sim).id, RESUME8[i]); }
     assert.deepEqual(t.flags, tut.flags); assert.equal(t.entered, true); assert.equal(t.enteredAt, 123); assert.equal(t.idMark, 77);
     assert.deepEqual(t.built, tut.built); assert.equal(t.on, true); assert.equal(t.done, false); assert.equal(t.migrated, undefined);
   }
@@ -49,7 +52,7 @@ test('pre-Round-11 12-part saves still remap first, then carry the id', () => {
   for (let j = 0; j < 12; j++) {
     const st = clone(base); delete st.mkt; st.tut = { on: true, beat: j, flags: {}, done: false, entered: true };
     const t = new Sim(st).s.tut;
-    assert.equal(t.beatId, IDS8[map[j]], 'position ' + j); assert.equal(t.beat, IDS8[map[j]] === 'expand' ? 4 : beatIndex(IDS8[map[j]]));
+    assert.equal(t.beatId, RESUME8[map[j]], 'position ' + j); assert.equal(t.beat, RESUME8[map[j]] === 'expand' ? 4 : beatIndex(RESUME8[map[j]]));
     if (j > 4) { assert.equal(t.migrated, 11); assert.equal(t.entered, false); } else { assert.equal(t.migrated, undefined); assert.equal(t.entered, true); }
   }
 });
@@ -97,11 +100,11 @@ test('after a reorder, the id wins over the stored position', () => {
   assert.equal(bad.s.tut.beat, 42); assert.equal(bad.s.tut.beatId, undefined); assert.equal(curBeat(bad), null);
 });
 
-test('tool unlocks match the former table at every beat: by beat id (expand, repair), never by position', () => {
-  const old = (id, tool) => { const at = IDS.indexOf(id); if (tool === 'office' || tool === 'gate') return false; if (['aisle', 'du5x5', 'du5x10', 'du10x10', 'du10x20', 'demolish', 'walk', 'parking'].includes(tool)) return at >= IDS.indexOf('expand'); if (tool === 'light') return at >= IDS.indexOf('repair'); return false; };
+test('tool unlocks match the former table at every beat, plus Act III (camera at overlays, HVAC and interior at climate): by beat id, never by position', () => {
+  const old = (id, tool) => { const at = IDS.indexOf(id); if (tool === 'office' || tool === 'gate') return false; if (['aisle', 'du5x5', 'du5x10', 'du10x10', 'du10x20', 'demolish', 'walk', 'parking'].includes(tool)) return at >= IDS.indexOf('expand'); if (tool === 'light') return at >= IDS.indexOf('repair'); if (tool === 'camera') return at >= IDS.indexOf('overlays'); if (['hvac', 'iu5x5'].includes(tool)) return at >= IDS.indexOf('climate'); return false; };
   const tools = ['aisle', 'du5x5', 'du10x10', 'demolish', 'walk', 'parking', 'light', 'camera', 'hvac', 'iu5x5', 'office', 'gate', 'shell2'];
   for (let i = 0; i < BEATS.length; i++) { const sim = makeMaple(7); sim.s.tut.beat = i; for (const k of tools) assert.equal(toolUnlocked(sim, k), old(IDS[i], k), `${IDS[i]} ${k}`); }
-  assert.equal(unlockBeat('du10x10'), beatIndex('expand')); assert.equal(unlockBeat('light'), beatIndex('repair')); assert.equal(unlockBeat('camera'), BEATS.length - 1);
+  assert.equal(unlockBeat('du10x10'), beatIndex('expand')); assert.equal(unlockBeat('light'), beatIndex('repair')); assert.equal(unlockBeat('camera'), beatIndex('overlays')); assert.equal(unlockBeat('hvac'), beatIndex('climate')); assert.equal(unlockBeat('shell2'), BEATS.length - 1);
 });
 
 // The real tutorial, title to graduation (same path as twalk). `strip` removes the id fields before every tick,
@@ -124,8 +127,18 @@ function play(strip, onBeat) {
   until(() => !!s.milestones.first_expansion); beat('expand');
   tick(2); const L = sim.objs('light').find((l) => l.x === 20 && l.y === 8); const t = s.tasks.find((x) => x.obj === L.id); d({ type: 'ownerTask', task: t.id }); beat('repair');
   d({ type: 'hire', role: 'porter' }); beat('hire');
-  // Act II break: Continue, then answer any owner reviews it released (first choice), still paused, until graduation.
-  d({ type: 'tutFlag', flag: 'actII_break' }); for (let i = 0; i < 20 && curBeat(sim)?.id === 'actII_break'; i++) { const c = s.convos.find((x) => x.released); if (c) d({ type: 'convo', id: c.id, i: 0 }); tt(); }
+  // Act II break: Continue, then answer any owner reviews it released (first choice), still paused, until Act III.
+  const brk = (id) => { d({ type: 'tutFlag', flag: id }); for (let i = 0; i < 20 && curBeat(sim)?.id === id; i++) { const c = s.convos.find((x) => x.released); if (c) d({ type: 'convo', id: c.id, i: 0 }); tt(); } };
+  brk('actII_break'); assert.equal(curBeat(sim).id, 'interior_customer');
+  // Act III (campaign Unit 6, same guided actions as tact3's integrated path), with the game's own cash.
+  const hall = () => sim.objs('light').find((l) => l.x === 20 && l.y === 8);
+  d({ type: 'tutFlag', flag: 'corralInspected' }); s.speed = 4; beat('interior_customer');
+  until(() => s.thoughts.some((x) => x.kind === 'bad' && x.text === 'The hallway is dark.')); d({ type: 'tutFlag', flag: 'feedbackAck' }); beat('feedback');
+  d({ type: 'tutFlag', flag: 'securityOverlaySeen' }); d({ type: 'ownerTask', task: s.tasks.find((x) => x.obj === hall().id && x.type !== 'makeready').id });
+  until(() => sim.works(hall())); assert.equal(d({ type: 'build', tool: 'camera', a: { x: 22, y: 14 }, b: { x: 22, y: 14 }, f: 0 }).ok, true); beat('overlays');
+  d({ type: 'tutFlag', flag: 'climateDemandAck' });
+  for (const a of [{ tool: 'hvac', a: { x: 14, y: 8 }, b: { x: 14, y: 8 }, f: 0 }, { tool: 'light', a: { x: 17, y: 8 }, b: { x: 17, y: 8 }, f: 0 }, { tool: 'iu5x5', a: { x: 16, y: 5 }, b: { x: 16, y: 11 }, f: 0, axis: 'y', climate: true }]) assert.equal(d({ type: 'build', ...a }).ok, true, a.tool);
+  beat('climate'); brk('actIII_break');
   assert.equal(curBeat(sim).id, 'grad');
   d({ type: 'tutFlag', flag: 'grad' }); tick(2);
   return { sim, s, log };

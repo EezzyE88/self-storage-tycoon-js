@@ -21,7 +21,10 @@ function beforeGrad(speed = 4) {
   s.tut.beat = beatIndex('hire'); s.tut.entered = true; tutorialTick(sim);
   assert.equal(curBeat(sim).id, 'hire');
   assert.equal(sim.dispatch({ type: 'hire', role: 'porter' }).ok, true); s.milestones.first_delegated = s.t; // the porter's first job, as in play
-  tutorialTick(sim); tutorialTick(sim); assert.equal(curBeat(sim).id, 'actII_break'); assert.equal(s.tut.entered, true); sim.dispatch({ type: 'tutFlag', flag: 'actII_break' });
+  tutorialTick(sim); tutorialTick(sim); assert.equal(curBeat(sim).id, 'actII_break'); assert.equal(s.tut.entered, true);
+  // Act III (campaign Unit 6) now sits between the Act II break and graduation; tact3 covers it. Graduation follows the Act III break.
+  const B3 = beatIndex('actIII_break'); Object.assign(s.tut, { beat: B3, beatId: 'actIII_break', beatAt: B3, entered: false }); tutorialTick(sim);
+  assert.equal(curBeat(sim).id, 'actIII_break'); assert.equal(s.tut.entered, true); sim.dispatch({ type: 'tutFlag', flag: 'actIII_break' });
   s.speed = speed; sim.events.length = 0; return sim;
 }
 const atGrad = (speed = 4) => { const sim = beforeGrad(speed); tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad'); return sim; };
