@@ -4,10 +4,11 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {makeMaple} from '../../js/maple.js';
 import {UI} from '../../js/ui.js';
+import {beatIndex} from '../../js/tutorial.js';
 
 let n=0;const test=(name,fn)=>{fn();n++;console.log('PASS',name);};
 function review(args){
- const sim=makeMaple();sim.s.tut.beat=4;sim.s.speed=0;
+ const sim=makeMaple();sim.s.tut.beat=beatIndex('expand');sim.s.speed=0;
  const ui=Object.create(UI.prototype),box={innerHTML:'',firstChild:null};
  ui.g={sim,rend:{view:'ext'}};ui.tool='du10x10';ui.plan=sim.plan({tool:ui.tool,f:0,...args});
  ui.$=()=>box;ui.schedulePlacementFrame=()=>{};

@@ -1054,11 +1054,11 @@
           "@node",
           "tests/headless/tmaple_pricing_stop.mjs"
         ],
-        "completion": "5 Maple pricing stop checks passed",
-        "minimum_pass_lines": 5,
+        "completion": "6 Maple pricing stop checks passed",
+        "minimum_pass_lines": 6,
         "timeout": 180,
-        "evidence": "native current behavior: real Maple tutorial to the expand beat, stubbed UI states, twin-sim state purity",
-        "scope": "Maple expand beat Business -> Asking rents read-only stop: order, progression, skip-safety, unchanged trigger, no state writes, save/reload"
+        "evidence": "native current behavior: real Maple tutorial to Beat 5, stubbed UI states, twin-sim state purity",
+        "scope": "Maple Beat 5 (What should new tenants pay?) Business -> Asking rents read-only stop: order, progression, skip-safety, unchanged expand trigger, no state writes, live occupancy story, save/reload"
       },
       {
         "id": "tcampaign_state",
@@ -1095,6 +1095,18 @@
         "timeout": 300,
         "evidence": "native current behavior: graduation entered at 1x/2x/4x, run speeds held at Pause on the card, Finish keeps time paused with no restored speed (sim and production UI popup path), manual Pause, held reviews released only after Finish, reload on the card, graduated/sentinel saves, skip cleanup, graduation reached with the Operate panel open",
         "scope": "Campaign Unit 3: paused graduation with Maple Street is yours / Finish tutorial"
+      },
+      {
+        "id": "tact1",
+        "command": [
+          "@node",
+          "tests/headless/tact1.mjs"
+        ],
+        "completion": "12 Act I checks passed",
+        "minimum_pass_lines": 12,
+        "timeout": 300,
+        "evidence": "native current behavior: real Maple tutorial through Act I, sim tutorial ticks, production UI card/speed/popup paths over a stubbed DOM, save/reload",
+        "scope": "Campaign Unit 4: Act I beat order and header, fail-forward table, paused chapter break with Continue, owner-review release at the break, reload at the break, old expand saves, determinism"
       },
       {
         "id": "tsection_menu_ring",

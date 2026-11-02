@@ -10,7 +10,7 @@ import { BEATS, LESSONS, stepState, curBeat } from '../../js/tutorial.js';
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('PASS ' + name); };
 const stepWhere = (re) => [...BEATS, ...LESSONS].flatMap((b) => b.steps).find((st) => re.test(st.sel || ''));
-const pricing = BEATS.find((b) => b.id === 'expand').steps[1];
+const pricing = BEATS.find((b) => b.id === 'pricing').steps[1];
 const hire = stepWhere(/"role":"porter"/), overlay = stepWhere(/data-a="overlay"/), collections = stepWhere(/^\.ladder$/);
 const PICKER = '.sheet [data-section-picker]';
 
@@ -72,10 +72,12 @@ test('ring logic never writes game state', () => {
 });
 test('tutorial step is unchanged apart from naming its section: trigger, order, selector and done() intact', () => {
   assert.deepEqual(pricing.section, ['business', 'Asking rents', 'Pricing']); assert.equal(pricing.sel, PICKER); assert.equal(pricing.lbl, 'Choose Pricing');
-  const expand = BEATS.find((b) => b.id === 'expand'); assert.equal(BEATS.indexOf(expand), 4); assert.equal(expand.steps.length, 9);
+  // Campaign Unit 4: the Pricing stop moved out of `expand` into its own Beat 5 (`pricing`); the step itself is unchanged.
+  const beat = BEATS.find((b) => b.id === 'pricing'); assert.equal(BEATS.indexOf(beat), 4); assert.equal(beat.steps.length, 3);
+  assert.equal(BEATS.find((b) => b.id === 'expand').steps.length, 6, 'expand keeps only its build steps');
   const sim = makeMaple(20260929); sim.s.tut.beat = 4;
-  assert.equal(curBeat(sim).id, 'expand'); assert.equal(stepState(sim, { tab: 'business', sel: null, sectionChoice: { tab: 'business', label: 'Asking rents' } }).cur, 2);
-  assert.equal(expand.check(sim), false); sim.s.milestones.first_expansion = 1; assert.equal(expand.check(sim), true);
+  assert.equal(curBeat(sim).id, 'pricing'); assert.equal(stepState(sim, { tab: 'business', sel: null, sectionChoice: { tab: 'business', label: 'Asking rents' } }).cur, 2);
+  assert.equal(beat.check(sim), false); sim.s.tut.flags.pricingSeen = true; sim.s.tut.flags.pricingAck = true; assert.equal(beat.check(sim), true);
 });
 test('step section values are real menu options in the production Business and Operate panels', () => {
   for (const [tab, wanted] of [['business', ['Asking rents', 'Collections']], ['operate', ['Hire capacity', 'Overlays']]]) {

@@ -30,7 +30,7 @@ test('cards and completion banners use the same live role number without changin
 });
 
 test('tutorial names the existing speed, rotation and repair controls', () => {
-  const text = BEATS.flatMap(b => b.steps.map(s => s.d || '')).join(' ');
+  const text = BEATS.flatMap(b => [typeof b.body === 'string' ? b.body : '', ...b.steps.map(s => s.d || '')]).join(' '); // Unit 4: the clock controls are introduced on the Welcome card
   assert.doesNotMatch(text, /top right|Flip doors|red wrench/);
   assert.match(text, /top left/);
   assert.match(text, /tap <b>Rotate<\/b>/);

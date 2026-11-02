@@ -42,42 +42,61 @@ function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f 
   // A later build group only counts as progressing once the previous group is placed.
   return after ? steps.map((st) => ({ ...st, done: (sim, ui) => placed(sim) || (after(sim) && st.done(sim, ui)) })) : steps;
 }
-// Expand beat pricing stop: reads UI state only. Past it once Build is open or the row is armed/ordered.
+// Beat 5 (Asking rents): the UI records `pricingSeen` whenever Business -> Pricing is shown during the tutorial (read-only,
+// like `businessOpened`), so Pricing opened earlier, e.g. during the money beat, counts. Guidance never touches rents.
 const rentsShowing = (ui) => tabIs(ui, 'business') && ui.sectionChoice?.tab === 'business' && ui.sectionChoice?.label === 'Asking rents';
-const rentsPast = (sim, ui) => tabIs(ui, 'build') || toolIs(ui, 'du10x10') || ordered(sim, 'du10x10') || !!sim.s.milestones.first_expansion;
+const pricingSeen = (sim) => !!sim.s.tut.flags.pricingSeen;
+// Live figures for Beat 5's story: operating units, how many are leased, how many are vacant. Coach cards show the
+// current step's text (not the beat body) on every screen, so the steps carry the short form as an {occupancy} token,
+// filled in by tutorialText() when the card is built (step texts stay plain strings).
+const occLine = (sim) => { const o = sim.occupancy(), vac = o.n - o.occ; return vac ? `<b>${o.occ} of ${o.n}</b> units are leased and <b>${vac}</b> ${vac === 1 ? 'is' : 'are'} vacant.` : `All <b>${o.n}</b> units are leased.`; };
+const pricingStory = (sim) => `${occLine(sim)} Prospects keep asking about space. Before you decide Maple Street needs more units, check what new customers pay.`;
 const waitBuild = (label, doneFn) => ({ t: label || 'Let construction finish', d: 'Construction takes game hours. Tap <b>4x</b> at the top to speed up. A progress ring shows over the site.', sel: FAST, done: doneFn });
 
+// Generic chapter break: a paused card with a deliberate Continue. Continue (flag = id) releases the owner reviews held
+// during the act; the break completes, and the next act's first beat enters, only once none of them is still waiting.
+function chapterBreak({ id, ...rest }) {
+  const go = (sim) => !!sim.s.tut.flags[id];
+  return { id, ...rest, pause: true, brk: true, flag: id, button: 'Continue', buttonWhen: (sim) => !go(sim),
+    steps: [
+      { t: 'Tap <b>Continue</b> when you\'re ready', d: 'Time stays paused. You can stop here and come back later. The next act starts after you continue.', sel: '.tut [data-a="tutNext"]', lbl: 'Continue', done: go },
+      { t: 'Answer the waiting owner requests', d: 'Requests that waited during this act appear now, one at a time. Time stays paused. The next act starts once they are answered.', sel: '[data-a="requests"]', lbl: 'Requests', done: (sim) => go(sim) && sim.releasedPending() === 0 },
+    ],
+    check: (sim) => go(sim) && sim.releasedPending() === 0 };
+}
+
 export const BEATS = [
-  { id: 'welcome', chapter: 'Take Control', title: 'Welcome to Maple Street Storage',
-    body: 'You own a small, working self-storage property. Most units are rented. Time is <b>paused</b> until you start the clock, so explore freely.',
+  // Act I "Take Over" (campaign Unit 4): beats 1-5, then the Act I chapter break.
+  { id: 'welcome', act: 'I', chapter: 'Take Over', title: 'Welcome to Maple Street Storage',
+    body: 'You own a small, working self-storage property. Most units are rented. Time is <b>paused</b> until you start the clock, so explore freely. The clock controls are at the top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>.',
     why: 'Everything on the map is real: customers drive in, open doors, use carts and pay rent. Each tutorial step tells you exactly where to tap.',
     steps: [
-      { t: 'Look around the property', d: '<b>Drag</b> to pan (two fingers on a phone). <b>Pinch</b> to zoom. The curved arrows rotate the view.', done: (sim, ui) => ui && ui.tutLooked },
-      { t: 'Tap <b>Look around</b> when ready', d: 'It\'s the yellow button below.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.welcome },
+      { t: 'Look around the property', d: '<b>Drag</b> to pan (two fingers on a phone). <b>Pinch</b> to zoom. The curved arrows rotate the view. On the right-hand rail, <b>EXT</b> shows the roofs and <b>F1</b> looks inside a building.', done: (sim, ui) => ui && ui.tutLooked },
+      { t: 'The clock (top left) is <b>paused</b>. Tap <b>Look around</b> when ready', d: 'Time stays paused until you start it. The clock controls are at the top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>. Then tap the yellow button below.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.welcome },
     ],
     button: 'Look around', check: (sim) => sim.s.tut.flags.welcome },
-  { id: 'makeready', chapter: 'Take Control', title: 'Turn over Unit 107',
+  { id: 'makeready', act: 'I', chapter: 'Take Over', title: 'Turn over Unit 107',
     body: 'A tenant moved out of Unit 107. It must be cleaned and checked (a <b>make-ready</b>) before it can rent again.',
     why: 'Vacant units earn nothing until they are rent-ready. Make-ready is the most common job on a storage property.',
     focus: (sim) => ({ obj: unitByRole(sim, 'mapleTurnover').id }),
     steps: [
       { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin (the ring points at it). Tap the unit itself.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim, ui) => (ui && ui.sel === unitByRole(sim, 'mapleTurnover').id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
       { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the <b>Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
-      { t: 'Start the clock: tap <b>1x</b>', d: 'The speed controls are at the <b>top left</b>. At <b>1x</b>, a day takes <b>24 real seconds</b>; <b>2x</b> takes 12 seconds and <b>4x</b> takes 6. Pause whenever you want to inspect or plan.', sel: PLAY, done: (sim) => running(sim) || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Start the clock: tap <b>1x</b>', d: 'At <b>1x</b>, a day takes <b>24 real seconds</b>; <b>2x</b> takes 12 seconds and <b>4x</b> takes 6. Tap <b>Pause</b> whenever you want to inspect or plan.', sel: PLAY, done: (sim) => running(sim) || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
       { t: 'Watch the Owner finish', d: 'The Owner walks from the office to Unit 107. The pin fills as work progresses (about 2-3 game hours). Use <b>4x</b> to hurry.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
     ],
     check: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
-  { id: 'lease', chapter: 'Take Control', title: 'Rent-ready units can lease',
+  { id: 'lease', act: 'I', chapter: 'Take Over', title: 'Rent-ready units can lease',
     body: 'Unit 107 is on the market. A prospect is driving over to the office to rent it.',
-    why: 'Prospects compare your asking rent with the market. Price higher and fewer sign; price lower and you fill faster but earn less. Change asking rents later in <b>Business &rarr; Asking rents</b>.',
+    why: 'Prospects compare your asking rent with the market. Price higher and fewer sign; price lower and you fill faster but earn less.',
     enter: (sim) => { const t = sim.s.t; const m = t % 1440; const at = m < 8.5 * 60 ? t - m + 8.5 * 60 : m > 17 * 60 ? t - m + 1440 + 8.5 * 60 : t + 45; sim.schedule({ kind: 'prospect', size: '5x10', climate: false, keen: true }, at); },
     steps: [
-      { t: 'Keep time running', d: 'If paused, tap <b>1x</b> or faster at the top left. The office opens at 8:30 AM.', sel: PLAY, done: (sim) => running(sim) || sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
+      { t: 'Keep time running', d: 'If paused, tap <b>1x</b> or faster. The office opens at 8:30 AM.', sel: PLAY, done: (sim) => running(sim) || sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
       { t: 'Watch for the prospect', d: 'A car enters through the gate at the bottom, parks by the <b>Office</b> (lower left) and the customer walks inside.', done: (sim) => sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
       { t: 'They sign a lease', d: 'At the counter they pick a unit. A green <b>+$/mo</b> pop shows the new rent, and the feed on the right logs the lease.', done: (sim) => !!sim.s.milestones.first_lease_after_turnover },
     ],
     check: (sim) => !!sim.s.milestones.first_lease_after_turnover },
-  { id: 'money', chapter: 'Take Control', title: 'Money without a spreadsheet',
+  { id: 'money', act: 'I', chapter: 'Take Over', title: 'Money without a spreadsheet',
     body: 'Your first new lease is signed. Here\'s where to see how the business is doing.',
     why: 'Rent bills <b>monthly</b> on each lease\'s anniversary, while operating costs accrue <b>daily at 7:00 AM</b> and settle weekly. A quiet week can look negative while the business is healthy - watch the <b>rent roll</b> and <b>occupancy</b>.',
     focus: () => ({ tab: 'business' }),
@@ -87,16 +106,27 @@ export const BEATS = [
     ],
     button: 'Got it', buttonWhen: (sim) => sim.s.tut.flags.businessOpened, flag: 'moneyAck',
     check: (sim) => sim.s.tut.flags.businessOpened && sim.s.tut.flags.moneyAck },
+  // Beat 5: read-only Asking rents comprehension. No rent change is asked for or made; Got it needs Pricing seen.
+  { id: 'pricing', act: 'I', chapter: 'Take Over', title: 'What should new tenants pay?',
+    body: pricingStory,
+    why: 'Asking rent is what a <b>new lease</b> pays. Price higher and fewer prospects sign; price lower and units fill faster but earn less each month. Signed leases keep their rent.',
+    steps: [
+      { t: 'Open <b>Business</b>', d: '{occupancy} Before you add units, check what new tenants pay. Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || pricingSeen(sim) },
+      { t: 'Choose <b>Pricing</b>', d: '{occupancy} Before you add units, check what new tenants pay. In the Business panel, open the section selector at the top and choose <b>Pricing</b>. It shows your <b>Asking rents</b>.', sel: '.sheet [data-section-picker]', section: ['business', 'Asking rents', 'Pricing'], lbl: 'Choose Pricing', done: (sim, ui) => rentsShowing(ui) || pricingSeen(sim) },
+      { t: 'Asking rents apply to <b>future leases</b>', d: 'Each row is a unit size with your asking rent, the market rent and how many are vacant. Changing an asking rent only affects <b>leases signed after the change</b>. Tenants with signed leases keep their current rent. You don\'t need to change anything now. Tap <b>Got it</b> on this card when you\'re ready.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.pricingAck },
+    ],
+    button: 'Got it', buttonWhen: pricingSeen, flag: 'pricingAck',
+    check: (sim) => pricingSeen(sim) && !!sim.s.tut.flags.pricingAck },
+  // Act I chapter break: paused, nothing authored pending. Continue releases held owner reviews (still paused); the next
+  // act's first beat enters only after they are answered (or retired as stale).
+  chapterBreak({ id: 'actI_break', act: 'I', chapter: 'Take Over', next: 'Act II · Stabilize', title: 'You have control of Maple Street',
+    body: 'The basics are working: units turn over, prospects sign leases, and rent comes in every month. <b>Maple Street is paused.</b> This is a good place to stop. Next, in <b>Act II · Stabilize</b>, demand keeps growing and you learn to grow without losing control of operations.',
+    why: 'What you learned in Act I: a vacant unit needs a make-ready before it can lease; work takes game time; <b>Pause</b> and the speeds run the clock; prospects become tenants by signing leases; leases bring in rent every month; cash alone doesn\'t show how the business is doing; and asking rents set what <b>future</b> leases pay.' }),
   { id: 'expand', chapter: 'Add Capacity', title: 'Maple Street is full',
-    body: 'Every unit is leased and prospects are still asking. First look at your asking rents, then build a new row of drive-up units on the empty grass east of the main aisle.',
+    body: 'Every unit is leased and prospects are still asking. Build a new row of drive-up units on the empty grass east of the main aisle.',
     why: 'Asking rents set what each <b>new lease</b> pays; signed leases keep their rent. Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. Eligible units open for rental automatically when construction finishes.',
     focus: () => ({ tool: 'du10x10', cell: { x: 13, y: 22 } }),
     steps: [
-      // Pricing comprehension (read-only): no rent change is asked for or made. Opening Build or starting the row counts
-      // as past this stop, so the build sequence below is never blocked by it.
-      { t: 'Open <b>Business</b>', d: 'Before you build, see what new customers pay. Tap <b>Business</b> in the bottom bar (the bar-chart icon).', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || rentsPast(sim, ui) },
-      { t: 'Choose <b>Pricing</b>', d: 'In the Business panel, open the section selector at the top and choose <b>Pricing</b>. It shows your <b>Asking rents</b>.', sel: '.sheet [data-section-picker]', section: ['business', 'Asking rents', 'Pricing'], lbl: 'Choose Pricing', done: (sim, ui) => rentsShowing(ui) || rentsPast(sim, ui) },
-      { t: 'Asking rents apply to <b>future leases</b>', d: 'Each row is a unit size with your asking rent, the market rent and how many are vacant. Changing an asking rent only affects <b>leases signed after the change</b>. Tenants with signed leases keep their current rent. You don\'t need to change anything now. When you\'re ready, tap <b>Build</b> in the bottom bar.', sel: TAB('build'), lbl: 'Open Build', done: rentsPast },
       ...buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, end: { x: 13, y: 28 }, axis: 'y', placed: (sim) => ordered(sim, 'du10x10'),
         place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.' }),
       waitBuild('Let construction finish and the units open', (sim) => !!sim.s.milestones.first_expansion),
@@ -139,6 +169,18 @@ export const BEATS = [
 // build, a legacy save or a test) wins and the id follows it; once BEATS are reordered, the id wins.
 // Never reuse or rename a beat id: a retired id maps forward here.
 export const BEAT_ALIASES = {};
+// A save loaded without a beat id predates ids (before campaign Unit 1) and is positioned in the original 8-beat layout.
+// (At run time, a position written without an id is a position in the current layout, as before.)
+export const LEGACY_BEATS = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'grad'];
+const OLD_EXPAND_AT = 4; // `expand` sat here, and began with the Asking rents stop, until Beat 5 took that stop over (Unit 4)
+// An `expand` save from before Unit 4: unless the Drive-Up 10x10 row was ordered or the expansion already opened, the
+// player resumes at Beat 5 (`pricing`, short and read-only, so nothing is completed for them); otherwise at `expand`.
+// Needs the whole state (orders, milestones): null when only the tutorial record is at hand (the load-time sync).
+function oldExpandTarget(s) {
+  if (!s || !s.milestones) return null;
+  const t = s.tut, row = (t.built || []).some((b) => b.tool === 'du10x10' && b.id >= (t.idMark || 0));
+  return row || s.milestones.first_expansion ? 'expand' : 'pricing';
+}
 export function beatIndex(id) {
   if (typeof id !== 'string') return -1;
   const seen = new Set(); while (BEAT_ALIASES[id] && !seen.has(id)) { seen.add(id); id = BEAT_ALIASES[id]; }
@@ -147,16 +189,30 @@ export function beatIndex(id) {
 // Read-only: the current tutorial position for any tut state (falls back to the numeric position).
 export function tutBeatIndex(s) {
   const t = s && s.tut; if (!t) return -1;
+  const r = resolveBeat(s); return r === null ? beatIndex('expand') : r;
+}
+// The current position, or null for an old `expand` save, which needs the whole state to resolve.
+function resolveBeat(s) {
+  const t = s.tut;
   const i = beatIndex(t.beatId);
   if (i < 0) return t.beat;
   if (Number.isInteger(t.beat) && t.beat !== t.beatAt) return t.beat; // position changed without the id
+  if (t.beatId === 'expand' && t.beatAt === OLD_EXPAND_AT && t.beat === OLD_EXPAND_AT) { const to = oldExpandTarget(s); return to ? beatIndex(to) : null; }
   return i;
 }
 // Mutating sync, used when a game is loaded and on each tutorial tick. Only an active tutorial carries an id.
-export function syncTutBeat(t) {
+// `s` (the whole state) is passed on ticks; at load only the tutorial record is, and an old `expand` save then waits
+// untouched for the first tick, where its orders and milestones decide between `pricing` and `expand`.
+export function syncTutBeat(t, s) {
   if (!t || !t.on || t.done) return;
-  const i = tutBeatIndex({ tut: t });
-  if (!Number.isInteger(i) || !BEATS[i]) return; // unknown position: leave untouched (nothing to resolve to)
+  if (!s && t.beatId == null && Number.isInteger(t.beat) && LEGACY_BEATS[t.beat]) { // loading a save from before beat ids
+    t.beatId = LEGACY_BEATS[t.beat]; t.beatAt = t.beatId === 'expand' ? OLD_EXPAND_AT : beatIndex(t.beatId);
+    t.beat = t.beatId === 'expand' ? OLD_EXPAND_AT : t.beatAt; // old expand: the first tick decides pricing or expand
+    if (t.beatId === 'expand') return;
+  }
+  const i = resolveBeat(s && s.tut === t ? s : { tut: t });
+  if (!Number.isInteger(i) || !BEATS[i]) return; // unknown or not yet resolvable: leave untouched
+  if (BEATS[i].id === 'pricing' && t.beatId === 'expand') t.entered = false; // an old expand save resumes at Beat 5: enter it
   t.beat = i; t.beatId = BEATS[i].id; t.beatAt = i;
 }
 
@@ -254,10 +310,18 @@ export const LESSONS = [
     button: 'Continue without borrowing', flag: 'finAck', check: (sim) => ctx(sim).flags.finAck },
 ];
 export const lessonById = (id) => LESSONS.find((l) => l.id === id);
+// Card header and Tutorial-list group. Act beats read "Act I · Take Over · Beat 3" (beats numbered across the campaign,
+// chapter breaks not counted); the not-yet-migrated remainder keeps its chapter with "Part n of N".
+export const beatGroup = (b) => b.act ? `Act ${b.act} · ${b.chapter}` : b.chapter;
+export function beatHeader(i) {
+  const b = BEATS[i]; if (!b) return '';
+  const n = BEATS.slice(0, i + 1).filter((x) => !x.brk).length, total = BEATS.filter((x) => !x.brk).length;
+  return b.brk ? `${beatGroup(b)} · Chapter break` : b.act ? `${beatGroup(b)} · Beat ${n}` : `${b.chapter} · Part ${n} of ${total}`;
+}
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
 export function tutorialText(sim, value) {
-  return typeof value === 'string' ? value.replace(/Unit (107|203)\b/g, (_, n) => {
+  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/Unit (107|203)\b/g, (_, n) => {
     const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
     return u ? `Unit ${u.num}` : 'the tutorial unit';
   }) : value;
@@ -266,7 +330,7 @@ export function curBeat(sim) {
   const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[tutBeatIndex(sim.s)] : null;
   if(!b)return null;
   const text = value => tutorialText(sim, value);
-  return {...b,title:text(b.title),body:text(b.body),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
+  return {...b,title:text(b.title),body:text(typeof b.body === 'function' ? b.body(sim) : b.body),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
 }
 // A navigation step whose destination is already showing is complete: never ask the player to tap what is selected.
 export function alreadyShowing(st, ui) {
@@ -304,9 +368,10 @@ export function installTutorial(sim) {
 function holdPause(sim) { if (sim.s.speed !== 0) { sim.s.speed = 0; sim.emit('speed', { v: 0, beat: true }); } }
 export function tutorialTick(sim) {
   const s = sim.s; if (!s.tut.on || s.tut.done) { if (s.tut) { delete s.tut.beatId; delete s.tut.beatAt; } return; } // a finished or skipped tutorial carries no id
-  syncTutBeat(s.tut);
+  syncTutBeat(s.tut, s);
   const b = BEATS[s.tut.beat]; if (!b) return;
   if (b.pause) holdPause(sim);
+  if (b.brk && s.tut.flags[b.flag]) sim.releaseHeld({ chapter: true }); // after Continue, still paused: held reviews come out first
   if (!s.tut.entered) { s.tut.entered = true; s.tut.enteredAt = s.t; if (b.enter) b.enter(sim); sim.emit('tut_beat', { beat: s.tut.beat }); }
   if (b.check(sim)) {
     sim.emit('tut_done', { beat: s.tut.beat });
