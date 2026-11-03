@@ -29,7 +29,8 @@ const CONFIRM = '#abar [data-a="confirm"]', PLAY = '#speed [data-v="1"]', FAST =
 
 // Standard build sequence: open Build -> category -> tool -> place at the marker -> Confirm.
 // `placed` = the order exists (later steps become meaningful once it does).
-function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f = 0, end = cell, axis, climate = false, placed, extra = [], after }) {
+// `review` steps sit between the placement and Confirm: they need the placement review bar (e.g. its Climate toggle).
+function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f = 0, end = cell, axis, climate = false, placed, extra = [], review = [], after }) {
   const past = (sim, ui) => placed(sim) || toolIs(ui, tool);
   const steps = [
     { t: `Open <b>Build</b>`, d: 'Tap <b>Build</b> in the bottom bar.', sel: TAB('build'), done: (sim, ui) => tabIs(ui, 'build') || past(sim, ui) },
@@ -37,6 +38,7 @@ function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f 
     { t: `Pick <b>${toolName}</b>`, d: `Tap the <b>${toolName}</b> card. The action bar opens at the bottom with the price.`, sel: TOOL(tool), done: past },
     ...extra,
     { placement: {tool, a:cell, b:end, f, axis, climate}, t: place, d: placeD + ' Follow the highlighted footprint from Start here to End here, or tap Use suggested placement. The preview turns <b>green</b> when valid, <b>amber</b> if it will build but can\'t earn yet, <b>red</b> if it can\'t go there - the action bar says why.', cell, f, done: (sim, ui) => placed(sim) || planOk(ui, tool) },
+    ...review.map((st) => ({ placement: {tool, a:cell, b:end, f, axis, climate}, ...st })),
     { placement: {tool, a:cell, b:end, f, axis, climate}, t: 'Tap <b>Confirm</b>', d: 'Check the cost and "cash after" line in the action bar, then tap <b>Confirm</b>. You can undo within 30 minutes for a full refund.', sel: CONFIRM, done: placed },
   ];
   // A later build group only counts as progressing once the previous group is placed.
@@ -73,6 +75,7 @@ const darkFeedback = (sim) => { const at = sim.s.tut.enteredAt ?? -Infinity; ret
 const feedbackSat = (sim) => { const tn = interiorTenant(sim); return tn ? `${Math.round((tn.sat ?? 0) * 100)}%` : 'not available'; };
 const tutBuiltEver = (sim, tools) => (sim.s.tut.built || []).some((b) => tools.includes(b.tool));
 const securityImproved = (sim) => tutBuiltEver(sim, ['camera', 'light']);
+const securityArmed = (ui) => !!ui && (ui.tool === 'camera' || ui.tool === 'light');
 const securityImprovementDone = (sim) => { const ids = (sim.s.tut.built || []).filter((b) => ['camera', 'light'].includes(b.tool)).map((b) => b.id); return ids.length > 0 && !sim.s.orders.some((o) => ids.includes(o.id) && o.st === 'construction'); };
 const hvacPresent = (sim) => sim.objs('hvac').some((o) => o.cstate === 'operating') || (sim.s.tut.built || []).some((b) => b.tool === 'hvac');
 const westLightPresent = (sim) => sim.objs('light').some((o) => (o.f || 0) === 0 && o.x === 17 && o.y === 8 && o.cstate === 'operating') || (sim.s.tut.built || []).some((b) => b.tool === 'light' && b.f === 0 && b.id >= (sim.s.tut.act3Mark || 0));
@@ -245,7 +248,12 @@ export const BEATS = [
       { t: 'Repair the dark hallway', d: 'The complaint came from the hallway light. Tap that failed light on the map; the wrench pin marks it.', obj: (sim) => hallLight(sim) && hallLight(sim).id, done: (sim, ui) => sim.works(hallLight(sim)) || (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || !!(repairTask(sim, hallLight(sim)) || {}).assigned },
       { t: 'Send the <b>Owner</b>', d: 'Use the light panel to send the Owner. You are fixing the problem the customer actually experienced before adding anything else.', sel: `[data-cmd*='\"ownerTask\"']`, done: (sim) => sim.works(hallLight(sim)) || !!(repairTask(sim, hallLight(sim)) || {}).assigned },
       { t: 'Let the hallway repair finish', d: 'Run time until the light works again. Then use the overlay evidence to decide whether Maple Street needs more coverage.', sel: PLAY, run: true, done: (sim) => sim.works(hallLight(sim)) },
-      { t: 'Improve one weak spot', d: 'Use <b>Build → Access & Security</b>. Add a Camera or Light where the overlay showed a weakness. If you already added one during the tutorial, that improvement counts; do not build a duplicate.', sel: TAB('build'), done: securityImproved },
+      // Improve one weak spot: a normal build sequence. Navigation steps fall back to the outcome, so an earlier tutorial-built
+      // camera/light still counts (no duplicate); the outcome step has no tab target, so an open Build panel never completes it.
+      { t: 'Improve one weak spot: open <b>Build</b>', d: 'Use <b>Build → Access & Security</b>. Add a Camera or Light where the overlay showed a weakness. If you already added one during the tutorial, that improvement counts; do not build a duplicate.', sel: TAB('build'), done: (sim, ui) => tabIs(ui, 'build') || securityArmed(ui) || securityImproved(sim) },
+      { t: 'Choose <b>Access & Security</b>', d: 'In the Build panel, tap the <b>Access & Security</b> category along the top. Swipe the category row sideways if you don\'t see it.', sel: CAT('security'), done: (sim, ui) => catIs(ui, 'security') || securityArmed(ui) || securityImproved(sim) },
+      { t: 'Pick <b>Camera</b> or <b>Light</b>', d: 'Tap the <b>Camera</b> card (a <b>Light</b> works too). The action bar opens at the bottom with the price.', sel: TOOL('camera'), done: (sim, ui) => securityArmed(ui) || securityImproved(sim) },
+      { t: 'Place it on a weak spot and <b>Confirm</b>', d: 'Hold and drag onto an area the Security overlay showed as dark or unwatched, check the action bar, then tap <b>Confirm</b>.', sel: CONFIRM, done: securityImproved },
       { t: 'Let the improvement finish', d: 'Run time until the improvement is operating. The goal is evidence → diagnosis → improvement, not building for its own sake.', sel: PLAY, run: true, done: securityImprovementDone },
     ],
     button: 'Got it', flag: 'securityOverlaySeen', buttonWhen: (sim, ui) => ui && ui.rend && ui.rend.overlay === 'security' && !flag(sim, 'securityOverlaySeen'),
@@ -260,9 +268,9 @@ export const BEATS = [
         place: '<b>12B · Add HVAC capacity</b>', placeD: 'Place the HVAC Plant on the grass strip just west of the interior building, touching the building.' }).map((st, i) => i === 0 ? { ...st, t: '12B · Open <b>Build</b> for HVAC' } : st),
       ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'light', toolName: 'Light', cell: { x: 17, y: 8 }, f: 0, after: hvacPresent, placed: westLightPresent,
         place: '<b>12C · Light the west corridor</b>', placeD: 'On <b>F1</b>, place a light in the west corridor so customers have a lit route to the new units.' }).map((st, i) => i === 0 ? { ...st, t: '12C · Prepare the climate corridor', done: (sim, ui) => westLightPresent(sim) || (hvacPresent(sim) && tabIs(ui, 'build')) } : st),
-      ...buildSteps({ cat: 'interior', catName: 'Interior', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 5 }, end: { x: 16, y: 11 }, axis: 'y', climate: true, f: 0, after: westLightPresent, placed: climatePresent,
+      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 5 }, end: { x: 16, y: 11 }, axis: 'y', climate: true, f: 0, after: westLightPresent, placed: climatePresent,
         place: 'Build climate units along the west corridor', placeD: 'On <b>F1</b>, place the units along the west side of the corridor with their doors facing the hallway.',
-        extra: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || climatePresent(sim) }] })
+        review: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || climatePresent(sim) }] })
         .map((st, i) => i === 0 ? { ...st, t: 'Build the climate units', done: (sim, ui) => climatePresent(sim) || (westLightPresent(sim) && tabIs(ui, 'build')) } : st),
       waitBuild('Let construction finish and the climate units open', (sim) => !!sim.s.milestones.first_climate || sim.objs('unit').some((u) => u.env === 'climate' && u.cstate === 'operating')),
     ],
@@ -377,9 +385,9 @@ export const LESSONS = [
         place: '<b>Tap</b> the grass just west of the interior building', placeD: 'Tap the grass strip between the main aisle and the interior building\'s west wall, about halfway up. It must touch the building.' }).map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> (HVAC first)' } : st),
       ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'light', toolName: 'Light', cell: { x: 17, y: 8 }, f: 0, after: (sim) => built(sim, 'hvac'), placed: (sim) => built(sim, 'light'),
         place: 'Tap <b>F1</b> on the right, then <b>tap</b> the west corridor', placeD: 'Tap <b>F1</b> on the right rail to see inside. The west corridor is the narrow dark hallway on the left side of the building; tap its middle.' }).map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (Light)', done: (sim, ui) => (tabIs(ui, 'build') && ordered(sim, 'hvac')) || built(sim, 'light') || toolIs(ui, 'light') } : st),
-      ...buildSteps({ cat: 'interior', catName: 'Interior', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 5 }, end: { x: 16, y: 11 }, axis: 'y', climate: true, f: 0, after: (sim) => built(sim, 'light'), placed: (sim) => newUnits(sim, (u) => u.env === 'climate').length > 0,
+      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 5 }, end: { x: 16, y: 11 }, axis: 'y', climate: true, f: 0, after: (sim) => built(sim, 'light'), placed: (sim) => newUnits(sim, (u) => u.env === 'climate').length > 0,
         place: '<b>Drag</b> a column along the corridor\'s west side', placeD: 'On <b>F1</b>, press on the empty floor just left of the west corridor at the top, and drag straight down to the bottom. Unit doors must open onto the corridor.',
-        extra: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar at the bottom, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 }] })
+        review: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar at the bottom, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 }] })
         .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (units)', done: (sim, ui) => (tabIs(ui, 'build') && built(sim, 'light')) || toolIs(ui, 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 } : st),
       waitBuild('Let construction finish and the climate units open', (sim) => !!sim.s.milestones.first_climate),
     ],

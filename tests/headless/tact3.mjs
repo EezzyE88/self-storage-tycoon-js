@@ -5,6 +5,8 @@
 import assert from 'node:assert/strict';
 import { makeMaple } from '../../js/maple.js';
 import { Sim } from '../../js/sim.js';
+import { TOOLS } from '../../js/data.js';
+import { UI } from '../../js/ui.js';
 import { BEATS, LESSONS, beatIndex, beatHeader, beatGroup, beatOwnsRequest, curBeat, stepState, syncTutBeat, tutorialTick, toolUnlocked } from '../../js/tutorial.js';
 
 globalThis.innerWidth = 390; globalThis.innerHeight = 844;
@@ -98,6 +100,43 @@ test('Campaign completion records interior/quality/climate lessons as truly comp
 test('Reload during the climate build preserves orders and resumes the climate beat without fabricating completion',()=>{
   const sim=makeMaple(71),s=sim.s;s.cash=1e6;setBeat(sim,'climate');tutorialTick(sim);sim.dispatch({type:'tutFlag',flag:'climateDemandAck'});assert.equal(sim.dispatch({type:'build',tool:'hvac',a:{x:14,y:8},b:{x:14,y:8},f:0}).ok,true);
   const restored=new Sim(clone(s));assert.equal(curBeat(restored).id,'climate');assert.ok(restored.s.orders.some(o=>o.tool==='hvac'&&o.st==='construction'));assert.equal(BEATS[beatIndex('climate')].check(restored),false);
+});
+
+// D1-D3 tutorial repairs (2026-11-03).
+const title = (sim, u) => { const st = stepState(sim, u); return st.b.steps[st.cur].t.replace(/<[^>]+>/g, ''); };
+test('D1 Beat 11: an open Build panel never completes "Improve one weak spot"; the camera/light build sequence does',()=>{
+  const sim=makeMaple(81),s=sim.s;s.cash=1e6;setBeat(sim,'overlays',{enter:true});s.tut.flags.securityOverlaySeen=true;s.tut.built=[];
+  assert.ok(sim.works(hallLight(sim)),'hall light works in this setup');
+  assert.equal(title(sim,ui()),'Improve one weak spot: open Build');
+  assert.equal(title(sim,ui({tab:'build'})),'Choose Access & Security','Build open alone is navigation only');
+  assert.notEqual(title(sim,ui({tab:'build'})),'Let the improvement finish');
+  assert.equal(title(sim,ui({tab:'build',cat:'security'})),'Pick Camera or Light');
+  assert.equal(title(sim,ui({tab:'build',cat:'security',tool:'camera'})),'Place it on a weak spot and Confirm');
+  assert.equal(title(sim,ui({tab:'build',cat:'security',tool:'light'})),'Place it on a weak spot and Confirm','a Light works too');
+  // The real coach (UI.resolveStep) must not tell the player to put the armed Camera/Light away during this sequence.
+  const R=(tool)=>({sim,tool,tab:'build',timeLocked:()=>false,placementMismatch:UI.prototype.placementMismatch,stepPlacement:UI.prototype.stepPlacement,root:{}});
+  for(const tool of ['camera','light']){const raw=BEATS[beatIndex('overlays')].steps[stepState(sim,ui({tab:'build',cat:'security',tool})).cur];const r=UI.prototype.resolveStep.call(R(tool),raw);
+    assert.notEqual(r.redirect,'tool',`armed ${tool}: coach keeps the place step`);assert.equal(r.t,raw.t);}
+  let a=null;for(let y=4;y<=16&&!a;y++)for(let x=16;x<=30&&!a;x++){const c={tool:'camera',a:{x,y},b:{x,y},f:0};if(sim.plan(c).status==='valid')a=c;}
+  assert.ok(a,'a valid camera cell exists');assert.equal(sim.dispatch({type:'build',...a}).ok,true);
+  assert.equal(title(sim,ui({tab:'build'})),'Let the improvement finish','ordered camera advances to the wait step');
+  s.speed=4;runUntil(sim,()=>curBeat(sim)?.id!=='overlays',3000);assert.equal(curBeat(sim).id,'climate');
+});
+test('D2 every coached build category contains the tool it points at; Interior 5x5 is under Units in Act III and the climate lesson',()=>{
+  let pairs=0;for(const b of [...BEATS,...LESSONS])for(let i=0;i+1<(b.steps||[]).length;i++){const c=/^\.cats \[data-v="(\w+)"\]$/.exec(b.steps[i].sel||''),t=/^\[data-a="tool"\]\[data-v="(\w+)"\]$/.exec(b.steps[i+1].sel||'');
+    if(c&&t){pairs++;assert.equal(TOOLS[t[1]].cat,c[1],`${b.id}: ${t[1]} is not in category ${c[1]}`);}}
+  assert.ok(pairs>=8,'category/tool pairs found');
+  const sim=makeMaple(82);setBeat(sim,'climate',{enter:true});sim.s.tut.flags.climateDemandAck=true;sim.s.tut.act3Mark=sim.s.nextId;sim.s.tut.built=[{tool:'hvac',f:0,id:9001},{tool:'light',f:0,id:9002}];
+  assert.equal(title(sim,ui({tab:'build',cat:'interior'})),'Choose Units');assert.equal(title(sim,ui({tab:'build',cat:'units'})),'Pick Interior 5x5');
+});
+test('D3 "Turn Climate on" follows the placement review (where the toggle exists) and precedes Confirm, in Act III and the climate lesson',()=>{
+  for(const b of [BEATS[beatIndex('climate')],LESSONS.find(l=>l.id==='climate')]){const ts=b.steps.map(st=>st.t.replace(/<[^>]+>/g,''));const k=ts.indexOf('Turn Climate on');
+    assert.ok(k>0,b.id);assert.ok(b.steps[k-1].placement&&!b.steps[k-1].sel,`${b.id}: placement step before the toggle`);assert.equal(ts[k+1],'Tap Confirm',b.id);assert.equal(b.steps[k].placement.tool,'iu5x5');}
+  const sim=makeMaple(83);setBeat(sim,'climate',{enter:true});sim.s.tut.flags.climateDemandAck=true;sim.s.tut.act3Mark=sim.s.nextId;sim.s.tut.built=[{tool:'hvac',f:0,id:9001},{tool:'light',f:0,id:9002}];
+  const u=(o)=>ui({tab:'build',cat:'units',tool:'iu5x5',...o});
+  assert.equal(title(sim,u()),'Build climate units along the west corridor','armed with no plan: place first');
+  assert.equal(title(sim,u({plan:{status:'valid'}})),'Turn Climate on','review open, climate off: toggle now');
+  assert.equal(title(sim,u({plan:{status:'valid'},climate:true})),'Tap Confirm');
 });
 
 console.log(`${passed} Act III checks passed`);

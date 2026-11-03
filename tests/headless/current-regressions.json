@@ -1150,8 +1150,8 @@
           "@node",
           "tests/headless/tact3.mjs"
         ],
-        "completion": "12 Act III checks passed",
-        "minimum_pass_lines": 12,
+        "completion": "15 Act III checks passed",
+        "minimum_pass_lines": 15,
         "timeout": 900,
         "evidence": "native current behavior: real Maple tutorial Act III beats over sim tutorial ticks with stubbed UI states, save/reload",
         "scope": "Campaign Unit 6: Act III beat order and header, D4 migration, interior customer route, real dark-hall complaint and feedback, Security overlay on/off and coverage fail-forward, climate demand/HVAC/units fail-forward, lesson completion, reload mid-overlay and mid-climate build"
