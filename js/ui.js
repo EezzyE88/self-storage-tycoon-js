@@ -2144,7 +2144,7 @@ export class UI {
     return step;
   }
   pauseBeat() { return !this.title && !!curBeat(this.sim)?.pause; }
-  tutKeepsCamera() { const s=this.sim.s; return !!(s.tut?.on && !s.lesson && curBeat(this.sim)?.act==='II'); }
+  tutKeepsCamera() { const s=this.sim.s; return !!(s.tut?.on && !s.lesson && ['II','III'].includes(curBeat(this.sim)?.act)); }
   tutFocus() { const b = curBeat(this.sim); return b && b.focus ? b.focus(this.sim) : null; }
   renderTut(force = false) {
     const s = this.sim.s, box = this.$('tut');
