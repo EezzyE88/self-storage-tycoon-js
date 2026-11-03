@@ -11,7 +11,7 @@ import { installTutorial, BEATS } from '../../js/tutorial.js';
 let ok = true; const check = (name, cond, extra = '') => { console.log((cond ? 'PASS ' : 'FAIL ') + name, extra); ok &&= !!cond; };
 // 1. pre-Round-11 save mid-tutorial (no market state, old part 9 = "Add Climate")
 { const st = JSON.parse(JSON.stringify(makeMaple().s)); delete st.mkt; st.tut = { on: true, beat: 9, flags: {}, done: false, entered: true };
-  const sim = new Sim(st); check('old save part 9 -> new part', BEATS[sim.s.tut.beat].id === 'grad' && sim.s.tut.beatId === 'grad', `beat ${sim.s.tut.beat} ${BEATS[sim.s.tut.beat].id}`);
+  const sim = new Sim(st); check('old save part 9 -> new part', BEATS[sim.s.tut.beat].id === 'actII_break' && sim.s.tut.beatId === 'actII_break', `beat ${sim.s.tut.beat} ${BEATS[sim.s.tut.beat].id}`); // D4 (campaign Unit 6): old index 7 resumes at the Act II break, then Act III
   const st2 = JSON.parse(JSON.stringify(makeMaple().s)); st2.tut = { on: true, beat: 6, flags: {}, done: false }; const sim2 = new Sim(st2);
   check('Round 11+ save untouched', BEATS[sim2.s.tut.beat].id === 'hire' && sim2.s.tut.migrated === undefined); } // old 8-part position 6 = hire
 // 2. Required conversion/readiness, independent of receiving a tenant by a deadline.

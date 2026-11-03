@@ -19,6 +19,7 @@ const test = (name, fn) => { fn(); passed++; console.log('PASS', name); };
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const ACT2 = ['expand', 'repair', 'hire'];
 const EXPAND = beatIndex('expand'), REPAIR = beatIndex('repair'), HIRE = beatIndex('hire'), BREAK = beatIndex('actII_break'), GRAD = beatIndex('grad');
+const NEXT = 'interior_customer'; // the beat after the Act II break (Act III, campaign Unit 6; graduation before it)
 const expand = BEATS[EXPAND], repair = BEATS[REPAIR], hire = BEATS[HIRE], brk = BEATS[BREAK];
 const hallLight = (sim) => sim.objs('light').find((l) => l.x === 20 && l.y === 8);
 const lightTask = (sim) => sim.s.tasks.find((t) => t.obj === hallLight(sim).id && t.type !== 'makeready');
@@ -50,15 +51,15 @@ function play(seed, { stopAt = 'grad', row = ROW, log, hook } = {}) {
 }
 const ask = (sim, key, extra = {}) => { sim.convo({ key, who: 'Tester', sev: 'attention', ttl: 60, def: 0, text: 'Test ' + key, actions: [{ label: 'Default', action: { type: 'tutFlag', flag: 'def_' + key } }, { label: 'Other' }], ...extra }); return sim.s.convos.find((c) => c.key === key); };
 
-test('Act II is beats 6-8 under "Act II · Stabilize", then the paused Act II break, then graduation', () => {
-  assert.deepEqual(BEATS.map((b) => b.id), ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', ...ACT2, 'actII_break', 'grad']);
+test('Act II is beats 6-8 under "Act II · Stabilize", then the paused Act II break, then Act III and graduation', () => {
+  assert.deepEqual(BEATS.map((b) => b.id), ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', ...ACT2, 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'grad']); // Act III since campaign Unit 6 (tact3)
   for (const id of [...ACT2, 'actII_break']) { const b = BEATS[beatIndex(id)]; assert.equal(b.act, 'II'); assert.equal(b.chapter, 'Stabilize'); }
   assert.deepEqual(ACT2.map((id) => beatHeader(beatIndex(id))), [6, 7, 8].map((n) => `Act II · Stabilize · Beat ${n}`));
-  assert.equal(beatHeader(BREAK), 'Act II · Stabilize · Chapter break'); assert.equal(beatHeader(GRAD), 'Graduation · Part 9 of 9');
-  assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Graduation']);
+  assert.equal(beatHeader(BREAK), 'Act II · Stabilize · Chapter break'); assert.equal(beatHeader(GRAD), 'Graduation · Part 13 of 13');
+  assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Act III · Improve', 'Graduation']);
   assert.deepEqual(ACT2.map((id) => BEATS[beatIndex(id)].title), ['Maple Street is full', 'A hallway light has failed', 'The Owner is the bottleneck']);
   assert.equal(brk.title, 'Maple Street is stable again'); assert.equal(brk.pause, true); assert.equal(brk.brk, true); assert.equal(brk.button, 'Continue'); assert.equal(brk.flag, 'actII_break');
-  assert.match(brk.body, /Maple Street is paused/); assert.match(brk.body, /what customers actually experience/); assert.ok(!brk.enter, 'the break authors no event');
+  assert.match(brk.body, /Maple Street is paused/); assert.match(brk.body, /Act III · Improve/); assert.match(brk.body, /follow a customer/); assert.ok(!brk.enter, 'the break authors no event');
   // The Act II understanding contract is stated on the break card.
   for (const re of [/expansion solves a capacity problem/, /costs cash now and takes time/, /equipment needs maintenance/, /Owner can only do so much/, /daily wage/, /each role does different work/]) assert.match(brk.why, re);
   // Unlocks stay keyed by id (expand, repair) and the first act is untouched.
@@ -186,7 +187,7 @@ test('Act II break: paused on arrival, run speeds held, Continue required, gradu
   sim.poll(); assert.equal(s.t, t0, 'no game time passes on the break');
   assert.equal(curBeat(sim).id, 'actII_break'); assert.equal(brk.buttonWhen(sim), true);
   sim.dispatch({ type: 'tutFlag', flag: 'actII_break' }); while (s.convos.some((c) => c.released)) { sim.dispatch({ type: 'convo', id: s.convos.find((c) => c.released).id, i: 0 }); tutorialTick(sim); }
-  tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad'); assert.equal(s.speed, 0, 'still paused into graduation');
+  tutorialTick(sim); assert.equal(curBeat(sim).id, NEXT); assert.equal(s.speed, 0, 'still paused into Act III');
 });
 
 test('owner reviews raised in Act II wait through the act; at Continue the stale light-out retires and the rest come out in order', () => {
@@ -208,10 +209,10 @@ test('owner reviews raised in Act II wait through the act; at Continue the stale
   assert.ok(!s.convos.includes(light), 'fixed light: stale, retired'); assert.ok(s.mgrLog.some((l) => l.retired && l.msg.includes('The light near my unit is out.')), 'logged, no decision');
   assert.ok(!s.tut.flags['def_' + light.key], 'retired without its default');
   assert.deepEqual(s.convos.filter((c) => c.released).map((c) => c.key), expected, 'released in saved order');
-  assert.equal(curBeat(sim).id, 'actII_break', 'graduation waits for them'); assert.equal(s.speed, 0);
+  assert.equal(curBeat(sim).id, 'actII_break', 'Act III waits for them'); assert.equal(s.speed, 0);
   assert.equal(stepState(sim, ui()).cur, 1, 'card: answer the waiting requests');
   while (s.convos.some((c) => c.released)) { sim.dispatch({ type: 'convo', id: s.convos.find((c) => c.released).id, i: 1 }); tutorialTick(sim); }
-  tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad'); assert.equal(s.speed, 0); assert.ok(!s.tut.flags.def_qhire, 'answered, not defaulted');
+  tutorialTick(sim); assert.equal(curBeat(sim).id, NEXT); assert.equal(s.speed, 0); assert.ok(!s.tut.flags.def_qhire, 'answered, not defaulted');
 });
 
 test('reload mid-build, mid-repair and at the break resumes on the same beat and step', () => {
@@ -234,7 +235,7 @@ test('reload mid-build, mid-repair and at the break resumes on the same beat and
   assert.equal(rc.s.tut.beatId, 'actII_break'); assert.equal(rc.s.tut.beat, BREAK); tutorialTick(rc); assert.equal(curBeat(rc).id, 'actII_break'); assert.equal(rc.s.speed, 0);
   c.sim.dispatch({ type: 'tutFlag', flag: 'actII_break' }); const rc2 = new Sim(clone(c.s)); tutorialTick(rc2);
   while (rc2.s.convos.some((x) => x.released)) { rc2.dispatch({ type: 'convo', id: rc2.s.convos.find((x) => x.released).id, i: 0 }); tutorialTick(rc2); }
-  tutorialTick(rc2); assert.equal(curBeat(rc2).id, 'grad'); assert.equal(rc2.s.speed, 0);
+  tutorialTick(rc2); assert.equal(curBeat(rc2).id, NEXT); assert.equal(rc2.s.speed, 0);
 });
 
 test('save ids: expand, repair and hire keep their ids; a 36d53ce save on graduation resumes on graduation', () => {
@@ -277,7 +278,7 @@ test('R1: entering Beat 7, Use suggested placement in Beat 6 and Continue at the
   // Continue at the Act II break, and graduation entering: no camera call.
   const c = play(20260929, { stopAt: 'actII_break' }), C = camUI(c.sim, 0), c0 = cam(C.rend);
   C.u.onEvent({ type: 'tut_beat', beat: BREAK }); const btn = { dataset: { a: 'tutNext' } }; btn.closest = () => btn; C.u.onClick({ target: btn });
-  c.tick(); C.u.onEvent({ type: 'tut_beat', beat: GRAD }); assert.ok(c.s.tut.flags.actII_break);
+  c.tick(); C.u.onEvent({ type: 'tut_beat', beat: beatIndex(NEXT) }); assert.ok(c.s.tut.flags.actII_break);
   assert.deepEqual(C.calls, []); assert.equal(cam(C.rend), c0);
   // Unrelated framing is preserved: Act I's entry framing still runs, and Act I's suggested placement is unchanged code.
   const m = makeMaple(20260929), M = camUI(m, 'ext'); m.s.tut.beat = beatIndex('makeready'); m.s.tut.beatId = 'makeready';
@@ -306,7 +307,7 @@ test('R2: only the Beat 6 build-status step folds the review to name, cost, cash
 
 test('R3: let-time-run steps count any running speed: 1x is ringed only from Pause, never at 1x/2x/4x, and no speed is changed', () => {
   const runs = BEATS.flatMap((b) => (b.steps || []).map((st, i) => (st.run ? b.id + ':' + i : null))).filter(Boolean);
-  assert.deepEqual(runs, ['repair:7', 'hire:3'], 'Act II Owner and Porter work only; Act I clock steps unchanged');
+  assert.deepEqual(runs, ['repair:7', 'hire:3', 'interior_customer:1', 'feedback:0', 'overlays:6', 'overlays:11'], 'Act II Owner and Porter work, and the Act III let-time-run steps (campaign Unit 6); Act I clock steps unchanged');
   for (const [beat, at] of [['repair', 7], ['hire', 3]]) {
     const { sim } = play(20260929, { stopAt: beat }), U = camUI(sim).u, raw = BEATS[beatIndex(beat)].steps[at];
     for (const sp of [0, 1, 2, 4]) {
