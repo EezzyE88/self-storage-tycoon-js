@@ -404,7 +404,7 @@ export const LESSONS = [
       waitBuild('Let construction finish and the climate units open', (sim) => !!sim.s.milestones.first_climate),
     ],
     check: (sim) => !!sim.s.milestones.first_climate },
-  { id: 'up', chapter: 'Lesson', revalidate: true, offer: (sim) => ((sim.lostRecent(30).noReady || 0) + (sim.lostRecent(30).noSize || 0)) >= 8 && sim.objs('unit').length > 26 && upOfferEvidence(sim), title: 'Build a working two-floor property',
+  { id: 'up', chapter: 'Lesson', revalidate: true, offer: (sim) => ((sim.lostRecent(30).noReady || 0) + (sim.lostRecent(30).noSize || 0)) >= 8 && sim.objs('unit').length > 26 && nearlyFull(sim) && upOfferEvidence(sim), title: 'Build a working two-floor property',
     body: 'The blueprint shows the whole layout. Use suggested placement to prepare each piece, or hold and drag from Start to End. Nothing is charged until Confirm.',
     why: 'Customers need a connected route: gate → loading → entrance → elevator → upstairs unit. Markers follow the building you actually place.',
     focus: (sim) => { const l=verticalLayout(sim); return l ? {cell:{x:l.sh.x+l.sh.w/2,y:l.sh.y+l.sh.h/2}} : null; },
@@ -455,6 +455,9 @@ export const lessonById = (id) => LESSONS.find((l) => l.id === id);
 // The automatic two-floor offer waits only while BOTH hold: a product shoppers were lost for still has rent-ready
 // vacancies, and no product has full Growth Readiness demand support. Evidence is economics.js investmentEvidence
 // (per size|env product); no new evidence rule. Growth -> Lessons always lists the lesson regardless.
+// Property-wide floor for the automatic offer: the coach's own "nearly full" boundary (ui.js coachHint). Below it the coach
+// tells the player to rent vacant units before expanding, so the offer must not contradict it.
+const nearlyFull = (sim) => { const oc = sim.occupancy(); return oc.n >= 4 && oc.pct >= 0.95; };
 function upOfferEvidence(sim) { const P = investmentEvidence(sim).products; return P.some((p) => p.demandSupported) || !P.some((p) => p.losses > 0 && p.readyVacancies > 0); }
 // A pending offer from a `revalidate` lesson is shown (and holds time) only while its offer still stands.
 export const offerStands = (sim, id) => { const L = lessonById(id); return !!L && (!L.revalidate || !!L.offer(sim)); };

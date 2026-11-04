@@ -1162,11 +1162,11 @@
           "@node",
           "tests/headless/tlesson_offer_gate.mjs"
         ],
-        "completion": "13 lesson offer gate checks passed",
-        "minimum_pass_lines": 13,
+        "completion": "17 lesson offer gate checks passed",
+        "minimum_pass_lines": 17,
         "timeout": 600,
         "evidence": "native current behavior: graduated Maple with the Act III climate set built through normal build actions, sim polls/ticks, save/load round trip, production renderTut/onClick over a stubbed DOM (not Safari)",
-        "scope": "F2 graduation free play: automatic two-floor lesson offer gated on investmentEvidence (relevant ready vacancies and no supported product), per-product independence, no-stock product, short window, original threshold, stale pending offer withdrawn on paused poll/load without clock advance or marking seen, UI never shows/holds a stale offer, valid offer Pause/Later speed restore and manual Pause, Growth Lessons access, other lesson predicates unchanged"
+        "scope": "F2 graduation free play: automatic two-floor lesson offer gated on the coach nearly-full boundary (>=4 operating units, >=95% leased; option b, coach agreement, boundary 28/30 vs 29/30, supported near-full offer reachable, occupancy-drop withdrawal) and on investmentEvidence (relevant ready vacancies and no supported product), per-product independence, no-stock product, short window, original threshold, stale pending offer withdrawn on paused poll/load without clock advance or marking seen, UI never shows/holds a stale offer, valid offer Pause/Later speed restore and manual Pause, Growth Lessons access, other lesson predicates unchanged"
       },
       {
         "id": "tsection_menu_ring",
