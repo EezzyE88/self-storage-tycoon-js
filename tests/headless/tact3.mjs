@@ -107,10 +107,14 @@ const title = (sim, u) => { const st = stepState(sim, u); return st.b.steps[st.c
 test('D1 Beat 11: an open Build panel never completes "Improve one weak spot"; the camera/light build sequence does',()=>{
   const sim=makeMaple(81),s=sim.s;s.cash=1e6;setBeat(sim,'overlays',{enter:true});s.tut.flags.securityOverlaySeen=true;s.tut.built=[];
   assert.ok(sim.works(hallLight(sim)),'hall light works in this setup');
-  assert.equal(title(sim,ui()),'Improve one weak spot: open Build');
-  assert.equal(title(sim,ui({tab:'build'})),'Choose Access & Security','Build open alone is navigation only');
-  assert.notEqual(title(sim,ui({tab:'build'})),'Let the improvement finish');
-  assert.equal(title(sim,ui({tab:'build',cat:'security'})),'Pick Camera or Light');
+  assert.equal(title(sim,ui()),'Turn the Security overlay back on','after the hallway repair the player is asked to turn Security back on before building');
+  assert.equal(title(sim,ui({tab:'build'})),'Turn the Security overlay back on','Build open with the overlay off still asks for the overlay');
+  assert.equal(title(sim,ui({tab:'build',cat:'security',tool:'camera'})),'Place it on a weak spot and Confirm','an armed Camera fails forward: never sent back to Operate');
+  assert.equal(title(sim,ui({tab:'operate',rend:{view:'ext',overlay:'security'}})),'Improve one weak spot: open Build','overlay back on: the earlier turn-off step does not return');
+  const on={view:'ext',overlay:'security'};
+  assert.equal(title(sim,ui({tab:'build',rend:on})),'Choose Access & Security','Build open alone is navigation only');
+  assert.notEqual(title(sim,ui({tab:'build',rend:on})),'Let the improvement finish');
+  assert.equal(title(sim,ui({tab:'build',cat:'security',rend:on})),'Pick Camera or Light');
   assert.equal(title(sim,ui({tab:'build',cat:'security',tool:'camera'})),'Place it on a weak spot and Confirm');
   assert.equal(title(sim,ui({tab:'build',cat:'security',tool:'light'})),'Place it on a weak spot and Confirm','a Light works too');
   // The real coach (UI.resolveStep) must not tell the player to put the armed Camera/Light away during this sequence.
