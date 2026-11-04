@@ -307,7 +307,7 @@ test('R2: only the Beat 6 build-status step folds the review to name, cost, cash
 
 test('R3: let-time-run steps count any running speed: 1x is ringed only from Pause, never at 1x/2x/4x, and no speed is changed', () => {
   const runs = BEATS.flatMap((b) => (b.steps || []).map((st, i) => (st.run ? b.id + ':' + i : null))).filter(Boolean);
-  assert.deepEqual(runs, ['repair:7', 'hire:3', 'interior_customer:1', 'feedback:0', 'overlays:7', 'overlays:12'], 'Act II Owner and Porter work, and the Act III let-time-run steps (campaign Unit 6); Act I clock steps unchanged');
+  assert.deepEqual(runs, ['repair:7', 'hire:3', 'interior_customer:1', 'feedback:0', 'overlays:8', 'overlays:14'], 'Act II Owner and Porter work, and the Act III let-time-run steps (campaign Unit 6); Act I clock steps unchanged');
   for (const [beat, at] of [['repair', 7], ['hire', 3]]) {
     const { sim } = play(20260929, { stopAt: beat }), U = camUI(sim).u, raw = BEATS[beatIndex(beat)].steps[at];
     for (const sp of [0, 1, 2, 4]) {
