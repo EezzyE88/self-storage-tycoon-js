@@ -158,14 +158,32 @@ test('D5 Act III: Confirm puts HVAC and the corridor light away so Choose Access
   assert.deepEqual(u.sounds.filter(k=>k!=='click'),['confirm','confirm','confirm'],'each success plays confirm only, never refuse');assert.deepEqual(u.toastsSeen,['good','good','good'],'success toasts only');
   assert.deepEqual((sim.s.tut.built||[]).map(b=>b.tool),['hvac','light','iu5x5']);
 });
-test('D5 unchanged: failed Confirm keeps the tool and plan; overlays camera Confirm keeps the tool; lessons keep the tool',()=>{
+test('D5 unchanged: failed Confirm keeps the tool and plan; overlays camera Confirm keeps the tool',()=>{
   const sim=makeMaple(92);sim.s.cash=1e6;setBeat(sim,'climate');tutorialTick(sim);sim.dispatch({type:'tutFlag',flag:'climateDemandAck'});
   const u=confirmUI(sim);let replanned=0;u.replan=()=>{replanned++;};const bad={tool:'hvac',a:{x:-1,y:-1},b:{x:-1,y:-1},f:0};arm(u,bad);const n=(sim.s.tut.built||[]).length;
   u.confirmPlan();assert.equal(u.tool,'hvac','failed Confirm keeps the tool');assert.deepEqual(u.sounds,['refuse'],'failed Confirm still refuses');assert.deepEqual(u.toastsSeen,['bad']);assert.equal(replanned,1,'failed Confirm replans as before');assert.equal((sim.s.tut.built||[]).length,n);
   const ov=makeMaple(93);ov.s.cash=1e6;setBeat(ov,'overlays',{enter:true});const L=hallLight(ov);ov.wear(L,Math.max(0,L.cond-0.19));ov.ensureRepairTask(L);ov.s.tut.flags.securityOverlaySeen=true;
   let a=null;for(let y=4;y<=16&&!a;y++)for(let x=16;x<=30&&!a;x++){const c={tool:'camera',a:{x,y},b:{x,y},f:0};if(ov.plan(c).status==='valid')a=c;}
   const v=confirmUI(ov);arm(v,a);v.confirmPlan();assert.equal(v.tool,'camera','overlays: next step is the wait step, tool kept');
-  const ls=makeMaple(94);ls.s.cash=1e6;ls.dispatch({type:'tutSkip'});ls.s.lesson={id:'climate',built:[],entered:true};const w=confirmUI(ls);arm(w,HVAC);w.confirmPlan();assert.equal(w.tool,'hvac','lessons are out of D5 scope: tool kept');
+});
+// Climate lesson: the same carryover as D5. After graduation the optional lesson's coach steps follow the same build sequence.
+const lessonSim=(seed,id)=>{const sim=makeMaple(seed);sim.s.cash=1e6;sim.dispatch({type:'tutSkip'});assert.equal(sim.dispatch({type:'lesson',op:'start',id}).ok,true,'lesson starts');sim.poll();sim.s.speed=0;return sim;};
+test('Climate lesson: Confirm puts HVAC and the corridor light away so Choose Access & Security / Choose Units show; the last climate build keeps its tool',()=>{
+  const sim=lessonSim(94,'climate');const u=confirmUI(sim),pre=JSON.stringify({t:sim.s.t,speed:sim.s.speed,tut:sim.s.tut,lesson:sim.s.lesson.id});
+  assert.equal(title(sim,u),'Choose Utilities','Build open: coach asks for Utilities');
+  assert.notEqual(arm(u,HVAC),'invalid');u.confirmPlan();assert.equal(u.tool,null,'HVAC put away after Confirm');assert.equal(u.plan,null);assert.equal(u.tab,'build','Build panel stays open');
+  assert.equal(title(sim,u),'Choose Access & Security','category row is the next coached target');
+  assert.notEqual(arm(u,LIGHT),'invalid');u.confirmPlan();assert.equal(u.tool,null,'light put away after Confirm');assert.equal(title(sim,u),'Choose Units');
+  assert.notEqual(arm(u,IU),'invalid');u.climate=true;u.confirmPlan();assert.equal(u.tool,'iu5x5','next step is the wait step: tool kept as before');
+  assert.equal(JSON.stringify({t:sim.s.t,speed:sim.s.speed,tut:sim.s.tut,lesson:sim.s.lesson.id}),pre,'manual Pause, clock, tutorial state and lesson untouched by Confirm');
+  assert.deepEqual(u.sounds.filter(k=>k!=='click'),['confirm','confirm','confirm'],'each success plays confirm only, never refuse');assert.deepEqual(u.toastsSeen,['good','good','good'],'success toasts only');
+  assert.deepEqual(sim.s.lesson.built.map(b=>b.tool),['hvac','light','iu5x5']);
+});
+test('Lessons unchanged: failed lesson Confirm keeps the tool; Coverage lesson camera Confirm keeps the tool (next step is the wait step)',()=>{
+  const sim=lessonSim(96,'climate');const u=confirmUI(sim);let replanned=0;u.replan=()=>{replanned++;};arm(u,{tool:'hvac',a:{x:-1,y:-1},b:{x:-1,y:-1},f:0});
+  u.confirmPlan();assert.equal(u.tool,'hvac','failed Confirm keeps the tool');assert.deepEqual(u.sounds,['refuse']);assert.equal(replanned,1);assert.equal(sim.s.lesson.built.length,0);
+  const q=lessonSim(97,'quality');let a=null;for(let y=4;y<=16&&!a;y++)for(let x=16;x<=30&&!a;x++){const c={tool:'camera',a:{x,y},b:{x,y},f:0};if(q.plan(c).status==='valid')a=c;}
+  const v=confirmUI(q);arm(v,a);v.confirmPlan();assert.equal(v.toastsSeen[0],'good');assert.equal(v.tool,'camera','quality lesson: next step is the wait step, tool kept');
 });
 test('D5 unchanged: free-play repeat building keeps the tool armed after each Confirm',()=>{
   const sim=makeMaple(95);sim.s.cash=1e6;sim.dispatch({type:'tutSkip'});assert.equal(sim.s.tut.on,false);const u=confirmUI(sim);let ok=0;
