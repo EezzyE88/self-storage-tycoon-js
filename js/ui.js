@@ -1085,10 +1085,10 @@ export class UI {
     this.plan.args = a;
     this.rend.setPreview(this.plan, this.planArgs.a); this.renderActionBar();
   }
-  // D5: after a tutorial Confirm, is the coach's next step a category, or a different tool's card? Then the finished
-  // tool is put away (as the player would with X). Free play, lessons and repeat building with the same tool keep it.
+  // D5: after a tutorial or lesson Confirm, is the coach's next step a category, or a different tool's card? Then the
+  // finished tool is put away (as the player would with X). Free play and repeat building with the same tool keep it.
   tutorialWantsOtherTool() {
-    const s = this.sim.s; if (!this.tool || !s.tut?.on || s.lesson) return false;
+    const s = this.sim.s; if (!this.tool || !(s.tut?.on || s.lesson)) return false;
     const b = curBeat(this.sim), st = b?.steps?.[stepState(this.sim, this).cur], sel = st?.sel || '';
     if (/^\.cats \[data-v="\w+"\]$/.test(sel)) return true;
     const t = /^\[data-a="tool"\]\[data-v="(\w+)"\]$/.exec(sel); return !!t && t[1] !== this.tool;
