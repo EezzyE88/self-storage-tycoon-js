@@ -4,6 +4,7 @@ import { careerEligibility } from './career.js';
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
 import { TOOLS, ROLES } from './data.js';
 import { verticalDone, verticalLayout, shaftHallState } from './blueprint.js';
+import { investmentEvidence } from './economics.js';
 
 const unitByRole = (sim, role) => tutorialUnit(sim, role);
 const createdSince = (sim, type, t) => sim.objs(type).some((o) => o.cstate === 'operating' && o.id > (ctx(sim).idMark || 0));
@@ -403,7 +404,7 @@ export const LESSONS = [
       waitBuild('Let construction finish and the climate units open', (sim) => !!sim.s.milestones.first_climate),
     ],
     check: (sim) => !!sim.s.milestones.first_climate },
-  { id: 'up', chapter: 'Lesson', offer: (sim) => ((sim.lostRecent(30).noReady || 0) + (sim.lostRecent(30).noSize || 0)) >= 8 && sim.objs('unit').length > 26, title: 'Build a working two-floor property',
+  { id: 'up', chapter: 'Lesson', revalidate: true, offer: (sim) => ((sim.lostRecent(30).noReady || 0) + (sim.lostRecent(30).noSize || 0)) >= 8 && sim.objs('unit').length > 26 && nearlyFull(sim) && upOfferEvidence(sim), title: 'Build a working two-floor property',
     body: 'The blueprint shows the whole layout. Use suggested placement to prepare each piece, or hold and drag from Start to End. Nothing is charged until Confirm.',
     why: 'Customers need a connected route: gate → loading → entrance → elevator → upstairs unit. Markers follow the building you actually place.',
     focus: (sim) => { const l=verticalLayout(sim); return l ? {cell:{x:l.sh.x+l.sh.w/2,y:l.sh.y+l.sh.h/2}} : null; },
@@ -451,6 +452,15 @@ export const LESSONS = [
     button: 'Continue without borrowing', flag: 'finAck', check: (sim) => ctx(sim).flags.finAck },
 ];
 export const lessonById = (id) => LESSONS.find((l) => l.id === id);
+// The automatic two-floor offer waits only while BOTH hold: a product shoppers were lost for still has rent-ready
+// vacancies, and no product has full Growth Readiness demand support. Evidence is economics.js investmentEvidence
+// (per size|env product); no new evidence rule. Growth -> Lessons always lists the lesson regardless.
+// Property-wide floor for the automatic offer: the coach's own "nearly full" boundary (ui.js coachHint). Below it the coach
+// tells the player to rent vacant units before expanding, so the offer must not contradict it.
+const nearlyFull = (sim) => { const oc = sim.occupancy(); return oc.n >= 4 && oc.pct >= 0.95; };
+function upOfferEvidence(sim) { const P = investmentEvidence(sim).products; return P.some((p) => p.demandSupported) || !P.some((p) => p.losses > 0 && p.readyVacancies > 0); }
+// A pending offer from a `revalidate` lesson is shown (and holds time) only while its offer still stands.
+export const offerStands = (sim, id) => { const L = lessonById(id); return !!L && (!L.revalidate || !!L.offer(sim)); };
 // Card header and Tutorial-list group. Act beats read "Act I · Take Over · Beat 3" (beats numbered across the campaign,
 // chapter breaks not counted); the not-yet-migrated remainder keeps its chapter with "Part n of N".
 export const beatGroup = (b) => b.act ? `Act ${b.act} · ${b.chapter}` : b.chapter;
@@ -537,6 +547,9 @@ export function lessonTick(sim) {
     if (b.check(sim)) { s.lessonsDone = s.lessonsDone || {}; s.lessonsDone[ls.id] = sim.day; s.lesson = null; sim.releaseHeld(); sim.emit('lesson_done', { id: ls.id, title: b.title }); }
     return;
   }
+  // A pending `revalidate` offer that no longer stands is withdrawn, not marked seen. This runs on every poll, including
+  // the paused-frame poll and the poll at load, so the clock never has to advance to retire it.
+  if (s.lessonOffer && !offerStands(sim, s.lessonOffer) && lessonById(s.lessonOffer)) s.lessonOffer = null;
   // offers: at most one at a time, checked hourly, never during tutorial
   if (sim.mod % 60 !== 0 || s.creative) return;
   if (s.mode === 'tutorial' && !(s.tut && s.tut.done)) return;

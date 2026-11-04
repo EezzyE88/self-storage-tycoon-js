@@ -19,7 +19,7 @@ import { complaintCopy, requestCopy } from './feedbackcopy.js';
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK, BILLING_CYCLE_DAYS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
-import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, lessonAllowed, tutBeatIndex, beatHeader, beatGroup } from './tutorial.js';
+import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
@@ -2178,7 +2178,7 @@ export class UI {
       // The stylesheet hides the offer chip while a panel or build bar is open; an offer nobody can see or dismiss must not
       // hold time, so it waits (unpaused) and appears, holding time as usual, once the panel closes.
       const covered = !!(this.$('sheet')?.firstChild || this.$('abar')?.firstChild);
-      const off = !this.title && !held && !covered && s.lessonOffer && lessonById(s.lessonOffer);
+      const off = !this.title && !held && !covered && s.lessonOffer && offerStands(this.sim, s.lessonOffer) && lessonById(s.lessonOffer);
       if (off) this.pauseForPopup('lessonOffer'); else this.resumePopup('lessonOffer');
       const key = 'offer:' + (off ? off.id : '');
       if (!force && key === this.tutKey) return; this.tutKey = key; this.rend.setFocus(null);

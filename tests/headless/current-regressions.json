@@ -1157,6 +1157,18 @@
         "scope": "Campaign Unit 6: Act III beat order and header, D4 migration, interior customer route, real dark-hall complaint and feedback, Security overlay on/off and coverage fail-forward, climate demand/HVAC/units fail-forward, lesson completion, reload mid-overlay and mid-climate build, climate construction-wait card (Act III and Climate lesson)"
       },
       {
+        "id": "tlesson_offer_gate",
+        "command": [
+          "@node",
+          "tests/headless/tlesson_offer_gate.mjs"
+        ],
+        "completion": "17 lesson offer gate checks passed",
+        "minimum_pass_lines": 17,
+        "timeout": 600,
+        "evidence": "native current behavior: graduated Maple with the Act III climate set built through normal build actions, sim polls/ticks, save/load round trip, production renderTut/onClick over a stubbed DOM (not Safari)",
+        "scope": "F2 graduation free play: automatic two-floor lesson offer gated on the coach nearly-full boundary (>=4 operating units, >=95% leased; option b, coach agreement, boundary 28/30 vs 29/30, supported near-full offer reachable, occupancy-drop withdrawal) and on investmentEvidence (relevant ready vacancies and no supported product), per-product independence, no-stock product, short window, original threshold, stale pending offer withdrawn on paused poll/load without clock advance or marking seen, UI never shows/holds a stale offer, valid offer Pause/Later speed restore and manual Pause, Growth Lessons access, other lesson predicates unchanged"
+      },
+      {
         "id": "tsection_menu_ring",
         "command": [
           "@node",
