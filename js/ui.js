@@ -2136,7 +2136,10 @@ export class UI {
     if (section && this.tab === section[0] && typeof document !== 'undefined' && this.root.querySelector) {
       const el = this.root.querySelector(sel), picker = this.root.querySelector('.sheet [data-section-picker]');
       // Section already chosen and its control rendered but below a short screen's fold: keep the real step (the ring scrolls it into view).
-      const chosen = !!el && this.sectionMenuKey !== this.tab && this.sectionChoice?.tab === this.tab && this.sectionChoice?.label === section[1];
+      // A control inside a hidden part of the panel (the compact panel hides its details) has no layout box and cannot be
+      // scrolled into view, so it does not count as chosen: the coach asks to choose the section again.
+      const laidOut = !!el && (typeof el.getClientRects !== 'function' || el.getClientRects().length > 0);
+      const chosen = laidOut && this.sectionMenuKey !== this.tab && this.sectionChoice?.tab === this.tab && this.sectionChoice?.label === section[1];
       if (picker && !(el && (this.guideVisible(el) || chosen))) return { ...step, redirect: 'section', section, t: `Choose <b>${section[2]}</b> in the section selector`, d: `The ${section[0] === 'operate' ? 'Operate' : 'Business'} panel is split into sections. Choose <b>${section[2]}</b> in the selector at the top of the panel; then ${step.t.replace(/<[^>]+>/g, '')}.`, sel: '.sheet [data-section-picker]', lbl: 'Choose ' + section[2] };
     }
     // An armed tool that differs from the step's tool, or the right tool on the wrong floor: following the map target
