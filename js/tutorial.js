@@ -254,6 +254,7 @@ export const BEATS = [
     steps: [
       { t: 'Open <b>Operate</b>', d: 'Open Operate and choose <b>Overlays</b>.', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || flag(sim, 'securityOverlaySeen') },
       { t: 'Turn on the <b>Security</b> overlay', d: 'Use <b>Overlays → Security</b>. Look for red crosses, stripes and dots rather than guessing where coverage is weak.', sel: '[data-a="overlay"][data-v="security"]', done: (sim, ui) => (ui && ui.rend && ui.rend.overlay === 'security') || flag(sim, 'securityOverlaySeen') },
+      { t: 'Tap <b>Back to map</b>', d: 'Time stays paused while the panel is expanded. Tap <b>Back to map</b> at the top of the panel to see the coverage marks across the property.', sel: '.sheet [data-a="sheetGrow"][aria-expanded="true"]', lbl: 'Back to map', done: (sim, ui) => !(ui && ui.sheetTall && ui.tab) || flag(sim, 'securityOverlaySeen') },
       { t: 'Inspect the coverage map', d: 'Red cross = dark and unwatched. Stripe = lit only. Dot = camera only. No mark = lit and on camera. Tap <b>Got it</b> after you have inspected the map.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => flag(sim, 'securityOverlaySeen') },
       { t: 'Turn the <b>Security</b> overlay off', d: 'Tap <b>Security</b> again. The diagnostic layer should disappear and the normal property view should return.', sel: '[data-a="overlay"][data-v="security"]', done: (sim, ui) => flag(sim, 'securityOverlaySeen') && (!ui || !ui.rend || ui.rend.overlay !== 'security') },
       { t: 'Tap <b>Back to map</b>', d: 'Time stays paused while the panel is expanded. Tap <b>Back to map</b> at the top of the panel to see the hallway again.', sel: '.sheet [data-a="sheetGrow"][aria-expanded="true"]', lbl: 'Back to map', done: (sim, ui) => !(ui && ui.sheetTall && ui.tab) || (ui && hallLight(sim) && ui.sel === hallLight(sim).id) || sim.works(hallLight(sim)) || !!(repairTask(sim, hallLight(sim)) || {}).assigned },
@@ -268,7 +269,7 @@ export const BEATS = [
       { t: 'Place it on a weak spot and <b>Confirm</b>', d: 'Hold and drag onto an area the Security overlay showed as dark or unwatched, check the action bar, then tap <b>Confirm</b>.', sel: CONFIRM, done: securityImproved },
       { t: 'Let the improvement finish', d: 'Run time until the improvement is operating. The goal is evidence → diagnosis → improvement, not building for its own sake.', sel: PLAY, run: true, done: securityImprovementDone },
     ],
-    button: 'Got it', flag: 'securityOverlaySeen', buttonWhen: (sim, ui) => ui && ui.rend && ui.rend.overlay === 'security' && !flag(sim, 'securityOverlaySeen'),
+    button: 'Got it', flag: 'securityOverlaySeen', buttonWhen: (sim, ui) => ui && ui.rend && ui.rend.overlay === 'security' && !(ui.sheetTall && ui.tab) && !flag(sim, 'securityOverlaySeen'),
     check: (sim) => sim.works(hallLight(sim)) && securityImprovementDone(sim) },
 
   { id: 'climate', act: 'III', chapter: 'Improve', title: 'Serve a customer need Maple Street misses',

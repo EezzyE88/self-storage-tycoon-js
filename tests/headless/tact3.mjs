@@ -50,23 +50,23 @@ test('Beat 10 creates no fake complaint: the normal visitor path deterministical
 
 test('Beat 11 requires Security overlay on, explicit acknowledgement, then off before improvement; secrisk is lesson-owned',()=>{
   const sim=makeMaple(41);failHall(sim);setBeat(sim,'overlays',{enter:true});const b=BEATS[beatIndex('overlays')];
-  assert.equal(stepState(sim,ui({tab:'operate'})).cur,1);assert.equal(stepState(sim,ui({tab:'operate',rend:{view:'ext',overlay:'security'}})).cur,2);
-  sim.dispatch({type:'tutFlag',flag:'securityOverlaySeen'});assert.equal(stepState(sim,ui({tab:'operate',rend:{view:'ext',overlay:'security'}})).cur,3,'must turn overlay off');assert.equal(stepState(sim,ui({tab:'operate',rend:{view:'ext',overlay:null}})).cur,5,'normal map returns before responding to the complaint');assert.equal(stepState(sim,ui({tab:'operate',sheetTall:true,rend:{view:'ext',overlay:null}})).cur,4,'an expanded Operate panel is collapsed with Back to map before the map tap');
+  assert.equal(stepState(sim,ui({tab:'operate'})).cur,1);assert.equal(stepState(sim,ui({tab:'operate',sheetTall:true,rend:{view:'ext',overlay:'security'}})).cur,2,'the expanded Operate panel is collapsed with Back to map before inspecting the coverage map');assert.match(b.steps[2].sel,/sheetGrow/,'step 2 is Back to map');assert.match(b.steps[3].t,/Inspect the coverage map/);assert.equal(b.buttonWhen(sim,ui({tab:'operate',sheetTall:true,rend:{view:'ext',overlay:'security'}})),false,'Got it waits until the map is visible');assert.equal(stepState(sim,ui({tab:'operate',rend:{view:'ext',overlay:'security'}})).cur,3);assert.equal(b.buttonWhen(sim,ui({tab:'operate',rend:{view:'ext',overlay:'security'}})),true);
+  sim.dispatch({type:'tutFlag',flag:'securityOverlaySeen'});assert.equal(stepState(sim,ui({tab:'operate',rend:{view:'ext',overlay:'security'}})).cur,4,'must turn overlay off');assert.equal(stepState(sim,ui({tab:'operate',rend:{view:'ext',overlay:null}})).cur,6,'normal map returns before responding to the complaint');assert.equal(stepState(sim,ui({tab:'operate',sheetTall:true,rend:{view:'ext',overlay:null}})).cur,5,'an expanded Operate panel is collapsed with Back to map before the map tap');
   assert.equal(beatOwnsRequest(sim,{key:'secrisk'}),true);assert.equal(beatOwnsRequest(sim,{key:'other'}),false);
   assert.equal(toolUnlocked(sim,'camera'),true);assert.equal(toolUnlocked(sim,'hvac'),false);
 });
 
 test('Beat 11 repairs the reported hallway first; an earlier player-built light/camera avoids a duplicate coverage build but never skips overlay diagnosis',()=>{
   const sim=makeMaple(42);setBeat(sim,'overlays',{enter:true});const L=hallLight(sim);sim.wear(L,Math.max(0,L.cond-0.19));sim.ensureRepairTask(L);sim.s.tut.built=[{tool:'camera',f:0,id:999}];
-  assert.equal(stepState(sim,ui({tab:'operate'})).cur,1,'prebuilt camera does not skip diagnosis');sim.s.tut.flags.securityOverlaySeen=true;assert.equal(stepState(sim,ui({tab:'operate',rend:{view:'ext',overlay:null}})).cur,5,'after overlay off, the failed hallway still has to be repaired');
+  assert.equal(stepState(sim,ui({tab:'operate'})).cur,1,'prebuilt camera does not skip diagnosis');sim.s.tut.flags.securityOverlaySeen=true;assert.equal(stepState(sim,ui({tab:'operate',rend:{view:'ext',overlay:null}})).cur,6,'after overlay off, the failed hallway still has to be repaired');
   const t=sim.s.tasks.find(x=>x.obj===L.id&&x.type!=='makeready');assert.equal(sim.dispatch({type:'ownerTask',task:t.id}).ok,true);sim.s.speed=4;runUntil(sim,()=>sim.works(L),1200);
   assert.equal(curBeat(sim).id,'climate','prebuilt coverage skips a duplicate build after the real complaint is fixed');assert.equal(BEATS[beatIndex('overlays')].check(sim),true,'repaired hall plus prior completed coverage satisfies the beat');
 });
 
 test('Reload mid-overlay never leaves progress stuck: the coach asks to turn Security on again unless the inspection acknowledgement was saved',()=>{
   const sim=makeMaple(43);failHall(sim);setBeat(sim,'overlays',{enter:true});const restored=new Sim(clone(sim.s));
-  assert.equal(stepState(restored,ui({tab:'operate',rend:{view:'ext',overlay:null}})).cur,1,'transient overlay is off after reload, so turn-on step returns');
-  restored.s.tut.flags.securityOverlaySeen=true;assert.equal(stepState(restored,ui({tab:'operate',rend:{view:'ext',overlay:null}})).cur,5,'saved acknowledgement resumes after the required off state');
+  assert.equal(stepState(restored,ui({tab:'operate',rend:{view:'ext',overlay:null}})).cur,1,'transient overlay is off after reload, so turn-on step returns');const rb=BEATS[beatIndex('overlays')],tall=ui({tab:'operate',sheetTall:true,rend:{view:'ext',overlay:'security'}});assert.equal(stepState(restored,tall).cur,2,'after reload, Security on again in the expanded panel stops at Back to map');assert.equal(rb.buttonWhen(restored,tall),false,'after reload, Got it waits for the map');
+  restored.s.tut.flags.securityOverlaySeen=true;assert.equal(stepState(restored,ui({tab:'operate',rend:{view:'ext',overlay:null}})).cur,6,'saved acknowledgement resumes after the required off state');
 });
 
 test('Beat 12 tells the truth about climate demand and unlocks HVAC/interior only when the climate beat begins',()=>{
