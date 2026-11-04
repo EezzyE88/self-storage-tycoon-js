@@ -139,4 +139,38 @@ test('D3 "Turn Climate on" follows the placement review (where the toggle exists
   assert.equal(title(sim,u({plan:{status:'valid'},climate:true})),'Tap Confirm');
 });
 
+// D5: a successful tutorial Confirm puts the finished tool away only when the coach's next step needs another category/tool.
+const confirmUI=(sim,o={})=>{const u=Object.create(UI.prototype);const rend={view:'ext',overlay:null,setPreview(){},setSelection(){}};
+  Object.assign(u,{g:{sim,rend,audio:{play(){}},autosavePaused(){}},title:false,sel:null,tab:'build',cat:null,tool:null,plan:null,planArgs:null,toasts:[],popupBlocks:new Set(),upgradeOptions:{},sheetTall:false,...o});
+  for(const k of ['renderTut','renderSheet','renderActionBar','renderFeed','syncFloorUi','resumePopup','pauseForPopup','notePause','endRetrofit','replan'])u[k]=()=>{};
+  u.sounds=[];u.toastsSeen=[];u.sfx=(k)=>u.sounds.push(k);u.toast=(m,kind)=>u.toastsSeen.push(kind||'info');
+  u.root={classList:{remove(){},toggle(){}},querySelector:()=>null};u.$=()=>({querySelector:()=>null,firstChild:null});return u;};
+const arm=(u,args)=>{u.tool=args.tool;u.cat=TOOLS[args.tool].cat;u.plan=u.sim.plan(args);u.plan.args=args;u.planArgs={a:args.a,b:args.b};return u.plan.status;};
+const HVAC={tool:'hvac',a:{x:14,y:8},b:{x:14,y:8},f:0},LIGHT={tool:'light',a:{x:17,y:8},b:{x:17,y:8},f:0},IU={tool:'iu5x5',a:{x:16,y:5},b:{x:16,y:11},f:0,axis:'y',climate:true};
+test('D5 Act III: Confirm puts HVAC and the corridor light away so Choose Access & Security / Choose Units show; the last climate build keeps its tool',()=>{
+  const sim=makeMaple(91);sim.s.cash=1e6;setBeat(sim,'climate');tutorialTick(sim);sim.dispatch({type:'tutFlag',flag:'climateDemandAck'});sim.s.speed=0;
+  const u=confirmUI(sim),pre=JSON.stringify({t:sim.s.t,speed:sim.s.speed,tut:sim.s.tut.beatId});
+  assert.notEqual(arm(u,HVAC),'invalid');u.confirmPlan();assert.equal(u.tool,null,'HVAC put away after Confirm');assert.equal(u.plan,null);assert.equal(u.tab,'build','Build panel stays open');
+  assert.equal(title(sim,u),'Choose Access & Security','category row is the next coached target');
+  assert.notEqual(arm(u,LIGHT),'invalid');u.confirmPlan();assert.equal(u.tool,null,'light put away after Confirm');assert.equal(title(sim,u),'Choose Units');
+  assert.notEqual(arm(u,IU),'invalid');u.climate=true;u.confirmPlan();assert.equal(u.tool,'iu5x5','next step is the wait step: tool kept as before');
+  assert.equal(JSON.stringify({t:sim.s.t,speed:sim.s.speed,tut:sim.s.tut.beatId}),pre,'manual Pause, clock and beat id untouched by Confirm');
+  assert.deepEqual(u.sounds.filter(k=>k!=='click'),['confirm','confirm','confirm'],'each success plays confirm only, never refuse');assert.deepEqual(u.toastsSeen,['good','good','good'],'success toasts only');
+  assert.deepEqual((sim.s.tut.built||[]).map(b=>b.tool),['hvac','light','iu5x5']);
+});
+test('D5 unchanged: failed Confirm keeps the tool and plan; overlays camera Confirm keeps the tool; lessons keep the tool',()=>{
+  const sim=makeMaple(92);sim.s.cash=1e6;setBeat(sim,'climate');tutorialTick(sim);sim.dispatch({type:'tutFlag',flag:'climateDemandAck'});
+  const u=confirmUI(sim);let replanned=0;u.replan=()=>{replanned++;};const bad={tool:'hvac',a:{x:-1,y:-1},b:{x:-1,y:-1},f:0};arm(u,bad);const n=(sim.s.tut.built||[]).length;
+  u.confirmPlan();assert.equal(u.tool,'hvac','failed Confirm keeps the tool');assert.deepEqual(u.sounds,['refuse'],'failed Confirm still refuses');assert.deepEqual(u.toastsSeen,['bad']);assert.equal(replanned,1,'failed Confirm replans as before');assert.equal((sim.s.tut.built||[]).length,n);
+  const ov=makeMaple(93);ov.s.cash=1e6;setBeat(ov,'overlays',{enter:true});const L=hallLight(ov);ov.wear(L,Math.max(0,L.cond-0.19));ov.ensureRepairTask(L);ov.s.tut.flags.securityOverlaySeen=true;
+  let a=null;for(let y=4;y<=16&&!a;y++)for(let x=16;x<=30&&!a;x++){const c={tool:'camera',a:{x,y},b:{x,y},f:0};if(ov.plan(c).status==='valid')a=c;}
+  const v=confirmUI(ov);arm(v,a);v.confirmPlan();assert.equal(v.tool,'camera','overlays: next step is the wait step, tool kept');
+  const ls=makeMaple(94);ls.s.cash=1e6;ls.dispatch({type:'tutSkip'});ls.s.lesson={id:'climate',built:[],entered:true};const w=confirmUI(ls);arm(w,HVAC);w.confirmPlan();assert.equal(w.tool,'hvac','lessons are out of D5 scope: tool kept');
+});
+test('D5 unchanged: free-play repeat building keeps the tool armed after each Confirm',()=>{
+  const sim=makeMaple(95);sim.s.cash=1e6;sim.dispatch({type:'tutSkip'});assert.equal(sim.s.tut.on,false);const u=confirmUI(sim);let ok=0;
+  const n0=sim.objs('light').length;
+  for(let y=2;y<sim.s.H-2&&ok<3;y+=3)for(let x=2;x<sim.s.W-2&&ok<3;x+=3){const args={tool:'light',a:{x,y},b:{x,y},f:0};if(sim.plan(args).status!=='valid')continue;arm(u,args);u.confirmPlan();assert.equal(u.tool,'light','tool stays armed for the next placement');ok++;}
+  assert.equal(ok,3,'three repeat builds confirmed with the same armed tool');assert.ok(!u.sounds.includes('refuse')&&u.toastsSeen.every(k=>k==='good'),'free-play success feedback unchanged');assert.equal(sim.objs('light').length,n0+3);
+});
 console.log(`${passed} Act III checks passed`);
