@@ -191,4 +191,45 @@ test('D5 unchanged: free-play repeat building keeps the tool armed after each Co
   for(let y=2;y<sim.s.H-2&&ok<3;y+=3)for(let x=2;x<sim.s.W-2&&ok<3;x+=3){const args={tool:'light',a:{x,y},b:{x,y},f:0};if(sim.plan(args).status!=='valid')continue;arm(u,args);u.confirmPlan();assert.equal(u.tool,'light','tool stays armed for the next placement');ok++;}
   assert.equal(ok,3,'three repeat builds confirmed with the same armed tool');assert.ok(!u.sounds.includes('refuse')&&u.toastsSeen.every(k=>k==='good'),'free-play success feedback unchanged');assert.equal(sim.objs('light').length,n0+3);
 });
+// Climate construction wait: units steps reached while the just-ordered HVAC Plant / light are still under construction show the
+// existing 'ordered' prerequisite wait (ringed on 4x) in climate wording, instead of a drag that can only preview amber while the
+// placement review holds time. Read-only guidance: no clock, speed, save or construction change.
+const resolved=(sim,u)=>{const st=stepState(sim,u);return u.resolveStep(st.b.steps[st.cur]);};
+const plain=(x)=>(x||'').replace(/<[^>]+>/g,'');
+const climateWaitWalk=(label,sim,u)=>{
+  assert.notEqual(arm(u,HVAC),'invalid');u.confirmPlan();assert.notEqual(arm(u,LIGHT),'invalid');u.confirmPlan();
+  assert.equal(u.tool,null,`${label}: PR #25 still puts the light away`);assert.equal(title(sim,u),'Choose Units',`${label}: raw coach step unchanged (D5 reads it)`);
+  assert.deepEqual([sim.objs('hvac').map(o=>o.cstate),sim.objs('light').filter(l=>l.x===17&&l.y===8).map(l=>l.cstate)],[['construction'],['construction']]);
+  const before=JSON.stringify(sim.s);let r=resolved(sim,u);assert.equal(JSON.stringify(sim.s),before,`${label}: prerequisite is read-only`);
+  assert.equal(r.redirect,'wait',`${label}: wait card while HVAC + light are building`);assert.equal(plain(r.t),'Let the HVAC Plant and light finish');
+  assert.match(plain(r.d),/still under construction\. Tap 4x to run time/);assert.equal(r.sel,'#speed [data-v="4"]');assert.equal(r.placement,undefined);assert.equal(u.currentBlueprintPlan(),null,`${label}: no placement cue while waiting`);
+  u.cat='units';r=resolved(sim,u);assert.equal(r.redirect,'wait',`${label}: Units chosen: still waiting`);
+  assert.equal(arm(u,IU),'incomplete',`${label}: a drag now previews amber`);u.popupBlocks.add('review');
+  r=resolved(sim,u);assert.equal(r.redirect,'tool',`${label}: review holding time: put the tool away first`);assert.match(plain(r.d),/Time is held while the Interior 5x5 placement review is open/);
+  u.popupBlocks.delete('review');u.tool=null;u.plan=null;
+  const restored=new Sim(clone(sim.s));const ur=confirmUI(restored,{cat:'units'});assert.equal(plain(resolved(restored,ur).t),'Let the HVAC Plant and light finish',`${label}: save/reload mid-wait shows the same card`);
+  assert.equal(sim.s.speed,0,`${label}: manual Pause kept`);sim.s.speed=4;let n=0;
+  while(n<5000&&[...sim.objs('hvac'),...sim.objs('light')].some(o=>o.cstate==='construction')){sim.step();tutorialTick(sim);n++;}
+  assert.ok(n<5000);sim.s.speed=0;r=resolved(sim,u);assert.equal(r.redirect,undefined,`${label}: built: real units step returns`);assert.equal(plain(r.t),'Pick Interior 5x5');
+  assert.equal(arm(u,IU),'valid',`${label}: units plan green on the first drag after the wait`);
+};
+test('Climate wait card: Act III beat 12 waits for the ordered HVAC Plant and light before placing climate units',()=>{
+  const sim=makeMaple(97);sim.s.cash=1e6;setBeat(sim,'climate');tutorialTick(sim);sim.dispatch({type:'tutFlag',flag:'climateDemandAck'});sim.s.speed=0;
+  climateWaitWalk('Act III',sim,confirmUI(sim));assert.equal(curBeat(sim).id,'climate');assert.equal(sim.s.tut.beatId,'climate','beat id unchanged');
+});
+test('Climate wait card: the Climate lesson waits for the ordered HVAC Plant and light before placing climate units',()=>{
+  const sim=lessonSim(98,'climate');climateWaitWalk('lesson',sim,confirmUI(sim));assert.equal(sim.s.lesson.id,'climate');
+});
+test('Climate wait card unchanged paths: confirmed amber units, single pending item wording, two-floor hallway wording',()=>{
+  for(const mk of [()=>{const s=makeMaple(99);s.s.cash=1e6;setBeat(s,'climate');tutorialTick(s);s.dispatch({type:'tutFlag',flag:'climateDemandAck'});s.s.speed=0;return s;},()=>lessonSim(100,'climate')]){
+    const sim=mk(),u=confirmUI(sim);arm(u,HVAC);u.confirmPlan();arm(u,LIGHT);u.confirmPlan();
+    const b=curBeat(sim),units=b.steps.filter(st=>st.prereq);assert.ok(units.length>=5,'every climate units step carries the wait');
+    assert.equal(arm(u,IU),'incomplete');u.climate=true;u.confirmPlan();assert.equal(u.tool,'iu5x5','amber Confirm still builds and keeps the tool');
+    assert.ok(units.every(st=>st.prereq(sim)===null),'confirmed amber units: no wait card');const r=resolved(sim,u);assert.notEqual(r.redirect,'wait');assert.match(plain(r.t),/Let construction finish and the climate units open/);
+  }
+  const one=lessonSim(101,'climate'),u1=confirmUI(one);arm(u1,HVAC);u1.confirmPlan();one.s.speed=4;let n=0;while(n<5000&&one.objs('hvac').some(o=>o.cstate==='construction')){one.step();n++;}one.s.speed=0;
+  arm(u1,LIGHT);u1.confirmPlan();assert.equal(plain(resolved(one,u1).t),'Let the light finish','only the pending item is named');
+  const up=confirmUI(makeMaple(102));const w=up.resolveStep({t:'x',d:'y',sel:null,prereq:()=>({state:'ordered',floor:2,committed:false})});
+  assert.equal(w.t,'F2 hallway ordered: let construction finish','two-floor lesson wording unchanged');assert.match(w.d,/F2's hallway is ordered but still under construction/);
+});
 console.log(`${passed} Act III checks passed`);

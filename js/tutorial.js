@@ -81,6 +81,16 @@ const hvacPresent = (sim) => sim.objs('hvac').some((o) => o.cstate === 'operatin
 const westLightPresent = (sim) => sim.objs('light').some((o) => (o.f || 0) === 0 && o.x === 17 && o.y === 8 && o.cstate === 'operating') || (sim.s.tut.built || []).some((b) => b.tool === 'light' && b.f === 0 && b.id >= (sim.s.tut.act3Mark || 0));
 const climatePresent = (sim) => sim.objs('unit').some((u) => u.env === 'climate') || (sim.s.tut.built || []).some((b) => b.tool === 'iu5x5');
 const climateDemandLine = (sim) => { const n = sim.lostRecent(14).noClimate || 0; return n > 0 ? `<b>${n}</b> shopper${n === 1 ? '' : 's'} left in the last 14 days because climate control was unavailable.` : 'Some shoppers specifically ask for climate control. Maple Street does not serve that demand yet.'; };
+// Climate units need the HVAC Plant and light ordered in this beat/lesson to be finished first. While one is still under
+// construction the units steps show the existing 'ordered' prerequisite wait (UI.resolveStep) in climate wording, ringed on 4x,
+// instead of a drag that can only preview amber while the placement review holds time. Read-only; null once nothing is pending.
+const climateWait = (placed) => (sim) => {
+  if (placed(sim)) return null;
+  const mark = ctx(sim).idMark || 0, pending = [...sim.objs('hvac'), ...sim.objs('light')].filter((o) => o.id >= mark && o.cstate === 'construction');
+  if (!pending.length) return null;
+  const names = ['hvac', 'light'].filter((k) => pending.some((o) => o.type === k)).map((k) => k === 'hvac' ? 'HVAC Plant' : 'light'), both = names.length > 1;
+  return { state: 'ordered', t: `Let the ${names.join(' and ')} finish`, d: `Climate units need a <b>finished</b> HVAC Plant and a <b>working</b> corridor light. ${both ? 'The HVAC Plant and light are' : `The ${names[0]} is`} still under construction. Tap <b>4x</b> to run time. This step continues by itself when ${both ? 'they are' : 'it is'} built.` };
+};
 const waitBuild = (label, doneFn) => ({ t: label || 'Let construction finish', d: 'Construction takes game hours. Tap <b>4x</b> at the top to speed up. A progress ring shows over the site.', sel: FAST, done: doneFn });
 
 // Generic chapter break: a paused card with a deliberate Continue. Continue (flag = id) releases the owner reviews held
@@ -272,7 +282,7 @@ export const BEATS = [
       ...buildSteps({ cat: 'units', catName: 'Units', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 5 }, end: { x: 16, y: 11 }, axis: 'y', climate: true, f: 0, after: westLightPresent, placed: climatePresent,
         place: 'Build climate units along the west corridor', placeD: 'On <b>F1</b>, place the units along the west side of the corridor with their doors facing the hallway.',
         review: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || climatePresent(sim) }] })
-        .map((st, i) => i === 0 ? { ...st, t: 'Build the climate units', done: (sim, ui) => climatePresent(sim) || (westLightPresent(sim) && tabIs(ui, 'build')) } : st),
+        .map((st, i) => i === 0 ? { ...st, t: 'Build the climate units', done: (sim, ui) => climatePresent(sim) || (westLightPresent(sim) && tabIs(ui, 'build')) } : st).map((st) => ({ ...st, prereq: climateWait(climatePresent) })),
       waitBuild('Let construction finish and the climate units open', (sim) => !!sim.s.milestones.first_climate || sim.objs('unit').some((u) => u.env === 'climate' && u.cstate === 'operating')),
     ],
     button: 'Got it', flag: 'climateDemandAck', buttonWhen: (sim) => !flag(sim, 'climateDemandAck'),
@@ -389,7 +399,7 @@ export const LESSONS = [
       ...buildSteps({ cat: 'units', catName: 'Units', tool: 'iu5x5', toolName: 'Interior 5x5', cell: { x: 16, y: 5 }, end: { x: 16, y: 11 }, axis: 'y', climate: true, f: 0, after: (sim) => built(sim, 'light'), placed: (sim) => newUnits(sim, (u) => u.env === 'climate').length > 0,
         place: '<b>Drag</b> a column along the corridor\'s west side', placeD: 'On <b>F1</b>, press on the empty floor just left of the west corridor at the top, and drag straight down to the bottom. Unit doors must open onto the corridor.',
         review: [{ t: 'Turn <b>Climate on</b>', d: 'In the action bar at the bottom, tap <b>Climate off</b> so it reads <b>Climate on</b>.', sel: '#abar [data-a="climate"]', done: (sim, ui) => (ui && ui.climate && ui.tool === 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 }] })
-        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (units)', done: (sim, ui) => (tabIs(ui, 'build') && built(sim, 'light')) || toolIs(ui, 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 } : st),
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (units)', done: (sim, ui) => (tabIs(ui, 'build') && built(sim, 'light')) || toolIs(ui, 'iu5x5') || newUnits(sim, (u) => u.env === 'climate').length > 0 } : st).map((st) => ({ ...st, prereq: climateWait((sim) => newUnits(sim, (u) => u.env === 'climate').length > 0) })),
       waitBuild('Let construction finish and the climate units open', (sim) => !!sim.s.milestones.first_climate),
     ],
     check: (sim) => !!sim.s.milestones.first_climate },
