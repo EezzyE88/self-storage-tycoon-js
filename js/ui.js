@@ -10,6 +10,7 @@ import { PROJECTS, projectOffers, projectStatus, matchesProject } from './proper
 import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
 import { careerGoalPresentation } from './careerhud.js';
+import { businessProgressHtml } from './investmentprogress.js';
 import { yardInfill } from './yardinfill.js';
 import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
 import { climateSuggestionText } from './climateavailability.js';
@@ -1797,6 +1798,7 @@ export class UI {
       <div class="stat"><small>Rent collected, last 30 days</small><b>${money(collected)}</b><div class="n">Received, already in cash</div></div>
       <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops${ox.tax ? ` (incl. ${money(ox.tax, true)} tax & insurance)` : ''} + ${money(pay)} payroll</div></div>
       </div>`;
+    h += businessProgressHtml(sim, this.g && this.g.tierInfo && careerEligibility(s).eligible ? this.g.tierInfo() : null); // read-only Investment Progress (graduated campaign only)
     h += this.financialHtml() + this.diagnosticHtml();
     h += this.reportHtml() + this.marketHtml();
     // GDD §63.1–63.2: operating contribution, with capital and financing shown separately
