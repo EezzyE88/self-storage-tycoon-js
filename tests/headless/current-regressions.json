@@ -1541,6 +1541,18 @@
         "minimum_pass_lines": 37,
         "timeout": 120,
         "evidence": "native parser, stamp writer and site assembly; no live Pages deploy or physical-device claim"
+      },
+      {
+        "id": "tinvestment_progress",
+        "command": [
+          "@node",
+          "tests/headless/tinvestment_progress.mjs"
+        ],
+        "completion": "9\\ investment\\ progress\\ checks\\ passed",
+        "minimum_pass_lines": 9,
+        "timeout": 180,
+        "evidence": "native read-only Investment Progress calculation and copy, tutorial card bodies, graduation Pause/transition timing and Business sheet HTML; no rendered or physical-device claim",
+        "scope": "Financial Comprehension: player-built operating units (construction, opening, demolition, split, save/reload), Act II/III breaks, graduation Option A, Business block conditions and career rent roll"
       }
     ],
     "historical": [

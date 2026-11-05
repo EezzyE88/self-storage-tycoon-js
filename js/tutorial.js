@@ -5,6 +5,7 @@ import { careerEligibility } from './career.js';
 import { TOOLS, ROLES } from './data.js';
 import { verticalDone, verticalLayout, shaftHallState } from './blueprint.js';
 import { investmentEvidence } from './economics.js';
+import { actIIProgress, investmentText, gradProgress } from './investmentprogress.js';
 
 const unitByRole = (sim, role) => tutorialUnit(sim, role);
 const createdSince = (sim, type, t) => sim.objs(type).some((o) => o.cstate === 'operating' && o.id > (ctx(sim).idMark || 0));
@@ -214,7 +215,7 @@ export const BEATS = [
     // A Porter already on staff counts once delegated work happens (never fire and re-hire). The act ends after the authored move-out arrives.
     check: (sim) => !!sim.s.milestones.first_delegated && !moveoutQueued(sim) },
   // Act II chapter break: paused; Continue releases owner reviews held during Act II, then Act III begins.
-  chapterBreak({ id: 'actII_break', act: 'II', chapter: 'Stabilize', next: 'Act III · Improve', title: 'Maple Street is stable again',
+  chapterBreak({ id: 'actII_break', act: 'II', chapter: 'Stabilize', next: 'Act III · Improve', title: 'Maple Street is stable again', progress: actIIProgress,
     body: 'The new row is open, the hallway light works and a Porter shares the work with you. <b>Maple Street is paused.</b> This is a good place to stop. Next, in <b>Act III · Improve</b>, you follow a customer through the property, read real feedback and use diagnostic overlays before investing again.',
     why: 'What you learned in Act II: expansion solves a capacity problem; construction costs cash now and takes time; equipment needs maintenance; the Owner can only do so much each day; staff add capacity for a daily wage; and each role does different work.' }),
 
@@ -291,12 +292,12 @@ export const BEATS = [
     button: 'Got it', flag: 'climateDemandAck', buttonWhen: (sim) => !flag(sim, 'climateDemandAck'),
     check: (sim) => !!sim.s.milestones.first_climate || sim.objs('unit').some((u) => u.env === 'climate' && u.cstate === 'operating') },
 
-  chapterBreak({ id: 'actIII_break', act: 'III', chapter: 'Improve', next: 'Graduation', title: 'Maple Street works better because you listened',
+  chapterBreak({ id: 'actIII_break', act: 'III', chapter: 'Improve', next: 'Graduation', title: 'Maple Street works better because you listened', progress: investmentText,
     body: 'You followed a customer, read what went wrong, diagnosed the property with an overlay and invested in a customer need. <b>Maple Street is paused.</b> This is a good place to stop before graduation.',
     why: 'What you learned in Act III: customers experience the physical route through the property; feedback records real events; satisfaction summarizes repeated service; overlays turn hidden systems into visible evidence; improvements should answer a diagnosed problem; and different products serve different demand.' }),
 
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
-  { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true,
+  { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
     body: 'You’ve taken Maple Street from a property you barely knew into one you can operate, diagnose, improve and grow. You understand how customers, staff, buildings and money fit together. There is still plenty to master, but the property is yours now. <b>Maple Street is paused.</b> Take your time, look around, and start the clock when you’re ready.',
     why: 'Deeper <b>lessons</b> on building up, collections and financing are offered when the situation comes up, or anytime from <b>Growth &rarr; Lessons</b>. A <b>report card</b> arrives every 30 days in <b>Business</b>.',
     steps: [{ t: 'Tap <b>Finish tutorial</b>', d: 'The tutorial closes and every tool is unlocked. Time stays paused until you choose a speed.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.grad }],
@@ -483,7 +484,7 @@ export function curBeat(sim) {
   const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[tutBeatIndex(sim.s)] : null;
   if(!b)return null;
   const text = value => tutorialText(sim, value);
-  return {...b,title:text(b.title),body:text(typeof b.body === 'function' ? b.body(sim) : b.body),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
+  return {...b,title:text(b.title),body:text(typeof b.body === 'function' ? b.body(sim) : b.body)+(b.progress ? b.progress(sim) : ''),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
 }
 // A navigation step whose destination is already showing is complete: never ask the player to tap what is selected.
 export function alreadyShowing(st, ui) {
