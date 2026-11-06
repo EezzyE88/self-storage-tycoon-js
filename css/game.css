@@ -767,7 +767,7 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .tut { left:8px; right:8px; width:auto; transform:none; bottom:calc(64px + var(--safe-b)); padding:5px 8px; border-radius:10px; }
 #ui .tut.min:not(.scen):not(.offer) { display:grid; grid-template-columns:minmax(0,1fr) 64px; max-height:none; }
 #ui .tut.min .ch { grid-column:2; grid-row:1; }
-#ui .tut.min .ch > span, #ui .tut.min .ck { display:none; }
+#ui .tut.min:not(.scen) .ch > span, #ui .tut.min .ck { display:none; }
 #ui .tut.min .tut-body { grid-column:1; grid-row:1; overflow:hidden; align-self:center; }
 #ui .tut.min .steps li.cur { display:block; padding:0; }
 #ui .tut.min .tx { display:block; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; font-size:14px; }
