@@ -130,7 +130,15 @@ const game = {
     }
     sim.events.length = 0; sim.poll(); this.drain();
   },
-  drain() { const ev = this.sim.events; if (!ev.length) return; this.sim.events = []; if (this.sim === this.demo && this.ui && this.ui.title) return; /* the living title screen stays quiet */ for (const e of ev) this.ui.onEvent(e); },
+  drain() {
+    const events = this.sim.events;
+    if (!events.length) return;
+    this.sim.events = [];
+    if (this.sim === this.demo && this.ui && this.ui.title) return; // the living title screen stays quiet
+    for (const event of events) this.ui.onEvent(event);
+    // A campaign stop can pause time inside a simulation tick, without a UI command or a new day.
+    if (events.some((event) => event.type === 'speed' && event.beat && event.v === 0)) this.autosavePaused();
+  },
   saveJSON() {
     const C = this.company, view = this.ui && this.rend ? this.rend.view : null;
     // The selected floor/exterior view and the player camera ride beside (not inside) the simulation state.
