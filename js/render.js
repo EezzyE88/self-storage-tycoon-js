@@ -386,6 +386,9 @@ export class Renderer {
     this.rot = 0; this.azimuth = this.targetAz = az; this.updateCamera();
   }
   lookAt(x, y) { this.center.set(x + 0.5, 0, y + 0.5); this.updateCamera(); }
+  // Player camera beside (not inside) the save: settled quarter rotation, never a mid-turn angle or tilt.
+  camState() { return { v: 1, x: this.center.x, z: this.center.z, zoom: this.zoom, rot: this.rot }; }
+  applyCamState(c) { this.center.set(c.x, 0, c.z); this.zoom = c.zoom; this.rot = c.rot; this.azimuth = this.targetAz = Math.PI / 4 + c.rot * Math.PI / 2; this.updateCamera(); }
   floorY() { return Number.isInteger(this.view) ? this.view*FLOOR_H : 0; }
   cellAt(cx, cy) {
     const rect = this.canvas.getBoundingClientRect();

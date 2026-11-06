@@ -1553,6 +1553,18 @@
         "timeout": 180,
         "evidence": "native read-only Investment Progress calculation and copy, tutorial card bodies, graduation Pause/transition timing and Business sheet HTML; no rendered or physical-device claim",
         "scope": "Financial Comprehension: player-built operating units (construction, opening, demolition, split, save/reload), Act II/III breaks, graduation Option A, Business block conditions and career rent roll"
+      },
+      {
+        "id": "tcamera_save",
+        "command": [
+          "@node",
+          "tests/headless/tcamera_save.mjs"
+        ],
+        "completion": "7\\ camera\\ save\\ checks\\ passed",
+        "minimum_pass_lines": 7,
+        "timeout": 180,
+        "evidence": "native production saveJSON/prepareLoad/applyLoad/attach in a vm with spies and the real Renderer camera methods; no rendered or physical-device claim",
+        "scope": "Player camera (center, zoom, settled rotation) beside the save: round trip, legacy saves, invalid values, mid-rotation, showcase cameras, portfolio, property switch"
       }
     ],
     "historical": [
