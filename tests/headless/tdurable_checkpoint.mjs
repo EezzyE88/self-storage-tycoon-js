@@ -10,8 +10,10 @@ import { makeSandbox, makeScenario, SCENARIOS, modeLabel, sandboxName } from '..
 import { MARKETS, ROLES, MIN_PER_DAY, TIERS } from '../../js/data.js';
 import { FINANCIAL_MINUTE } from '../../js/finance.js';
 import { portfolioCareer } from '../../js/career.js';
+import { loadRenderer } from '../performance/renderer-fixture.mjs';
+const Renderer = await loadRenderer();
 const memory = new Map();
-globalThis.window = { localStorage: { getItem: k => memory.get(k) || null, setItem: (k,v) => memory.set(k,String(v)), removeItem: k => memory.delete(k) } };
+globalThis.window.localStorage = { getItem: k => memory.get(k) || null, setItem: (k,v) => memory.set(k,String(v)), removeItem: k => memory.delete(k) };
 const { localsave } = await import('../../js/localsave.js');
 const { savearchive } = await import('../../js/savearchive.js');
 const clone = x => structuredClone(x);
@@ -137,7 +139,7 @@ async function gameFixture() {
   const cloud = { ok: false, put: async () => false, beacon() {} };
   const context = vm.createContext({ Audio:class{}, Sim, fmtTime, makeMaple, makeSandbox, makeScenario, SCENARIOS,
     modeLabel, sandboxName, MARKETS, ROLES, MIN_PER_DAY, TIERS, FINANCIAL_MINUTE, portfolioCareer,
-    localsave, savearchive, cloud, performance, console, BUILD:{name:'test'}, CompressionStream, DecompressionStream,
+    localsave, savearchive, cloud, performance, console, installTutorial, BUILD:{name:'test'}, CompressionStream, DecompressionStream,
     Response, Blob, btoa, atob, escape, unescape, encodeURIComponent, decodeURIComponent });
   vm.runInContext(main.slice(main.indexOf('const game = {'), main.indexOf('// initial world')) +
     main.slice(main.indexOf('const WORKING_FLOAT'),main.indexOf('// Save codes')) +
@@ -147,9 +149,10 @@ async function gameFixture() {
   g.sim=sim; g.company={props:[{name:'Yard',sim}],active:0,feed:[]}; g.rend={view:'ext',setPreview(){}}; g.durable=D;
   const ui=Object.create(UI.prototype);ui.g=g;ui.title=false;g.ui=ui;
   for(const name of ['sfx','toast','renderActionBar','renderTut','setMeta'])ui[name]=()=>{};
+  const attach = g.attach;
   g.attach=function(s){this.sim=s;};
   localsave.onClear=()=>g.beginSaveSession();
-  return {g,ui,sim,S,D};
+  return {g,ui,sim,S,D,attach};
 }
 await test('actual paused loan keeps synchronous legacy fallback and acknowledges full strict snapshot later', async () => {
   const {g,ui,sim,S,D}=await gameFixture(),t=sim.s.t; S.hold=true;
@@ -161,10 +164,14 @@ await test('actual paused loan keeps synchronous legacy fallback and acknowledge
   assert.equal(prep.company.props[0].sim.s.cash,300000);
   assert.equal(memory.get('sst.kept.previous'),'manual sentinel'); assert.equal(memory.get('sst.kept.archive'),'archive sentinel');
 });
-await test('automatic Maple Street chapter pause checkpoints progress before leaving the page', async () => {
-  const {g,ui,S,D}=await gameFixture();
+await test('automatic Maple Street chapter pause checkpoints progress and restores the camera before any exit save', async () => {
+  const {g,ui,S,D,attach}=await gameFixture();
   const sim=makeMaple(), s=sim.s;
   g.sim=sim; g.company={props:[{name:'Maple Street Storage',sim}],active:0,feed:[]};
+  const rend = g.rend = new Renderer({clientWidth:375,clientHeight:667},sim);
+  rend.setSim = (loaded) => { rend.sim = loaded; };
+  ui.resetSession = (view) => { rend.view = view; };
+  ui.setTab = ui.renderFeed = ()=>{};
   ui.onEvent=()=>{};
   installTutorial(sim);
   // A running Act II save just before the last prerequisite completes.
@@ -173,6 +180,13 @@ await test('automatic Maple Street chapter pause checkpoints progress before lea
   s.speed=4;
   await g.autosave(true);
   const previous=S.data.main;
+  const previousCamera = rend.camState();
+  rend.view = 0;
+  rend.rotate(1);
+  rend.zoomBy(1.6);
+  rend.pan(20,-30);
+  const camera = rend.camState();
+  assert.notDeepEqual(camera,previousCamera);
   s.milestones.first_delegated=s.t;
   sim.poll();
   assert.equal(s.tut.beatId,'actII_break');
@@ -184,12 +198,30 @@ await test('automatic Maple Street chapter pause checkpoints progress before lea
   assert.equal(prep.company.props[0].sim.s.tut.beatId,'actII_break');
   assert.equal(prep.company.props[0].sim.s.speed,0);
   assert.equal(prep.company.props[0].sim.s.cash,s.cash);
+  assert.equal(prep.company.props[0].sim.s.t,s.t);
   await D.idle();
   assert.equal(S.data.main.code,local.code);
   assert.equal(S.data.backup.code,previous.code);
   const writes=S.writes.length;
   sim.poll(); g.drain(); await D.idle();
   assert.equal(S.writes.length,writes,'remaining at the break must not repeat the write');
+
+  const resumed=await gameFixture();
+  resumed.g.attach=attach;
+  resumed.g.rend=rend;
+  resumed.ui.resetSession=ui.resetSession;
+  resumed.ui.setTab=resumed.ui.renderFeed=resumed.ui.onEvent=()=>{};
+  resumed.ui.title=true;
+  rend.applyCamState(previousCamera);
+  rend.view='ext';
+  assert.equal(await resumed.g.loadCode(local.code,true),true);
+  assert.equal(resumed.g.sim.s.tut.beatId,'actII_break');
+  assert.equal(resumed.g.sim.s.speed,0);
+  assert.equal(resumed.g.sim.s.cash,s.cash);
+  assert.equal(resumed.g.sim.s.t,s.t);
+  assert.equal(rend.view,0);
+  assert.deepEqual(rend.camState(),camera);
+  assert.equal(rend.azimuth,rend.targetAz);
 });
 await test('actual New game fences pending compression from the outgoing company', async () => {
   const {g,S,D}=await gameFixture(); let release;
