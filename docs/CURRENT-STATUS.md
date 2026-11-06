@@ -1,3 +1,29 @@
+# Current project status — November 5, 2026
+
+## Verified source and publication
+
+- Active repository: [EezzyE88/self-storage-tycoon-js](https://github.com/EezzyE88/self-storage-tycoon-js).
+- Verified master: `d7f49903076fd6bb3a70189b7e6efb9a7c0d9db9` (`d7f4990`); tree `04a0d67232b375a699c905e20186f4cc5d9a284e`; parents `b483fc6607b7cbad506b6e55b037783be673c000` and `72a779ee6d6a40185dd94af12a36f79c1b56c0bf`.
+- [PR #30](https://github.com/EezzyE88/self-storage-tycoon-js/pull/30) merged: five files, +213/−4. Read-only `js/investmentprogress.js` plus tutorial and Business presentation and a focused test. Simulation, financial formulas, save system and Pause were not modified by the PR.
+- [Pages run #20](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42127848496) (`42127848496`) completed successfully on the exact merge SHA. Gate log: **132 PASS, 0 FAIL, 0 ERROR, 0 BLOCKED, 0 TIMEOUT, 0 NOT_RUN**. Pages build, artifact upload and deploy steps succeeded.
+- [Published environment](https://eezzye88.github.io/self-storage-tycoon-js/): job-confirmed URL. The displayed public build stamp and served asset hashes were not separately fetched; expected stamp is `d7f4990`.
+
+## Financial Comprehension status
+
+PR #30 shows operating player-built units, leased/vacant count, contracted rent from those units and the total property rent roll at Act II, Act III, graduation and relevant post-graduation Business views. Graduation warns prospectively of normal demand and expense conditions; Business repeats the reminder for up to 30 game days or while new units are vacant. No headline claims success while zero new units are leased. Income is explicitly distinguished from collected cash and operating result, with a pointer to Statement. The existing HUD cash-today label remains a separate deferred review.
+
+Local candidate qualification was *reported* as 9/9 focused, 132/132 native, save-state parity and Chromium renders at 390×844 and 375×667; 26/26 evidence hashes were checked across retained transfers. The *merge-commit* gate 132/132 was independently verified in GitHub Actions.
+
+## Outstanding work and authority
+
+Live stamp/public accessibility and physical iPhone Safari screens/scrolling at the four placements remain unverified; so do unfamiliar-player understanding, enjoyment and broader accessibility/performance. The proposed 20-page economy/development plan and Advanced Financial Insights are **not** adopted implementations. Retain the accepted Maple Street teaching direction, paused graduation, saves, economy and manual Pause. Beta/release acceptance remains unchanged, and the budget is $0.
+
+**Record boundary:** Content below is an archived October 30 status snapshot. Its then-current commit, hosting and runtime links are historical only, not November 5 assertions.
+
+---
+
+## Preserved October 30 orientation record (historical; verbatim)
+
 # Current project status
 
 Reconciled October 30, 2026, America/Los_Angeles. Dated observations, not a promise of future branch state; refresh refs before consequential operations.
