@@ -52,7 +52,10 @@ export class MapleVisualLab {
   // Read-only interpretation of the exact current customer state, not a synthetic visit.
   currentVisit() {
     const s = this.renderer.sim.s;
-    const a = (s.agents || []).find(a => a.kind === 'cust' && a.unit && s.objects?.[a.unit]?.access === 'interior');
+    const visitors = (s.agents || []).filter(a => a.kind === 'cust' && a.unit && s.objects?.[a.unit]?.access === 'interior');
+    // Prefer the visible visit over an earlier customer still travelling in a vehicle.
+    const a = visitors.find(a => !a.hidden && (a.st === 'walk' || a.st === 'atunit'))
+      || visitors.find(a => !a.hidden) || visitors[0];
     if (!a) return null;
     const veh = (s.vehicles || []).find(v => v.id === a.veh);
     return Object.freeze({agentId:a.id, unitId:a.unit, phase:a.st, hidden:!!a.hidden,
@@ -74,7 +77,7 @@ export function installVisualLab(game) {
     const s = game.sim.s;
     const eligible = s.market?.id === 'maple' && !game.ui.title;
     const expandedLesson = ((s.tut?.on && !s.tut.done) || s.lesson) && !game.ui.tutMin;
-    panel.hidden = !eligible || game.ui.modalOpen() || !!game.ui.tab || !!game.ui.tool || !!expandedLesson;
+    panel.hidden = !eligible || !!game.showcase?.photo || game.ui.modalOpen() || !!game.ui.tab || !!game.ui.tool || !!expandedLesson;
     if (!eligible) lab.setEnabled(false);
     const label = `Visual Lab · ${lab.enabled ? 'Experimental' : 'Original'}`;
     if (summary.textContent !== label) {
@@ -83,7 +86,8 @@ export function installVisualLab(game) {
       toggle.setAttribute('aria-pressed', String(lab.enabled));
     }
     const a = lab.currentVisit();
-    const status = a ? `Live customer ${a.agentId} · ${a.phase}${a.hidden ? ' · inside unit' : ''}${a.speed === 0 ? ' · paused' : ''}` : 'Waiting for an interior customer visit';
+    // Hidden also means in a vehicle, the office or restroom; it is not a location.
+    const status = a ? `Live customer ${a.agentId} · ${a.phase}${a.speed === 0 ? ' · paused' : ''}` : 'Waiting for an interior customer visit';
     if (visit.textContent !== status) visit.textContent = status;
   }
   const onToggle = () => { lab.setEnabled(!lab.enabled); update(); };

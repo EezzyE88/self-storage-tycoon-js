@@ -1560,7 +1560,7 @@
           "@node",
           "tests/headless/tvisual_lab.mjs"
         ],
-        "completion": "PASS 12 focused checks",
+        "completion": "PASS 12 focused checks: .*",
         "minimum_pass_lines": 1,
         "timeout": 180,
         "scope": "optional visual lab adapter exact restore and read-only customer metadata"
@@ -1571,10 +1571,21 @@
           "@node",
           "tests/headless/tvisual_lab_integration.mjs"
         ],
-        "completion": "PASS real Three.js",
+        "completion": "PASS real Three\\.js .*",
         "minimum_pass_lines": 1,
         "timeout": 180,
         "scope": "real shared material lifecycle and deterministic simulation/event parity"
+      },
+      {
+        "id": "tvisual_lab_review",
+        "command": [
+          "@node",
+          "tests/headless/tvisual_lab_review.mjs"
+        ],
+        "completion": "4 Visual Lab review regression groups passed",
+        "minimum_pass_lines": 4,
+        "timeout": 180,
+        "scope": "PR32 natural hidden arrival, phase labels, visible customer preference, collapsed/expanded Photo-mode visibility and read-only state"
       }
     ],
     "historical": [
