@@ -1,5 +1,27 @@
 # Self Storage Tycoon
 
+An iPhone-first JavaScript/Three.js self-storage management game. This section is the current orientation, verified November 5, 2026. The historical October 30 README is retained unchanged below.
+
+## Current source, testing and hosting
+
+- **Active repository:** [EezzyE88/self-storage-tycoon-js](https://github.com/EezzyE88/self-storage-tycoon-js).
+- **Verified gameplay master:** `d7f49903076fd6bb3a70189b7e6efb9a7c0d9db9` (`d7f4990`), source tree `04a0d67232b375a699c905e20186f4cc5d9a284e`. This is the [merged PR #30](https://github.com/EezzyE88/self-storage-tycoon-js/pull/30) checkpoint, whose parents are `b483fc6` and `72a779e`.
+- **Financial Comprehension:** read-only Investment Progress added to Act II, Act III, graduation and Business. It explains added units, leased/vacant count and contracted rent. It does not change the underlying economy or save model.
+- **GitHub Pages:** [run #20](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42127848496), ID `42127848496`, passed its exact-commit native gate **132/132** and deployment job. [Pages URL](https://eezzye88.github.io/self-storage-tycoon-js/). Live rendered build stamp has *not* been independently verified; expected stamp is `d7f4990`.
+- **Earlier candidate qualification:** reported 9/9 focused, saved-state parity and rendered Chromium checks at 390×844 and 375×667. These are not physical iPhone results.
+- **Still outstanding:** physical iPhone Safari checks of the four financial explanation placements, live build stamp, novice-player comprehension and enjoyment, broader beta/release qualification.
+- **Governing policy:** SST Project Runtime v3 revision 5, unchanged. Historical evidence and current saves, manual Pause, economy, and $0 budget remain protected. No acceptance decision resulted from PR #30.
+
+## Current navigation
+
+[Status](docs/CURRENT-STATUS.md) · [Handoff](docs/HANDOFF.md) · [Overview](docs/PROJECT-OVERVIEW.md) · [Integration](docs/INTEGRATION-SUMMARY.md) · [Recovery](docs/RECOVERY-INDEX.md) · [Pages evidence](docs/releases/PAGES-PR30-20261105.md).
+
+---
+
+## Preserved October 30 orientation record (historical; verbatim)
+
+# Self Storage Tycoon
+
 An iPhone Safari game about operating and growing a self-storage business. Build useful capacity, understand costs/customers, delegate work and invest for visible payoff.
 
 ## Start here

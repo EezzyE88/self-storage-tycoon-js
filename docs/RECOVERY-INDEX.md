@@ -1,3 +1,19 @@
+# Recovery and evidence index — current November 5, 2026
+
+**Current source:** https://github.com/EezzyE88/self-storage-tycoon-js at `d7f49903076fd6bb3a70189b7e6efb9a7c0d9db9`, tree `04a0d67232b375a699c905e20186f4cc5d9a284e`; merge parents `b483fc6607b7cbad506b6e55b037783be673c000` and `72a779ee6d6a40185dd94af12a36f79c1b56c0bf`. [PR #30](https://github.com/EezzyE88/self-storage-tycoon-js/pull/30) is merged. Historical source and evidence remain accessible in Git history; no older commits are replaced.
+
+**Deploy proof:** [Pages #20](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42127848496) run ID `42127848496`, gate job `127596527587` logs **132 PASS, 0 FAIL**, deploy job `127597166934` successful, environment https://eezzye88.github.io/self-storage-tycoon-js/. Direct served stamp and served-asset checks remain outstanding.
+
+**Retained candidate evidence:** `FinComp_InvestmentProgress_72a779e_20261105_REPORT.md`, `FinComp_Candidate_72a779e_20261105.zip`, `FinComp_72a779e_1_bundle_report.zip`, and two screenshot ZIPs for 390×844 and 375×667. Manifest 26/26 reported verified. Candidate bundle was independently verified in the prior candidate review but not freshly recovered for this documentation operation. Source backup does not include personal/browser company saves.
+
+**Qualification gaps:** live public build-stamp check, physical iPhone Safari four-screen assessment, novice comprehension, broader accessibility/performance and acceptance. All historical qualification is source-specific. Runtime v3 revision 5 remains unchanged; $0 budget and save/economy/Pause protections remain.
+
+**Historical boundary:** the original October 30 recovery ledger follows verbatim. Its historical source and temporary-host URLs remain for traceability; do not mistake them for November 5 live status.
+
+---
+
+## Preserved October 30 orientation record (historical; verbatim)
+
 # Recovery and evidence index
 
 Reconciled October 30, 2026, America/Los_Angeles. Source recovery does not recover normal browser company saves.

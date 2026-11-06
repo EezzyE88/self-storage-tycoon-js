@@ -1,3 +1,19 @@
+# Project overview — current direction (November 5, 2026)
+
+**End goal:** an understandable, satisfying iPhone-first self-storage tycoon game where layout, leasing, operations, finances and multi-property growth form a coherent loop. Players should be able to explain why units are vacant, why cash changes, and whether investments are beginning to work. Preserve player-controlled time, save integrity and established behavior.
+
+**Newest source:** verified master `d7f49903076fd6bb3a70189b7e6efb9a7c0d9db9`; tree `04a0d67232b375a699c905e20186f4cc5d9a284e`. The [PR #30](https://github.com/EezzyE88/self-storage-tycoon-js/pull/30) Investment Progress explanation merged into master. [Pages #20](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42127848496) ran 132/132 PASS on that merge SHA and deployed. This is technical qualification, **not** player acceptance. Live stamp, physical iPhone and first-time-player comprehension remain open.
+
+**Immediate priority:** verify the live build identity and financial explanations in the four intended screens; get bounded player feedback on financial clarity, enjoyment and stopping points. Triage actual defects rather than reopening simulation balance without evidence.
+
+**Deferred/protected:** HUD cash-today clarity is a separate possible unit. Longer-term optional Advanced Financial Insights and the unapproved 20-page economy/progression proposal do not replace the accepted Maple Street five-act tutorial or authorize new financial systems. Preserve the accepted construction, economy, Pause, save compatibility, user-controlled timing and $0 budget. No beta/release acceptance is inferred.
+
+**Historical boundary:** original October 30 overview remains below unchanged for historical source/evidence context. Dates and statuses in that section are not the current baseline.
+
+---
+
+## Preserved October 30 orientation record (historical; verbatim)
+
 # Project overview and finish target
 
 Reconciled October 30, 2026, America/Los_Angeles. [Current status](CURRENT-STATUS.md) supplies exact evidence and limits.

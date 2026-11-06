@@ -1,3 +1,19 @@
+# SST continuation handoff — November 5, 2026
+
+**Current gameplay baseline:** `d7f49903076fd6bb3a70189b7e6efb9a7c0d9db9`, tree `04a0d67232b375a699c905e20186f4cc5d9a284e`. Use only `EezzyE88/self-storage-tycoon-js`. [PR #30](https://github.com/EezzyE88/self-storage-tycoon-js/pull/30) merged; [Pages run #20](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42127848496) passed its exact-commit **132/132** gate and deployed successfully. The job-confirmed URL is https://eezzye88.github.io/self-storage-tycoon-js/; observed live stamp remains unverified.
+
+**Changed gameplay presentation:** Investment Progress appears at Act II/III breaks, graduation and Business. Contracted rents are not collections or profit. HUD cash-today and the economy are unchanged. Candidate local 9/9 focused, parity and phone-size Chromium rendering are retained collaborator evidence, not physical Safari results.
+
+**Next player-facing qualification:** verify expected live stamp `d7f4990`; inspect all four placements at 375×667 / 390×844 or on the actual iPhone if needed; test novice understanding and stopping points. Do not infer acceptance from automation or rendering. Keep current saves, economy, manual Pause, owner-review hold, paused graduation and the five-act Maple Street direction intact.
+
+**Governance:** SST Project Runtime v3 revision 5 supersedes rev4; it and its protected ENM are not changed. $0 budget. No source, push, merge, deployment or acceptance action without applicable authorization. Use [Current Status](CURRENT-STATUS.md), [Overview](PROJECT-OVERVIEW.md), [Integration](INTEGRATION-SUMMARY.md), [Recovery](RECOVERY-INDEX.md) and [Pages evidence](releases/PAGES-PR30-20261105.md) for more detail.
+
+**Historical boundary:** the previous October 30 handoff is preserved verbatim below. Its runtime and deployment references are historical, not the current project checkpoint.
+
+---
+
+## Preserved October 30 orientation record (historical; verbatim)
+
 # SST continuation handoff
 
 Updated October 30, 2026, America/Los_Angeles.

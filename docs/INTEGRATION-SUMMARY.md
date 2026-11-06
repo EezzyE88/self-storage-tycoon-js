@@ -1,3 +1,25 @@
+# Integration summary — current verified November 5, 2026
+
+## PR #30 integrated
+
+- Base: `b483fc6607b7cbad506b6e55b037783be673c000`.
+- Candidate: `72a779ee6d6a40185dd94af12a36f79c1b56c0bf`.
+- Merge commit, verified master: `d7f49903076fd6bb3a70189b7e6efb9a7c0d9db9`; tree `04a0d67232b375a699c905e20186f4cc5d9a284e` (same as candidate), parents exactly base and candidate.
+- [PR #30](https://github.com/EezzyE88/self-storage-tycoon-js/pull/30): one candidate commit; five-file diff, +213/−4. Adds read-only `js/investmentprogress.js` and its test; changes `js/tutorial.js`, `js/ui.js` and regression manifest. No changes in the PR to simulation/economy/save/HUD/Statement/Pause.
+- Act II, Act III, graduation and post-graduation Business explain the relationship between built units, leases, contracted rent, occupancy and cost timing. Graduation uses future-tense market warning before Finish. No zero-lease success headline. Business reminder uses a 30-game-day default.
+
+## Qualification and deployment
+
+- Retained candidate report: 9/9 focused; 132/132 local gate; save-state parity; browser renders at 375×667 and 390×844; complete 26/26 evidence hashes.
+- [GitHub Pages run #20](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42127848496) (`42127848496`): gate log 132/132, deploy job successful. Public site URL identified but direct served stamp not verified.
+- Unverified: physical iPhone check and unfamiliar-player comprehension/enjoyment. Acceptance/beta/release remain unchanged.
+
+**Historical boundary:** the original October 30 integration account below remains unchanged, including older source-specific verification. It must not be read as the current master/deployment state.
+
+---
+
+## Preserved October 30 orientation record (historical; verbatim)
+
 # Integration summary — October 30, 2026
 
 ## Completed integration
