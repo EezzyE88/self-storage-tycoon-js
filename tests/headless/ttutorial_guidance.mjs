@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { makeMaple } from '../../js/maple.js';
-import { BEATS, curBeat, tutorialText } from '../../js/tutorial.js';
+import { BEATS, curBeat, tutorialText, beatDoneLabel } from '../../js/tutorial.js';
 import { UI, guideLabelPlacement } from '../../js/ui.js';
 
 let groups = 0;
@@ -18,7 +18,7 @@ test('cards and completion banners use the same live role number without changin
   const source = readFileSync('js/showcase.js', 'utf8');
   const branch = source.split('\n').find(line => line.includes("case 'tut_done':"));
   const calls = [];
-  const context = {game:{sim}, s:sim.s, BEATS, tutorialText, e:{type:'tut_done',beat:1}, celebrate:(...args)=>calls.push(args), officeAt:()=>null};
+  const context = {game:{sim}, s:sim.s, BEATS, tutorialText, beatDoneLabel, e:{type:'tut_done',beat:1}, celebrate:(...args)=>calls.push(args), officeAt:()=>null};
   vm.runInNewContext(`switch(e.type) { ${branch} }`, context);
   assert.equal(calls[0][1], 'Turn over Unit 1007');
   assert.equal(JSON.stringify(sim.s), before);

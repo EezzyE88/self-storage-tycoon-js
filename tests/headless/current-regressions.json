@@ -1565,6 +1565,18 @@
         "timeout": 180,
         "evidence": "native production saveJSON/prepareLoad/applyLoad/attach in a vm with spies and the real Renderer camera methods; no rendered or physical-device claim",
         "scope": "Player camera (center, zoom, settled rotation) beside the save: round trip, legacy saves, invalid values, mid-rotation, showcase cameras, portfolio, property switch"
+      },
+      {
+        "id": "tlabel_consistency",
+        "command": [
+          "@node",
+          "tests/headless/tlabel_consistency.mjs"
+        ],
+        "completion": "2\\ label\\ consistency\\ checks\\ passed",
+        "minimum_pass_lines": 2,
+        "timeout": 120,
+        "evidence": "native tutorial beat labels and Business sheet HTML; no rendered or physical-device claim",
+        "scope": "Between-beat banner numbering matches the card header; rent-roll card names tenants-behind rent per month"
       }
     ],
     "historical": [
