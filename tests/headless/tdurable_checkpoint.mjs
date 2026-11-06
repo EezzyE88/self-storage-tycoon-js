@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { UI } from '../../js/ui.js';
 import { Sim, fmtTime } from '../../js/sim.js';
 import { makeMaple } from '../../js/maple.js';
+import { beatIndex, installTutorial } from '../../js/tutorial.js';
 import { makeSandbox, makeScenario, SCENARIOS, modeLabel, sandboxName } from '../../js/scenarios.js';
 import { MARKETS, ROLES, MIN_PER_DAY, TIERS } from '../../js/data.js';
 import { FINANCIAL_MINUTE } from '../../js/finance.js';
@@ -159,6 +160,36 @@ await test('actual paused loan keeps synchronous legacy fallback and acknowledge
   assert.equal(D.status,'saved'); const prep=await g.prepareLoad(S.data.main.code); assert.ok(prep.ok);
   assert.equal(prep.company.props[0].sim.s.cash,300000);
   assert.equal(memory.get('sst.kept.previous'),'manual sentinel'); assert.equal(memory.get('sst.kept.archive'),'archive sentinel');
+});
+await test('automatic Maple Street chapter pause checkpoints progress before leaving the page', async () => {
+  const {g,ui,S,D}=await gameFixture();
+  const sim=makeMaple(), s=sim.s;
+  g.sim=sim; g.company={props:[{name:'Maple Street Storage',sim}],active:0,feed:[]};
+  ui.onEvent=()=>{};
+  installTutorial(sim);
+  // A running Act II save just before the last prerequisite completes.
+  const hire=beatIndex('hire');
+  Object.assign(s.tut,{beat:hire,beatId:'hire',beatAt:hire,entered:true});
+  s.speed=4;
+  await g.autosave(true);
+  const previous=S.data.main;
+  s.milestones.first_delegated=s.t;
+  sim.poll();
+  assert.equal(s.tut.beatId,'actII_break');
+  assert.equal(s.speed,0);
+  g.drain();
+  const local=localsave.get().main;
+  const prep=await g.prepareLoad(local.code);
+  assert.ok(prep.ok);
+  assert.equal(prep.company.props[0].sim.s.tut.beatId,'actII_break');
+  assert.equal(prep.company.props[0].sim.s.speed,0);
+  assert.equal(prep.company.props[0].sim.s.cash,s.cash);
+  await D.idle();
+  assert.equal(S.data.main.code,local.code);
+  assert.equal(S.data.backup.code,previous.code);
+  const writes=S.writes.length;
+  sim.poll(); g.drain(); await D.idle();
+  assert.equal(S.writes.length,writes,'remaining at the break must not repeat the write');
 });
 await test('actual New game fences pending compression from the outgoing company', async () => {
   const {g,S,D}=await gameFixture(); let release;
