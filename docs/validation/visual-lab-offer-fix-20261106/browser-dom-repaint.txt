@@ -1,0 +1,13 @@
+locator.scrollIntoViewIfNeeded: Element is not attached to the DOM
+Call log:
+[2m  - attempting scroll into view action[22m
+[2m    - waiting for element to be stable[22m
+
+    at touchControl (/workspace/sst-lab-offer-fix/tests/browser-qa/visual-lab-review.cjs:150:22)
+    at /workspace/sst-lab-offer-fix/tests/browser-qa/visual-lab-review.cjs:156:31 {
+  log: [
+    '  - attempting scroll into view action',
+    '    - waiting for element to be stable'
+  ],
+  name: 'Error'
+}

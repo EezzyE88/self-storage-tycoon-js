@@ -1,0 +1,19 @@
+{
+  "offerCase": {
+    "open": false,
+    "priorSpeed": 1,
+    "action": "start"
+  },
+  "offer": null,
+  "lesson": {
+    "id": "interior",
+    "idMark": 84,
+    "built": [],
+    "flags": {},
+    "entered": true
+  },
+  "speed": 0,
+  "t": 4741,
+  "popupBlocks": [],
+  "labHidden": true
+}

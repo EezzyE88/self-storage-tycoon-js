@@ -77,7 +77,10 @@ export function installVisualLab(game) {
     const s = game.sim.s;
     const eligible = s.market?.id === 'maple' && !game.ui.title;
     const expandedLesson = ((s.tut?.on && !s.tut.done) || s.lesson) && !game.ui.tutMin;
-    panel.hidden = !eligible || !!game.showcase?.photo || game.ui.modalOpen() || !!game.ui.tab || !!game.ui.tool || !!expandedLesson;
+    // Optional teaching controls have priority, including the collapsed active lesson.
+    // The UI owns offer visibility: pending offers held behind other UI are not blockers.
+    const optionalLessonUI = !!s.lesson || game.ui.popupBlocks?.has('lessonOffer') === true;
+    panel.hidden = !eligible || !!game.showcase?.photo || game.ui.modalOpen() || !!game.ui.tab || !!game.ui.tool || !!expandedLesson || optionalLessonUI;
     if (!eligible) lab.setEnabled(false);
     const label = `Visual Lab · ${lab.enabled ? 'Experimental' : 'Original'}`;
     if (summary.textContent !== label) {

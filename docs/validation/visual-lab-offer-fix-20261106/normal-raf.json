@@ -1,0 +1,723 @@
+{
+  "environment": "Chromium software WebGL; normal production RAF; no physical Safari/performance claim",
+  "results": [
+    {
+      "width": 375,
+      "height": 667,
+      "initial": {
+        "t": 420,
+        "speed": 0,
+        "tutorial": true,
+        "updates": 8
+      },
+      "paused": {
+        "t": 421,
+        "updates": 15
+      },
+      "final": {
+        "updates": 53,
+        "tutorial": true,
+        "speed": 0
+      },
+      "pageErrors": [],
+      "photoTargets": "all slider/shutter centers reachable; focus value changed after touch",
+      "offerResults": [
+        {
+          "open": false,
+          "action": "dismiss",
+          "priorSpeed": 0,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 0,
+            "offer": null,
+            "lesson": null,
+            "seen": 4,
+            "offerPause": false,
+            "labOpen": false,
+            "labHidden": false,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 161.5,
+              "y": 568,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 337,
+              "y": 568,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": null
+        },
+        {
+          "open": false,
+          "action": "dismiss",
+          "priorSpeed": 1,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4747,
+            "speed": 1,
+            "offer": null,
+            "lesson": null,
+            "seen": 4,
+            "offerPause": false,
+            "labOpen": false,
+            "labHidden": false,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 161.5,
+              "y": 568,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 337,
+              "y": 568,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": null
+        },
+        {
+          "open": false,
+          "action": "start",
+          "priorSpeed": 0,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 0,
+            "offer": null,
+            "lesson": "interior",
+            "seen": null,
+            "offerPause": false,
+            "labOpen": false,
+            "labHidden": true,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 161.5,
+              "y": 568,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 337,
+              "y": 568,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": {
+            "speed": 0,
+            "labOpen": false,
+            "palette": true,
+            "details": {
+              "x": 323.859375,
+              "y": 576,
+              "reachable": true
+            },
+            "end": {
+              "x": 320.6875,
+              "y": 568,
+              "reachable": true
+            }
+          }
+        },
+        {
+          "open": false,
+          "action": "start",
+          "priorSpeed": 1,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 1,
+            "offer": null,
+            "lesson": "interior",
+            "seen": null,
+            "offerPause": false,
+            "labOpen": false,
+            "labHidden": true,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 161.5,
+              "y": 568,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 337,
+              "y": 568,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": {
+            "speed": 0,
+            "labOpen": false,
+            "palette": true,
+            "details": {
+              "x": 323.859375,
+              "y": 569.4188232421875,
+              "reachable": true
+            },
+            "end": {
+              "x": 320.6875,
+              "y": 568,
+              "reachable": true
+            }
+          }
+        },
+        {
+          "open": true,
+          "action": "dismiss",
+          "priorSpeed": 0,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 0,
+            "offer": null,
+            "lesson": null,
+            "seen": 4,
+            "offerPause": false,
+            "labOpen": true,
+            "labHidden": false,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 161.5,
+              "y": 568,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 337,
+              "y": 568,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": null
+        },
+        {
+          "open": true,
+          "action": "dismiss",
+          "priorSpeed": 1,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4746,
+            "speed": 1,
+            "offer": null,
+            "lesson": null,
+            "seen": 4,
+            "offerPause": false,
+            "labOpen": true,
+            "labHidden": false,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 161.5,
+              "y": 568,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 337,
+              "y": 568,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": null
+        },
+        {
+          "open": true,
+          "action": "start",
+          "priorSpeed": 0,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 0,
+            "offer": null,
+            "lesson": "interior",
+            "seen": null,
+            "offerPause": false,
+            "labOpen": true,
+            "labHidden": true,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 161.5,
+              "y": 568,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 337,
+              "y": 568,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": {
+            "speed": 0,
+            "labOpen": true,
+            "palette": true,
+            "details": {
+              "x": 323.859375,
+              "y": 575.0960693359375,
+              "reachable": true
+            },
+            "end": {
+              "x": 320.6875,
+              "y": 568,
+              "reachable": true
+            }
+          }
+        },
+        {
+          "open": true,
+          "action": "start",
+          "priorSpeed": 1,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 1,
+            "offer": null,
+            "lesson": "interior",
+            "seen": null,
+            "offerPause": false,
+            "labOpen": true,
+            "labHidden": true,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 161.5,
+              "y": 568,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 337,
+              "y": 568,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": {
+            "speed": 0,
+            "labOpen": true,
+            "palette": true,
+            "details": {
+              "x": 323.859375,
+              "y": 568,
+              "reachable": true
+            },
+            "end": {
+              "x": 320.6875,
+              "y": 568,
+              "reachable": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "initial": {
+        "t": 420,
+        "speed": 0,
+        "tutorial": true,
+        "updates": 7
+      },
+      "paused": {
+        "t": 421,
+        "updates": 13
+      },
+      "final": {
+        "updates": 57,
+        "tutorial": true,
+        "speed": 0
+      },
+      "pageErrors": [],
+      "photoTargets": "all slider/shutter centers reachable; focus value changed after touch",
+      "offerResults": [
+        {
+          "open": false,
+          "action": "dismiss",
+          "priorSpeed": 0,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 0,
+            "offer": null,
+            "lesson": null,
+            "seen": 4,
+            "offerPause": false,
+            "labOpen": false,
+            "labHidden": false,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 169,
+              "y": 745,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 352,
+              "y": 745,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": null
+        },
+        {
+          "open": false,
+          "action": "dismiss",
+          "priorSpeed": 1,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4747,
+            "speed": 1,
+            "offer": null,
+            "lesson": null,
+            "seen": 4,
+            "offerPause": false,
+            "labOpen": false,
+            "labHidden": false,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 169,
+              "y": 745,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 352,
+              "y": 745,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": null
+        },
+        {
+          "open": false,
+          "action": "start",
+          "priorSpeed": 0,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 0,
+            "offer": null,
+            "lesson": "interior",
+            "seen": null,
+            "offerPause": false,
+            "labOpen": false,
+            "labHidden": true,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 169,
+              "y": 745.7281494140625,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 352,
+              "y": 745.7281494140625,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": {
+            "speed": 0,
+            "labOpen": false,
+            "palette": true,
+            "details": {
+              "x": 338.859375,
+              "y": 753,
+              "reachable": true
+            },
+            "end": {
+              "x": 335.6875,
+              "y": 745,
+              "reachable": true
+            }
+          }
+        },
+        {
+          "open": false,
+          "action": "start",
+          "priorSpeed": 1,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 1,
+            "offer": null,
+            "lesson": "interior",
+            "seen": null,
+            "offerPause": false,
+            "labOpen": false,
+            "labHidden": true,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 169,
+              "y": 745,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 352,
+              "y": 745,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": {
+            "speed": 0,
+            "labOpen": false,
+            "palette": true,
+            "details": {
+              "x": 338.859375,
+              "y": 745,
+              "reachable": true
+            },
+            "end": {
+              "x": 335.6875,
+              "y": 745,
+              "reachable": true
+            }
+          }
+        },
+        {
+          "open": true,
+          "action": "dismiss",
+          "priorSpeed": 0,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 0,
+            "offer": null,
+            "lesson": null,
+            "seen": 4,
+            "offerPause": false,
+            "labOpen": true,
+            "labHidden": false,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 169,
+              "y": 745,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 352,
+              "y": 745,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": null
+        },
+        {
+          "open": true,
+          "action": "dismiss",
+          "priorSpeed": 1,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4747,
+            "speed": 1,
+            "offer": null,
+            "lesson": null,
+            "seen": 4,
+            "offerPause": false,
+            "labOpen": true,
+            "labHidden": false,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 169,
+              "y": 745,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 352,
+              "y": 745,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": null
+        },
+        {
+          "open": true,
+          "action": "start",
+          "priorSpeed": 0,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 0,
+            "offer": null,
+            "lesson": "interior",
+            "seen": null,
+            "offerPause": false,
+            "labOpen": true,
+            "labHidden": true,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 169,
+              "y": 745,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 352,
+              "y": 745,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": {
+            "speed": 0,
+            "labOpen": true,
+            "palette": true,
+            "details": {
+              "x": 338.859375,
+              "y": 752.0953979492188,
+              "reachable": true
+            },
+            "end": {
+              "x": 335.6875,
+              "y": 745,
+              "reachable": true
+            }
+          }
+        },
+        {
+          "open": true,
+          "action": "start",
+          "priorSpeed": 1,
+          "before": {
+            "t": 4741,
+            "speed": 0
+          },
+          "after": {
+            "t": 4741,
+            "speed": 1,
+            "offer": null,
+            "lesson": "interior",
+            "seen": null,
+            "offerPause": false,
+            "labOpen": true,
+            "labHidden": true,
+            "palette": true
+          },
+          "targets": [
+            {
+              "action": "lessonStart",
+              "x": 169,
+              "y": 745,
+              "reachable": true
+            },
+            {
+              "action": "lessonLater",
+              "x": 352,
+              "y": 745,
+              "reachable": true
+            }
+          ],
+          "lessonNavigation": {
+            "speed": 0,
+            "labOpen": true,
+            "palette": true,
+            "details": {
+              "x": 338.859375,
+              "y": 745.728271484375,
+              "reachable": true
+            },
+            "end": {
+              "x": 335.6875,
+              "y": 745,
+              "reachable": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

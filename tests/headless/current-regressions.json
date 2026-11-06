@@ -1582,10 +1582,10 @@
           "@node",
           "tests/headless/tvisual_lab_review.mjs"
         ],
-        "completion": "4 Visual Lab review regression groups passed",
-        "minimum_pass_lines": 4,
+        "completion": "5 Visual Lab review regression groups passed",
+        "minimum_pass_lines": 5,
         "timeout": 180,
-        "scope": "PR32 natural hidden arrival, phase labels, visible customer preference, collapsed/expanded Photo-mode visibility and read-only state"
+        "scope": "PR32 natural hidden arrival, phase labels, visible customer preference, collapsed/expanded Photo-mode visibility and read-only state; displayed versus held lesson offers preserve state and palette"
       }
     ],
     "historical": [

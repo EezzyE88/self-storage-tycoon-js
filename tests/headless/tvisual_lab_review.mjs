@@ -12,7 +12,7 @@ function fixture(sim = makeMaple(4401)) {
   }]));
   const panel = { open: false, hidden: false, querySelector: k => nodes.get(k), addEventListener() {}, removeEventListener() {}, remove() {} };
   globalThis.document = { createElement: () => panel, body: { append() {} } };
-  const game = {sim, rend: {sim, mat: {}}, showcase: {photo: false}, ui: {title: false, tab: null, tool: null, tutMin: true, modalOpen: () => false}};
+  const game = {sim, rend: {sim, mat: {}}, showcase: {photo: false}, ui: {title: false, tab: null, tool: null, tutMin: true, popupBlocks: new Set(), modalOpen: () => false}};
   game.visualLab = installVisualLab(game);
   return {game, panel, nodes, status: () => nodes.get('[data-visit]').textContent};
 }
@@ -78,4 +78,31 @@ test('Photo mode hides collapsed and expanded Lab without resetting the palette 
   }
 });
 
-console.log("4 Visual Lab review regression groups passed");
+test('displayed optional offers hide the Lab; held pending offers do not; palette and state survive', () => {
+  for (const open of [false, true]) {
+    const f = fixture();
+    f.panel.open = open;
+    f.game.visualLab.lab.setEnabled(true);
+    f.game.sim.s.lessonOffer = 'interior';
+    const before = JSON.stringify(f.game.sim.s);
+    f.game.visualLab.update();
+    assert.equal(f.panel.hidden, false, 'pending but held offer does not suppress the Lab');
+    f.game.ui.popupBlocks.add('lessonOffer');
+    f.game.visualLab.update();
+    assert.equal(f.panel.hidden, true, 'displayed offer has priority over the Lab');
+    f.game.ui.popupBlocks.delete('lessonOffer');
+    f.game.visualLab.update();
+    assert.equal(f.panel.hidden, false);
+    assert.equal(f.panel.open, open);
+    assert.equal(f.game.visualLab.lab.enabled, true);
+    assert.equal(JSON.stringify(f.game.sim.s), before);
+    f.game.sim.s.lesson = {id: 'interior', flags: {}};
+    const activeBefore = JSON.stringify(f.game.sim.s);
+    f.game.visualLab.update();
+    assert.equal(f.panel.hidden, true, 'collapsed active optional lesson keeps its controls accessible');
+    assert.equal(f.game.visualLab.lab.enabled, true);
+    assert.equal(JSON.stringify(f.game.sim.s), activeBefore);
+  }
+});
+
+console.log("5 Visual Lab review regression groups passed");

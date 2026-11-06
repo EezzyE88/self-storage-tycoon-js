@@ -1,0 +1,14 @@
+{
+  "offerCase": {
+    "open": false,
+    "priorSpeed": 0,
+    "action": "start"
+  },
+  "offer": "interior",
+  "speed": 0,
+  "t": 4740,
+  "popupBlocks": [
+    "lessonOffer"
+  ],
+  "labHidden": true
+}
