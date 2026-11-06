@@ -1,0 +1,1 @@
+PASS 12 focused checks: reversible visuals, read-only visit, Pause, exact restore, missing unit, construction guard

@@ -1,0 +1,53 @@
+PASS four entrance directions, 1x1 fixtures and occupied/empty contents remain within footprints on floors 0/1/2
+PASS Open House scene construction: four camera orientations, floor visibility, lease decoration, day/night, animation, rebuild stability and complete state isolation
+{"environment":"CPU scene graph; Canvas/GPU stubbed; WebGL and physical iPhone NOT TESTED","units":23,"batches":9,"counts":{"candidate":{"meshes":267,"instances":436,"casters":111}}}
+✔ tests/headless/topenhouse.mjs (355.426655ms)
+PASS every temporary pause source restores the exact previous speed (Pause, 1x, 2x, 4x)
+PASS nested and interleaved pauses restore the speed from before the first one
+PASS manual Pause during a temporary pause is preserved by button and keyboard
+PASS an inert run-speed tap during a blocking panel neither runs time nor changes what is restored
+PASS tutorial: tapping 1x with only the tutorial card open is an explicit run choice
+PASS panel closure: Details → Back to map and close restore the previous speed, including Pause
+PASS actions: commissioning, owner make-ready and build placement never start a paused clock
+PASS confirmations: cancelling or keeping construction and confirming an expansion restore the previous speed
+PASS requests: answering the last request, and navigating from Requests, keep the player speed
+PASS property switch never applies another property’s saved speed; loads stay paused
+PASS showcase: unfreezing photo mode and starting the tour do not override a manual Pause
+PASS tutorial wording no longer promises a 1x resume
+PASS the policy is UI-only: no simulation or save field is added
+13 pause-policy checks passed
+✔ tests/headless/tpause_policy.mjs (551.201538ms)
+PASS paused expansion loan updates legacy fallback immediately without a frame or leave event
+PASS paused acquisition stores both properties atomically with exact economics
+PASS paused transfer preserves both ledgers and failed transfer cannot replace save
+PASS paused build saves charge and order before returning; duplicate confirm spends nothing
+PASS property switch saves active property and paused portfolio for fresh load
+PASS older pending compression cannot overwrite a newer paused transaction
+PASS repeated paused actions leave the final complete snapshot and prior backup
+PASS running actions retain existing cadence and never force Pause or advance time
+PASS failed commands and title-screen actions cannot overwrite autosave
+PASS manual Pause checkpoints earlier running transactions without advancing time
+PASS paused checkpoint keeps existing cloud fallback when local storage is unavailable
+PASS storage failure does not roll back or repeat a financial action and keeps error reporting
+PASS no new state schema or simulation/economics changes
+PASS only explicit save hooks differ from exact 918d31f production source
+ALL PASS: 14 paused autosave regression groups
+✔ tests/headless/tpaused_autosave.mjs (541.170715ms)
+PASS successful renderer returned unchanged; no fallback UI
+PASS accessible static error, no error HTML injection, manual reload only
+PASS actual main boot failure stops before game UI, clock, handlers, cloud or save setup
+✔ tests/headless/tstartup_graphics.mjs (121.619197ms)
+PASS 12 focused checks: reversible visuals, read-only visit, Pause, exact restore, missing unit, construction guard
+✔ tests/headless/tvisual_lab.mjs (40.496732ms)
+PASS real Three.js shared materials/rebuild/dispose exact restore; 2000-minute deterministic on/off state and event parity; read-only at Pause/1x/2x/4x
+✔ tests/headless/tvisual_lab_integration.mjs (1366.407371ms)
+PASS production raw/compressed save-code preparation/load repeated three times; report and cash exact, no repeated accrual
+✔ tests/headless/tworking_yard_save.mjs (278.695282ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3265.37115

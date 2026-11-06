@@ -1,0 +1,12 @@
+AssertionError [ERR_ASSERTION]: storageUnchanged
+
+false !== true
+
+    at /workspace/sst-lab/tests/browser-qa/visual-lab.cjs:50:113 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

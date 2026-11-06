@@ -1,0 +1,15 @@
+{
+  "offerCase": {
+    "open": false,
+    "priorSpeed": 1,
+    "action": "dismiss"
+  },
+  "offer": null,
+  "seen": {
+    "interior": 4
+  },
+  "speed": 0,
+  "t": 4740,
+  "popupBlocks": [],
+  "labHidden": false
+}

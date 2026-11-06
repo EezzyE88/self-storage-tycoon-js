@@ -1,0 +1,27 @@
+{
+  "parent": "06504fd1d00327f6b7e9572dd6646e770e4b539e",
+  "original_archives_unchanged": {
+    "SST_VISUAL_LAB_06504fd.bundle": "309263c028deb83b36b89ef832f3ea07f897ad29a3f2fc1de7f4775324214c5c",
+    "SST_FOCUSED_VERIFICATION_06504fd_20261106.zip": "ea2165de5225de4ea9dd8338b9c956f535167842410becd3df39d9ef1ac04bf7"
+  },
+  "files": {
+    "375-photo-lab-collapsed.png": "845e77a10557fe582e8b6d90611aff8a8c612fb71a9d537fca0ca4ae65d742f4",
+    "375-photo-lab-expanded.png": "6fe547a0b2f40a823103ad8933e481589d1a9b009981f47844154987b6cd1455",
+    "375-tutorial-expanded.png": "de30974ef657ec96a1bb30710b0e149a315ad15a58dbdce864585d54b258f481",
+    "390-photo-lab-collapsed.png": "36f7885bf9f1c00699a5b9cef992c1ca096c7dd180a0c07c50d78d7273d1a907",
+    "390-photo-lab-expanded.png": "956dd27670da4d50a90624c1fcd587dc3b7a077afab83b5c0ad583abfb6b082e",
+    "390-tutorial-expanded.png": "e7dc3c3bf781b5ffab278a566baac57f3bccfc7fda0886917c278985a2374e98",
+    "REPORT.md": "42fcb92ae52cf87b6c2c45b7e50ecad4c413bdd6d9920e057c4db065654a7d08",
+    "baseline-native.txt": "275f44f81c3b051130d2c7b8abe44503d346206bce0e8f506b3e9b567703ba5b",
+    "baseline-photo-native.txt": "3a242cda1acb26fa3d2676c9c525b403b24899dbb36f26c70c5eebf51707bf9f",
+    "native.txt": "e5c4594031ed7b64df085fc5f8faaaa73fd0b2247379f094052d9c7116688e6a",
+    "normal-raf-before-tool-check.txt": "b76d35b8b7ef744d8ba39291d25020d65318a4f2ea502535aca850c3ac8d6bff",
+    "normal-raf.json": "ed40e98a4ab6694de06255c42e5588f36d76d6160a89ad99778daf5d3fb531c3",
+    "normal-raf.txt": "3afae429968cbb8610722bddf8693961a55edbcc7f94d93c2139d5a0f8aa6cff",
+    "runner-results.json": "27f3fe3c23ce38a5585b7ffcbf980af92bf1abe6f8bcc2e501db2645d42034d0",
+    "runner-tvisual_lab.txt": "07b3dcb401715fab0762d7757631406fdf9cc079093184036c81b567c66b720b",
+    "runner-tvisual_lab_integration.txt": "68717299c4f595e5a4ae950199a303ce88a50530c1859983b565c178127e8ac4",
+    "runner-tvisual_lab_review.txt": "81a7cc043fe292fee5c96348fcab93b8581b15c780401daf4a867e00c96b6434",
+    "targeted-native.txt": "81a7cc043fe292fee5c96348fcab93b8581b15c780401daf4a867e00c96b6434"
+  }
+}

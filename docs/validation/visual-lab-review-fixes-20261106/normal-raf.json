@@ -1,0 +1,47 @@
+{
+  "environment": "Chromium software WebGL; normal production RAF; no physical Safari/performance claim",
+  "results": [
+    {
+      "width": 375,
+      "height": 667,
+      "initial": {
+        "t": 420,
+        "speed": 0,
+        "tutorial": true,
+        "updates": 10
+      },
+      "paused": {
+        "t": 421,
+        "updates": 15
+      },
+      "final": {
+        "updates": 55,
+        "tutorial": true,
+        "speed": 0
+      },
+      "pageErrors": [],
+      "photoTargets": "all slider/shutter centers reachable for collapsed and expanded Lab; real touch input delivered"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "initial": {
+        "t": 420,
+        "speed": 0,
+        "tutorial": true,
+        "updates": 7
+      },
+      "paused": {
+        "t": 421,
+        "updates": 14
+      },
+      "final": {
+        "updates": 60,
+        "tutorial": true,
+        "speed": 0
+      },
+      "pageErrors": [],
+      "photoTargets": "all slider/shutter centers reachable for collapsed and expanded Lab; real touch input delivered"
+    }
+  ]
+}

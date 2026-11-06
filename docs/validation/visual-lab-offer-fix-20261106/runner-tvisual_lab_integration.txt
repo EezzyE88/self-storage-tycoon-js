@@ -1,0 +1,1 @@
+PASS real Three.js shared materials/rebuild/dispose exact restore; 2000-minute deterministic on/off state and event parity; read-only at Pause/1x/2x/4x

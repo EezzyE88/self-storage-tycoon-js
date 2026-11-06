@@ -1,0 +1,5 @@
+page.waitForFunction: Timeout 15000ms exceeded.
+    at /workspace/sst-lab-offer-fix/tests/browser-qa/visual-lab-review.cjs:125:20 {
+  log: [],
+  name: 'TimeoutError'
+}

@@ -1,0 +1,12 @@
+AssertionError [ERR_ASSERTION]: offer action restores prior speed, including manual Pause
+
+0 !== 1
+
+    at /workspace/sst-lab-offer-fix/tests/browser-qa/visual-lab-review.cjs:132:16 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

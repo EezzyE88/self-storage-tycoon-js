@@ -20,6 +20,7 @@ import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
 import { createStartupRenderer } from './startup.js';
 import { createReleaseGuard } from './releaseguard.js';
+import { installVisualLab } from './visual-lab.js';
 
 Renderer.prototype.setSim = function (sim) {
   if (this.projectMark) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); this.projectMark = null; }
@@ -113,6 +114,7 @@ const game = {
   },
   note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },
   attach(sim, kind, opts = {}) {
+    this.visualLab?.reset();
     this.ui?.reserveWait?.stop('Session changed.');
     this.sim = sim; this.acc = 0; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)
     if (this.rend) this.rend.setSim(sim);
@@ -319,6 +321,7 @@ if (game.rend) {
 game.ui = new UI(game);
 game.attach(game.sim, 'maple');
 installShowcase(game);
+if (new URLSearchParams(location.search).has('visualLab')) game.visualLab = installVisualLab(game);
 window.__game = game;
 
 
@@ -417,6 +420,7 @@ function tick(now) {
   const renderMs = game.showFps ? performance.now() - renderStart : 0;
   const uiStart = game.showFps ? performance.now() : 0;
   game.ui.update(rdt);
+  game.visualLab?.update();
   if (game.showFps) {
     diagnostics.record({ at: now, mode, drawn: true, rafMs, frameMs: transition ? null : drawInterval, simMs, renderMs, uiMs: performance.now() - uiStart,
       info: { calls: info.render.calls, triangles: info.render.triangles, geometries: info.memory.geometries, textures: info.memory.textures },

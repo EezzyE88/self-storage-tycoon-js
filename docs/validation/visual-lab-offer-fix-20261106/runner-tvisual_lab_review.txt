@@ -1,0 +1,6 @@
+PASS natural arriving customer is not described as inside a unit
+PASS hidden office/restroom/departure phases never imply unit occupancy
+PASS visible walking/at-unit visit is preferred over an earlier hidden arrival
+PASS Photo mode hides collapsed and expanded Lab without resetting the palette or Pause
+PASS displayed optional offers hide the Lab; held pending offers do not; palette and state survive
+5 Visual Lab review regression groups passed
