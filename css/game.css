@@ -1254,3 +1254,7 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui.tut-review-compact .unit-review .nm > small,
 #ui.tut-review-compact .unit-review .spend-more,
 #ui.tut-review-compact .unit-review .build-authorization { display:none; }
+#visual-lab { position: fixed; right: max(8px, env(safe-area-inset-right)); bottom: calc(env(safe-area-inset-bottom) + 74px); z-index: 6; width: 224px; max-width: calc(100vw - 36px); padding: 0 10px; border: 1px solid #628b8b; border-radius: 10px; background: #16202bf2; color: #f1eee7; font: 12px system-ui, sans-serif; }
+#visual-lab[hidden] { display: none; }
+#visual-lab summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+#visual-lab button { min-height: 44px; width: 100%; margin-bottom: 6px; }

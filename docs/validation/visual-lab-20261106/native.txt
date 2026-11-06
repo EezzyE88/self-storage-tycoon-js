@@ -1,0 +1,330 @@
+✔ tests/headless/topenhouse.mjs (270.034619ms)
+✔ tests/headless/tpause_policy.mjs (349.352101ms)
+node:internal/child_process:1191
+    result.error = new ErrnoException(result.error, 'spawnSync ' + options.file);
+                   ^
+
+<ref *1> Error: spawnSync git EPERM
+    at Object.spawnSync (node:internal/child_process:1191:20)
+    at spawnSync (node:child_process:929:24)
+    at execFileSync (node:child_process:972:15)
+    at readSource (file:///workspace/sst-lab/tests/headless/source_reader.mjs:14:13)
+    at stage0Baseline (file:///workspace/sst-lab/tests/headless/stage0_baseline.mjs:23:35)
+    at transactionBaseline (file:///workspace/sst-lab/tests/headless/transaction_baseline.mjs:9:11)
+    at financialContextBaseline (file:///workspace/sst-lab/tests/headless/financial_context_baseline.mjs:10:11)
+    at firstGateBaseline (file:///workspace/sst-lab/tests/headless/first_gate_baseline.mjs:9:11)
+    at acquisitionGuidanceBaseline (file:///workspace/sst-lab/tests/headless/acquisition_guidance_baseline.mjs:10:11)
+    at shortScreenBaseline (file:///workspace/sst-lab/tests/headless/short_screen_baseline.mjs:9:11) {
+  errno: -1,
+  code: 'EPERM',
+  syscall: 'spawnSync git',
+  path: 'git',
+  spawnargs: [ 'show', 'd155a92590a938005b00c16ec52d92b812205736:js/main.js' ],
+  error: [Circular *1],
+  status: 0,
+  signal: null,
+  output: [
+    null,
+    "import { portfolioCareer } from './career.js';\n" +
+      '// Boot, fixed-step simulation loop, input, save/load, test hooks.\n' +
+      "import { FINANCIAL_MINUTE } from './finance.js';\n" +
+      "import { Sim, fmtTime } from './sim.js';\n" +
+      "import { TICKS_PER_SEC_1X, TIERS } from './data.js';\n" +
+      "import { makeMaple, makeEmptyLot } from './maple.js';\n" +
+      "import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from './scenarios.js';\n" +
+      'export { modeLabel };\n' +
+      "import { MARKETS, MIN_PER_DAY, ROLES } from './data.js';\n" +
+      "import { installTutorial } from './tutorial.js';\n" +
+      "import { PerformanceStats } from './performance.js';\n" +
+      "import { Renderer } from './render.js';\n" +
+      "import { UI } from './ui.js';\n" +
+      "import { Audio } from './audio.js';\n" +
+      "import { cloud } from './cloud.js';\n" +
+      "import { localsave } from './localsave.js';\n" +
+      "import { durablesave, checkpointRecord, recoverCheckpoints } from './durablesave.js';\n" +
+      "import { savearchive } from './savearchive.js';\n" +
+      "import { BUILD } from './version.js';\n" +
+      "import { installShowcase } from './showcase.js';\n" +
+      "import { createStartupRenderer } from './startup.js';\n" +
+      '\n' +
+      'Renderer.prototype.setSim = function (sim) {\n' +
+      '  if (this.projectMark) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); this.projectMark = null; }\n' +
+      '  this.sim = sim; this.resizeWorld();\n' +
+      '  this.clearDynamic();\n' +
+      '  this.lastStruct = -1; this.setPreview(null); this.setSelection(null); this.setFocus(null);\n' +
+      '};\n' +
+      '\n' +
+      "const canvas = document.getElementById('view');\n" +
+      '// HUD subtitle: Maple stops saying "Tutorial" once the player graduates\n' +
+      'const game = {\n' +
+      '  sim: null, rend: null, ui: null, audio: new Audio(), showFps: false, acc: 0,\n' +
+      '  company: null,\n' +
+      "  durable: typeof durablesave === 'undefined' ? null : durablesave,\n" +
+      '  beginSaveSession(replace = true) {\n' +
+      '    this.saveSeq = (this.saveSeq || 0) + 1; this.saving = false;\n' +
+      '    if (replace) return this.durable?.replace();\n' +
+      '  },\n' +
+      '  newGame(kind, opts) {\n' +
+      '    this.beginSaveSession();\n' +
+      '    let sim, name;\n' +
+      "    if (kind && kind.startsWith('sc:')) { sim = makeScenario(kind.slice(3)); name = SCENARIOS[kind.slice(3)].name; }\n" +
+      "    else if (kind === 'custom') { sim = makeSandbox(opts); name = sandboxName(sim.s); }\n" +
+      "    else if (kind === 'empty' || kind === 'creative') { sim = makeSandbox({ kind: kind === 'creative' ? 'free' : 'business' }); name = kind === 'creative' ? 'Free Build Lot' : 'Empty Lot'; sim.s.sb.name = name; } // quick starts (menu, tests)\n" +
+      "    else if (kind === 'maple') { sim = makeMaple(); name = 'Maple Street Storage'; }\n" +
+      "    else { sim = makeEmptyLot({ creative: kind === 'creative' }); name = kind === 'creative' ? 'Creative Lot' : 'Empty Lot'; }\n" +
+      '    this.company = { props: [{ name, sim }], active: 0, feed: [] };\n' +
+      '    this.attach(sim, kind);\n' +
+      "    if (kind === 'sc:comeback' && this.ui) this.ui.scMin = false;\n" +
+      '  },\n' +
+      "  metaName() { const C = this.company; if (!C) return null; const p = C.props[C.active]; return p.name + (C.props.length > 1 ? ` (${C.active + 1}/${C.props.length})` : ''); },\n" +
+      '  switchProperty(k) {\n' +
+      '    const C = this.company; if (!C || !C.props[k] || k === C.active) return;\n' +
+      "    this.ui?.reserveWait?.stop('Property changed.');\n" +
+      '    const speed = this.sim.s.speed; C.active = k; const sim = C.props[k].sim; sim.s.speed = speed;\n' +
+      "    this.attach(sim, 'switch');\n" +
+      '    this.autosavePaused();\n' +
+      '  },\n' +
+      '  tierInfo() { return portfolioCareer(this.company ? this.company.props : [{ sim: this.sim }]); },\n' +
+      '  syncTier() { // Once an hour, from the completed company minute; tiers never go down.\n' +
+      '    const ti = this.tierInfo();\n' +
+      '    if (!ti.target) return;\n' +
+      "    for (const p of ti.eligible) if ((p.sim.s.coTier || 1) < ti.target.n) p.sim.dispatch({ type: 'coTier', tier: ti.target.n });\n" +
+      '  },\n' +
+      '  offers() { // acquisition offers (GDD §46)\n' +
+      '    const day = this.sim.day, n = this.company ? this.company.props.length : 1;\n' +
+      '    const out = [];\n' +
+      '    const tier = this.sim.s.coTier || 1;\n' +
+      "    for (const m of ['blank', 'urban', 'rural']) if (m === 'blank' || tier >= 3) out.push({ kind: 'parcel', market: m, name: `Empty parcel · ${MARKETS[m].name}`, desc: 'Raw land with street frontage. Build it from scratch.', price: { blank: 45000, urban: 70000, rural: 25000 }[m] * (1 + 0.1 * (n - 1)) });\n" +
+      '    const mp = makeMapleSeedPrice(day);\n' +
+      "    const fac = FACILITY_NAMES.find((nm) => !(this.company ? this.company.props : []).some((p) => p.name === nm)) || 'Oak Ridge Storage';\n" +
+      "    out.push({ kind: 'facility', market: 'maple', name: 'Operating facility · ' + fac, fac, desc: '23 units, mostly leased, some deferred maintenance. Rent roll comes with it.', price: mp });\n" +
+      "    return out.map((o) => ({ ...o, price: Math.round(o.price / 1000) * 1000 + WORKING_FLOAT })); // price includes the new property's opening working cash\n" +
+      '  },\n' +
+      '  acquire(kind, market) {\n' +
+      "    const C = this.company, src = this.sim; if (!C) return { ok: false, msg: 'No company' };\n" +
+      "    if (C.props.length >= 5) return { ok: false, msg: 'Portfolio is limited to 5 properties' };\n" +
+      "    const of = this.offers().find((o) => o.kind === kind && o.market === market); if (!of) return { ok: false, msg: 'Offer not available' };\n" +
+      "    if (src.s.cash < of.price) return { ok: false, msg: 'Not enough cash at this property' };\n" +
+      '    let sim, name;\n' +
+      "    if (kind === 'parcel') { sim = makeSandbox({ market, cash: 0, plain: true }); name = { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[market] + ' ' + (C.props.length + 1); }\n" +
+      '    else {\n' +
+      '      const k = C.props.filter((p) => p.sim.s.mirror != null || FACILITY_NAMES.includes(p.name)).length;\n' +
+      "      sim = makeMaple(1000 + C.props.length * 77, { mirror: k % 2 === 0 }); const s = sim.s; s.mode = 'sandbox'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true; s.cash = 0; name = of.fac;\n" +
+      '      if (!s.mirror) s.mirror = false;\n' +
+      "      for (const g of sim.objs('gate')) g.cond = 0.55 + ((C.props.length * 13) % 20) / 100;\n" +
+      "      for (const o of sim.objs('light')) o.cond = 0.5 + ((o.id * 37) % 40) / 100;\n" +
+      '    }\n' +
+      '    // align to the company clock\n' +
+      '    const t = src.s.t, d = src.day, s = sim.s, dt = t - s.t;\n' +
+      '    s.t = t; s.finance.lastDay = t % MIN_PER_DAY <= FINANCIAL_MINUTE ? d - 1 : d; s.finance.observedFrom = d; s.today = { day: d, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 };\n' +
+      '    for (const v of s.visits) v.t += dt;\n' +
+      '    for (const L of Object.values(s.leases)) { L.nextBill += d - 1; L.start += d - 1; }\n' +
+      "    for (const u of sim.objs('unit')) if (u.vacatedAt != null) u.vacatedAt += dt;\n" +
+      '    for (const tk of s.tasks) tk.created += dt;\n' +
+      '    for (const a of s.agents) { if (a.t0 != null) a.t0 += dt; }\n' +
+      '    s.milestones = {}; s.speed = 0; sim.markDirty(); sim.rebuild();\n' +
+      "    src.money(-of.price, 'capex', 'Acquisition: ' + name);\n" +
+      "    sim.money(WORKING_FLOAT, 'other', 'Opening working cash from ' + C.props[C.active].name);\n" +
+      '    C.props.push({ name, sim }); if (this.ui) this.ui.setMeta(this.metaName(), modeLabel(src.s));\n' +
+      '    this.note(C.active, `Acquired ${name} for $${of.price.toLocaleString()}`);\n' +
+      '    this.autosavePaused();\n' +
+      '    return { ok: true, msg: `Acquired ${name}. Open the Portfolio to switch to it and send it cash.` };\n' +
+      '  },\n' +
+      '  transfer(from, to, amt) {\n' +
+      "    const C = this.company; const A = C && C.props[from], B = C && C.props[to]; if (!A || !B || from === to || !Number.isFinite(amt) || amt <= 0) return { ok: false, msg: 'Invalid transfer' };\n" +
+      "    if (A.sim.s.cash < amt) return { ok: false, msg: 'Not enough cash' };\n" +
+      "    A.sim.money(-amt, 'other', 'Transfer to ' + B.name); B.sim.money(amt, 'other', 'Transfer from ' + A.name);\n" +
+      '    this.autosavePaused();\n' +
+      '    return { ok: true, msg: `Sent $${amt.toLocaleString()} to ${B.name}` };\n' +
+      '  },\n' +
+      '  note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },\n' +
+      '  attach(sim, kind, opts = {}) {\n' +
+      "    this.ui?.reserveWait?.stop('Session changed.');\n" +
+      '    this.sim = sim; this.acc = 0; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)\n' +
+      '    if (this.rend) this.rend.setSim(sim);\n' +
+      '    if (this.ui) {\n' +
+      '      this.ui.tool = null; this.ui.sel = null; this.ui.plan = null; this.ui.setTab(null); this.ui.resetSession(opts.view); this.ui.renderActionBar();\n' +
+      "      const s = sim.s; this.ui.setMeta(this.metaName() || (s.mode === 'tutorial' ? 'Maple Street Storage' : s.creative ? 'Creative Lot' : 'Empty Lot'), modeLabel(s));\n" +
+      '      this.ui.hF2 = null; this.ui.renderTut(true); this.ui.renderFeed(true);\n' +
+      '    }\n' +
+      "    this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));\n" +
+      "    this.rend.zoom = (sim.s.mode === 'tutorial' ? 1.05 : 0.95) * (window.innerWidth < 600 ? 0.8 : 1); this.rend.updateCamera();\n" +
+      '    if (this.ui && this.ui.phone()) { this.rend.fitProperty(this.ui.safeRect()); setTimeout(() => this.rend.fitProperty(this.ui.safeRect()), 60); }\n' +
+      '    sim.events.length = 0; sim.poll(); this.drain();\n' +
+      '  },\n' +
+      '  drain() { const ev = this.sim.events; if (!ev.length) return; this.sim.events = []; if (this.sim === this.demo && this.ui && this.ui.title) return; /* the living title screen stays quiet */ for (const e of ev) this.ui.onEvent(e); },\n' +
+      '  saveJSON() {\n' +
+      '    const C = this.company, view = this.ui && this.rend ? this.rend.view : null;\n' +
+      '    // The selected floor/exterior view is the only save-owned UI state; it rides beside (not inside) the simulation state.\n' +
+      '    const own = (s) => view == null || s !== this.sim.s ? s : { ...s, uiView: view };\n' +
+      '    return C && C.props.length > 0 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));\n' +
+      '  },\n' +
+      "  rawSaveCode(json) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); },\n" +
+      '  async saveCode(json = this.saveJSON()) {\n' +
+      '    try {\n' +
+      "      const cs = new CompressionStream('gzip'); const buf = await new Response(new Blob([json]).stream().pipeThrough(cs)).arrayBuffer();\n" +
+      "      let bin = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x80"... 33485 more characters,
+    ''
+  ],
+  pid: 1018,
+  stdout: "import { portfolioCareer } from './career.js';\n" +
+    '// Boot, fixed-step simulation loop, input, save/load, test hooks.\n' +
+    "import { FINANCIAL_MINUTE } from './finance.js';\n" +
+    "import { Sim, fmtTime } from './sim.js';\n" +
+    "import { TICKS_PER_SEC_1X, TIERS } from './data.js';\n" +
+    "import { makeMaple, makeEmptyLot } from './maple.js';\n" +
+    "import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from './scenarios.js';\n" +
+    'export { modeLabel };\n' +
+    "import { MARKETS, MIN_PER_DAY, ROLES } from './data.js';\n" +
+    "import { installTutorial } from './tutorial.js';\n" +
+    "import { PerformanceStats } from './performance.js';\n" +
+    "import { Renderer } from './render.js';\n" +
+    "import { UI } from './ui.js';\n" +
+    "import { Audio } from './audio.js';\n" +
+    "import { cloud } from './cloud.js';\n" +
+    "import { localsave } from './localsave.js';\n" +
+    "import { durablesave, checkpointRecord, recoverCheckpoints } from './durablesave.js';\n" +
+    "import { savearchive } from './savearchive.js';\n" +
+    "import { BUILD } from './version.js';\n" +
+    "import { installShowcase } from './showcase.js';\n" +
+    "import { createStartupRenderer } from './startup.js';\n" +
+    '\n' +
+    'Renderer.prototype.setSim = function (sim) {\n' +
+    '  if (this.projectMark) { this.scene.remove(this.projectMark); this.projectMark.material.dispose(); this.projectMark = null; }\n' +
+    '  this.sim = sim; this.resizeWorld();\n' +
+    '  this.clearDynamic();\n' +
+    '  this.lastStruct = -1; this.setPreview(null); this.setSelection(null); this.setFocus(null);\n' +
+    '};\n' +
+    '\n' +
+    "const canvas = document.getElementById('view');\n" +
+    '// HUD subtitle: Maple stops saying "Tutorial" once the player graduates\n' +
+    'const game = {\n' +
+    '  sim: null, rend: null, ui: null, audio: new Audio(), showFps: false, acc: 0,\n' +
+    '  company: null,\n' +
+    "  durable: typeof durablesave === 'undefined' ? null : durablesave,\n" +
+    '  beginSaveSession(replace = true) {\n' +
+    '    this.saveSeq = (this.saveSeq || 0) + 1; this.saving = false;\n' +
+    '    if (replace) return this.durable?.replace();\n' +
+    '  },\n' +
+    '  newGame(kind, opts) {\n' +
+    '    this.beginSaveSession();\n' +
+    '    let sim, name;\n' +
+    "    if (kind && kind.startsWith('sc:')) { sim = makeScenario(kind.slice(3)); name = SCENARIOS[kind.slice(3)].name; }\n" +
+    "    else if (kind === 'custom') { sim = makeSandbox(opts); name = sandboxName(sim.s); }\n" +
+    "    else if (kind === 'empty' || kind === 'creative') { sim = makeSandbox({ kind: kind === 'creative' ? 'free' : 'business' }); name = kind === 'creative' ? 'Free Build Lot' : 'Empty Lot'; sim.s.sb.name = name; } // quick starts (menu, tests)\n" +
+    "    else if (kind === 'maple') { sim = makeMaple(); name = 'Maple Street Storage'; }\n" +
+    "    else { sim = makeEmptyLot({ creative: kind === 'creative' }); name = kind === 'creative' ? 'Creative Lot' : 'Empty Lot'; }\n" +
+    '    this.company = { props: [{ name, sim }], active: 0, feed: [] };\n' +
+    '    this.attach(sim, kind);\n' +
+    "    if (kind === 'sc:comeback' && this.ui) this.ui.scMin = false;\n" +
+    '  },\n' +
+    "  metaName() { const C = this.company; if (!C) return null; const p = C.props[C.active]; return p.name + (C.props.length > 1 ? ` (${C.active + 1}/${C.props.length})` : ''); },\n" +
+    '  switchProperty(k) {\n' +
+    '    const C = this.company; if (!C || !C.props[k] || k === C.active) return;\n' +
+    "    this.ui?.reserveWait?.stop('Property changed.');\n" +
+    '    const speed = this.sim.s.speed; C.active = k; const sim = C.props[k].sim; sim.s.speed = speed;\n' +
+    "    this.attach(sim, 'switch');\n" +
+    '    this.autosavePaused();\n' +
+    '  },\n' +
+    '  tierInfo() { return portfolioCareer(this.company ? this.company.props : [{ sim: this.sim }]); },\n' +
+    '  syncTier() { // Once an hour, from the completed company minute; tiers never go down.\n' +
+    '    const ti = this.tierInfo();\n' +
+    '    if (!ti.target) return;\n' +
+    "    for (const p of ti.eligible) if ((p.sim.s.coTier || 1) < ti.target.n) p.sim.dispatch({ type: 'coTier', tier: ti.target.n });\n" +
+    '  },\n' +
+    '  offers() { // acquisition offers (GDD §46)\n' +
+    '    const day = this.sim.day, n = this.company ? this.company.props.length : 1;\n' +
+    '    const out = [];\n' +
+    '    const tier = this.sim.s.coTier || 1;\n' +
+    "    for (const m of ['blank', 'urban', 'rural']) if (m === 'blank' || tier >= 3) out.push({ kind: 'parcel', market: m, name: `Empty parcel · ${MARKETS[m].name}`, desc: 'Raw land with street frontage. Build it from scratch.', price: { blank: 45000, urban: 70000, rural: 25000 }[m] * (1 + 0.1 * (n - 1)) });\n" +
+    '    const mp = makeMapleSeedPrice(day);\n' +
+    "    const fac = FACILITY_NAMES.find((nm) => !(this.company ? this.company.props : []).some((p) => p.name === nm)) || 'Oak Ridge Storage';\n" +
+    "    out.push({ kind: 'facility', market: 'maple', name: 'Operating facility · ' + fac, fac, desc: '23 units, mostly leased, some deferred maintenance. Rent roll comes with it.', price: mp });\n" +
+    "    return out.map((o) => ({ ...o, price: Math.round(o.price / 1000) * 1000 + WORKING_FLOAT })); // price includes the new property's opening working cash\n" +
+    '  },\n' +
+    '  acquire(kind, market) {\n' +
+    "    const C = this.company, src = this.sim; if (!C) return { ok: false, msg: 'No company' };\n" +
+    "    if (C.props.length >= 5) return { ok: false, msg: 'Portfolio is limited to 5 properties' };\n" +
+    "    const of = this.offers().find((o) => o.kind === kind && o.market === market); if (!of) return { ok: false, msg: 'Offer not available' };\n" +
+    "    if (src.s.cash < of.price) return { ok: false, msg: 'Not enough cash at this property' };\n" +
+    '    let sim, name;\n' +
+    "    if (kind === 'parcel') { sim = makeSandbox({ market, cash: 0, plain: true }); name = { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[market] + ' ' + (C.props.length + 1); }\n" +
+    '    else {\n' +
+    '      const k = C.props.filter((p) => p.sim.s.mirror != null || FACILITY_NAMES.includes(p.name)).length;\n' +
+    "      sim = makeMaple(1000 + C.props.length * 77, { mirror: k % 2 === 0 }); const s = sim.s; s.mode = 'sandbox'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true; s.cash = 0; name = of.fac;\n" +
+    '      if (!s.mirror) s.mirror = false;\n' +
+    "      for (const g of sim.objs('gate')) g.cond = 0.55 + ((C.props.length * 13) % 20) / 100;\n" +
+    "      for (const o of sim.objs('light')) o.cond = 0.5 + ((o.id * 37) % 40) / 100;\n" +
+    '    }\n' +
+    '    // align to the company clock\n' +
+    '    const t = src.s.t, d = src.day, s = sim.s, dt = t - s.t;\n' +
+    '    s.t = t; s.finance.lastDay = t % MIN_PER_DAY <= FINANCIAL_MINUTE ? d - 1 : d; s.finance.observedFrom = d; s.today = { day: d, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 };\n' +
+    '    for (const v of s.visits) v.t += dt;\n' +
+    '    for (const L of Object.values(s.leases)) { L.nextBill += d - 1; L.start += d - 1; }\n' +
+    "    for (const u of sim.objs('unit')) if (u.vacatedAt != null) u.vacatedAt += dt;\n" +
+    '    for (const tk of s.tasks) tk.created += dt;\n' +
+    '    for (const a of s.agents) { if (a.t0 != null) a.t0 += dt; }\n' +
+    '    s.milestones = {}; s.speed = 0; sim.markDirty(); sim.rebuild();\n' +
+    "    src.money(-of.price, 'capex', 'Acquisition: ' + name);\n" +
+    "    sim.money(WORKING_FLOAT, 'other', 'Opening working cash from ' + C.props[C.active].name);\n" +
+    '    C.props.push({ name, sim }); if (this.ui) this.ui.setMeta(this.metaName(), modeLabel(src.s));\n' +
+    '    this.note(C.active, `Acquired ${name} for $${of.price.toLocaleString()}`);\n' +
+    '    this.autosavePaused();\n' +
+    '    return { ok: true, msg: `Acquired ${name}. Open the Portfolio to switch to it and send it cash.` };\n' +
+    '  },\n' +
+    '  transfer(from, to, amt) {\n' +
+    "    const C = this.company; const A = C && C.props[from], B = C && C.props[to]; if (!A || !B || from === to || !Number.isFinite(amt) || amt <= 0) return { ok: false, msg: 'Invalid transfer' };\n" +
+    "    if (A.sim.s.cash < amt) return { ok: false, msg: 'Not enough cash' };\n" +
+    "    A.sim.money(-amt, 'other', 'Transfer to ' + B.name); B.sim.money(amt, 'other', 'Transfer from ' + A.name);\n" +
+    '    this.autosavePaused();\n' +
+    '    return { ok: true, msg: `Sent $${amt.toLocaleString()} to ${B.name}` };\n' +
+    '  },\n' +
+    '  note(k, msg) { const C = this.company; const p = C.props[k]; C.feed.unshift({ k, prop: p.name, msg, t: p.sim.s.t }); C.feed.length = Math.min(C.feed.length, 30); },\n' +
+    '  attach(sim, kind, opts = {}) {\n' +
+    "    this.ui?.reserveWait?.stop('Session changed.');\n" +
+    '    this.sim = sim; this.acc = 0; installTutorial(sim); // tutorial beats (Maple) + optional lessons (any non-scenario property)\n' +
+    '    if (this.rend) this.rend.setSim(sim);\n' +
+    '    if (this.ui) {\n' +
+    '      this.ui.tool = null; this.ui.sel = null; this.ui.plan = null; this.ui.setTab(null); this.ui.resetSession(opts.view); this.ui.renderActionBar();\n' +
+    "      const s = sim.s; this.ui.setMeta(this.metaName() || (s.mode === 'tutorial' ? 'Maple Street Storage' : s.creative ? 'Creative Lot' : 'Empty Lot'), modeLabel(s));\n" +
+    '      this.ui.hF2 = null; this.ui.renderTut(true); this.ui.renderFeed(true);\n' +
+    '    }\n' +
+    "    this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));\n" +
+    "    this.rend.zoom = (sim.s.mode === 'tutorial' ? 1.05 : 0.95) * (window.innerWidth < 600 ? 0.8 : 1); this.rend.updateCamera();\n" +
+    '    if (this.ui && this.ui.phone()) { this.rend.fitProperty(this.ui.safeRect()); setTimeout(() => this.rend.fitProperty(this.ui.safeRect()), 60); }\n' +
+    '    sim.events.length = 0; sim.poll(); this.drain();\n' +
+    '  },\n' +
+    '  drain() { const ev = this.sim.events; if (!ev.length) return; this.sim.events = []; if (this.sim === this.demo && this.ui && this.ui.title) return; /* the living title screen stays quiet */ for (const e of ev) this.ui.onEvent(e); },\n' +
+    '  saveJSON() {\n' +
+    '    const C = this.company, view = this.ui && this.rend ? this.rend.view : null;\n' +
+    '    // The selected floor/exterior view is the only save-owned UI state; it rides beside (not inside) the simulation state.\n' +
+    '    const own = (s) => view == null || s !== this.sim.s ? s : { ...s, uiView: view };\n' +
+    '    return C && C.props.length > 0 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));\n' +
+    '  },\n' +
+    "  rawSaveCode(json) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); },\n" +
+    '  async saveCode(json = this.saveJSON()) {\n' +
+    '    try {\n' +
+    "      const cs = new CompressionStream('gzip'); const buf = await new Response(new Blob([json]).stream().pipeThrough(cs)).arrayBuffer();\n" +
+    "      let bin = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x80"... 33485 more characters,
+  stderr: ''
+}
+
+Node.js v24.22.1
+✖ tests/headless/tpaused_autosave.mjs (308.628256ms)
+✔ tests/headless/tstartup_graphics.mjs (96.583119ms)
+✔ tests/headless/tvisual_lab.mjs (52.523072ms)
+✔ tests/headless/tworking_yard_save.mjs (184.34312ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1272.863867
+
+✖ failing tests:
+
+test at tests/headless/tpaused_autosave.mjs:1:1
+✖ tests/headless/tpaused_autosave.mjs (308.628256ms)
+  'test failed'

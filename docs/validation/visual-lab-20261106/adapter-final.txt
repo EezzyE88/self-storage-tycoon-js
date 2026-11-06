@@ -1,0 +1,10 @@
+✔ tests/headless/tvisual_lab.mjs (35.636609ms)
+✔ tests/headless/tvisual_lab_integration.mjs (726.692549ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 770.257597

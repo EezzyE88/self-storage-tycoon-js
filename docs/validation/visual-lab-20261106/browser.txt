@@ -1,0 +1,1 @@
+PASS browser A/B, Pause, rebuild, resume, restore, overlay, zoom, touch controls and close at both sizes

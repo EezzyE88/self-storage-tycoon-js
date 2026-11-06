@@ -1,0 +1,18 @@
+{
+  "baseline": "53fb2b38c4f15fd651d3cf478a815e1408b8e4d9",
+  "unchanged_sha256": {
+    "js/sim.js": "1a4630ea2d9c2a731adbbd770d5f9c709c9bbf3d75deb8b80a9255915b3e5974",
+    "js/data.js": "0cc0985de5ddacfc1a7d7fe462c1c4cdc89f07dbc26a1868020d742fd9477e66",
+    "js/finance.js": "fc53b3d54969aedc4d36ac3cb2e9e9640de5b235d89ad04defea49088af831e9",
+    "js/maple.js": "3e8cf5698b4f0d659c2dae49b9f99a8ec0b2a1cb04f9810cede9a2ec3ea66f82",
+    "js/tutorial.js": "c1218fd5bf73dbfbf49b7d16a11f88d9413312fb26af36e459269c67ec8b8f0c",
+    "js/audio.js": "140d39a8096f034044f50e6ace388e26b39494ce38704b0301ff13a92bb8ace0",
+    "js/fx.js": "5fc2f184b9137262be5b3e27c41bc17a6671f366dddeed4b8999b73094946476",
+    "js/localsave.js": "d22f865dcde082975544e467753333ffec07549f64a35df446eb7151503ceeba",
+    "js/durablesave.js": "721a2de2a039266f43e176188500449fdf37b8373e3533ad83acaafc14b71434",
+    "js/savearchive.js": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
+    "js/cloud.js": "cc784d86fb0d2a7165700f33a6cc2c309f5ae2bc9be079001707ca86b96676e7",
+    "js/ui.js": "ec37df113e958e65c01b1b3ad52e166865f239974d2ddd93d240ea9560ffe39e",
+    "js/render.js": "4c7d232706329a07d9d3c161dd0ec52bd65022f4a728919f769e9334091da565"
+  }
+}

@@ -1553,6 +1553,28 @@
         "timeout": 180,
         "evidence": "native read-only Investment Progress calculation and copy, tutorial card bodies, graduation Pause/transition timing and Business sheet HTML; no rendered or physical-device claim",
         "scope": "Financial Comprehension: player-built operating units (construction, opening, demolition, split, save/reload), Act II/III breaks, graduation Option A, Business block conditions and career rent roll"
+      },
+      {
+        "id": "tvisual_lab",
+        "command": [
+          "@node",
+          "tests/headless/tvisual_lab.mjs"
+        ],
+        "completion": "PASS 12 focused checks",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "scope": "optional visual lab adapter exact restore and read-only customer metadata"
+      },
+      {
+        "id": "tvisual_lab_integration",
+        "command": [
+          "@node",
+          "tests/headless/tvisual_lab_integration.mjs"
+        ],
+        "completion": "PASS real Three.js",
+        "minimum_pass_lines": 1,
+        "timeout": 180,
+        "scope": "real shared material lifecycle and deterministic simulation/event parity"
       }
     ],
     "historical": [
