@@ -1577,6 +1577,18 @@
         "timeout": 120,
         "evidence": "native tutorial beat labels and Business sheet HTML; no rendered or physical-device claim",
         "scope": "Between-beat banner numbering matches the card header; rent-roll card names tenants-behind rent per month"
+      },
+      {
+        "id": "tscenario_rules_save",
+        "command": [
+          "@node",
+          "tests/headless/tscenario_rules_save.mjs"
+        ],
+        "completion": "3\\ scenario\\ rule\\ save\\ checks\\ passed",
+        "minimum_pass_lines": 3,
+        "timeout": 180,
+        "evidence": "native production saveCode/prepareLoad in a vm with real scenarios and goalMet; no rendered or physical-device claim",
+        "scope": "Scenario goal comparison rules survive save/reload; damaged saves repaired; non-scenario saves untouched"
       }
     ],
     "historical": [

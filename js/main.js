@@ -319,12 +319,15 @@ function validCam(s) {
   if (!Number.isInteger(c.rot) || c.rot < 0 || c.rot > 3 || c.zoom < 0.25 || c.zoom > 4.2 || c.x < -4 || c.x > s.W + 4 || c.z < -4 || c.z > s.H + 4) return null;
   return { v: 1, x: c.x, z: c.z, zoom: c.zoom, rot: c.rot };
 }
+// Scenario goal comparison ('<' = "under"). Text sanitizing used to strip it to '', which turned Go Vertical's
+// "elevator wait under 10 min" into "at least 10 min" after a reload; '' only ever comes from that damage.
+function goalCmp(v) { return v === '<' || v === '' ? '<' : undefined; }
 function sanitizeSave(v, depth = 0) {
   if (depth > 40) return null;
   if (typeof v === 'string') return v.replace(/[<>"`]/g, '').replace(/'/g, '\u2019').slice(0, 2000);
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
   if (Array.isArray(v)) return v.map((x) => sanitizeSave(x, depth + 1));
-  if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue; o[k.replace(/[<>"'`]/g, '')] = sanitizeSave(v[k], depth + 1); } return o; }
+  if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue; o[k.replace(/[<>"'`]/g, '')] = k === 'cmp' ? goalCmp(v[k]) : sanitizeSave(v[k], depth + 1); } return o; }
   return v;
 }
 function makeMapleSeedPrice(day) { return 95000 + (day % 7) * 1500; }
