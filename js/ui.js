@@ -1794,7 +1794,7 @@ export class UI {
     h += `<div class="stats">
       <div class="stat"><small>Cash</small><b class="${s.cash < 0 ? 'neg' : ''}">${money(s.cash)}</b><div class="n">Money you have now. Unpaid rent is not included.</div></div>
       <div class="stat"><small>Owed to you</small><b>${money(rcv.amt)}</b><div class="n">${rcv.n ? `${rcv.n} account${rcv.n > 1 ? 's' : ''} behind · not cash until paid` : 'Every tenant is paid up'}</div></div>
-      <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${money(paying)} from paying tenants${roll - paying > 0 ? ` · ${money(roll - paying)} past due` : ''} · ${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
+      <div class="stat"><small>Monthly rent roll</small><b>${money(roll)}</b><div class="n">${money(paying)} from paying tenants${roll - paying > 0 ? ` · ${money(roll - paying)}/mo from tenants behind` : ''} · ${occ.occ} of ${occ.n} units leased (${pct(occ.pct)})</div></div>
       <div class="stat"><small>Rent collected, last 30 days</small><b>${money(collected)}</b><div class="n">Received, already in cash</div></div>
       <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops${ox.tax ? ` (incl. ${money(ox.tax, true)} tax & insurance)` : ''} + ${money(pay)} payroll</div></div>
       </div>`;

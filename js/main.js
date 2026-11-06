@@ -121,16 +121,24 @@ const game = {
       const s = sim.s; this.ui.setMeta(this.metaName() || (s.mode === 'tutorial' ? 'Maple Street Storage' : s.creative ? 'Creative Lot' : 'Empty Lot'), modeLabel(s));
       this.ui.hF2 = null; this.ui.renderTut(true); this.ui.renderFeed(true);
     }
+    this.lastCam = opts.cam || null;
+    if (opts.cam) this.rend.applyCamState(opts.cam); // a restored player camera replaces the default framing and the phone re-fit
+    else {
     this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));
     this.rend.zoom = (sim.s.mode === 'tutorial' ? 1.05 : 0.95) * (window.innerWidth < 600 ? 0.8 : 1); this.rend.updateCamera();
     if (this.ui && this.ui.phone()) { this.rend.fitProperty(this.ui.safeRect()); setTimeout(() => this.rend.fitProperty(this.ui.safeRect()), 60); }
+    }
     sim.events.length = 0; sim.poll(); this.drain();
   },
   drain() { const ev = this.sim.events; if (!ev.length) return; this.sim.events = []; if (this.sim === this.demo && this.ui && this.ui.title) return; /* the living title screen stays quiet */ for (const e of ev) this.ui.onEvent(e); },
   saveJSON() {
     const C = this.company, view = this.ui && this.rend ? this.rend.view : null;
-    // The selected floor/exterior view is the only save-owned UI state; it rides beside (not inside) the simulation state.
-    const own = (s) => view == null || s !== this.sim.s ? s : { ...s, uiView: view };
+    // The selected floor/exterior view and the player camera ride beside (not inside) the simulation state.
+    // Tour, follow, attract and photo cameras are not the player's: keep the last player-owned camera instead.
+    const sc = this.showcase, transient = !!(sc && (sc.photo || sc.mode));
+    if (view != null && this.rend.camState && !transient) this.lastCam = this.rend.camState();
+    const cam = view != null ? this.lastCam || null : null;
+    const own = (s) => view == null || s !== this.sim.s ? s : cam ? { ...s, uiView: view, uiCam: cam } : { ...s, uiView: view };
     return C && C.props.length > 0 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));
   },
   rawSaveCode(json) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); },
@@ -152,28 +160,28 @@ const game = {
     try {
       const st = sanitizeSave(JSON.parse(await this.decodeSave(code)));
       if (!st || typeof st !== 'object') return { ok: false, msg: 'Not a save' };
-      let company, view;
+      let company, view, cam;
       if (st.company && Array.isArray(st.props) && st.props.length) {
         if (st.props.length > 12 || !st.props.every((p) => p && typeof p.name === 'string' && validState(p.s)) || !Number.isInteger(st.active ?? 0) || (st.active ?? 0) < 0 || (st.active ?? 0) >= st.props.length || (st.feed != null && !Array.isArray(st.feed))) return { ok: false, msg: 'Invalid portfolio save' };
-        view = st.props[st.active ?? 0].s.uiView; for (const p of st.props) delete p.s.uiView;
+        view = st.props[st.active ?? 0].s.uiView; cam = validCam(st.props[st.active ?? 0].s); for (const p of st.props) { delete p.s.uiView; delete p.s.uiCam; }
         const props = st.props.map((p) => ({ name: p.name, sim: new Sim(p.s) })); for (const p of props) p.sim.s.speed = 0;
         company = { props, active: st.active ?? 0, feed: st.feed || [] };
       } else {
         if (!validState(st)) return { ok: false, msg: 'Invalid save' };
-        view = st.uiView; delete st.uiView;
+        view = st.uiView; cam = validCam(st); delete st.uiView; delete st.uiCam;
         st.speed = 0; const sim = new Sim(st);
         company = { props: [{ name: st.scenario ? st.scenario.name : st.mode === 'tutorial' ? 'Maple Street Storage' : st.creative ? 'Creative Lot' : sandboxName(st) || 'My Property', sim }], active: 0, feed: [] };
       }
       for (const p of company.props) { p.sim.ensure(); p.sim.events.length = 0; } // migration/rebuild must succeed before anything is replaced
       const sim = company.props[company.active].sim, s = sim.s;
       const meta = { name: company.props[company.active].name, mode: modeLabel(s), day: sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: company.props.length };
-      return { ok: true, company, view, meta };
+      return { ok: true, company, view, cam, meta };
     } catch (e) { console.warn(e); return { ok: false, msg: 'Unreadable save' }; }
   },
   applyLoad(prep, resume = false) {
     this.beginSaveSession(!resume);
     this.company = prep.company;
-    this.attach(prep.company.props[prep.company.active].sim, 'load', { view: prep.view }); this.ui.title = false; return true;
+    this.attach(prep.company.props[prep.company.active].sim, 'load', { view: prep.view, cam: prep.cam }); this.ui.title = false; return true;
   },
   async loadCode(code, resume = false) { const prep = await this.prepareLoad(code); return prep.ok ? this.applyLoad(prep, resume) : false; },
   saveMeta() {
@@ -304,12 +312,22 @@ function validState(st) {
   }
   return true;
 }
+// A saved camera is accepted only whole and in range; anything else falls back to the default framing.
+function validCam(s) {
+  const c = s && s.uiCam, num = (v) => typeof v === 'number' && Number.isFinite(v);
+  if (!c || typeof c !== 'object' || Array.isArray(c) || c.v !== 1 || ![c.x, c.z, c.zoom, c.rot].every(num) || !num(s.W) || !num(s.H)) return null;
+  if (!Number.isInteger(c.rot) || c.rot < 0 || c.rot > 3 || c.zoom < 0.25 || c.zoom > 4.2 || c.x < -4 || c.x > s.W + 4 || c.z < -4 || c.z > s.H + 4) return null;
+  return { v: 1, x: c.x, z: c.z, zoom: c.zoom, rot: c.rot };
+}
+// Scenario goal comparison ('<' = "under"). Text sanitizing used to strip it to '', which turned Go Vertical's
+// "elevator wait under 10 min" into "at least 10 min" after a reload; '' only ever comes from that damage.
+function goalCmp(v) { return v === '<' || v === '' ? '<' : undefined; }
 function sanitizeSave(v, depth = 0) {
   if (depth > 40) return null;
   if (typeof v === 'string') return v.replace(/[<>"`]/g, '').replace(/'/g, '\u2019').slice(0, 2000);
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
   if (Array.isArray(v)) return v.map((x) => sanitizeSave(x, depth + 1));
-  if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue; o[k.replace(/[<>"'`]/g, '')] = sanitizeSave(v[k], depth + 1); } return o; }
+  if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue; o[k.replace(/[<>"'`]/g, '')] = k === 'cmp' ? goalCmp(v[k]) : sanitizeSave(v[k], depth + 1); } return o; }
   return v;
 }
 function makeMapleSeedPrice(day) { return 95000 + (day % 7) * 1500; }

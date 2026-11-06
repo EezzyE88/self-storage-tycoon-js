@@ -467,6 +467,12 @@ export const offerStands = (sim, id) => { const L = lessonById(id); return !!L &
 // Card header and Tutorial-list group. Act beats read "Act I · Take Over · Beat 3" (beats numbered across the campaign,
 // chapter breaks not counted); the not-yet-migrated remainder keeps its chapter with "Part n of N".
 export const beatGroup = (b) => b.act ? `Act ${b.act} · ${b.chapter}` : b.chapter;
+// Between-beat banner, numbered like the card header: chapter breaks are not counted as beats.
+export function beatDoneLabel(i) {
+  const b = BEATS[i]; if (!b) return '';
+  const n = BEATS.slice(0, i + 1).filter((x) => !x.brk).length, total = BEATS.filter((x) => !x.brk).length;
+  return b.brk && b.act ? `Act ${b.act} complete` : `Beat ${n} of ${total} complete`;
+}
 export function beatHeader(i) {
   const b = BEATS[i]; if (!b) return '';
   const n = BEATS.slice(0, i + 1).filter((x) => !x.brk).length, total = BEATS.filter((x) => !x.brk).length;
