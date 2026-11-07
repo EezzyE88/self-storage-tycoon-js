@@ -29,28 +29,45 @@ const bar=ui=>{ui.renderActionBar();return ui.$('abar').innerHTML;};
 const mainSrc=readFileSync('js/main.js','utf8'),kStart=mainSrc.indexOf("window.addEventListener('keydown'"),kEnd=mainSrc.indexOf('\n});',kStart)+4;
 function keyboard(ui){const h={},game={ui,sim:ui.g.sim,rend:ui.g.rend,showcase:{photo:false,mode:null}};vm.runInNewContext(mainSrc.slice(kStart,kEnd),{window:{addEventListener:(t,f)=>h[t]=f},game});return key=>h.keydown({key,target:{tagName:'CANVAS'},preventDefault(){}});}
 
-await test('Elevator Confirm -> "Light both hallways" with Elevator still armed: guided to switch, no actionable map cue (reproduced first)',()=>{
+await test('Elevator Confirm arms Light immediately; an explicit tool override still shows safe mismatch guidance',()=>{
   const {s,ui}=atElevatorStep();ui.suggestPlacement();assert.equal(ui.plan.args.tool,'elevator');assert.equal(ui.plan.cost,9500);const cash=s.s.cash;ui.confirmPlan();assert.equal(cash-s.s.cash,9500,'charged once');
-  assert.equal(step(s,ui).t,'Light both hallways');assert.equal(ui.tool,'elevator','tool stays armed after Confirm (repeat placement is kept)');
+  assert.equal(step(s,ui).t,'Light both hallways');assert.equal(ui.tool,'light','the next lesson tool is armed');assert.equal(ui.plan,null,'no placement is pre-confirmed');ui.pickTool('elevator');
   // The reproduced failure path: a hold at the Light target with Elevator armed quotes a $9,500 Elevator.
   const q=holdAtTarget(s,ui);assert.deepEqual([q.tool,q.cost],['elevator',9500],'what following the old "Tap here" did');
   const r=resolved(s,ui);assert.equal(r.redirect,'switch');assert.equal(r.t,'Switch to Light');assert.equal(r.sel,'#tut [data-a="suggestPlacement"]');assert.match(r.d,/<b>Elevator<\/b> is still armed, so a hold would place another Elevator/);
   ui.guideStep=r;assert.equal(ui.guideTarget(),null,'no map ring when the control is not on screen (never a map "Tap here")');
   const t=captions(ui);assert.ok(!t.some(x=>/Place here|Start here|End here/.test(x)),'no imperative placement cue');assert.ok(t.includes('Light goes here · F1'),'target outline kept, described');
   assert.doesNotMatch(ui.$('blueprint').innerHTML,/<circle[^>]*fill="#ffd23a"/,'no placement marker');
-  assert.match(bar(ui),/Hold places another Elevator on F1 · lesson needs Light on F1/,'build bar says what a hold would do');});
+  assert.match(bar(ui),/Hold places another Elevator on F1 · lesson needs Light on F1/,'build bar says what a hold would do');
+  const doorSim=makeMaple(20260929);doorSim.s.tut={on:false,done:true,flags:{}};
+  doorSim.s.lesson={id:'up',idMark:doorSim.s.nextId,built:[],flags:{},entered:true};
+  doorSim.s.cash=1e6;doorSim.s.open=false;
+  for(const k of ['aisle','shell2'])assert.ok(doorSim.dispatch({type:'build',...verticalLayout(doorSim).plans[k]}).ok,k);
+  for(let i=0;i<4000;i++){doorSim.s.t++;doorSim.step();doorSim.events.length=0;}
+  assert.ok(doorSim.dispatch({type:'build',...verticalLayout(doorSim).plans.hall}).ok);
+  ui.g.sim=doorSim;ui.pickTool('doorWide');
+  const door=verticalLayout(doorSim).plans.doorWide,near={x:door.a.x+1,y:door.a.y};
+  assert.match(doorSim.plan({...door,a:near,b:near}).reasons.join(' '),/inside of this door needs a hallway/);
+  const before=doorSim.s.cash;
+  ui.placeStart(near);ui.placeMove(near);ui.finishPlacement();
+  assert.deepEqual(ui.plan.args.a,door.a);assert.deepEqual(ui.plan.args.dir,door.dir);
+  assert.notEqual(ui.plan.status,'invalid');assert.equal(doorSim.s.cash,before);
+  const cost=ui.plan.cost;ui.confirmPlan();assert.equal(doorSim.s.cash,before-cost);
+  assert.equal(ui.tool,'loading');assert.equal(ui.plan,null);
+});
 
 await test('Light F1 -> Light F2: the floor mismatch is guided too; tool+floor match gives the normal cue; then F2 units',()=>{
   const {s,ui}=atElevatorStep();ui.suggestPlacement();ui.confirmPlan();
   ui.suggestPlacement();assert.deepEqual([ui.tool,ui.rend.view,ui.plan.args.f,ui.plan.status],['light',0,0,'valid'],'one tap arms Light on F1');assert.equal(resolved(s,ui).redirect,undefined,'tool and floor match: no redirect');
   ui.confirmPlan();assert.equal(s.objs('light').filter(o=>o.f===0).length>0,true);
   assert.equal(step(s,ui).t,'Light both hallways');const want=ui.stepPlacement(step(s,ui));assert.equal(want.f,1,'second light goes on F2');
-  const q=holdAtTarget(s,ui);assert.equal(q.f,0,'a hold now would quote on F1 (reproduced)');
+  assert.equal(ui.rend.view,1,'Confirm follows the lesson to F2');ui.setView(0);
+  const q=holdAtTarget(s,ui);assert.equal(q.f,0,'a deliberate floor override still gets the mismatch guard');
   const r=resolved(s,ui);assert.equal(r.redirect,'switch');assert.equal(r.t,'Switch to F2 for this Light');ui.guideStep=r;assert.equal(ui.guideTarget(),null);
   assert.ok(captions(ui).includes('Light goes here · F2'));assert.ok(!captions(ui).includes('Place here'));assert.match(bar(ui),/Hold places another Light on F1 · lesson needs Light on F2/);
   ui.suggestPlacement();assert.deepEqual([ui.tool,ui.rend.view,ui.plan.args.f,ui.plan.status],['light',1,1,'valid'],'one tap moves to F2');assert.equal(resolved(s,ui).redirect,undefined);
   ui.plan=null;ui.planArgs=null;assert.ok(captions(ui).includes('Place here'),'matching tool and floor: the actionable cue returns');
-  ui.suggestPlacement();ui.confirmPlan();assert.equal(step(s,ui).t,'F2 units');assert.equal(resolved(s,ui).redirect,'switch','next tool differs again');
+  ui.suggestPlacement();ui.confirmPlan();assert.equal(step(s,ui).t,'F2 units');assert.equal(ui.tool,'iu5x5','F2 unit tool is armed');ui.pickTool('light');assert.equal(resolved(s,ui).redirect,'switch','explicit override keeps mismatch guidance');
   const u=captions(ui);assert.ok(u.some(t=>/goes here · F2/.test(t))&&!u.includes('Start here')&&!u.includes('Place here'));assert.doesNotMatch(ui.$('blueprint').innerHTML,/#ffd23a/,'no yellow placement outline, unit footprint or door marker while the wrong tool is armed');});
 
 await test('repeated placement with the same tool and floor is unchanged; ordinary building outside lessons is unchanged',()=>{
