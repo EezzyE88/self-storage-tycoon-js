@@ -1254,3 +1254,26 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui.tut-review-compact .unit-review .nm > small,
 #ui.tut-review-compact .unit-review .spend-more,
 #ui.tut-review-compact .unit-review .build-authorization { display:none; }
+
+/* Both ends of an automatic decision pause inherit the same pulse phase. */
+@property --decision-ring {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 4px;
+}
+#ui:has(#modal .request-decision-head),
+#ui:not(:has(.modal-bg)):has(.decision-prompt) {
+  animation: decision-pulse 1.6s ease-in-out infinite;
+}
+#ui:has(#modal .request-decision-head) :is(#modal .request-decision-head, #speed [data-v="0"].on),
+#ui:not(:has(.modal-bg)):has(.decision-prompt) :is(.decision-prompt, #speed [data-v="0"].on) {
+  outline: var(--decision-ring) solid #f3c66b;
+  outline-offset: 2px;
+}
+@keyframes decision-pulse {
+  50% { --decision-ring: 0px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ui:has(#modal .request-decision-head),
+  #ui:not(:has(.modal-bg)):has(.decision-prompt) { animation: none; }
+}

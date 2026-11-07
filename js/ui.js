@@ -990,6 +990,7 @@ export class UI {
     return true;
   }
   pickTool(k) {
+    this.lessonBuild = null;
     if(this.retrofitReview)this.endRetrofit();
     this.fundingContext = null;
     this.projectProposal = null;
@@ -1063,11 +1064,28 @@ export class UI {
     return `<button class="btn sm build-rotate" data-a="rotateBuild" aria-label="Rotate placement clockwise">↻ Rotate${side?' · '+side:''}</button>`;
   }
   toolFloor() { const v = this.rend.view; return Number.isInteger(v)?v:0; }
-  placeStart(cell) { if (!this.tool || !cell) return; this.placementPeek = false; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.buildPlacing = true; this.root?.classList.add('is-placing'); this.planArgs = { a: { x: cell.x, y: cell.y }, b: { x: cell.x, y: cell.y } }; this.replan(); this.sfx('place'); }
+  lessonDoorTarget(cell) {
+    const door = this.tool === 'doorWide' && this.sim.s.lesson?.id === 'up' ? this.currentBlueprintPlan() : null;
+    if (door?.tool !== 'doorWide') return null;
+    const distance = Math.abs(cell.x - door.a.x) + Math.abs(cell.y - door.a.y);
+    if (distance === 0) return door;
+    if (distance !== 1) return null;
+    // Keep valid manual wall placements. If the hold just missed the taught cell, review its entrance instead.
+    const manual = this.sim.plan({ tool: this.tool, a: cell, b: cell, f: 0 });
+    return manual.status === 'invalid' && this.sim.plan(door).status !== 'invalid' ? door : null;
+  }
+  placeStart(cell) {
+    if (!this.tool || !cell) return;
+    const door = this.lessonDoorTarget(cell), target = door?.a || cell;
+    this.placementPeek = false; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]};
+    this.buildPlacing = true; this.root?.classList.add('is-placing');
+    this.planArgs = { a: { ...target }, b: { ...target }, dir: door?.dir };
+    this.replan(); this.sfx('place');
+  }
   finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.renderActionBar(); }
   cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.rend.setPreview(null); this.renderActionBar(); }
   placeMove(cell) {
-    if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { this.planArgs.a = this.planArgs.b = { x: cell.x, y: cell.y }; this.replan(); return; }
+    if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { const door = this.lessonDoorTarget(cell); this.planArgs.a = this.planArgs.b = { ...(door?.a || cell) }; this.planArgs.dir = door?.dir; this.replan(); return; }
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
     const hint=this.currentBlueprintPlan();
     if(hint?.tool===this.tool && Math.abs(cell.x-hint.b.x)<=1 && Math.abs(cell.y-hint.b.y)<=1 && Math.abs(this.planArgs.a.x-hint.a.x)<=1 && Math.abs(this.planArgs.a.y-hint.a.y)<=1) { this.planArgs.a={...hint.a}; this.planArgs.axis=hint.axis; this.planArgs.dir=hint.dir; cell=hint.b; }
@@ -1094,6 +1112,24 @@ export class UI {
     if (/^\.cats \[data-v="\w+"\]$/.test(sel)) return true;
     const t = /^\[data-a="tool"\]\[data-v="(\w+)"\]$/.exec(sel); return !!t && t[1] !== this.tool;
   }
+  advanceLessonTool() {
+    const from = this.lessonBuild;
+    if (!from || this.plan || this.pointerBusy || this.buildPlacing) return;
+    if (this.sim !== from.sim || this.sim.s.lesson !== from.lesson) { this.lessonBuild = null; return; }
+    const { b, cur } = stepState(this.sim, this);
+    const next = b?.steps[cur];
+    const to = this.currentBlueprintPlan();
+    if (cur === from.step && (!to || (to.f || 0) === from.floor)) return;
+    if (!to && next?.prereq?.(this.sim)) {
+      if (this.tool) { this.pickTool(null); this.lessonBuild = from; }
+      return;
+    }
+    this.pickTool(to?.tool || null);
+    if (to && this.toolFloor() !== (to.f || 0)) {
+      this.setView(to.f || 0);
+      this.renderActionBar();
+    }
+  }
   canRush() { const s = this.sim.s; return !s.creative && (s.coTier || 1) >= 2; }
   confirmPlan() {
     if (!this.plan) return;
@@ -1106,12 +1142,19 @@ export class UI {
     const projectKey = this.projectProposal?.sim === this.sim && matchesProject(this.plan.args, this.projectProposal.key) ? this.projectProposal.key : null;
     const finishesWait=this.reserveWait?.pending&&this.reserveWait.matches(this.plan.args);
     const finishesResult=this.reserveResult&&this.reserveWait?.matches(this.plan.args,this.reserveResult);
+    const guided = this.sim.s.lesson?.id === 'up' ? this.currentBlueprintPlan() : null;
+    const lessonBuild = guided && guided.tool === this.tool && (guided.f || 0) === this.toolFloor()
+      ? { sim: this.sim, lesson: this.sim.s.lesson, step: stepState(this.sim, this).cur, floor: this.toolFloor() } : null;
     const r = this.sim.dispatch({ type: 'build', ...this.plan.args, ...(projectKey ? { projectKey } : {}) });
     if (r.ok) this.g.autosavePaused?.();
     if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
     if(r.ok&&(finishesWait||finishesResult)){this.reserveResult=null;this.reserveNotice=null;this.renderTut(true);}
     if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); this.replan(); }
+    if (r.ok && lessonBuild) {
+      this.lessonBuild = lessonBuild;
+      this.advanceLessonTool();
+    }
     if (r.ok && this.tutorialWantsOtherTool()) this.pickTool(null); // D5: put the finished tool away so the coached category row shows
     this.renderActionBar();
   }
@@ -1946,7 +1989,7 @@ export class UI {
       this.requestCards.push(el.outerHTML);
       if (!c.staffHandling) this.ownerRequestCards.push(el.outerHTML);
     }
-    if(ownerCount) { const b=document.createElement('button'); b.className='convo inbox-chip';b.dataset.a='requests';b.textContent=`${ownerCount} owner request${ownerCount===1?'':'s'} · paused · Review`;frag.appendChild(b); }
+    if(ownerCount) { const b=document.createElement('button'); b.className='convo inbox-chip decision-prompt';b.dataset.a='requests';b.textContent=`${ownerCount} owner request${ownerCount===1?'':'s'} · paused · Review`;frag.appendChild(b); }
     else if(staffCount) { const b=document.createElement('div'); b.className='request-handling inbox-chip';const handlers=[...new Set(order.map(c=>c.staffHandling))].join(' / ');b.textContent=`${handlers} ${order.every(c=>c.staffWaiting) ? (!officeOpen ? 'awaiting office hours for' : 'awaiting staff availability for') : 'handling'} ${staffCount} request${staffCount===1?'':'s'}`;frag.appendChild(b); }
     feed.prepend(frag);
     if(this.requestPanel && this.modalOpen()) this.renderRequestPanel();
@@ -2187,10 +2230,11 @@ export class UI {
       if (off) this.pauseForPopup('lessonOffer'); else this.resumePopup('lessonOffer');
       const key = 'offer:' + (off ? off.id : '');
       if (!force && key === this.tutKey) return; this.tutKey = key; this.rend.setFocus(null);
-      box.innerHTML = off ? `<div class="tut offer"><button class="lesson-chip" data-a="lessonStart" data-v="${off.id}"><small>Optional lesson · paused</small><b>${off.title}</b></button><button class="x" data-a="lessonLater" data-v="${off.id}" aria-label="Dismiss optional lesson">${I.x}</button></div>` : '';
+      box.innerHTML = off ? `<div class="tut offer"><button class="lesson-chip decision-prompt" data-a="lessonStart" data-v="${off.id}"><small>Optional lesson · paused</small><b>${off.title}</b></button><button class="x" data-a="lessonLater" data-v="${off.id}" aria-label="Dismiss optional lesson">${I.x}</button></div>` : '';
       return;
     }
     const isLesson = !!s.lesson;
+    this.advanceLessonTool();
     const st = stepState(this.sim, this); const cur = st.cur, step = this.resolveStep(b.steps[cur]);
     const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim, this));
     const bk = isLesson ? 'L' + s.lesson.id : tutBeatIndex(s);
@@ -2216,7 +2260,7 @@ export class UI {
       <ol class="steps">${items}</ol>
       ${heldN ? `<p class="note held-note">${heldN} owner request${heldN === 1 ? ' is' : 's are'} waiting. ${heldN === 1 ? 'It' : 'They'} will appear ${isLesson ? 'when this lesson ends' : b.brk ? 'after you tap Continue' : b.pause ? 'after you finish the tutorial' : 'at the next stopping point'}.</p>` : ''}
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
-      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : b.pause ? '' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
+      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri${hold ? ' decision-prompt' : ''}" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : b.pause ? '' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
   // The placement the current RESOLVED step asks for. A step that is waiting on, or missing, a prerequisite (e.g. an
   // elevator committed before its hallways finished) asks for no placement, so nothing invites placing again.
@@ -2502,7 +2546,7 @@ export class UI {
       <h4>${won ? 'You brought the yard back.' : esc(next?.label || 'Keep improving the yard')}</h4>
       <p>${won ? 'Yard rescued. Keep it working and lease ready vacancies. Review demand and cash before investing.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>
       <div class="comeback-current">${p.restored}/6 spaces usable now · ${p.ready} vacant ready · ${p.occupied} occupied${p.reserved ? ` · ${p.reserved} reserved` : ''}</div>
-      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won?'<button class="btn pri" data-a="rescueLeasing">Review leasing</button>':''}${won && c.acknowledged ? '<button class="btn" data-a="yardExplore">Explore a row extension</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : won?'':'<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
+      <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won?`<button class="btn pri${!c.acknowledged ? ' decision-prompt' : ''}" data-a="rescueLeasing">Review leasing</button>`:''}${won && c.acknowledged ? '<button class="btn" data-a="yardExplore">Explore a row extension</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : won?'':'<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
       <details class="comeback-details" ${detailOpen?'open':''}><summary>${won && c.acknowledged ? 'Rescue history' : 'Goals and recovery choices'}</summary>
         <ul class="goals">${p.goals.map(g => `<li class="${g.met?'met':''}"><span class="ck">${g.met?'&#10003;':''}</span><span>${esc(g.label)}</span><b>${g.k==='comebackWing'?`${p.restored}/6`:g.met?'Done':'Pending'}</b></li>`).join('')}</ul>
         <p>Plan goal: complete two distinct restoration spaces through Owner work, or one target make-ready job through employed staff. Hiring alone does not complete it.</p>
