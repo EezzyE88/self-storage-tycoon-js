@@ -47,7 +47,15 @@ export function diagnostics(sim) {
   for (const x of s.mkt.lostLog) if (x.d >= period.start && x.d <= period.end && ['noSize', 'noReady', 'noClimate'].includes(x.r)) {
     const k = x.sz + (x.climate || x.r === 'noClimate' ? ' climate' : ''); bySize[k] = (bySize[k] || 0) + 1;
   }
-  for (const [size, n] of Object.entries(bySize).sort((a, b) => b[1] - a[1]).slice(0, 2)) add(`${n} shoppers wanted ${size} and found none`, 'Suitable rentable inventory missing', 'Observed demand opportunity; shoppers are not promised leases', 'Turn over suitable units first, then assess an expansion', 'growth');
+  for (const [size, n] of Object.entries(bySize).sort((a, b) => b[1] - a[1]).slice(0, 2)) {
+    add(
+      `${n} shopper${n === 1 ? '' : 's'} found no suitable ${size} when they visited`,
+      'Past missed demand',
+      'Future leases are not guaranteed',
+      'Check current availability before scheduling turnover or expansion',
+      'growth',
+    );
+  }
   if (o.exhausted >= 3) add(`Owner capacity exhausted on ${o.exhausted} of ${o.workDays.length} measured days`, 'Office service and property work compete for time', 'Backlogs can keep inventory unavailable', 'Hire for the measured workload or schedule work before expanding');
   if (o.officeQueue || o.lost.service) {
     const waiting = o.officeWaiting;

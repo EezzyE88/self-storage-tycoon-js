@@ -36,11 +36,11 @@ test('current rolling period includes today but excludes expired and future loss
 test('saved monthly 14 and rolling 20 stay independent and display their dates',()=>{
  const sim=setup(361,331);sim.s.mkt.lostLog=Array.from({length:14},()=>loss(340));sim.monthReport(361);const R=sim.s.mkt.reports.at(-1),stored=JSON.stringify(R);
  sim.s.t=380*1440+825;sim.s.mkt.lostLog.push(...Array.from({length:20},()=>loss(380)));const ui=uiFor(sim);
- assert.match(ui.reportHtml(),/completed Days 331–360/);assert.match(ui.reportHtml(),/generated Day 361/);assert.match(ui.diagnosticHtml(),/Days 352–381, today so far/);assert.match(ui.diagnosticHtml(),/20 shoppers wanted 10x10/);assert.equal(JSON.stringify(R),stored);
+ assert.match(ui.reportHtml(),/completed Days 331–360/);assert.match(ui.reportHtml(),/generated Day 361/);assert.match(ui.diagnosticHtml(),/Days 352–381, today so far/);assert.match(ui.diagnosticHtml(),/20 shoppers found no suitable 10x10 when they visited/);assert.equal(JSON.stringify(R),stored);
 });
 test('standard and climate availability counts are labeled separately',()=>{
  const sim=setup();sim.s.mkt.lostLog=[loss(30),loss(30,'noSize',true),loss(30,'noClimate',true)];const ui=uiFor(sim),html=ui.diagnosticHtml();
- assert.match(html,/1 shoppers wanted 10x10 and/);assert.match(html,/2 shoppers wanted 10x10 climate/);assert.match(html,/separate standard and climate/);
+ assert.match(html,/1 shopper found no suitable 10x10 when they visited/);assert.match(html,/2 shoppers found no suitable 10x10 climate when they visited/);assert.match(html,/separate standard and climate/);
 });
 test('historical service losses with empty queue do not diagnose current shortage or advise hiring',()=>{
  const sim=setup();sim.s.officeQ=[];sim.s.mkt.lostLog=Array.from({length:7},()=>loss(30,'service'));sim.operations();const before=JSON.stringify(sim.s);const d=sim.diagnostics().find(d=>d.cause.includes('service-related'));
