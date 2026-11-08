@@ -1762,8 +1762,8 @@ export class Sim {
   findAd(id) { const m = this.s.mkt; const a = m && m.ad; if (a && a.id === id) return a; return (m && m.adHistory || []).find((x) => x.id === id) || null; }
   adFactor(size) {
     const a = this.activeAd(); if (!a) return 1;
-    if (a.kind === 'local') return 1.15;
-    if (a.kind === 'size' && a.target === size) return 1.5;
+    if (a.kind === 'local') return 1.45;
+    if (a.kind === 'size' && a.target === size) return 2.5;
     return 1;
   }
   act_ad(a) {

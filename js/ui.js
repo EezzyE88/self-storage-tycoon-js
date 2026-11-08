@@ -89,6 +89,16 @@ const money = (v, dec = false) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocal
 const ACQUISITION_OPENING_CASH = 5000;
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const pct = (v) => Math.round(v * 100) + '%';
+export const AD_RESULT_SCOPE = 'These figures count only campaign-attributed shoppers and leases, and compare their first-month rent with the campaign cost. They are not total profit: attributed tenants keep paying after month one, and leases from other shoppers are not counted here.';
+// Targeted-ad break-even: campaign cost ÷ the asking rent of the ready units of that size, split by standard/climate when both are ready.
+export function adBreakEvenText(s, size, units, cost) {
+  const ask = (env) => s.market.ask[productKey(size, env)] || MARKETS[s.market.id].rent[size];
+  const line = (env, label) => { const a = ask(env), n = Math.max(1, Math.ceil(cost / Math.max(1, a))); return n + ' ' + label + ' lease' + (n === 1 ? '' : 's') + ' at ' + money(a) + '/mo'; };
+  const std = units.some((u) => u.env !== 'climate'), clim = units.some((u) => u.env === 'climate');
+  if (std && clim) return 'roughly ' + line('std', 'standard') + ' or ' + line('climate', 'climate') + ' to cover the spend.';
+  if (clim) return 'roughly ' + line('climate', 'new climate') + ' to cover the spend.';
+  return 'roughly ' + line('std', 'new standard') + ' to cover the spend' + (std ? '.' : ', once units are ready.');
+}
 // Floor identity shown to the player: numeric level 0 is Floor 1. Non-integers fall back to Floor 1, never a guess.
 export const floorName = (f) => `Floor ${(Number.isInteger(f) && f > 0 ? f : 0) + 1}`;
 // Construction completion: order-owned counts are always integers; property-wide extras are labelled separately.
@@ -1716,22 +1726,22 @@ export class UI {
     let h = '<h3>Advertising</h3>';
     if (active) {
       const net = roi(active), days = Math.max(0, active.until - sim.day + 1);
-      h += '<div class="item"><div class="grow"><b>' + esc(active.label) + '</b><small>' + days + ' day' + (days === 1 ? '' : 's') + ' left · ' + (active.inquiries || 0) + ' extra shopper' + ((active.inquiries || 0) === 1 ? '' : 's') + ' attributed · ' + (active.leases || 0) + ' lease' + ((active.leases || 0) === 1 ? '' : 's') + ' · first-month rent ' + money(active.revenue || 0) + '</small></div><span class="pill ' + (net >= 0 ? 'g' : 'a') + '">' + (net >= 0 ? '+' : '') + money(net) + ' vs spend</span></div>';
-      h += '<p class="note">Only the campaign-created share of shoppers is attributed here. A campaign cannot fix bad pricing, no vacancy, poor access or weak reviews.</p>';
+      h += '<div class="item"><div class="grow"><b>' + esc(active.label) + '</b><small>' + days + ' day' + (days === 1 ? '' : 's') + ' left · ' + (active.inquiries || 0) + ' ad-attributed shopper' + ((active.inquiries || 0) === 1 ? '' : 's') + ' · ' + (active.leases || 0) + ' attributed lease' + ((active.leases || 0) === 1 ? '' : 's') + ' · attributed first-month rent ' + money(active.revenue || 0) + ' vs ' + money(active.cost || 0) + ' spend</small></div><span class="pill ' + (net >= 0 ? 'g' : 'a') + '">' + (net >= 0 ? '+' : '') + money(net) + ' vs spend</span></div>';
+      h += '<p class="note">' + AD_RESULT_SCOPE + ' A campaign cannot fix bad pricing, no vacancy, poor access or weak reviews.</p>';
     } else {
       const ready = sim.objs('unit').filter((u) => u.cstate === 'operating' && u.commercial === 'ready' && !u.blocked);
       const bySize = {};
       for (const u of ready) (bySize[u.size] ||= []).push(u);
-      h += '<p class="note">Ads create more shoppers, not guaranteed leases. Focus on a size you actually have vacant and competitively priced. The simple break-even below is campaign cost ÷ current asking rent.</p><div class="list">';
-      h += '<div class="item"><div class="grow"><b>Local search · 30 days</b><small>+15% shopper traffic across all sizes · $500. Best when several sizes have vacancy.</small>' + this.spendingHtml(500, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $500', { type: 'ad', kind: 'local' }, '', !s.open) + '</div>';
+      h += '<p class="note">Ads create more shoppers, not guaranteed leases. Focus on a size you actually have vacant and competitively priced. The simple break-even below is campaign cost ÷ the asking rent of the units you have ready (standard or climate).</p><div class="list">';
+      h += '<div class="item"><div class="grow"><b>Local search · 30 days</b><small>+45% shopper traffic across all sizes · $500. Best when several sizes have vacancy.</small>' + this.spendingHtml(500, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $500', { type: 'ad', kind: 'local' }, '', !s.open) + '</div>';
       for (const sz of Object.keys(MARKETS[s.market.id].demand)) {
-        const units = bySize[sz] || [], ask = s.market.ask[productKey(sz, 'std')] || MARKETS[s.market.id].rent[sz], be = Math.max(1, Math.ceil(250 / Math.max(1, ask)));
-        h += '<div class="item"><div class="grow"><b>Target ' + esc(sz) + ' · 30 days</b><small>+50% ' + esc(sz) + ' shopper traffic · $250 · ' + units.length + ' rent-ready now · roughly ' + be + ' new lease' + (be === 1 ? '' : 's') + ' at ' + money(ask) + '/mo to cover the spend.</small>' + this.spendingHtml(250, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';
+        const units = bySize[sz] || [];
+        h += '<div class="item"><div class="grow"><b>Target ' + esc(sz) + ' · 30 days</b><small>+150% ' + esc(sz) + ' shopper traffic · $250 · ' + units.length + ' rent-ready now · ' + adBreakEvenText(s, sz, units, 250) + '</small>' + this.spendingHtml(250, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';
       }
       h += '</div>';
       if (recent) {
         const net = roi(recent);
-        h += '<p class="note"><b>Last campaign:</b> ' + esc(recent.label) + ' · ' + (recent.inquiries || 0) + ' extra shoppers · ' + (recent.leases || 0) + ' leases · ' + money(recent.revenue || 0) + ' first-month rent against ' + money(recent.cost || 0) + ' spend (' + (net >= 0 ? '+' : '') + money(net) + ').</p>';
+        h += '<p class="note"><b>Last campaign:</b> ' + esc(recent.label) + ' · ' + (recent.inquiries || 0) + ' ad-attributed shopper' + ((recent.inquiries || 0) === 1 ? '' : 's') + ' · ' + (recent.leases || 0) + ' attributed lease' + ((recent.leases || 0) === 1 ? '' : 's') + ' · ' + money(recent.revenue || 0) + ' attributed first-month rent against ' + money(recent.cost || 0) + ' spend (' + (net >= 0 ? '+' : '') + money(net) + '). ' + AD_RESULT_SCOPE + '</p>';
       }
     }
     return h;
