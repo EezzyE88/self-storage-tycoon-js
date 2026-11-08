@@ -215,6 +215,37 @@
           ]
         }
       }
+    },
+    {
+      "commit": "ca9c6de2ab4200880b25f5f0bdbf3e00475aef41",
+      "parent_commit": "4d64b99380ad650a8e2e47da5aba98962157d59a",
+      "tree": "189fd8844fc4810d53e2f3e794a5f3127978e615",
+      "files": {
+        "js/sim.js": {
+          "parent_sha256": "21089a210a79a4e1cc6b7239cc67832724007d4efcc138bea9cabbe7809c221e",
+          "current_sha256": "251a7a6a4f3f5b7d25316ccc091fa47b597728fe54ed38700e9528e160bc0ae0",
+          "hunks": [
+            {
+              "before": "    if (a.kind === 'local') return 1.15;\n    if (a.kind === 'size' && a.target === size) return 1.5;",
+              "after": "    if (a.kind === 'local') return 1.45; // experiment: was 1.15 (+15%)\n    if (a.kind === 'size' && a.target === size) return 2.5; // experiment: was 1.5 (+50%)"
+            }
+          ]
+        },
+        "js/ui.js": {
+          "parent_sha256": "38f5e9fce47a3e85bcd1fd76c85b77b7780c0584f9a3a717c7b2e193f526c8c1",
+          "current_sha256": "9b0e24354d7a174b10ff7e0183c32c7b6c093849e64fc1880477c20017d30272",
+          "hunks": [
+            {
+              "before": "<small>+15% shopper traffic across all sizes",
+              "after": "<small>+45% shopper traffic across all sizes"
+            },
+            {
+              "before": "<small>+50% ' + esc(sz) + ' shopper traffic",
+              "after": "<small>+150% ' + esc(sz) + ' shopper traffic"
+            }
+          ]
+        }
+      }
     }
   ]
 }
