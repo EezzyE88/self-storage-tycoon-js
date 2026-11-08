@@ -246,6 +246,49 @@
           ]
         }
       }
+    },
+    {
+      "commit": "d4d454129a030d68890bf11caf5ab6a93d3d30ad",
+      "parent_commit": "064d3ede427a017fa86f092de8f0494c2a33d92b",
+      "tree": "f331c04194e3442c1cc425cacd4b0d592260d80e",
+      "files": {
+        "js/sim.js": {
+          "parent_sha256": "251a7a6a4f3f5b7d25316ccc091fa47b597728fe54ed38700e9528e160bc0ae0",
+          "current_sha256": "0b953e4ee14102378c642791c684204fa31457a61ea6b036b3e7ddad43f07473",
+          "hunks": [
+            {
+              "before": "    if (a.kind === 'local') return 1.45; // experiment: was 1.15 (+15%)\n    if (a.kind === 'size' && a.target === size) return 2.5; // experiment: was 1.5 (+50%)\n",
+              "after": "    if (a.kind === 'local') return 1.45;\n    if (a.kind === 'size' && a.target === size) return 2.5;\n"
+            }
+          ]
+        },
+        "js/ui.js": {
+          "parent_sha256": "9b0e24354d7a174b10ff7e0183c32c7b6c093849e64fc1880477c20017d30272",
+          "current_sha256": "c3deaa4742ea0c27fd89f3f01e65c52aef02873fd8b43200be03a0c321644f56",
+          "hunks": [
+            {
+              "before": "",
+              "after": "export const AD_RESULT_SCOPE = 'These figures count only campaign-attributed shoppers and leases, and compare their first-month rent with the campaign cost. They are not total profit: attributed tenants keep paying after month one, and leases from other shoppers are not counted here.';\n// Targeted-ad break-even: campaign cost \u00f7 the asking rent of the ready units of that size, split by standard/climate when both are ready.\nexport function adBreakEvenText(s, size, units, cost) {\n  const ask = (env) => s.market.ask[productKey(size, env)] || MARKETS[s.market.id].rent[size];\n  const line = (env, label) => { const a = ask(env), n = Math.max(1, Math.ceil(cost / Math.max(1, a))); return n + ' ' + label + ' lease' + (n === 1 ? '' : 's') + ' at ' + money(a) + '/mo'; };\n  const std = units.some((u) => u.env !== 'climate'), clim = units.some((u) => u.env === 'climate');\n  if (std && clim) return 'roughly ' + line('std', 'standard') + ' or ' + line('climate', 'climate') + ' to cover the spend.';\n  if (clim) return 'roughly ' + line('climate', 'new climate') + ' to cover the spend.';\n  return 'roughly ' + line('std', 'new standard') + ' to cover the spend' + (std ? '.' : ', once units are ready.');\n}\n"
+            },
+            {
+              "before": "      h += '<div class=\"item\"><div class=\"grow\"><b>' + esc(active.label) + '</b><small>' + days + ' day' + (days === 1 ? '' : 's') + ' left \u00b7 ' + (active.inquiries || 0) + ' extra shopper' + ((active.inquiries || 0) === 1 ? '' : 's') + ' attributed \u00b7 ' + (active.leases || 0) + ' lease' + ((active.leases || 0) === 1 ? '' : 's') + ' \u00b7 first-month rent ' + money(active.revenue || 0) + '</small></div><span class=\"pill ' + (net >= 0 ? 'g' : 'a') + '\">' + (net >= 0 ? '+' : '') + money(net) + ' vs spend</span></div>';\n      h += '<p class=\"note\">Only the campaign-created share of shoppers is attributed here. A campaign cannot fix bad pricing, no vacancy, poor access or weak reviews.</p>';\n",
+              "after": "      h += '<div class=\"item\"><div class=\"grow\"><b>' + esc(active.label) + '</b><small>' + days + ' day' + (days === 1 ? '' : 's') + ' left \u00b7 ' + (active.inquiries || 0) + ' ad-attributed shopper' + ((active.inquiries || 0) === 1 ? '' : 's') + ' \u00b7 ' + (active.leases || 0) + ' attributed lease' + ((active.leases || 0) === 1 ? '' : 's') + ' \u00b7 attributed first-month rent ' + money(active.revenue || 0) + ' vs ' + money(active.cost || 0) + ' spend</small></div><span class=\"pill ' + (net >= 0 ? 'g' : 'a') + '\">' + (net >= 0 ? '+' : '') + money(net) + ' vs spend</span></div>';\n      h += '<p class=\"note\">' + AD_RESULT_SCOPE + ' A campaign cannot fix bad pricing, no vacancy, poor access or weak reviews.</p>';\n"
+            },
+            {
+              "before": "      h += '<p class=\"note\">Ads create more shoppers, not guaranteed leases. Focus on a size you actually have vacant and competitively priced. The simple break-even below is campaign cost \u00f7 current asking rent.</p><div class=\"list\">';\n",
+              "after": "      h += '<p class=\"note\">Ads create more shoppers, not guaranteed leases. Focus on a size you actually have vacant and competitively priced. The simple break-even below is campaign cost \u00f7 the asking rent of the units you have ready (standard or climate).</p><div class=\"list\">';\n"
+            },
+            {
+              "before": "        const units = bySize[sz] || [], ask = s.market.ask[productKey(sz, 'std')] || MARKETS[s.market.id].rent[sz], be = Math.max(1, Math.ceil(250 / Math.max(1, ask)));\n        h += '<div class=\"item\"><div class=\"grow\"><b>Target ' + esc(sz) + ' \u00b7 30 days</b><small>+150% ' + esc(sz) + ' shopper traffic \u00b7 $250 \u00b7 ' + units.length + ' rent-ready now \u00b7 roughly ' + be + ' new lease' + (be === 1 ? '' : 's') + ' at ' + money(ask) + '/mo to cover the spend.</small>' + this.spendingHtml(250, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';\n",
+              "after": "        const units = bySize[sz] || [];\n        h += '<div class=\"item\"><div class=\"grow\"><b>Target ' + esc(sz) + ' \u00b7 30 days</b><small>+150% ' + esc(sz) + ' shopper traffic \u00b7 $250 \u00b7 ' + units.length + ' rent-ready now \u00b7 ' + adBreakEvenText(s, sz, units, 250) + '</small>' + this.spendingHtml(250, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';\n"
+            },
+            {
+              "before": "        h += '<p class=\"note\"><b>Last campaign:</b> ' + esc(recent.label) + ' \u00b7 ' + (recent.inquiries || 0) + ' extra shoppers \u00b7 ' + (recent.leases || 0) + ' leases \u00b7 ' + money(recent.revenue || 0) + ' first-month rent against ' + money(recent.cost || 0) + ' spend (' + (net >= 0 ? '+' : '') + money(net) + ').</p>';\n",
+              "after": "        h += '<p class=\"note\"><b>Last campaign:</b> ' + esc(recent.label) + ' \u00b7 ' + (recent.inquiries || 0) + ' ad-attributed shopper' + ((recent.inquiries || 0) === 1 ? '' : 's') + ' \u00b7 ' + (recent.leases || 0) + ' attributed lease' + ((recent.leases || 0) === 1 ? '' : 's') + ' \u00b7 ' + money(recent.revenue || 0) + ' attributed first-month rent against ' + money(recent.cost || 0) + ' spend (' + (net >= 0 ? '+' : '') + money(net) + '). ' + AD_RESULT_SCOPE + '</p>';\n"
+            }
+          ]
+        }
+      }
     }
   ]
 }
