@@ -26,7 +26,7 @@ import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
 import { guideFor } from './handbook.js';
 import { verticalLayout, verticalDone, verticalCheck, authoredPlacement } from './blueprint.js';
-import { expansionEvidence, cancellationBreakdown } from './vertical.js';
+import { expansionEvidence, cancellationBreakdown, served } from './vertical.js';
 import { layoutCaptions, edgePoint, CAPTION_PRIORITY as CP } from './captions.js';
 // Results of savearchive.keep(): older callers and test doubles may still return a plain boolean.
 const stored = (r) => r === true || !!(r && r.ok);
@@ -295,6 +295,7 @@ export class UI {
       case 'upgradeCamera': this.changeUpgrade('outsideCameras',!(this.retrofitReview?.args||this.upgradeOptions||{}).outsideCameras); break;
       case 'upgradeFixture': {const opts=this.retrofitReview?.args||this.upgradeOptions;const list=new Set(opts?.excludedFixtures||[]);list.has(v)?list.delete(v):list.add(v);this.changeUpgrade('excludedFixtures',[...list]);break;}
       case 'unitAttachment': this.select(Number(v)); break;
+      case 'inspectElevator': { const o = this.sim.s.objects[+v]; if (!o || o.type !== 'elevator') break; if (!this.selectionOnActiveFloor(o.id)) this.setView(o.f || 0); this.sfx('click'); this.select(o.id); break; }
       case 'upgradeRetrofit': this.beginRetrofit(Number(v)); break;
       case 'upgradeCancel': this.endRetrofit(); break;
       case 'upgradeConfirm': {const r=this.retrofitReview;if(r){const result=this.do({type:'unitRetrofit',...r.args,upgradeStamp:r.quote.upgradeStamp},true);if(result.ok){this.endRetrofit();this.renderSheet(true);}else{this.toast(result.msg,'bad');this.refreshRetrofit();}}break;}
@@ -495,7 +496,7 @@ export class UI {
   resetSession(view) {
     this.reserveWait?.stop('Session changed.');this.reserveNotice=null;this.reserveResult=null;this.reserveOffers=null;
     for (const toast of this.toasts || []) toast.el.remove();
-    this.toasts = [];
+    this.toasts = []; this.heldNotice = null;
     this.growthProposal = null; this.growthPlanArgs = null;
     this.projectProposal = null;
     this.pricingReview = null; this.acquisitionReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null; this.transferReview = null;
@@ -1385,6 +1386,15 @@ export class UI {
       <div class="row wrap">${jump('Staff', 'operate', 'Staff')}${jump('Policies', 'operate', 'Policies')}${jump('Asking rents', 'business', 'Asking rents')}${jump('Collections', 'business', 'Collections')}${p.manager || p.lastAction ? jump('Manager log', 'operate', 'Manager log') : ''}</div>
     </details>`;
   }
+  // The one elevator responsible for a unit's elevator-outage or no-power block; null when none or more than one could be.
+  blockingElevator(u) {
+    const sim = this.sim, D = sim.D, f = u.f || 0;
+    if (!u.blocked || u.accessHold != null || f < 1 || !(u.missing || []).some((m) => m === 'Elevator is out of service' || m === 'Elevator has no power')) return null;
+    const sh = D.shellAt[sim.idx(u.x, u.y)];
+    const els = sim.objs('elevator').filter((e) => e.cstate === 'operating' && D.shellAt[sim.idx(e.x, e.y)] === sh && served(sim, e).includes(f));
+    const down = els.filter((e) => !sim.works(e));
+    return down.length === 1 && down.length === els.length ? down[0] : null;
+  }
   taskActions(o) {
     const s = this.sim.s; const t = s.tasks.find((x) => x.obj === o.id);
     const ownerCan = t ? ROLES.owner.can.includes(t.need) : !(o.type === 'elevator' || o.type === 'hvac');
@@ -1461,7 +1471,7 @@ export class UI {
       case 'unit': {
         const L = o.lease && s.leases[o.lease], tn = L && s.tenants[L.tenant];
         const state = o.cstate === 'built' ? '<span class="pill a">Built · not ready</span>' : o.cstate === 'ready' ? '<span class="pill b">Opening automatically</span>' :
-          o.commercial === 'occupied' ? (L && L.status !== 'current' ? this.stagePill(L) + (o.overlock ? '<span class="pill r">Overlocked</span>' : '') : '<span class="pill g">Occupied</span>') : o.commercial === 'ready' ? '<span class="pill g">Rent-ready</span>' : o.commercial === 'reserved' ? '<span class="pill b">Reserved · move-in pending</span>' : o.commercial === 'unready' ? '<span class="pill a">Needs make-ready</span>' : '<span class="pill">—</span>';
+          o.commercial === 'occupied' ? (L && L.status !== 'current' ? this.stagePill(L) + (o.overlock ? '<span class="pill r">Overlocked</span>' : '') : '<span class="pill g">Occupied</span>') : o.commercial === 'ready' ? (o.blocked ? `<span class="pill a">${o.accessHold != null ? 'Vacant · temporarily closed' : 'Vacant · no customer access'}</span>` : '<span class="pill g">Rent-ready</span>') : o.commercial === 'reserved' ? '<span class="pill b">Reserved · move-in pending</span>' : o.commercial === 'unready' ? '<span class="pill a">Needs make-ready</span>' : '<span class="pill">—</span>';
         const key = productKey(o.size, o.env), ask = s.market.ask[key];
         let h = `<div class="row wrap">${state}<span class="pill">${o.access === 'drive' ? 'Drive-up' : 'Interior'}</span>${o.env === 'climate' ? '<span class="pill b">Climate</span>' : ''}${o.access === 'drive' ? '' : `<span class="pill">${floorName(o.f)}</span>`}</div>`;
         h += `<div class="kv"><span>Size</span><span>${o.size} (${SIZES[o.size].sqft} sq ft)</span><span>Asking rent</span><span>${money(ask)}/mo</span><span>Market rent</span><span>${money(Math.round(sim.marketRent(o)))}/mo</span>`;
@@ -1475,7 +1485,7 @@ export class UI {
           if (L.status === 'auction') b.push(this.cmdBtn('Pull from auction', { type: 'collect', op: 'hold', lease: L.id }));
           if (b.length) h += `<div class="row wrap" style="margin-top:6px">${b.join('')}</div>`; }
         if (o.blocked && o.accessHold != null) h += `<div class="miss"><b>Temporarily closed for freight handover</b><small>The freight elevator is paused for its ${floorName(o.f)} extension service test. Access is re-checked automatically when the package hands over.</small></div>`;
-        else if (o.blocked) h += `<div class="miss"><b>Customers can't reach this unit</b><ul>${(o.missing || []).map((m) => `<li>${esc(m)}</li>`).join('')}</ul><small>It won't rent until access is restored.</small></div>`;
+        else if (o.blocked) { const el = this.blockingElevator(o); h += `<div class="miss"><b>Customers can't reach this unit</b><ul>${(o.missing || []).map((m) => `<li>${esc(m)}</li>`).join('')}</ul><small>It won't rent until access is restored.</small>${el ? `<div class="row wrap" style="margin-top:6px"><button class="btn sm pri" data-a="inspectElevator" data-v="${el.id}">Inspect elevator</button></div>` : ''}</div>`; }
         if ((o.cstate === 'built' || o.cstate === 'ready') && o.missing && o.missing.length) h += `<div class="miss"><b>Why it can't open yet</b><ul>${o.missing.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>`;
         const acts = [];
         const attachments=mountedOn(sim,o.id);if(attachments.length)h+=`<h3>Unit equipment</h3><div class="row wrap">${attachments.map(f=>`<button class="btn sm" data-a="unitAttachment" data-v="${f.id}">${f.type==='unitLight'?'Interior light':f.type==='light'?'Wall light':'Outside camera'} · ${f.cstate==='construction'?'installing':f.unpowered?'no power':'installed'}</button>`).join('')}</div>`;
@@ -1955,13 +1965,22 @@ export class UI {
   }
 
   // ------------------------------------------------------------ FEED / TOASTS / BUBBLES
-  toast(text, kind = '') {
-    // one message at a time on phones; a repeat of a visible message refreshes it instead of stacking
-    const dup = this.toasts.find((t) => t.text === text); if (dup) { dup.t = performance.now(); dup.el.classList.remove('out'); return; }
+  toast(text, kind = '', keep = false) {
+    // one message at a time on phones; a repeat of a visible message refreshes it instead of stacking.
+    // A kept toast (held notice) is not pushed out by later toasts during its normal life; they show beside it instead.
+    const now = performance.now();
+    const dup = this.toasts.find((t) => t.text === text); if (dup) { dup.t = now; dup.el.classList.remove('out'); return; }
     const feed = this.$('feed'); const el = document.createElement('div'); el.className = 'toast ' + kind; el.innerHTML = `<span class="dot"></span><span>${esc(text)}</span>`;
-    feed.appendChild(el); this.toasts.push({ el, t: performance.now(), text });
-    while (this.toasts.length > (this.phone() ? 1 : 3)) { const o = this.toasts.shift(); o.el.remove(); }
+    const item = { el, t: now, text, keep }; feed.appendChild(el); this.toasts.push(item);
+    const kept = (o) => o !== item && o.keep && now - o.t <= 4600;
+    const limit = (this.phone() ? 1 : 3) + this.toasts.filter(kept).length;
+    while (this.toasts.length > limit) { const i = this.toasts.findIndex((o) => !kept(o)); const [o] = this.toasts.splice(i < 0 ? 0 : i, 1); o.el.remove(); }
   }
+  // IFM-01A: a notice the player must be able to read (restored customer access) waits while a sheet, dialog or
+  // celebration banner hides the toast area, then shows once as a kept toast. One slot, UI-only, never saved.
+  holdNotice(text, kind = '') { this.heldNotice = { text, kind }; this.flushNotice(); }
+  noticeClear() { return !this.title && !this.modalOpen() && !this.root.classList.contains('has-sheet') && !this.g.showcase?.bannerBusy?.(); }
+  flushNotice() { const h = this.heldNotice; if (!h || !this.noticeClear()) return; this.heldNotice = null; this.toast(h.text, h.kind, true); }
   renderFeed(force = false) {
     const s = this.sim.s; this.sim.syncRequestHandling();
     const officeOpen = this.sim.hour >= OFFICE_HOURS[0] && this.sim.hour < OFFICE_HOURS[1];
@@ -2064,6 +2083,7 @@ export class UI {
   }
   updateBubbles() {
     this.syncFeedbackProperty();
+    this.flushNotice();
     const now = performance.now(), s = this.sim.s; const placed = [];
     // A coached map tap (step flag clearMapTap) must reach its target: complaint bubbles stay visible but stop taking taps.
     const shield = this.bubbles.length > 0 && this.coachClearsMapTap();
@@ -2129,7 +2149,8 @@ export class UI {
       case 'review': if (e.stars <= 2 || e.stars === 5) this.toast(`${e.stars}-star review: "${e.text}"`, e.stars <= 2 ? 'bad' : 'good'); break;
       case 'report': this.toast(`Month ${e.month} report card: grade ${e.grade}. Open Business to read it.`, e.grade <= 'B' ? 'good' : 'bad'); this.sfx('milestone'); break;
       case 'lost': break;
-      case 'access_lost': this.toast(`${e.n > 1 ? e.n + ' units' : e.name} lost customer access - ${e.why}`, 'bad'); this.sfx('fault'); break;
+      case 'access_restored': this.holdNotice(`${e.equip} repaired: ${e.n > 1 ? e.n + ' units' : e.name} regained customer access`, 'good'); break;
+      case 'access_lost': this.heldNotice = null; this.toast(`${e.n > 1 ? e.n + ' units' : e.name} lost customer access - ${e.why}`, 'bad'); this.sfx('fault'); break;
       case 'cash_warn': this.toast(e.msg, 'bad'); this.sfx('attention'); break;
       case 'power_shed': this.toast(`Power capacity exceeded - ${e.name} shut off`, 'bad'); this.sfx('attention'); break;
       case 'power_restored': break;

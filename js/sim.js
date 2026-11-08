@@ -525,6 +525,13 @@ export class Sim {
       if (hold) u.accessHold = hold; // reported only if still disconnected after the handover
       else { if (u.accessHold != null) delete u.accessHold; if (u.blocked && !wasBlocked) newlyBlocked.push(u); }
     }
+    if (this.repairWatch && !this.previewing) { // transient (never saved): report units a completed repair genuinely reconnected
+      for (const w of this.repairWatch) {
+        const back = w.units.map((id) => s.objects[id]).filter((u) => u && u.type === 'unit' && u.cstate === 'operating' && !u.blocked);
+        if (back.length) this.emit('access_restored', { n: back.length, obj: w.obj, equip: w.name, unit: back[0].id, name: back[0].name });
+      }
+      this.repairWatch = null;
+    }
     if (newlyBlocked.length && s.t > 0) this.emit('access_lost', { n: newlyBlocked.length, unit: newlyBlocked[0].id, name: newlyBlocked[0].name, x: newlyBlocked[0].x, y: newlyBlocked[0].y, f: newlyBlocked[0].f || 0, why: newlyBlocked[0].missing[0] });
   }
   unitLit(u) { const fc = this.unitFront(u)[0]; if (!fc) return 1; if (u.access === 'drive') return this.isDaylight() ? 1 : Math.max(0.35, this.D.lit[0][this.idx(fc.x, fc.y)]); return this.D.lit[u.f || 0][this.idx(fc.x, fc.y)]; }
@@ -3161,6 +3168,8 @@ export class Sim {
       completed = true;
       // choice, not chore: the Owner's quick fix is free but wears out sooner; a Tech or vendor restores it fully
       const quick = t.type === 'repair' && ag && ag.role === 'owner' && this.pressureOn();
+      // remember which units had no customer access, so the next access check can report how many this repair actually restored
+      (this.repairWatch ||= []).push({ obj: o.id, name: this.objName(o), units: this.objs('unit').filter((u) => u.blocked && u.accessHold == null).map((u) => u.id) });
       o.cond = quick ? Math.max(o.cond, 0.72) : 1; o.quickFix = quick; if (o.type === 'door' && o.keypad) o.kcond = quick ? 0.72 : 1; this.markDirty();
       this.milestone('first_repair'); this.emit('repaired', { obj: o.id, x: o.x, y: o.y, f: o.f || 0 });
       s.convos = s.convos.filter((c) => c.obj !== o.id);

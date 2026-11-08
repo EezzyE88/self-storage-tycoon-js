@@ -194,6 +194,27 @@
           ]
         }
       }
+    },
+    {
+      "commit": "2802b6978fb52006a82f1ed4f7e8eb5bdb5e7fa9",
+      "parent_commit": "1139e87b1b11a3edfc8da5e817d38bbfebd3c001",
+      "tree": "a85c77a7970afb9f966a702ad48a3fbe0b51cc51",
+      "files": {
+        "js/sim.js": {
+          "parent_sha256": "1a4630ea2d9c2a731adbbd770d5f9c709c9bbf3d75deb8b80a9255915b3e5974",
+          "current_sha256": "21089a210a79a4e1cc6b7239cc67832724007d4efcc138bea9cabbe7809c221e",
+          "hunks": [
+            {
+              "before": "      const quick = t.type === 'repair' && ag && ag.role === 'owner' && this.pressureOn();\n      o.cond = quick",
+              "after": "      const quick = t.type === 'repair' && ag && ag.role === 'owner' && this.pressureOn();\n      // remember which units had no customer access, so the next access check can report how many this repair actually restored\n      (this.repairWatch ||= []).push({ obj: o.id, name: this.objName(o), units: this.objs('unit').filter((u) => u.blocked && u.accessHold == null).map((u) => u.id) });\n      o.cond = quick"
+            },
+            {
+              "before": "    if (newlyBlocked.length && s.t > 0) this.emit('access_lost',",
+              "after": "    if (this.repairWatch && !this.previewing) { // transient (never saved): report units a completed repair genuinely reconnected\n      for (const w of this.repairWatch) {\n        const back = w.units.map((id) => s.objects[id]).filter((u) => u && u.type === 'unit' && u.cstate === 'operating' && !u.blocked);\n        if (back.length) this.emit('access_restored', { n: back.length, obj: w.obj, equip: w.name, unit: back[0].id, name: back[0].name });\n      }\n      this.repairWatch = null;\n    }\n    if (newlyBlocked.length && s.t > 0) this.emit('access_lost',"
+            }
+          ]
+        }
+      }
     }
   ]
 }
