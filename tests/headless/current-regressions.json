@@ -1567,6 +1567,18 @@
         "scope": "Player camera (center, zoom, settled rotation) beside the save: round trip, legacy saves, invalid values, mid-rotation, showcase cameras, portfolio, property switch"
       },
       {
+        "id": "tifm01a_elevator_access",
+        "command": [
+          "@node",
+          "tests/headless/tifm01a_elevator_access.mjs"
+        ],
+        "completion": "11\\ IFM\\-01A\\ elevator\\ access\\ groups\\ passed",
+        "minimum_pass_lines": 11,
+        "timeout": 300,
+        "evidence": "native Sim (Go Vertical two-floor fixture, instant setup) plus UI prototype methods objSheet/blockingElevator/onEvent; no rendered or physical-device claim",
+        "scope": "IFM-01A: blocked unit names the one responsible elevator (none when ambiguous or not elevator-caused), completed repair reports only units that genuinely regained access (zero-restore and other-equipment repairs silent, previews ignored, watch never saved), blocked vacant unit not shown Rent-ready"
+      },
+      {
         "id": "tlabel_consistency",
         "command": [
           "@node",

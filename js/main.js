@@ -349,7 +349,7 @@ window.__game = game;
 
 
 // ---------------------------------------------------------------- simulation stepping
-const BG_EVENTS = { fault: (e, sm) => e.sev === 'critical' ? `${sm.objName(sm.s.objects[e.obj]) || 'Equipment'} failed` : null, cash_warn: (e) => e.msg, access_lost: (e) => `${e.n > 1 ? e.n + ' units' : e.name} lost customer access`, power_shed: (e) => `Power exceeded - ${e.name} shut off`, moveout: () => 'A tenant moved out', lease: () => 'New lease signed', scenario_end: (e) => e.won ? 'Scenario complete' : 'Scenario failed' };
+const BG_EVENTS = { fault: (e, sm) => e.sev === 'critical' ? `${sm.objName(sm.s.objects[e.obj]) || 'Equipment'} failed` : null, cash_warn: (e) => e.msg, access_lost: (e) => `${e.n > 1 ? e.n + ' units' : e.name} lost customer access`, access_restored: (e) => `${e.n > 1 ? e.n + ' units' : e.name} regained customer access`, power_shed: (e) => `Power exceeded - ${e.name} shut off`, moveout: () => 'A tenant moved out', lease: () => 'New lease signed', scenario_end: (e) => e.won ? 'Scenario complete' : 'Scenario failed' };
 function stepTicks(n) {
   const sim = game.sim, C = game.company;
   const others = C ? C.props.map((p, k) => ({ p, k })).filter((x) => x.p.sim !== sim) : [];
