@@ -1723,10 +1723,10 @@ export class UI {
       const bySize = {};
       for (const u of ready) (bySize[u.size] ||= []).push(u);
       h += '<p class="note">Ads create more shoppers, not guaranteed leases. Focus on a size you actually have vacant and competitively priced. The simple break-even below is campaign cost ÷ current asking rent.</p><div class="list">';
-      h += '<div class="item"><div class="grow"><b>Local search · 30 days</b><small>+15% shopper traffic across all sizes · $500. Best when several sizes have vacancy.</small>' + this.spendingHtml(500, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $500', { type: 'ad', kind: 'local' }, '', !s.open) + '</div>';
+      h += '<div class="item"><div class="grow"><b>Local search · 30 days</b><small>+45% shopper traffic across all sizes · $500. Best when several sizes have vacancy.</small>' + this.spendingHtml(500, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $500', { type: 'ad', kind: 'local' }, '', !s.open) + '</div>';
       for (const sz of Object.keys(MARKETS[s.market.id].demand)) {
         const units = bySize[sz] || [], ask = s.market.ask[productKey(sz, 'std')] || MARKETS[s.market.id].rent[sz], be = Math.max(1, Math.ceil(250 / Math.max(1, ask)));
-        h += '<div class="item"><div class="grow"><b>Target ' + esc(sz) + ' · 30 days</b><small>+50% ' + esc(sz) + ' shopper traffic · $250 · ' + units.length + ' rent-ready now · roughly ' + be + ' new lease' + (be === 1 ? '' : 's') + ' at ' + money(ask) + '/mo to cover the spend.</small>' + this.spendingHtml(250, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';
+        h += '<div class="item"><div class="grow"><b>Target ' + esc(sz) + ' · 30 days</b><small>+150% ' + esc(sz) + ' shopper traffic · $250 · ' + units.length + ' rent-ready now · roughly ' + be + ' new lease' + (be === 1 ? '' : 's') + ' at ' + money(ask) + '/mo to cover the spend.</small>' + this.spendingHtml(250, 0, 'after campaign') + '</div>' + this.cmdBtn('Run $250', { type: 'ad', kind: 'size', target: sz }, '', !s.open) + '</div>';
       }
       h += '</div>';
       if (recent) {

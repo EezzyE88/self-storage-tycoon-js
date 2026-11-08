@@ -17,7 +17,7 @@ const c0 = s.cash;
 const r1 = sim.dispatch({ type: 'ad', kind: 'size', target: '10x10' });
 check('targeted campaign starts', r1.ok && s.mkt.ad && s.mkt.ad.target === '10x10');
 check('targeted campaign costs $250', Math.round(c0 - s.cash) === 250);
-check('targeted size gets 1.5x traffic', Math.abs(sim.adFactor('10x10') - 1.5) < 1e-9);
+check('targeted size gets 2.5x traffic (experiment)', Math.abs(sim.adFactor('10x10') - 2.5) < 1e-9);
 check('other sizes are unchanged', Math.abs(sim.adFactor('5x10') - 1) < 1e-9);
 check('second campaign cannot overlap', !sim.dispatch({ type: 'ad', kind: 'local' }).ok);
 
@@ -38,7 +38,7 @@ const c1 = s.cash;
 const r2 = sim.dispatch({ type: 'ad', kind: 'local' });
 check('local campaign starts after expiry', r2.ok && s.mkt.ad && s.mkt.ad.kind === 'local');
 check('local campaign costs $500', Math.round(c1 - s.cash) === 500);
-check('local campaign adds 15% all-size traffic', Math.abs(sim.adFactor('5x5') - 1.15) < 1e-9 && Math.abs(sim.adFactor('10x20') - 1.15) < 1e-9);
+check('local campaign adds 45% all-size traffic (experiment)', Math.abs(sim.adFactor('5x5') - 1.45) < 1e-9 && Math.abs(sim.adFactor('10x20') - 1.45) < 1e-9);
 
 console.log(pass ? 'ALL PASS' : 'SOME FAILED');
 if (!pass) process.exitCode = 1;
