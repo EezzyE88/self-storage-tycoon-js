@@ -1579,6 +1579,18 @@
         "scope": "IFM-01A: blocked unit names the one responsible elevator (none when ambiguous or not elevator-caused), completed repair reports only units that genuinely regained access (zero-restore and other-equipment repairs silent, previews ignored, watch never saved), blocked vacant unit not shown Rent-ready"
       },
       {
+        "id": "tifm01a_notice_visibility",
+        "command": [
+          "@node",
+          "tests/headless/tifm01a_notice_visibility.mjs"
+        ],
+        "completion": "13\\ IFM\\-01A\\ notice\\ visibility\\ groups\\ passed",
+        "minimum_pass_lines": 13,
+        "timeout": 180,
+        "evidence": "UI prototype toast/holdNotice/flushNotice/onEvent with a stub DOM, clock and banner; no rendered or physical-device claim",
+        "scope": "IFM-01A successor: restored-access notice waits while a sheet, dialog or celebration banner hides toasts, then shows once and is not displaced by autosave or lease toasts during its 4.2 s life; other toasts and the phone one-toast rule unchanged; dropped if access is lost again; never saved"
+      },
+      {
         "id": "tlabel_consistency",
         "command": [
           "@node",

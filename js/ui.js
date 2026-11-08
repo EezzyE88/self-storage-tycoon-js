@@ -496,7 +496,7 @@ export class UI {
   resetSession(view) {
     this.reserveWait?.stop('Session changed.');this.reserveNotice=null;this.reserveResult=null;this.reserveOffers=null;
     for (const toast of this.toasts || []) toast.el.remove();
-    this.toasts = [];
+    this.toasts = []; this.heldNotice = null;
     this.growthProposal = null; this.growthPlanArgs = null;
     this.projectProposal = null;
     this.pricingReview = null; this.acquisitionReview = null; this.creditReview = null; this.termLoanReview = null; this.fundingContext = null; this.transferReview = null;
@@ -1965,13 +1965,22 @@ export class UI {
   }
 
   // ------------------------------------------------------------ FEED / TOASTS / BUBBLES
-  toast(text, kind = '') {
-    // one message at a time on phones; a repeat of a visible message refreshes it instead of stacking
-    const dup = this.toasts.find((t) => t.text === text); if (dup) { dup.t = performance.now(); dup.el.classList.remove('out'); return; }
+  toast(text, kind = '', keep = false) {
+    // one message at a time on phones; a repeat of a visible message refreshes it instead of stacking.
+    // A kept toast (held notice) is not pushed out by later toasts during its normal life; they show beside it instead.
+    const now = performance.now();
+    const dup = this.toasts.find((t) => t.text === text); if (dup) { dup.t = now; dup.el.classList.remove('out'); return; }
     const feed = this.$('feed'); const el = document.createElement('div'); el.className = 'toast ' + kind; el.innerHTML = `<span class="dot"></span><span>${esc(text)}</span>`;
-    feed.appendChild(el); this.toasts.push({ el, t: performance.now(), text });
-    while (this.toasts.length > (this.phone() ? 1 : 3)) { const o = this.toasts.shift(); o.el.remove(); }
+    const item = { el, t: now, text, keep }; feed.appendChild(el); this.toasts.push(item);
+    const kept = (o) => o !== item && o.keep && now - o.t <= 4600;
+    const limit = (this.phone() ? 1 : 3) + this.toasts.filter(kept).length;
+    while (this.toasts.length > limit) { const i = this.toasts.findIndex((o) => !kept(o)); const [o] = this.toasts.splice(i < 0 ? 0 : i, 1); o.el.remove(); }
   }
+  // IFM-01A: a notice the player must be able to read (restored customer access) waits while a sheet, dialog or
+  // celebration banner hides the toast area, then shows once as a kept toast. One slot, UI-only, never saved.
+  holdNotice(text, kind = '') { this.heldNotice = { text, kind }; this.flushNotice(); }
+  noticeClear() { return !this.title && !this.modalOpen() && !this.root.classList.contains('has-sheet') && !this.g.showcase?.bannerBusy?.(); }
+  flushNotice() { const h = this.heldNotice; if (!h || !this.noticeClear()) return; this.heldNotice = null; this.toast(h.text, h.kind, true); }
   renderFeed(force = false) {
     const s = this.sim.s; this.sim.syncRequestHandling();
     const officeOpen = this.sim.hour >= OFFICE_HOURS[0] && this.sim.hour < OFFICE_HOURS[1];
@@ -2074,6 +2083,7 @@ export class UI {
   }
   updateBubbles() {
     this.syncFeedbackProperty();
+    this.flushNotice();
     const now = performance.now(), s = this.sim.s; const placed = [];
     // A coached map tap (step flag clearMapTap) must reach its target: complaint bubbles stay visible but stop taking taps.
     const shield = this.bubbles.length > 0 && this.coachClearsMapTap();
@@ -2139,8 +2149,8 @@ export class UI {
       case 'review': if (e.stars <= 2 || e.stars === 5) this.toast(`${e.stars}-star review: "${e.text}"`, e.stars <= 2 ? 'bad' : 'good'); break;
       case 'report': this.toast(`Month ${e.month} report card: grade ${e.grade}. Open Business to read it.`, e.grade <= 'B' ? 'good' : 'bad'); this.sfx('milestone'); break;
       case 'lost': break;
-      case 'access_restored': this.toast(`${e.equip} repaired: ${e.n > 1 ? e.n + ' units' : e.name} regained customer access`, 'good'); break;
-      case 'access_lost': this.toast(`${e.n > 1 ? e.n + ' units' : e.name} lost customer access - ${e.why}`, 'bad'); this.sfx('fault'); break;
+      case 'access_restored': this.holdNotice(`${e.equip} repaired: ${e.n > 1 ? e.n + ' units' : e.name} regained customer access`, 'good'); break;
+      case 'access_lost': this.heldNotice = null; this.toast(`${e.n > 1 ? e.n + ' units' : e.name} lost customer access - ${e.why}`, 'bad'); this.sfx('fault'); break;
       case 'cash_warn': this.toast(e.msg, 'bad'); this.sfx('attention'); break;
       case 'power_shed': this.toast(`Power capacity exceeded - ${e.name} shut off`, 'bad'); this.sfx('attention'); break;
       case 'power_restored': break;

@@ -89,7 +89,7 @@ test('unit status pill: blocked vacant unit is not shown green Rent-ready; comme
   assert.equal(u.commercial, 'ready'); assert.equal(u.cstate, 'operating');
 });
 test('toast wording names count and access only', () => {
-  const U = ui(fixture().sim); const seen = []; U.toast = (t, k) => seen.push([t, k]); U.sfx = () => {};
+  const U = ui(fixture().sim); const seen = []; U.toast = (t, k) => seen.push([t, k]); U.sfx = () => {}; U.noticeClear = () => true;
   const ev = [{ type: 'access_restored', n: 6, equip: 'Elevator', name: 'Unit 2001' }, { type: 'access_restored', n: 1, equip: 'Elevator', name: 'Unit 2001' }];
   for (const e of ev) U.onEvent(e); assert.equal(seen.length, 2); assert.equal(seen[0][1], 'good');
   assert.equal(seen[0][0], 'Elevator repaired: 6 units regained customer access'); assert.equal(seen[1][0], 'Elevator repaired: Unit 2001 regained customer access');
