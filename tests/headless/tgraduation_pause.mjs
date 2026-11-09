@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { makeMaple } from '../../js/maple.js';
 import { Sim } from '../../js/sim.js';
-import { BEATS, beatIndex, curBeat, tutorialTick, installTutorial } from '../../js/tutorial.js';
+import { BEATS, beatIndex, curBeat, tutorialTick, installTutorial, upstairsReady } from '../../js/tutorial.js';
 import { UI } from '../../js/ui.js';
 
 globalThis.innerWidth = 390; globalThis.innerHeight = 844; // phone viewport for the card layout paths
@@ -16,6 +16,16 @@ const GRAD = beatIndex('grad');
 // The step before graduation. Campaign Unit 5 put the Act II break between hire and graduation: the hire beat is completed
 // with a porter, then Continue is tapped on the break with nothing waiting, so the next tutorial tick enters graduation.
 // `speed` is the speed graduation is reached at (forced here; in play the break already holds Pause).
+function buildUpstairsUnit(sim) { // structure-only Go Vertical on the interior building, then one F2 hallway, light and Interior 5x10
+  const s = sim.s; sim.ensure(); const sh = sim.objs('shell')[0], q = sim.verticalPlan(sh.id, { fitout: false });
+  const until = (f) => { for (let n = 0; n < 20000 && !f(); n++) { sim.step(); sim.events.length = 0; s.convos.length = 0; } assert.ok(f(), 'construction finished'); };
+  const idle = () => !s.orders.some((o) => o.st === 'construction');
+  assert.equal(sim.dispatch({ type: 'verticalUpgrade', shell: sh.id, fitout: false, stairs: false, stamp: q.stamp }).ok, true); until(idle);
+  assert.equal(sim.dispatch({ type: 'build', tool: 'hall', a: { x: 17, y: 5 }, b: { x: 17, y: 6 }, f: 1 }).ok, true); until(idle);
+  assert.equal(sim.dispatch({ type: 'build', tool: 'light', a: { x: 17, y: 6 }, b: { x: 17, y: 6 }, f: 1 }).ok, true);
+  assert.equal(sim.dispatch({ type: 'build', tool: 'iu5x10', a: { x: 18, y: 5 }, b: { x: 18, y: 5 }, f: 1, axis: 'y' }).ok, true);
+  until(() => upstairsReady(sim));
+}
 function beforeGrad(speed = 4) {
   const sim = makeMaple(77), s = sim.s; s.cash = 1e6; s.open = true;
   s.tut.beat = beatIndex('hire'); s.tut.entered = true; tutorialTick(sim);
@@ -25,6 +35,10 @@ function beforeGrad(speed = 4) {
   // Act III (campaign Unit 6) now sits between the Act II break and graduation; tact3 covers it. Graduation follows the Act III break.
   const B3 = beatIndex('actIII_break'); Object.assign(s.tut, { beat: B3, beatId: 'actIII_break', beatAt: B3, entered: false }); tutorialTick(sim);
   assert.equal(curBeat(sim).id, 'actIII_break'); assert.equal(s.tut.entered, true); sim.dispatch({ type: 'tutFlag', flag: 'actIII_break' });
+  // Act IV Beat 13 (campaign Unit 7a) now sits between the Act III break and graduation; tact4 covers it. Its check is a real
+  // working upstairs unit, built here through the normal Go Vertical and build actions; the next tick completes it into graduation.
+  buildUpstairsUnit(sim);
+  const BV = beatIndex('vertical'); Object.assign(s.tut, { beat: BV, beatId: 'vertical', beatAt: BV, entered: true }); assert.equal(curBeat(sim).id, 'vertical');
   s.speed = speed; sim.events.length = 0; return sim;
 }
 const atGrad = (speed = 4) => { const sim = beforeGrad(speed); tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad'); return sim; };

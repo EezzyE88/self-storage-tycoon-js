@@ -14,7 +14,7 @@ const base = clone(makeMaple(7).s);
 const load = (tut, patch = {}) => { const st = clone(base); Object.assign(st, patch); st.tut = clone(tut); return new Sim(st); };
 // Campaign Unit 4 inserted Beat 5 (pricing) and the Act I break; ids never change, positions did.
 // Campaign Unit 5 added the Act II break before graduation; campaign Unit 6 added Act III (beats 9-12 and its break).
-const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'grad'];
+const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'grad']; // Act IV Beat 13 since campaign Unit 7a (tact4)
 const IDS8 = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'grad']; // the layout saves had before ids
 // Where each pre-id position resumes: the same beat, except D4 (campaign Unit 6): the old graduation (index 7, not
 // graduated) resumes at the Act II break and then continues into Act III.
@@ -139,6 +139,15 @@ function play(strip, onBeat) {
   d({ type: 'tutFlag', flag: 'climateDemandAck' });
   for (const a of [{ tool: 'hvac', a: { x: 14, y: 8 }, b: { x: 14, y: 8 }, f: 0 }, { tool: 'light', a: { x: 17, y: 8 }, b: { x: 17, y: 8 }, f: 0 }, { tool: 'iu5x5', a: { x: 16, y: 5 }, b: { x: 16, y: 11 }, f: 0, axis: 'y', climate: true }]) assert.equal(d({ type: 'build', ...a }).ok, true, a.tool);
   beat('climate'); brk('actIII_break');
+  // Act IV Beat 13 (campaign Unit 7a, as tact4): structure-only Go Vertical with the game's own cash (waiting for rent if
+  // the quote does not fit yet), then one F2 hallway, light and Interior 5x10 through the normal build actions.
+  assert.equal(curBeat(sim).id, 'vertical');
+  const sh = sim.objs('shell')[0], q = () => sim.verticalPlan(sh.id, { fitout: false }), idle = () => !s.orders.some((o) => o.st === 'construction');
+  s.speed = 4; until(() => s.cash >= q().cost + 600, 1440 * 120);
+  assert.equal(d({ type: 'verticalUpgrade', shell: sh.id, fitout: false, stairs: false, stamp: q().stamp }).ok, true); until(idle, 1440 * 8);
+  assert.equal(d({ type: 'build', tool: 'hall', a: { x: 17, y: 5 }, b: { x: 17, y: 6 }, f: 1 }).ok, true); until(idle);
+  assert.equal(d({ type: 'build', tool: 'light', a: { x: 17, y: 6 }, b: { x: 17, y: 6 }, f: 1 }).ok, true); until(idle);
+  assert.equal(d({ type: 'build', tool: 'iu5x10', a: { x: 18, y: 5 }, b: { x: 18, y: 5 }, f: 1, axis: 'y' }).ok, true); beat('vertical');
   assert.equal(curBeat(sim).id, 'grad');
   d({ type: 'tutFlag', flag: 'grad' }); tick(2);
   return { sim, s, log };
