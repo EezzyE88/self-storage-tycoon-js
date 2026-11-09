@@ -1350,6 +1350,17 @@
         "evidence": "current production offers/UI handlers/acquisition engine; controlled fixtures and stub DOM; browser evidence separate"
       },
       {
+        "id": "tfacility_preview",
+        "command": [
+          "@node",
+          "tests/headless/tfacility_preview.mjs"
+        ],
+        "completion": "6 facility-preview groups passed",
+        "minimum_pass_lines": 6,
+        "timeout": 90,
+        "evidence": "current production game.buildFacility/facilityPreview/acquire in a VM; controlled fixtures; preview = purchase state, determinism, source nonmutation; rendered checks separate"
+      },
+      {
         "id": "tfirst_gate_guidance",
         "command": [
           "@node",

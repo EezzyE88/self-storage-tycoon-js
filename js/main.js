@@ -74,21 +74,17 @@ const game = {
     out.push({ kind: 'facility', market: 'maple', name: 'Operating facility · ' + fac, fac, desc: '23 units, mostly leased, some deferred maintenance. Rent roll comes with it.', price: mp });
     return out.map((o) => ({ ...o, price: Math.round(o.price / 1000) * 1000 + WORKING_FLOAT })); // price includes the new property's opening working cash
   },
-  acquire(kind, market) {
-    const C = this.company, src = this.sim; if (!C) return { ok: false, msg: 'No company' };
-    if (C.props.length >= 5) return { ok: false, msg: 'Portfolio is limited to 5 properties' };
-    const of = this.offers().find((o) => o.kind === kind && o.market === market); if (!of) return { ok: false, msg: 'Offer not available' };
-    if (src.s.cash < of.price) return { ok: false, msg: 'Not enough cash at this property' };
-    let sim, name;
-    if (kind === 'parcel') { sim = makeSandbox({ market, cash: 0, plain: true }); name = { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[market] + ' ' + (C.props.length + 1); }
-    else {
-      const k = C.props.filter((p) => p.sim.s.mirror != null || FACILITY_NAMES.includes(p.name)).length;
-      sim = makeMaple(1000 + C.props.length * 77, { mirror: k % 2 === 0 }); const s = sim.s; s.mode = 'sandbox'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true; s.cash = 0; name = of.fac;
-      if (!s.mirror) s.mirror = false;
-      for (const g of sim.objs('gate')) g.cond = 0.55 + ((C.props.length * 13) % 20) / 100;
-      for (const o of sim.objs('light')) o.cond = 0.5 + ((o.id * 37) % 40) / 100;
-    }
-    // align to the company clock
+  // The operating facility an acquisition from `src` would create. Shared by acquire() and the read-only purchase preview:
+  // it only reads src.s.t, src.day and the property list, and returns a new Sim. It never charges, adds or saves anything.
+  buildFacility(src, props) {
+    const k = props.filter((p) => p.sim.s.mirror != null || FACILITY_NAMES.includes(p.name)).length;
+    const sim = makeMaple(1000 + props.length * 77, { mirror: k % 2 === 0 }); const s = sim.s; s.mode = 'sandbox'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true; s.cash = 0;
+    if (!s.mirror) s.mirror = false;
+    for (const g of sim.objs('gate')) g.cond = 0.55 + ((props.length * 13) % 20) / 100;
+    for (const o of sim.objs('light')) o.cond = 0.5 + ((o.id * 37) % 40) / 100;
+    return this.alignAcquired(sim, src);
+  },
+  alignAcquired(sim, src) { // align a newly created property to the company clock
     const t = src.s.t, d = src.day, s = sim.s, dt = t - s.t;
     s.t = t; s.finance.lastDay = t % MIN_PER_DAY <= FINANCIAL_MINUTE ? d - 1 : d; s.finance.observedFrom = d; s.today = { day: d, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 };
     for (const v of s.visits) v.t += dt;
@@ -97,6 +93,25 @@ const game = {
     for (const tk of s.tasks) tk.created += dt;
     for (const a of s.agents) { if (a.t0 != null) a.t0 += dt; }
     s.milestones = {}; s.speed = 0; sim.markDirty(); sim.rebuild();
+    return sim;
+  },
+  facilityPreview() { // read-only: what the operating-facility offer would add, from the same constructor acquire() uses
+    const C = this.company; if (!C || C.props.length >= 5) return null;
+    const of = this.offers().find((o) => o.kind === 'facility'); if (!of) return null;
+    const sim = this.buildFacility(this.sim, C.props), o = sim.occupancy();
+    const career = portfolioCareer([...C.props, { name: of.fac, sim }]);
+    return { name: of.fac, price: of.price, units: o.n, leased: o.occ, roll: sim.rentRoll(), opexDay: sim.dailyOpex().total,
+      payroll: sim.s.staff.reduce((a, st) => a + st.wage, 0), staff: sim.s.staff.map((st) => st.role),
+      career: { roll: career.roll, n: career.n, cur: career.cur && career.cur.name, next: career.next && { name: career.next.name, roll: career.next.roll, props: career.next.props }, qualified: career.qualified && career.qualified.name } };
+  },
+  acquire(kind, market) {
+    const C = this.company, src = this.sim; if (!C) return { ok: false, msg: 'No company' };
+    if (C.props.length >= 5) return { ok: false, msg: 'Portfolio is limited to 5 properties' };
+    const of = this.offers().find((o) => o.kind === kind && o.market === market); if (!of) return { ok: false, msg: 'Offer not available' };
+    if (src.s.cash < of.price) return { ok: false, msg: 'Not enough cash at this property' };
+    let sim, name;
+    if (kind === 'parcel') { sim = this.alignAcquired(makeSandbox({ market, cash: 0, plain: true }), src); name = { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[market] + ' ' + (C.props.length + 1); }
+    else { sim = this.buildFacility(src, C.props); name = of.fac; }
     src.money(-of.price, 'capex', 'Acquisition: ' + name);
     sim.money(WORKING_FLOAT, 'other', 'Opening working cash from ' + C.props[C.active].name);
     C.props.push({ name, sim }); if (this.ui) this.ui.setMeta(this.metaName(), modeLabel(src.s));
