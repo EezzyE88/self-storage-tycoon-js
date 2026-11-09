@@ -1184,6 +1184,22 @@
         "scope": "Campaign Unit 7a: Act IV Beat 13 order and header, bounded Hallway unlock, objective upstairs-unit completion (F1, unfinished and blocked units do not count), prebuilt and full fit-out recognition, live quote and affordability rent wait without borrowing, guidance over real UI states, no tutorial dispatch, Pause kept, Act III-era graduation save migration, reload mid-build, determinism"
       },
       {
+        "id": "tact4_render",
+        "command": [
+          "@node",
+          "tests/headless/tact4_render.mjs"
+        ],
+        "completion": "5 Act IV Beat 13 rendered checks passed",
+        "minimum_pass_lines": 5,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json",
+          "css/game.css"
+        ],
+        "evidence": "production renderTut()/showVertical() markup on the ordinary Day 18 Act III break replay, with the shipped stylesheet rules; browser geometry checked separately (rendered walk)",
+        "scope": "Campaign Unit 7a-r1: Beat 13 live structure-only quote, fit-out estimate, available funds and shortfall in the rendered step text (collapsed card, low-cash rent wait updating as rent arrives, no borrowing wording); Beat 13 step and ring inside the Go Vertical review (structure-only option, then Confirm), bounded to Beat 13; no fixed prices"
+      },
+      {
         "id": "tlesson_offer_gate",
         "command": [
           "@node",
