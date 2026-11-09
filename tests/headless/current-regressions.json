@@ -1366,8 +1366,8 @@
           "@node",
           "tests/headless/tfacility_guidance.mjs"
         ],
-        "completion": "7 facility-guidance groups passed",
-        "minimum_pass_lines": 7,
+        "completion": "9 facility-guidance groups passed",
+        "minimum_pass_lines": 9,
         "timeout": 90,
         "evidence": "current production UI acquisitions row, purchase review and Operator career with main.js game in a VM; stub DOM; rendered checks separate"
       },

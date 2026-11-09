@@ -89,4 +89,14 @@ test('prices, loan terms, presets and eligibility are unchanged by guidance (sam
   assert.equal(JSON.stringify(f.g.offers()),o1);assert.equal(f.sim.loanLimit(),l1);assert.equal(JSON.stringify(f.sim.loanTerms()),t1);
   assert.match(readFileSync('js/ui.js','utf8'),/const LOAN_PRESETS = \[10000, 25000, 50000, 100000\];/);
 });
+for(const loan of [0,50000]){
+  const f=fixture(loan?60000:250000);if(loan)assert.ok(f.sim.dispatch({type:'borrow',amt:loan}).ok);
+  click(f,'acquire','facility','maple');click(f,'acquisitionConfirm');assert.equal(f.g.company.props.length,2);
+  const json=f.g.saveJSON();assert.doesNotMatch(json,/"guidance"|facilityPreview|"pv"|What comes with it/);
+  const r=await f.g.prepareLoad(json);assert.ok(r.ok,r.msg);const C=r.company;
+  assert.equal(C.props.length,2);assert.equal(C.props[1].name,f.g.company.props[1].name);
+  for(const k of [0,1])assert.equal(JSON.stringify({...C.props[k].sim.s,speed:0}),JSON.stringify({...f.g.company.props[k].sim.s,speed:0}));
+  assert.equal(C.props[0].sim.s.debt.length,loan?1:0);for(const p of C.props)assert.equal(p.sim.s.speed,0);
+  n++;console.log('PASS save and reload after a facility purchase '+(loan?'with a $'+loan+' loan':'without a loan')+' restores both properties, debt and Pause, and carries no preview data');
+}
 console.log(`${n} facility-guidance groups passed`);
