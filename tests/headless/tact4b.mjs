@@ -54,7 +54,7 @@ function noteUI(sim, { tab = 'business', visible = true, modal = false } = {}) {
 }
 test('Beat 14 follows Beat 13 in Act IV, before graduation, and reuses the collections lesson contract verbatim', () => {
   const ids = BEATS.map((b) => b.id), c = beatIndex('collections'), b = BEATS[c], L = LESSONS.find((x) => x.id === 'collections');
-  assert.equal(ids[c - 1], 'vertical'); assert.equal(ids[c + 1], 'grad'); assert.equal(beatHeader(c), 'Act IV · Grow · Beat 14');
+  assert.equal(ids[c - 1], 'vertical'); assert.equal(ids[c + 1], 'financing'); assert.equal(beatHeader(c), 'Act IV · Grow · Beat 14');
   assert.equal(b.act, 'IV'); assert.equal(!!b.pause, false); assert.equal('focus' in b, false);
   for (const k of ['title', 'body', 'why', 'button', 'flag']) assert.equal(b[k], L[k], k);
   assert.deepEqual(b.steps.slice(1).map((x) => [x.sel, x.d]), L.steps.map((x) => [x.sel, x.d]), 'same targets and instructions as the lesson');
@@ -146,7 +146,7 @@ test('early payment fail-forward: the card says the account was paid; Collection
   assert.match(renderCard(sim), /data-a="tutNext">Got it<\/button>/);
   tutorialTick(sim); assert.equal(curBeat(sim).id, 'collections', 'inspection alone does not complete: Got it is still the acknowledgment');
   sim.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(sim);
-  assert.equal(curBeat(sim).id, 'grad'); assert.ok(sim.s.lessonsDone.collections, 'the optional collections lesson is not offered again');
+  assert.equal(curBeat(sim).id, 'financing'); assert.ok(sim.s.lessonsDone.collections, 'the optional collections lesson is not offered again');
 });
 
 test('held requests: the lien card is the beat’s own content while other reviews stay held; after Beat 14 it is held, then retired once stale', () => {
@@ -157,7 +157,7 @@ test('held requests: the lien card is the beat’s own content while other revie
   assert.ok(lien, 'a branch that reaches lien during the beat');
   const card = lien.s.convos.find((x) => x.key === 'lien' + id), other = lien.s.convos.find((x) => x.key === 'other');
   assert.equal(lien.reviewHeld(card), false, 'lien card shown'); assert.equal(lien.reviewHeld(other), true, 'other review held');
-  lien.dispatch({ type: 'tutFlag', flag: 'act4Seen' }); lien.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(lien); assert.equal(curBeat(lien).id, 'grad');
+  lien.dispatch({ type: 'tutFlag', flag: 'act4Seen' }); lien.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(lien); assert.equal(curBeat(lien).id, 'financing');
   lien.syncReviewHold(); assert.equal(lien.reviewHeld(card), true, 'after Beat 14 the lien card waits like any review');
   // Nobody answers: the standard procedure runs (notice 14 days after lien), so the held card is stale and is retired.
   for (let i = 0; i < 1440 * 16; i++) { lien.s.speed = 4; lien.step(); quiet(lien); }
@@ -226,8 +226,8 @@ test('inspection before completion: Got it appears and counts only after the Col
   assert.equal(sim.s.cash, cash); assert.equal(sim.s.ledger.length, led); assert.equal(JSON.stringify(sim.s.leases), L); assert.equal(sim.s.speed, spd, 'inspection is read-only');
   assert.equal(stepState(sim, ui({ tab: 'business' })).cur, 3); assert.match(renderCard(sim), /data-a="tutNext">Got it<\/button>/);
   tutorialTick(sim); assert.equal(curBeat(sim).id, 'collections', 'inspection alone does not complete');
-  sim.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad');
-  const g = fromJSON(JSON.stringify(sim.s)); noteUI(g).noteAct4Seen(); assert.equal(g.s.tut.beatId, 'grad', 'after Beat 14 the hook does nothing');
+  sim.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(sim); assert.equal(curBeat(sim).id, 'financing');
+  const g = fromJSON(JSON.stringify(sim.s)); noteUI(g).noteAct4Seen(); assert.equal(g.s.tut.beatId, 'financing', 'after Beat 14 the hook does nothing');
 });
 test('reload and inspection: not inspected before reload means inspect again; inspected before reload keeps Got it; still one reversal', () => {
   const sim = at14(); run1(sim); const num = sim.s.objects[sim.s.leases[sim.s.tut.flags.act4Account].unit].num;
@@ -236,6 +236,6 @@ test('reload and inspection: not inspected before reload means inspect again; in
   assert.equal(JSON.stringify(r2.s), j, 'byte-identical'); assert.equal(r2.s.tut.flags.act4Seen, true, 'inspection persists');
   assert.equal(stepState(r2, ui()).cur, 3, 'after reload, Got it is the next step even before Business is reopened'); assert.match(renderCard(r2), /data-a="tutNext">Got it<\/button>/);
   for (let i = 0; i < 60; i++) run1(r2); assert.equal(unitLines(r2, num).filter((x) => /^Returned payment/.test(x.note)).length, 1);
-  r2.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(r2); assert.equal(curBeat(r2).id, 'grad');
+  r2.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(r2); assert.equal(curBeat(r2).id, 'financing');
 });
 console.log(`${passed} Act IV Beat 14 checks passed`);

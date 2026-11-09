@@ -35,12 +35,12 @@ function play(seed, { hook, stopAt = 'actI_break', log } = {}) {
 }
 
 test('Act I is beats 1-5, then the Act I break, then the rest of the tutorial in its old order', () => {
-  assert.deepEqual(BEATS.map((b) => b.id), [...ACT1, 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'collections', 'grad']); // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
+  assert.deepEqual(BEATS.map((b) => b.id), [...ACT1, 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'collections', 'financing', 'actIV_break', 'grad']); // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
   for (const id of [...ACT1, 'actI_break']) { const b = BEATS[beatIndex(id)]; assert.equal(b.act, 'I'); assert.equal(b.chapter, 'Take Over'); }
   assert.deepEqual(ACT1.map((id) => beatHeader(beatIndex(id))), [1, 2, 3, 4, 5].map((n) => `Act I · Take Over · Beat ${n}`));
   assert.equal(beatHeader(BREAK), 'Act I · Take Over · Chapter break');
   assert.equal(beatHeader(EXPAND), 'Act II · Stabilize · Beat 6'); // Act II since campaign Unit 5 (tact2)
-  assert.equal(beatHeader(beatIndex('grad')), 'Graduation · Part 15 of 15'); // Act III since campaign Unit 6 (tact3); Act IV Beats 13-14 since Unit 7a/7b (tact4, tact4b)
+  assert.equal(beatHeader(beatIndex('grad')), 'Graduation · Part 16 of 16'); // Act III since campaign Unit 6 (tact3); Act IV Beats 13-14 since Unit 7a/7b (tact4, tact4b)
   assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Act III · Improve', 'Act IV · Grow', 'Graduation']); // Act IV since campaign Unit 7a (tact4)
   const brk = BEATS[BREAK]; assert.equal(brk.title, 'You have control of Maple Street'); assert.equal(brk.pause, true); assert.equal(brk.brk, true);
   assert.equal(brk.button, 'Continue'); assert.match(brk.body, /Act II · Stabilize/); assert.match(brk.body, /Maple Street is paused/);

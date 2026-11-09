@@ -43,6 +43,10 @@ function beforeGrad(speed = 4) {
   // Act IV Beat 14 (campaign Unit 7b) follows; tact4b covers its real returned payment. Here it is positioned as already
   // answered (guard set, Got it given), so the next tick completes it into graduation.
   const BC = beatIndex('collections'); Object.assign(s.tut, { beat: BC, beatId: 'collections', beatAt: BC, entered: true }); s.tut.flags.act4Account = Object.keys(s.leases)[0]; s.tut.flags.act4Seen = true; s.tut.flags.collAck = true;
+  tutorialTick(sim); assert.equal(curBeat(sim).id, 'financing');
+  // Act IV Beat 15 and the Act IV break (campaign Unit 7c; tact4c covers them): reviewed and declined, then Continue given at
+  // the break with nothing waiting. Since Unit 7c graduation always follows that paused break, so the next tick enters it.
+  Object.assign(s.tut.flags, { finSeen: true, finAck: true }); tutorialTick(sim); assert.equal(curBeat(sim).id, 'actIV_break'); tutorialTick(sim); assert.equal(s.tut.entered, true); s.tut.flags.actIV_break = true;
   s.speed = speed; sim.events.length = 0; return sim;
 }
 const atGrad = (speed = 4) => { const sim = beforeGrad(speed); tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad'); return sim; };

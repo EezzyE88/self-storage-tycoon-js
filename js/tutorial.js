@@ -3,8 +3,9 @@ import { careerEligibility } from './career.js';
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
 import { TOOLS, ROLES, BILLING_CYCLE_DAYS } from './data.js';
-import { verticalDone, verticalLayout, shaftHallState } from './blueprint.js';
-import { investmentEvidence } from './economics.js';
+import { verticalDone, verticalLayout, shaftHallState, upRouteQuote } from './blueprint.js';
+import { investmentEvidence, demandEvidenceText } from './economics.js';
+import { creditNeeded, creditProjection, outlook, cents } from './finance.js';
 import { actIIProgress, investmentText, gradProgress } from './investmentprogress.js';
 
 const unitByRole = (sim, role) => tutorialUnit(sim, role);
@@ -170,6 +171,30 @@ const act4Line = (sim) => {
     : `Now <b>${sim.stageOf(L)}</b>, <b>${usd(sim.owed(L))}</b> owed${s.objects[L.unit]?.overlock ? ', locked out' : ''}.`;
   return ` <span class="tut-money" data-qa="tut-act4-account">${head} ${now}</span>`;
 };
+// Act IV Beat 15 (campaign Unit 7c, D3 Option 2, P1 inspection-only): a read-only financing review of the real, unbuilt
+// upper-floor route. Every figure is computed from the current state; nothing here orders, charges, borrows or saves.
+// The term-loan figures come from a disposable copy with the tutorial loan lock lifted on the copy only.
+const quoteCache = new WeakMap();
+const routeQuote = (sim) => { const k = `${sim.s.structV}:${sim.s.nextId}`, o = quoteCache.get(sim); if (o?.k === k) return o.q; const q = upRouteQuote(sim); quoteCache.set(sim, { k, q }); return q; };
+export function financingReview(sim) {
+  const s = sim.s, q = routeQuote(sim), now = sim.financialPosition(), roll = cents(sim.rentRoll());
+  if (!q.ok) return { ok: false, reason: q.reason, now, roll };
+  const ctx = { spend: q.total, extraDaily: q.dailyCost }, after = sim.financialPosition(ctx), gap = Math.max(0, cents(-after.available));
+  const room = Math.max(0, Math.floor(sim.creditLimit() - s.loan.bal)), needed = creditNeeded(sim, ctx);
+  const credit = { limit: sim.creditLimit(), owed: cents(s.loan.bal), room, needed, projection: needed ? creditProjection(sim, needed, ctx) : null };
+  const c = new sim.constructor(JSON.parse(JSON.stringify(s))); c.ensure(); c.s.tut.done = true; c.s.tut.on = false;
+  const { rate, months } = c.loanTerms(), limit = c.loanLimit(), amount = gap > 0 ? Math.max(5000, Math.ceil(gap / 5000) * 5000) : 0;
+  const loan = { lockedHere: sim.loanLimit() === 0, limit, rate, months, amount, approved: amount > 0 && amount <= limit };
+  if (amount) {
+    loan.pmt = c.loanPmt(amount, rate, months); loan.share = roll ? loan.pmt / roll : null; loan.totalPaid = cents(loan.pmt * months); loan.interest = cents(loan.totalPaid - amount);
+    if (loan.approved && c.dispatch({ type: 'borrow', amt: amount }).ok) loan.after = c.financialPosition(ctx); // the copy only
+  }
+  const ev = investmentEvidence(sim, { creates: q.units.map((u) => ({ type: 'unit', size: u.size, env: u.env })) });
+  return { ok: true, q, now, after, gap, credit, loan, roll, demand: { evidence: ev, text: demandEvidenceText(ev) }, saving: outlook(sim) };
+}
+const finSeen = (sim) => !!sim.s.tut.flags.finSeen;
+const finLine = (sim) => { const R = financingReview(sim); if (!R.ok) return ''; return ` <span class="tut-money" data-qa="tut-fin-money">Upper-floor route ${usd(R.q.total)} · available ${usd(R.now.available)}${R.gap ? ` · ${usd(R.gap)} short` : ''}</span>`; };
+
 const hallWait = (placed) => (sim) => placed(sim) || hallF2(sim) !== 'ordered' ? null : { state: 'ordered', t: 'Let the F2 hallway finish', d: 'The upstairs hallway is still under construction. Lights and unit doors need a <b>finished</b> hallway. Tap <b>4x</b> to run time; this step continues by itself.' };
 
 // Generic chapter break: a paused card with a deliberate Continue. Continue (flag = id) releases the owner reviews held
@@ -413,6 +438,19 @@ export const BEATS = [
       { t: 'Tap <b>Got it</b>', d: 'Or act on an account first. The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => act4Seen(sim) && !!ctx(sim).flags.collAck },
     ],
     button: 'Got it', flag: 'collAck', buttonWhen: act4Seen, check: (sim) => act4Seen(sim) && !!ctx(sim).flags.collAck },
+  // Beat 15 (D3 Option 2, P1 inspection-only): the live quote of the unbuilt upper-floor route, the money, the demand evidence
+  // and the ways to pay, then a free decision. Declining completes it; borrowing is neither offered nor required here.
+  { id: 'financing', act: 'IV', chapter: 'Grow', title: 'Can Maple afford to build up?', review: 'fin',
+    body: 'Maple Street could add a second building with an upstairs floor on its open land. Today it costs more than Maple can spend and still keep its reserve. A loan or the credit line could cover the gap, but being able to borrow does not make a project worth doing.',
+    why: 'A term loan is long-term capital: you repay it every month for years, whether or not the new units rent. The credit line is for short gaps in cash. Judge a project by the money you have, the demand you can see and the payments you would owe.',
+    steps: [
+      { t: 'Review the upper-floor project{finMoney}', d: 'Tap <b>Review the project</b> on this card. It prices the route at today’s costs and compares the ways to pay. Nothing is ordered, charged or borrowed.', sel: '.tut [data-a="finReview"]', lbl: 'Review the project', done: finSeen },
+      { t: 'Decide, then tap <b>Continue without borrowing</b>{finMoney}', d: 'Borrowing is not required, and declining has no penalty. You can reopen the review first. The button is on this card and in the review.', sel: '.tut [data-a="tutNext"]', lbl: 'Continue', done: (sim) => finSeen(sim) && !!sim.s.tut.flags.finAck },
+    ],
+    button: 'Continue without borrowing', flag: 'finAck', buttonWhen: finSeen, check: (sim) => finSeen(sim) && !!sim.s.tut.flags.finAck },
+  chapterBreak({ id: 'actIV_break', act: 'IV', chapter: 'Grow', next: 'Graduation', title: 'You are managing Maple Street now',
+    body: 'You connected a second floor, followed a returned payment through Collections and weighed financing against what Maple can afford. <b>Maple Street is paused.</b> One final review remains before the property is fully yours.',
+    why: 'What you learned in Act IV: vertical growth needs connected infrastructure; larger growth needs planning; unpaid rent moves through staged decisions and can escalate; borrowing adds capital but creates repayment obligations; and financing should be judged against the project’s need and Maple’s capacity.' }),
 
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
   { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
@@ -602,7 +640,7 @@ export function beatHeader(i) {
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
 export function tutorialText(sim, value, live = {}) { // `live`: per-card cache, so one card reads each live figure once
-  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/\{verticalMoney\}/g, () => (live.vm ??= verticalMoneyTag(sim))).replace(/\{act4Account\}/g, () => (live.a4 ??= act4Line(sim))).replace(/Unit (107|203)\b/g, (_, n) => {
+  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/\{verticalMoney\}/g, () => (live.vm ??= verticalMoneyTag(sim))).replace(/\{act4Account\}/g, () => (live.a4 ??= act4Line(sim))).replace(/\{finMoney\}/g, () => (live.fin ??= finLine(sim))).replace(/Unit (107|203)\b/g, (_, n) => {
     const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
     return u ? `Unit ${u.num}` : 'the tutorial unit';
   }) : value;
@@ -668,7 +706,7 @@ export function tutorialTick(sim) {
   if (!s.tut.entered) { s.tut.entered = true; s.tut.enteredAt = s.t; if (b.enter) b.enter(sim); sim.emit('tut_beat', { beat: s.tut.beat }); }
   if (b.tick) b.tick(sim); // a beat's own once-guarded state (Beat 14's returned payment); runs while the beat is current
   if (b.check(sim)) {
-    const lesson = { interior_customer: 'interior', overlays: 'quality', climate: 'climate', collections: 'collections' }[b.id];
+    const lesson = { interior_customer: 'interior', overlays: 'quality', climate: 'climate', collections: 'collections', financing: 'financing' }[b.id];
     if (lesson) { s.lessonsDone ||= {}; s.lessonsDone[lesson] ||= sim.day; }
     sim.emit('tut_done', { beat: s.tut.beat });
     s.tut.beat++; s.tut.entered = false; s.tut.idMark = s.nextId;

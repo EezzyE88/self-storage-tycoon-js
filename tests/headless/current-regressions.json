@@ -1215,6 +1215,36 @@
         "scope": "Campaign Unit 7b: Act IV Beat 14 S2 returned payment: verified prior rent payment, one labelled reversal through sim.money netting to zero, state equivalent to a real missed bill, normal delinquency progression and early payment, unrelated tenants and RNG untouched, persistent duplicate guard, no-eligible-account wait, lien card owned by the beat while other reviews stay held, manual Pause, live account line in step text; Collections inspection required before completion (Got it shown and counted only after the ladder was on screen with the account authored), including early payment and across reload"
       },
       {
+        "id": "tact4c",
+        "command": [
+          "@node",
+          "tests/headless/tact4c.mjs"
+        ],
+        "completion": "12 Act IV Beat 15 checks passed",
+        "minimum_pass_lines": 12,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json"
+        ],
+        "evidence": "native current behavior: the ordinary Day 18 Act III break replayed through Beats 13-14 into Beat 15, production renderTut()/showFinancingReview() markup and click path, sim tutorial ticks, save/reload",
+        "scope": "Campaign Unit 7c: Act IV Beat 15 (D3 Option 2, P1 inspection-only): live route quote, position, credit line, term-loan quote on a copy, 30-day schedule and demand evidence; review required before the decision; read-only review with no Confirm/draw/loan/build control and no profitability claim; Continue without borrowing completes with money, debt and leases unchanged; tutorial loan lock holds; no tutorial dispatch; Act IV chapter break pauses and releases held reviews before graduation; manual Pause; save/reload; old-save mapping; no-route honesty"
+      },
+      {
+        "id": "tup_route_quote",
+        "command": [
+          "@node",
+          "tests/headless/tup_route_quote.mjs"
+        ],
+        "completion": "5 upper-floor route quote checks passed",
+        "minimum_pass_lines": 5,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json"
+        ],
+        "evidence": "native current behavior: upRouteQuote against an independent stepped dry run (actual charges, construction run in game minutes) on the Day 18 break, after Beat 13, mirrored Maple and a post-graduation state",
+        "scope": "Campaign Unit 7c: read-only current-state quote of the unbuilt upper-floor route: parity with the stepped dry run, real state byte-identical, deterministic, no lesson marker on the real state, pinned fixture oracle, no hardcoded quote in source, honest blocked result"
+      },
+      {
         "id": "tlesson_offer_gate",
         "command": [
           "@node",

@@ -128,3 +128,31 @@ function deriveAuthoredPlacement(sim, step) {
   }
   return null;
 }
+
+// Act IV Beat 15 (campaign Unit 7c): read-only current-state quote of the unbuilt upper-floor route (the `up` blueprint).
+// Works only on a disposable copy of the state: it places each blueprint step in order with that step's real plan, reads its
+// real cost, and completes the copy's orders at once so the next step can be planned. The real state is never touched,
+// charged or saved; the lesson marker exists only on the copy. Parity with a stepped (time-advancing) dry run is tested.
+export const UP_ROUTE_STEPS=['aisle','shell2','hall','doorWide','loading','hall2','elevator','light','light2','units'];
+export function upRouteQuote(sim) {
+  const c=new sim.constructor(JSON.parse(JSON.stringify(sim.s))); c.ensure(); const cs=c.s;
+  cs.cash=1e9; cs.lesson={id:'up',idMark:cs.nextId,built:[],flags:{},entered:false,quote:true};
+  let lay=verticalLayout(c);
+  if(!lay) return {ok:false,reason:'No clear plot for a two-floor building remains on this parcel.'};
+  if(lay.blocked) return {ok:false,reason:lay.blocked};
+  const plot={x:lay.sh.x,y:lay.sh.y,w:lay.sh.w,h:lay.sh.h}, rows=[], doneKey={light:'lights',light2:'lights'};
+  const finish=()=>{ for(const o of cs.orders) if(o.st==='construction') c.completeOrder(o); c.events.length=0; };
+  for(const k of UP_ROUTE_STEPS) {
+    if(!['shell2','light','light2'].includes(k) && verticalDone(c,doneKey[k]||k)) continue;
+    lay=verticalLayout(c); const args=lay?.plans?.[k]; if(!args) return {ok:false,reason:'The route could not be planned past '+k+'.'};
+    const pl=c.plan(args); if(pl.status==='invalid') return {ok:false,reason:(pl.reasons&&pl.reasons[0])||'A step of the route is blocked.',step:k};
+    const daily=c.planDailyCost(pl), cash0=cs.cash, r=c.dispatch({type:'build',...args});
+    if(!r.ok) return {ok:false,reason:r.msg||'A step of the route could not be ordered.',step:k};
+    const charged=Math.round((cash0-cs.cash)*100)/100;
+    rows.push({step:k,tool:args.tool,label:pl.label||args.tool,cost:charged,dailyCost:daily||0,units:(pl.creates||[]).filter(x=>x.type==='unit').map(u=>({size:u.size,env:u.env||'std'}))});
+    finish();
+  }
+  const units=c.objs('unit').filter(u=>(u.f||0)===1&&u.x>=plot.x&&u.y>=plot.y&&u.x<plot.x+plot.w&&u.y<plot.y+plot.h).map(u=>({size:u.size,env:u.env||'std',ask:c.askFor(u)}));
+  const r2=(v)=>Math.round(v*100)/100;
+  return {ok:true,plot,rows,total:r2(rows.reduce((a,x)=>a+x.cost,0)),dailyCost:r2(rows.reduce((a,x)=>a+x.dailyCost,0)),units,askRoll:r2(units.reduce((a,u)=>a+u.ask,0))};
+}

@@ -14,7 +14,7 @@ const base = clone(makeMaple(7).s);
 const load = (tut, patch = {}) => { const st = clone(base); Object.assign(st, patch); st.tut = clone(tut); return new Sim(st); };
 // Campaign Unit 4 inserted Beat 5 (pricing) and the Act I break; ids never change, positions did.
 // Campaign Unit 5 added the Act II break before graduation; campaign Unit 6 added Act III (beats 9-12 and its break).
-const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'collections', 'grad']; // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
+const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'collections', 'financing', 'actIV_break', 'grad']; // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
 const IDS8 = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'grad']; // the layout saves had before ids
 // Where each pre-id position resumes: the same beat, except D4 (campaign Unit 6): the old graduation (index 7, not
 // graduated) resumes at the Act II break and then continues into Act III.
@@ -151,6 +151,9 @@ function play(strip, onBeat) {
   // Act IV Beat 14 (campaign Unit 7b, as tact4b): one real returned payment, then the collections lesson's Got it.
   assert.equal(curBeat(sim).id, 'collections'); until(() => s.tut.flags.act4Account != null, 1440 * 40);
   d({ type: 'tutFlag', flag: 'act4Seen' }); d({ type: 'tutFlag', flag: 'collAck' }); beat('collections');
+  // Act IV Beat 15 (campaign Unit 7c, as tact4c): review the financing (inspection only), continue without borrowing; Act IV break.
+  assert.equal(curBeat(sim).id, 'financing'); d({ type: 'tutFlag', flag: 'finSeen' }); d({ type: 'tutFlag', flag: 'finAck' }); beat('financing');
+  brk('actIV_break');
   assert.equal(curBeat(sim).id, 'grad');
   d({ type: 'tutFlag', flag: 'grad' }); tick(2);
   return { sim, s, log };

@@ -20,7 +20,7 @@ import { complaintCopy, requestCopy } from './feedbackcopy.js';
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK, BILLING_CYCLE_DAYS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
-import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup, verticalReviewGuide } from './tutorial.js';
+import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup, verticalReviewGuide, financingReview } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
@@ -334,6 +334,8 @@ export class UI {
       case 'climate': this.climate = !this.climate; this.replan(); break;
       case 'floorChoose': this.showFloors(); break;
       case 'verticalReview': this.showVertical(+v); break;
+      case 'finReview': this.showFinancingReview(); this.sfx('click'); break;
+      case 'finDecline': { const b = curBeat(this.sim); if (b?.id === 'financing' && this.sim.s.tut.flags.finSeen) this.do({ type: 'tutFlag', flag: 'finAck' }); this.closeModal(); this.sim.poll(); this.sfx('confirm'); break; }
       case 'verticalPreview': this.previewVertical(); break;
       case 'verticalBack': { const R=this.verticalReview; if(R) this.showVertical(R.shell,R); break; }
       case 'verticalCancel': this.endVerticalReview(); this.renderActionBar(); this.resumePopup('vpreview'); break;
@@ -2316,7 +2318,7 @@ export class UI {
       <ol class="steps">${items}</ol>
       ${heldN ? `<p class="note held-note">${heldN} owner request${heldN === 1 ? ' is' : 's are'} waiting. ${heldN === 1 ? 'It' : 'They'} will appear ${isLesson ? 'when this lesson ends' : b.brk ? 'after you tap Continue' : b.pause ? 'after you finish the tutorial' : 'at the next stopping point'}.</p>` : ''}
       ${b.why ? `<div class="why ${this.tutWhy ? 'open' : ''}"><button class="mini" data-a="tutWhy">${this.tutWhy ? 'Hide' : 'Why this matters'}</button>${this.tutWhy ? `<p>${b.why}</p>` : ''}</div>` : ''}
-      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${showBtn ? `<button class="btn pri${hold ? ' decision-prompt' : ''}" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : b.pause ? '' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
+      </div><div class="row tut-actions">${(step?.blueprint || step?.placement) ? `<button class="btn sm${step.redirect === 'switch' ? ' pri' : ''}" data-a="suggestPlacement">Use suggested placement</button>` + '<button class="btn sm" data-a="showPlacement">Show me where</button>' + (b.id==='up' ? '<button class="skip" data-a="recheckLayout">Recheck my layout</button>' : '') : ''}${b.review === 'fin' ? '<button class="btn sm" data-a="finReview">Review the project</button>' : ''}${showBtn ? `<button class="btn pri${hold ? ' decision-prompt' : ''}" data-a="tutNext">${b.button}</button>` : (step?.placement||step?.blueprint ? '<span class="mini">Hold at Start, drag to End. Review, then Confirm.</span>' : '<span class="mini">Follow the steps - the ring shows where to tap</span>')}${isLesson ? '<button class="skip" data-a="lessonEnd">End lesson</button>' : b.pause ? '' : '<button class="skip" data-a="tutSkip">Skip tutorial</button>'}</div></div>`;
   }
   // The placement the current RESOLVED step asks for. A step that is waiting on, or missing, a prerequisite (e.g. an
   // elevator committed before its hallways finished) asks for no placement, so nothing invites placing again.
@@ -3076,6 +3078,38 @@ export class UI {
     if (!this.floorsOpen) return; const m = this.$('modal');
     if (this.floorsKey && !(m.querySelector && m.querySelector('.modal.floors'))) { this.floorsOpen = false; return; } // replaced by another dialog
     const h = this.floorsHtml(); if (h === this.floorsKey) return; this.floorsKey = h; m.innerHTML = h;
+  }
+  // Act IV Beat 15: read-only financing review of the unbuilt upper-floor route (D3 Option 2, P1 inspection-only). Opening it
+  // counts as the inspection; it offers no build, draw or loan, only Continue without borrowing and Close.
+  showFinancingReview() {
+    const sim = this.sim, t = sim.s.tut, b = curBeat(sim); if (!t?.on || b?.id !== 'financing') return;
+    if (!t.flags.finSeen) this.do({ type: 'tutFlag', flag: 'finSeen' });
+    this.pauseForPopup('modal');
+    const R = financingReview(sim), kv = (a, v, cls = '') => `<span>${a}</span><b class="${cls}">${v}</b>`, pct = (v) => (v * 100).toFixed(1).replace(/\.0$/, '') + '%';
+    const st = stepState(sim, this), header = `${beatHeader(tutBeatIndex(sim.s))} · Step ${Math.min(st.cur + 1, b.steps.length)} of ${b.steps.length}`;
+    let body = '';
+    if (!R.ok) body = `<p class="vr-verdict unsupported">${esc(R.reason)}</p><p class="note">There is no upper-floor route to price right now, so there is nothing to finance. Continue without borrowing.</p>`;
+    else {
+      const q = R.q, labels = { aisle: 'Drive aisle to the new building', shell2: 'Two-floor building shell', hall: 'F1 hallway', doorWide: 'Wide entrance door', loading: 'Loading zone', hall2: 'F2 hallway', elevator: 'Freight elevator', light: 'F1 hallway light', light2: 'F2 hallway light', units: 'Upstairs units' };
+      const mix = Object.entries(q.units.reduce((m, u) => { const k = `${u.size}${u.env === 'climate' ? ' climate' : ''}`; m[k] = (m[k] || 0) + 1; return m; }, {})).map(([k, n]) => `${n} × ${k}`).join(', ');
+      body += `<h3>The project</h3><p class="note">A second building with an upstairs floor at the suggested plot on Maple’s open land, priced at today’s costs. Nothing is ordered or charged.</p><div class="kv" data-qa="fin-rows">${q.rows.map((r) => kv(esc(labels[r.step] || r.label), money(r.cost))).join('')}${kv('<b>Total</b>', money(q.total))}</div>`;
+      body += `<p class="note">Adds ${mix || 'no units'} upstairs and about ${money(q.dailyCost, true)} a day in running costs. Their asking rents total ${money(q.askRoll)} a month only if every one rents.</p>`;
+      body += `<h3>Maple’s money</h3><div class="kv" data-qa="fin-money">${kv('Cash now', money(R.now.cash))}${kv('Unpaid committed bills', money(R.now.committed))}${kv('Recommended reserve', money(R.now.reserve))}${kv('Available now', money(R.now.available))}${kv('Available after this project', money(R.after.available), R.after.available < 0 ? 'neg' : '')}</div>`;
+      body += `<p class="note" data-qa="fin-gap">${R.gap ? `Building it from cash would leave Maple ${money(R.gap)} short of its reserve.` : 'Maple could pay for it from cash and keep its reserve.'}</p>`;
+      body += `<h3>Demand</h3><p class="note" data-qa="fin-demand">${esc(R.demand.text)}</p><p class="note">This is observed evidence, not a forecast. Nothing here shows the new units would rent, or how soon.</p>`;
+      const C = R.credit, L = R.loan;
+      const creditTxt = C.needed === 0 ? 'Not needed: cash already covers this with the reserve.' : C.needed == null ? `It cannot cover this. The line has ${money(C.room)} of ${money(C.limit)} unused, short of what the project needs.` : `A ${money(C.needed)} draw would cover it, adding about ${money(C.projection.dailyInterest, true)} a day in interest and ${money(C.projection.debt)} of debt.`;
+      const loanTxt = !L.amount ? 'Not needed for this project.' : !L.approved ? `A ${money(L.amount)} loan is more than the bank would approve at this rent roll (${money(L.limit)}).` : `${money(L.amount)} over ${L.months} months at ${pct(L.rate)}: ${money(L.pmt, true)} a month, ${L.share != null ? pct(L.share) + ' of the ' + money(R.roll) + ' monthly rent roll' : ''}, ${money(L.totalPaid)} repaid in total (${money(L.interest)} interest).${L.after ? ` After borrowing and building, available would be ${money(L.after.available)}.` : ''}`;
+      const sv = R.saving;
+      body += `<h3>Ways to pay</h3><div class="list fin-ways">
+        <div class="item" data-qa="fin-credit"><div class="grow"><b>Credit line</b><small>For short gaps in cash, not long projects. ${esc(creditTxt)}</small></div></div>
+        <div class="item" data-qa="fin-loan"><div class="grow"><b>Term loan (quote only)</b><small>Long-term capital, repaid every month whether or not the units rent. ${esc(loanTxt)}${L.lockedHere ? ' Term loans open after the tutorial; nothing can be borrowed here.' : ''}</small></div></div>
+        <div class="item" data-qa="fin-saving"><div class="grow"><b>Save up</b><small>Today’s schedule for the next 30 days: ${money(sv.inflow)} of current-tenant rent in, ${money(sv.outflow)} of bills and payments out, ${sv.net >= 0 ? '+' : ''}${money(sv.net)} net. This is a schedule, not a promise.</small></div></div>
+        <div class="item" data-qa="fin-decline"><div class="grow"><b>Decline for now</b><small>Nothing is charged and nothing is owed. You can build up later, when the money and the demand support it.</small></div></div>
+      </div>`;
+    }
+    const G = `<div class="vr-coach" data-qa="fin-coach" role="status"><small>${esc(header)}</small><b>Financing being available does not make a project worth doing</b><span>Compare the cost, the money, the demand and the payments. Borrowing is not required, and declining has no penalty.</span></div>`;
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal vreview freview" role="dialog" aria-modal="true" aria-labelledby="fin-title"><div class="row"><h2 id="fin-title">Upper-floor project · financing review<small class="vr-paused">Paused while you review · nothing is ordered, charged or borrowed</small></h2><button class="x" data-a="modalClose" aria-label="Close review" title="Close review">${I.x}</button></div>${G}<div class="vr-body">${body}</div><div class="row wrap vr-acts"><button class="btn pri vr-guide" data-a="finDecline" data-qa="fin-decline-btn">Continue without borrowing</button><button class="btn" data-a="modalClose" data-qa="fin-close">Close review</button></div></div></div>`;
   }
   showVertical(id, options={fitout:true,stairs:false}) {
     if(!this.verticalReview)this.verticalPreviousView=this.rend.view;

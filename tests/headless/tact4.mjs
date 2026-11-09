@@ -49,7 +49,7 @@ function playRoute(sim) {
 
 test('Beat 13 opens Act IV right after the Act III break, before Beat 14 and graduation; no camera focus, no pause', () => {
   const ids = BEATS.map((b) => b.id), v = beatIndex('vertical');
-  assert.equal(ids[v - 1], 'actIII_break'); assert.equal(ids[v + 1], 'collections'); assert.equal(ids[v + 2], 'grad'); assert.equal(v + 3, BEATS.length); // Beat 14 since Unit 7b (tact4b)
+  assert.equal(ids[v - 1], 'actIII_break'); assert.equal(ids[v + 1], 'collections'); assert.equal(ids[v + 2], 'financing'); assert.equal(ids[v + 3], 'actIV_break'); assert.equal(ids[v + 4], 'grad'); assert.equal(v + 5, BEATS.length); // Beats 14-15 and the Act IV break since Units 7b-7c (tact4b, tact4c)
   const b = BEATS[v]; assert.equal(b.act, 'IV'); assert.equal(b.chapter, 'Grow'); assert.equal('focus' in b, false); assert.equal(!!b.pause, false);
   assert.equal(beatHeader(v), 'Act IV · Grow · Beat 13');
   assert.equal(BEATS[v - 1].next, 'Act IV · Grow'); assert.match(BEATS[v - 1].body, /stop before Act IV/);
