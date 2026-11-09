@@ -87,6 +87,28 @@ const I = {
 const money = (v, dec = false) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: dec ? 2 : 0, minimumFractionDigits: dec ? 2 : 0 });
 // Existing acquisition term, also disclosed in Growth; checked against actual engine purchases.
 const ACQUISITION_OPENING_CASH = 5000;
+const LOAN_PRESETS = [10000, 25000, 50000, 100000]; // Financing's expansion-loan choices
+// AG-01: read-only operating-facility guidance from the shared preview constructor. Facts only; every choice stays the player's.
+function facilityGuidance(sim, pv, price, careerOk) {
+  if (!pv) return null;
+  const cash = sim.s.cash, lim = sim.loanLimit(), { rate, months } = sim.loanTerms();
+  const loan = cash < price ? LOAN_PRESETS.filter((v) => v <= lim).find((v) => cash + v >= price) || 0 : 0;
+  const pos = cash < price && loan ? sim.financialPosition({ spend: price - loan }) : null;
+  const debt = sim.s.debt.length ? { monthly: sim.s.debt.reduce((a, d) => a + d.pmt, 0), next: Math.min(...sim.s.debt.map((d) => d.next)) } : null;
+  return { pv, price, short: cash < price, loan, rate, months, pmt: loan ? sim.loanPmt(loan, rate, months) : 0, firstDay: sim.day + BILLING_CYCLE_DAYS,
+    cashAfter: pos ? pos.cash : null, available: pos ? pos.available : null, debt, career: careerOk && pv.career.next ? pv.career : null };
+}
+function facilityGuidanceHtml(fg) {
+  if (!fg) return '';
+  const p = fg.pv, c = fg.career, opex = Math.round(p.opexDay * 100) / 100;
+  let h = `<div class="kv facility-guidance"><span>Units leased</span><b>${p.leased} of ${p.units}</b><span>Current contracted rent</span><b>${money(p.roll)}/mo</b><span>Operating costs today</span><b>${money(opex, true)}/day (~${money(Math.round(opex * 30))} per 30 days)</b><span>Staff included</span><b>${p.staff.length === 1 && p.staff[0] === 'owner' ? 'Owner only' : p.staff.map(esc).join(', ')}</b></div>`;
+  h += `<p class="note">Contracted rent is not guaranteed: tenants can move out or pay late. Costs shown are before repairs, staff and loan payments. Some equipment needs maintenance.</p>`;
+  if (fg.short) h += fg.loan ? `<p class="note facility-loan"><b>If you borrow:</b> a ${money(fg.loan)} expansion loan from Financing would cost ${money(fg.pmt, true)}/mo for ${fg.months} months at ${(fg.rate * 100).toFixed(1)}%, first payment Day ${fg.firstDay}. After borrowing and buying: cash ${money(fg.cashAfter, true)} here · available after bills &amp; reserve <span class="${fg.available < 0 ? 'neg' : ''}">${money(fg.available, true)}</span>. The 14-day reserve does not include the first loan payment.</p>` : `<p class="note facility-loan">No current loan option covers this price.</p>`;
+  else if (fg.debt) h += `<p class="note facility-loan">Term-loan payments ${money(fg.debt.monthly, true)}/mo · next payment Day ${fg.debt.next}.</p>`;
+  if (c) { const met = c.roll >= c.next.roll && c.n >= c.next.props;
+    h += `<p class="note facility-career"><b>Career after purchase</b> (current rules): rent roll ${money(c.roll)} of ${money(c.next.roll)}/mo · properties ${c.n} of ${c.next.props}.${met ? ` Both requirements for ${esc(c.next.name)} met; promotion is checked hourly.` : ''}</p>`; }
+  return h + `<p class="note facility-choice">Buying, borrowing, saving up and waiting are all valid choices. Rent and costs can change.</p>`;
+}
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const pct = (v) => Math.round(v * 100) + '%';
 export const AD_RESULT_SCOPE = 'These figures count only campaign-attributed shoppers and leases, and compare their first-month rent with the campaign cost. They are not total profit: attributed tenants keep paying after month one, and leases from other shoppers are not counted here.';
@@ -383,6 +405,7 @@ export class UI {
       case 'acquire': this.showAcquisitionReview(v, el.dataset.m); break;
       case 'previewFirstGate': this.previewFirstGate(); break;
       case 'acquisitionFinancing': this.fundingContext=null; this.setTab('business',true); this.jumpSection('Financing'); break;
+      case 'seeAcquisitions': this.jumpSection('Acquisitions'); break;
       case 'acquisitionConfirm': this.confirmAcquisitionReview(); break;
       case 'transfer': this.showTransferReview(+el.dataset.from, +el.dataset.to, +v); break;
       case 'transferConfirm': this.confirmTransferReview(v); break;
@@ -831,14 +854,15 @@ export class UI {
     if(!offer)return {ok:false,msg:'Offer not available'};
     if(this.sim.s.cash<offer.price)return {ok:false,msg:'Not enough cash at this property'};
     const position=this.sim.financialPosition({spend:offer.price});
-    return {ok:true,offer,workingCash:ACQUISITION_OPENING_CASH,sourceName:C.props[C.active].name,cashAfter:position.cash,position};
+    const guidance=kind==='facility'&&this.g.facilityPreview?facilityGuidance(this.sim,this.g.facilityPreview(),offer.price,careerEligibility(this.sim.s).eligible):null;
+    return {ok:true,offer,workingCash:ACQUISITION_OPENING_CASH,sourceName:C.props[C.active].name,cashAfter:position.cash,position,...(guidance?{guidance}:{})};
   }
   showAcquisitionReview(kind, market) {
     const q=this.acquisitionQuote(kind,market),C=this.g.company;
     this.creditReview=null;this.termLoanReview=null;this.transferReview=null;
     this.acquisitionReview=q.ok?{sim:this.sim,company:C,source:C.props[C.active],kind,market,quote:q}:null;
     this.requestPanel=false;this.pauseForPopup('modal');
-    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="acquisition-title"><h2 id="acquisition-title">Review property purchase</h2>${q.ok?`<h3>${esc(q.offer.name)}</h3><p>${esc(q.offer.desc)}</p><div class="kv"><span>Purchasing property</span><b>${esc(q.sourceName)}</b><span>Total price</span><b>${money(q.offer.price)}</b><span>Included opening working cash</span><b>${money(q.workingCash)}</b><span>Purchasing property's cash after purchase</span><b>${money(q.cashAfter,true)}</b></div>${this.financialContextHtml(q.position,q.sourceName,'purchase')}<p class="note">Opening working cash is included in the total price and goes into the new property's account. The remaining cash shown stays at ${esc(q.sourceName)}. Future rent is not guaranteed.</p>`:`<p class="note">${esc(q.msg)}. Return to Acquisitions to review current offers.</p>`}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="acquisitionConfirm">Confirm ${money(q.offer.price)} purchase</button>`:''}</div></div></div>`;
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="acquisition-title"><h2 id="acquisition-title">Review property purchase</h2>${q.ok?`<h3>${esc(q.offer.name)}</h3><p>${esc(q.offer.desc)}</p><div class="kv"><span>Purchasing property</span><b>${esc(q.sourceName)}</b><span>Total price</span><b>${money(q.offer.price)}</b><span>Included opening working cash</span><b>${money(q.workingCash)}</b><span>Purchasing property's cash after purchase</span><b>${money(q.cashAfter,true)}</b></div>${q.guidance?`<h3>What comes with it</h3>${facilityGuidanceHtml(q.guidance)}`:''}${this.financialContextHtml(q.position,q.sourceName,'purchase')}<p class="note">Opening working cash is included in the total price and goes into the new property's account. The remaining cash shown stays at ${esc(q.sourceName)}. Future rent is not guaranteed.</p>`:`<p class="note">${esc(q.msg)}. Return to Acquisitions to review current offers.</p>`}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="acquisitionConfirm">Confirm ${money(q.offer.price)} purchase</button>`:''}</div></div></div>`;
   }
   confirmAcquisitionReview() {
     const r=this.acquisitionReview,C=this.g.company;
@@ -1813,7 +1837,7 @@ export class UI {
       h += `<div class="item"><div class="grow"><b>Term loan · ${money(d.bal)} left</b><small>${money(d.orig)} at ${(d.rate * 100).toFixed(1)}% · ${money(d.pmt)}/mo · ${d.months - d.paid} payments left · next Day ${d.next}</small></div>${this.cmdBtn('Pay off', { type: 'payoff', id: d.id }, '', s.cash < d.bal)}</div>`;
     }
     const tut = s.mode === 'tutorial' && !s.tut.done;
-    const opts = [10000, 25000, 50000, 100000].filter((v) => v <= lim);
+    const opts = LOAN_PRESETS.filter((v) => v <= lim);
     h += `<div class="item"><div class="grow"><b>Expansion loan</b><small>${tut ? 'Opens after the tutorial: early growth is cash-funded.' : lim ? `Approved up to ${money(lim)} · ${(rate * 100).toFixed(1)}% · ${months} months. Payments are capped at 45% of your rent roll.` : 'Your rent roll is too small to support loan payments yet.'}</small></div></div>`;
     if (opts.length) h += `<div class="loanopts">${opts.map((v) => { const pm = sim.loanPmt(v, rate, months); return `<button class="loanopt" data-a="termLoanReview" data-v="${v}"><b>Review ${money(v)}</b><small>${money(pm)}/mo · cash after ${money(s.cash + v)}</small></button>`; }).join('')}</div>`;
     const room = sim.creditLimit() - s.loan.bal;
@@ -1955,7 +1979,7 @@ export class UI {
       const ti = this.g.tierInfo(), nx = ti.next;
       h += `<h3>Operator career</h3><div class="career"><div class="tier"><small>Level ${ti.cur.n} of ${TIERS.length}</small><b>${ti.cur.name}</b></div>`;
       if (nx) { const pr = Math.min(1, ti.roll / nx.roll), pp = Math.min(1, ti.n / nx.props);
-        h += `<div class="goal"><span>Next: <b>${nx.name}</b></span><div class="bar"><i style="width:${Math.round(pr * 100)}%"></i></div><small>Career rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? ` · Career properties ${ti.n} of ${nx.props}` : ''}</small>${nx.props > 1 ? `<div class="bar"><i style="width:${Math.round(pp * 100)}%"></i></div>` : ''}<small class="perks">Unlocks: ${nx.perks.map(esc).join(' · ')}</small></div>`; }
+        h += `<div class="goal"><span>Next: <b>${nx.name}</b></span><div class="bar"><i style="width:${Math.round(pr * 100)}%"></i></div><small>Career rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo${nx.props > 1 ? ` · Career properties ${ti.n} of ${nx.props}` : ''}</small>${nx.props > 1 ? `<div class="bar"><i style="width:${Math.round(pp * 100)}%"></i></div>` : ''}<small class="perks">Unlocks: ${nx.perks.map(esc).join(' · ')}</small>${nx.props > ti.n && this.g.company ? '<button class="btn sm" data-a="seeAcquisitions">See Acquisitions</button>' : ''}</div>`; }
       if (ti.excluded?.length) h += `<details class="explanation"><summary>Career participation</summary><p>Only eligible properties count toward promotion.</p>${ti.excluded.map(p => `<p>${esc(p.name || 'Property')}: ${esc(careerEligibility(p.sim.s).reason)}</p>`).join('')}</details>`;
       h += `<small class="perks">Unlocked perks: ${TIERS.filter((T) => T.n <= ti.cur.n).flatMap((T) => T.perks).map(esc).join(' · ')}</small></div>`;
     }
@@ -2645,7 +2669,8 @@ export class UI {
     if (C.feed.length) h += `<h3>Company attention</h3><div class="list">${C.feed.slice(0, 6).map((e) => `<div class="item"><div class="grow"><b>${esc(e.prop)}</b><small>Day ${dayOf(e.t)} · ${esc(e.msg)}</small></div>${C.props[e.k] && e.k !== cur ? `<button class="btn sm" data-a="switchProp" data-v="${e.k}">Go</button>` : ''}</div>`).join('')}</div>`;
     if (!this.sim.s.creative && (this.sim.s.mode !== 'tutorial' || this.sim.s.tut.done)) {
       const offers = this.g.offers();
-      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item" data-acquisition-offer="${of.kind}:${of.market}"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small>${this.sim.s.cash < of.price ? `<p class="note acquisition-shortfall">Need <strong>${money(of.price-this.sim.s.cash,true)}</strong> more at this property.</p><button class="btn sm" data-a="acquisitionFinancing" aria-label="View Financing for ${esc(of.name)}">View Financing</button>` : ''}</div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Review ${money(of.price)}</button></div>`).join('')}</div>
+      const fg = this.g.facilityPreview && offers.some((of) => of.kind === 'facility') ? facilityGuidance(this.sim, this.g.facilityPreview(), offers.find((of) => of.kind === 'facility').price, careerEligibility(this.sim.s).eligible) : null;
+      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item" data-acquisition-offer="${of.kind}:${of.market}"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small>${of.kind === 'facility' && fg ? `<details class="explanation facility-details"><summary>What comes with it</summary>${facilityGuidanceHtml(fg)}</details>` : ''}${this.sim.s.cash < of.price ? `<p class="note acquisition-shortfall">Need <strong>${money(of.price-this.sim.s.cash,true)}</strong> more at this property.</p><button class="btn sm" data-a="acquisitionFinancing" aria-label="View Financing for ${esc(of.name)}">View Financing</button>` : ''}</div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Review ${money(of.price)}</button></div>`).join('')}</div>
         <p class="note">Paid from this property's cash. Prices include ${money(ACQUISITION_OPENING_CASH)} of opening working cash for the new property; send more from here to fund construction.</p>`;
     } else if (this.sim.s.mode === 'tutorial' && !this.sim.s.tut.done) h += `<p class="note">Finish the tutorial to unlock acquisitions and a multi-property company.</p>`;
     return h;
