@@ -150,7 +150,7 @@ function play(strip, onBeat) {
   assert.equal(d({ type: 'build', tool: 'iu5x10', a: { x: 18, y: 5 }, b: { x: 18, y: 5 }, f: 1, axis: 'y' }).ok, true); beat('vertical');
   // Act IV Beat 14 (campaign Unit 7b, as tact4b): one real returned payment, then the collections lesson's Got it.
   assert.equal(curBeat(sim).id, 'collections'); until(() => s.tut.flags.act4Account != null, 1440 * 40);
-  d({ type: 'tutFlag', flag: 'collAck' }); beat('collections');
+  d({ type: 'tutFlag', flag: 'act4Seen' }); d({ type: 'tutFlag', flag: 'collAck' }); beat('collections');
   assert.equal(curBeat(sim).id, 'grad');
   d({ type: 'tutFlag', flag: 'grad' }); tick(2);
   return { sim, s, log };

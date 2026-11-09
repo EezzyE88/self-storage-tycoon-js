@@ -2367,6 +2367,13 @@ export class UI {
     }
     return moved;
   }
+  // Beat 14: the Collections ladder actually on screen in Business, with the returned-payment account on the books, counts as
+  // the inspection (read-only flag, persisted with the tutorial). Opening Business alone, or tapping Got it, does not.
+  noteAct4Seen() {
+    const f = this.sim.s.tut?.on && this.sim.s.tut.beatId === 'collections' ? this.sim.s.tut.flags : null;
+    if (!f || f.act4Account == null || f.act4Seen || this.title || this.tab !== 'business' || this.modalOpen()) return;
+    if (this.guideVisible(this.root.querySelector('.ladder'))) { this.do({ type: 'tutFlag', flag: 'act4Seen' }); this.sim.poll(); this.renderTut(true); }
+  }
   guideVisible(el) {
     if(!el || el.disabled || (el.closest('details:not([open])') && !el.matches('summary'))) return false; const r=el.getBoundingClientRect();
     if(r.width<2||r.height<2||r.top<0||r.bottom>innerHeight||r.left<0||r.right>innerWidth) return false;
@@ -2534,6 +2541,7 @@ export class UI {
     if (this.menuTouch || this.pointerBusy || performance.now() < (this.menuScrollUntil || 0)) { g.hidden = true; return; }
     const s = this.sim.s;
     if (s.tut && s.tut.on && tutBeatIndex(s) === 0 && !this.title) { const sig = [this.rend.zoom.toFixed(3), this.rend.rot, this.rend.center.x.toFixed(2), this.rend.center.z.toFixed(2)].join(','); if (this.lookSig == null) this.lookSig = sig; else if (performance.now() - (this.lookT0 || (this.lookT0 = performance.now())) < 2500) this.lookSig = sig; else if (sig !== this.lookSig) this.tutLooked = true; }
+    this.noteAct4Seen();
     const t = curBeat(this.sim) ? this.guideTarget() : null;
     if (!t) { if (!g.hidden) g.hidden = true; this.guidePos = null; return; }
     let x, y, w, h;

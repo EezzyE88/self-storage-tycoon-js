@@ -1205,14 +1205,14 @@
           "@node",
           "tests/headless/tact4b.mjs"
         ],
-        "completion": "13 Act IV Beat 14 checks passed",
-        "minimum_pass_lines": 13,
+        "completion": "15 Act IV Beat 14 checks passed",
+        "minimum_pass_lines": 15,
         "timeout": 900,
         "required_files": [
           "tests/headless/fixtures/act3_break_trace_20260929.json"
         ],
         "evidence": "native current behavior: the ordinary Day 18 Act III break replayed through Beat 13 into Beat 14, sim tutorial ticks with the real collections ladder (billLease) under forced and seeded draws, save/reload, production tutorialText",
-        "scope": "Campaign Unit 7b: Act IV Beat 14 S2 returned payment: verified prior rent payment, one labelled reversal through sim.money netting to zero, state equivalent to a real missed bill, normal delinquency progression and early payment, unrelated tenants and RNG untouched, persistent duplicate guard, no-eligible-account wait, lien card owned by the beat while other reviews stay held, manual Pause, live account line in step text"
+        "scope": "Campaign Unit 7b: Act IV Beat 14 S2 returned payment: verified prior rent payment, one labelled reversal through sim.money netting to zero, state equivalent to a real missed bill, normal delinquency progression and early payment, unrelated tenants and RNG untouched, persistent duplicate guard, no-eligible-account wait, lien card owned by the beat while other reviews stay held, manual Pause, live account line in step text; Collections inspection required before completion (Got it shown and counted only after the ladder was on screen with the account authored), including early payment and across reload"
       },
       {
         "id": "tlesson_offer_gate",

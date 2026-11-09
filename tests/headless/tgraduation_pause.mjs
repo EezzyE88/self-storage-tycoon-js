@@ -42,7 +42,7 @@ function beforeGrad(speed = 4) {
   tutorialTick(sim); assert.equal(curBeat(sim).id, 'collections');
   // Act IV Beat 14 (campaign Unit 7b) follows; tact4b covers its real returned payment. Here it is positioned as already
   // answered (guard set, Got it given), so the next tick completes it into graduation.
-  const BC = beatIndex('collections'); Object.assign(s.tut, { beat: BC, beatId: 'collections', beatAt: BC, entered: true }); s.tut.flags.act4Account = Object.keys(s.leases)[0]; s.tut.flags.collAck = true;
+  const BC = beatIndex('collections'); Object.assign(s.tut, { beat: BC, beatId: 'collections', beatAt: BC, entered: true }); s.tut.flags.act4Account = Object.keys(s.leases)[0]; s.tut.flags.act4Seen = true; s.tut.flags.collAck = true;
   s.speed = speed; sim.events.length = 0; return sim;
 }
 const atGrad = (speed = 4) => { const sim = beforeGrad(speed); tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad'); return sim; };

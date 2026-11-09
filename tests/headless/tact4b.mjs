@@ -44,6 +44,14 @@ const run1 = (sim) => { sim.s.speed = 4; sim.step(); quiet(sim); }; // one runni
 const unitLines = (sim, num) => sim.s.ledger.filter((x) => (x.note || '').endsWith(`Unit ${num}`));
 const leaseView = (sim, L) => ({ status: L.status, balance: L.balance, fees: L.fees, dueSince: L.dueSince, feeDone: L.feeDone, nextBill: L.nextBill, overlock: !!sim.s.objects[L.unit].overlock });
 
+// The production UI's Beat 14 inspection hook with the DOM stubbed: `visible` is whether the Collections ladder is on screen.
+function noteUI(sim, { tab = 'business', visible = true, modal = false } = {}) {
+  const u = Object.create(UI.prototype); u.g = { sim, audio: { unlock() {}, play() {} }, rend: { setFocus() {}, setSelection() {}, view: 'ext', lookAt() {} } };
+  Object.assign(u, { title: false, tab, tutMin: true, tutWhy: false, toasts: [], sel: null, tool: null, plan: null, popupBlocks: new Set() });
+  const ladder = { ladder: true }; u.root = { querySelector: (q) => (q === '.ladder' ? ladder : null), querySelectorAll: () => [] };
+  u.guideVisible = (el) => !!el && el === ladder && visible; u.modalOpen = () => modal; u.renderTut = () => null; u.sfx = () => null;
+  return u;
+}
 test('Beat 14 follows Beat 13 in Act IV, before graduation, and reuses the collections lesson contract verbatim', () => {
   const ids = BEATS.map((b) => b.id), c = beatIndex('collections'), b = BEATS[c], L = LESSONS.find((x) => x.id === 'collections');
   assert.equal(ids[c - 1], 'vertical'); assert.equal(ids[c + 1], 'grad'); assert.equal(beatHeader(c), 'Act IV · Grow · Beat 14');
@@ -126,12 +134,17 @@ test('normal progression only: across RNG branches the ladder alone moves the ac
   assert.ok([...seen].some((p) => p.startsWith('delinquent>current')), 'some branches pay early'); assert.ok([...seen].some((p) => p.includes('lien')), 'some reach lien');
 });
 
-test('early payment fail-forward: the card says the account was paid, and Got it still completes the beat (lesson marked done)', () => {
+test('early payment fail-forward: the card says the account was paid; Collections must still be inspected, then Got it completes the beat (lesson marked done)', () => {
   const base = at14(); run1(base); const id = base.s.tut.flags.act4Account, j = JSON.stringify(base.s);
   let sim = null; for (let k = 0; k < 40 && !sim; k++) { const c = fromJSON(j); c.s.rngSalt = k; for (let r = 0; r < k * 5; r++) c.rnd(); for (let i = 0; i < 1440 * 14; i++) { c.s.speed = 4; c.step(); quiet(c); if (c.s.leases[id].status === 'current') { sim = c; break; } } }
   assert.ok(sim, 'a branch where the tenant pays before review');
   const html = renderCard(sim); assert.match(html, /Unit 1010’s \$119 rent payment came back on Day \d+\. The tenant has since paid in full; the account is current\./);
-  assert.match(html, /data-a="tutNext">Got it<\/button>/);
+  assert.doesNotMatch(html, /data-a="tutNext">Got it<\/button>/, 'no Got it before Collections is inspected, even though the tenant paid');
+  sim.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(sim); assert.equal(curBeat(sim).id, 'collections', 'paid early: Got it alone does not complete');
+  delete sim.s.tut.flags.collAck;
+  const u = noteUI(sim, { visible: true }); u.noteAct4Seen(); assert.equal(sim.s.tut.flags.act4Seen, true, 'the paid-up ladder on screen counts as the inspection');
+  assert.match(renderCard(sim), /data-a="tutNext">Got it<\/button>/);
+  tutorialTick(sim); assert.equal(curBeat(sim).id, 'collections', 'inspection alone does not complete: Got it is still the acknowledgment');
   sim.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(sim);
   assert.equal(curBeat(sim).id, 'grad'); assert.ok(sim.s.lessonsDone.collections, 'the optional collections lesson is not offered again');
 });
@@ -144,7 +157,7 @@ test('held requests: the lien card is the beat’s own content while other revie
   assert.ok(lien, 'a branch that reaches lien during the beat');
   const card = lien.s.convos.find((x) => x.key === 'lien' + id), other = lien.s.convos.find((x) => x.key === 'other');
   assert.equal(lien.reviewHeld(card), false, 'lien card shown'); assert.equal(lien.reviewHeld(other), true, 'other review held');
-  lien.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(lien); assert.equal(curBeat(lien).id, 'grad');
+  lien.dispatch({ type: 'tutFlag', flag: 'act4Seen' }); lien.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(lien); assert.equal(curBeat(lien).id, 'grad');
   lien.syncReviewHold(); assert.equal(lien.reviewHeld(card), true, 'after Beat 14 the lien card waits like any review');
   // Nobody answers: the standard procedure runs (notice 14 days after lien), so the held card is stale and is retired.
   for (let i = 0; i < 1440 * 16; i++) { lien.s.speed = 4; lien.step(); quiet(lien); }
@@ -198,5 +211,31 @@ test('rendered step text: the wait, then the live account story (stage, amount o
   // the same card, re-rendered without force (as every frame does), follows the live account when the tenant pays mid-step
   const { u, box } = renderCard.last; sim.payUp(L); u.renderTut(false);
   assert.match(box.innerHTML, /data-qa="tut-act4-account">Unit 1010’s \$119 rent payment came back on Day \d+\. The tenant has since paid in full; the account is current\.<\/span>/);
+});
+test('inspection before completion: Got it appears and counts only after the Collections ladder was on screen with the account authored', () => {
+  const sim = at14(); const f = sim.s.tut.flags;
+  noteUI(sim).noteAct4Seen(); assert.equal(f.act4Seen, undefined, 'nothing to inspect before the payment comes back');
+  run1(sim); assert.ok(f.act4Account != null);
+  sim.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(sim);
+  assert.equal(curBeat(sim).id, 'collections', 'Got it without inspection does not complete'); assert.doesNotMatch(renderCard(sim), /data-a="tutNext"/, 'no Got it on the card yet');
+  delete f.collAck;
+  for (const o of [{ tab: 'operate' }, { visible: false }, { modal: true }]) { noteUI(sim, o).noteAct4Seen(); assert.equal(f.act4Seen, undefined, 'not inspected: ' + JSON.stringify(o)); }
+  assert.equal(stepState(sim, ui({ tab: 'business' })).cur, 2, 'Business open, Collections not yet on screen: Find Collections');
+  const cash = sim.s.cash, led = sim.s.ledger.length, L = JSON.stringify(sim.s.leases), spd = sim.s.speed;
+  noteUI(sim).noteAct4Seen(); assert.equal(f.act4Seen, true);
+  assert.equal(sim.s.cash, cash); assert.equal(sim.s.ledger.length, led); assert.equal(JSON.stringify(sim.s.leases), L); assert.equal(sim.s.speed, spd, 'inspection is read-only');
+  assert.equal(stepState(sim, ui({ tab: 'business' })).cur, 3); assert.match(renderCard(sim), /data-a="tutNext">Got it<\/button>/);
+  tutorialTick(sim); assert.equal(curBeat(sim).id, 'collections', 'inspection alone does not complete');
+  sim.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(sim); assert.equal(curBeat(sim).id, 'grad');
+  const g = fromJSON(JSON.stringify(sim.s)); noteUI(g).noteAct4Seen(); assert.equal(g.s.tut.beatId, 'grad', 'after Beat 14 the hook does nothing');
+});
+test('reload and inspection: not inspected before reload means inspect again; inspected before reload keeps Got it; still one reversal', () => {
+  const sim = at14(); run1(sim); const num = sim.s.objects[sim.s.leases[sim.s.tut.flags.act4Account].unit].num;
+  const r1 = fromJSON(JSON.stringify(sim.s)); assert.equal(stepState(r1, ui({ tab: 'business' })).cur, 2); assert.doesNotMatch(renderCard(r1), /data-a="tutNext"/);
+  noteUI(r1).noteAct4Seen(); const j = JSON.stringify(r1.s), r2 = fromJSON(j);
+  assert.equal(JSON.stringify(r2.s), j, 'byte-identical'); assert.equal(r2.s.tut.flags.act4Seen, true, 'inspection persists');
+  assert.equal(stepState(r2, ui()).cur, 3, 'after reload, Got it is the next step even before Business is reopened'); assert.match(renderCard(r2), /data-a="tutNext">Got it<\/button>/);
+  for (let i = 0; i < 60; i++) run1(r2); assert.equal(unitLines(r2, num).filter((x) => /^Returned payment/.test(x.note)).length, 1);
+  r2.dispatch({ type: 'tutFlag', flag: 'collAck' }); tutorialTick(r2); assert.equal(curBeat(r2).id, 'grad');
 });
 console.log(`${passed} Act IV Beat 14 checks passed`);

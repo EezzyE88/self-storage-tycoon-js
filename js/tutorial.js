@@ -157,6 +157,9 @@ export function authorAct4Account(sim) {
   return { ok: true, lease: L.id, unit: u.num, bill, late };
 }
 const act4Authored = (sim) => sim.s.tut.flags.act4Account != null;
+// Beat 14 completes only after the player has actually looked at Collections with the authored account on the books: the UI
+// sets act4Seen (persistent, read-only) when the ladder is on screen during Beat 14. Early payment does not skip the inspection.
+const act4Seen = (sim) => act4Authored(sim) && !!sim.s.tut.flags.act4Seen;
 // Live story of that account for the rendered step text (beat bodies are not shown on phone cards).
 const act4Line = (sim) => {
   const s = sim.s, id = s.tut.flags.act4Account; if (id == null) return '';
@@ -405,11 +408,11 @@ export const BEATS = [
     ownsRequest: (sim, c) => !!c && sim.s.tut.flags.act4Account != null && c.key === 'lien' + sim.s.tut.flags.act4Account,
     steps: [
       { t: 'Let time run until a payment comes back', d: 'No tenant has a paid rent bill old enough yet. Tap <b>4x</b>; this step continues by itself once one does. The tutorial only uses a real payment; it never invents rent.', sel: FAST, run: true, done: act4Authored },
-      { t: 'Open <b>Business</b>{act4Account}', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => (act4Authored(sim) && tabIs(ui, 'business')) || ctx(sim).flags.collAck },
-      { t: 'Find <b>Collections</b>{act4Account}', d: 'In the Business panel, choose <b>Collections</b> in the section selector to reach the ladder. Each rung counts accounts at that stage; the list below has actions for each account (notice, plan, waive, unlock).', sel: '.ladder', done: (sim) => ctx(sim).flags.collAck },
-      { t: 'Tap <b>Got it</b>', d: 'Or act on an account first. The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => ctx(sim).flags.collAck },
+      { t: 'Open <b>Business</b>{act4Account}', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => (act4Authored(sim) && tabIs(ui, 'business')) || act4Seen(sim) },
+      { t: 'Find <b>Collections</b>{act4Account}', d: 'In the Business panel, choose <b>Collections</b> in the section selector to reach the ladder. Each rung counts accounts at that stage; the list below has actions for each account (notice, plan, waive, unlock).', sel: '.ladder', done: act4Seen },
+      { t: 'Tap <b>Got it</b>', d: 'Or act on an account first. The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => act4Seen(sim) && !!ctx(sim).flags.collAck },
     ],
-    button: 'Got it', flag: 'collAck', buttonWhen: act4Authored, check: (sim) => act4Authored(sim) && !!ctx(sim).flags.collAck },
+    button: 'Got it', flag: 'collAck', buttonWhen: act4Seen, check: (sim) => act4Seen(sim) && !!ctx(sim).flags.collAck },
 
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
   { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
