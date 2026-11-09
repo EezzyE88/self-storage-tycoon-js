@@ -1,6 +1,6 @@
 import { officePanelState } from './officepanel.js';
 import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';
-import { demandEvidenceText, paybackText } from './economics.js';
+import { demandEvidenceText, paybackText, paybackEvidenceNote } from './economics.js';
 import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
 import { ReserveWait, sandboxReserveQuote, reserveQuote } from './reservewait.js';
 import { yardProgress, yardChoices, yardInventory, yardQuote } from './yardloop.js';
@@ -1228,14 +1228,15 @@ export class UI {
           if(sandboxReserveQuote(this.sim,R.args))status += '<button class="btn sm" data-a="sandboxReserveStart">Fast-forward to reserve</button><p class="note">Runs normal time for up to 7 game days, then pauses. Owner decisions stop the wait. Stop or Pause ends it. Return to this placement and Confirm separately to buy.</p>';
         }
         const inv = this.sim.investment(R);
-        if (inv) status += `<details class="build-details"><summary>Payback &amp; build terms</summary><div class="refund-note">${esc(paybackText(inv))} Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class="note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;
+        if (inv) status += `<details class="build-details"><summary>Payback &amp; build terms</summary><div class="refund-note">${esc(paybackText(inv))}${paybackEvidenceNote(inv) ? ' ' + esc(paybackEvidenceNote(inv)) : ''} Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class="note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;
       }
       if (R.status !== 'invalid' && R.dur && !this.sim.instantOn() && (this.sim.s.creative || !R.cost)) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
     }
     const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';
-    const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' · +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';
-    // Keep the same financial calculation beside Confirm, outside optional review details.
+    // One daily figure: the header shows the same complete planDailyCost as the added-cost line.
     const daily = this.sim.planDailyCost(R);
+    const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' · ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${daily ? ' · +' + money(daily, true) + '/day' : ''}</small>` : '&nbsp;';
+    // Keep the same financial calculation beside Confirm, outside optional review details.
     const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });
     const authorization = T.unit && this.sim.autoOpenEnabled() ? '<p class="note build-authorization">Confirm authorizes construction. Units open automatically when ready. Opening the property remains your decision.</p>' : '';
     const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after ${this.tool==='demolish'?'removal':'build'}: <b>${money(P.cash)}</b><span class="spend-more"><br> Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br> Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br> Added costs: ${money(daily, true)}/day when operating.</span></p>` : ''}${authorization}</div>`;

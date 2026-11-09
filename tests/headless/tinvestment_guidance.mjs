@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {investmentEvidence, investment, growthReadiness, staffingEvidence, operations, demandEvidenceText, paybackText} from '../../js/economics.js';
+import {investmentEvidence, investment, growthReadiness, staffingEvidence, operations, demandEvidenceText, paybackText, paybackEvidenceNote, EVIDENCE_MIN, planDailyCost} from '../../js/economics.js';
 import {makeMaple} from '../../js/maple.js';
 import {Sim} from '../../js/sim.js';
 import {UI} from '../../js/ui.js';
@@ -105,6 +105,46 @@ test('two-loss opportunity still actionable with unsupported payback',()=>{
 });
 test('repeated advice is read-only after normal initialization',()=>{
  const s=makeMaple();s.ensure();s.growthReadiness();const before=structuredClone(s.s),p=plan();for(let i=0;i<3;i++){investmentEvidence(s,p);s.investment(p);s.growthReadiness(p);s.staffingEvidence('porter');}assert.deepEqual(s.s,before);
+});
+test('payback shortfall names the existing thresholds and actual matching observations',()=>{
+ assert.deepEqual({...EVIDENCE_MIN},{window:14,comparables:3,losses:5});
+ const one=investment(synthetic({leased:1,losses:8}),plan());assert.equal(one.range,null);
+ assert.match(paybackText(one),/insufficient comparable evidence for 5x10 standard \(1 leased 5x10 standard to compare; estimates need 3\)\./);
+ assert.doesNotMatch(paybackText(one),/months|matching shopper loss|days of observations/);
+ assert.equal(paybackEvidenceNote(one),demandEvidenceText(one.evidence));assert.match(paybackEvidenceNote(one),/8 matching availability losses.*support reviewing/);
+ const few=investment(synthetic({day:10,leased:3,losses:1}),plan());
+ assert.match(paybackText(few),/\(1 matching shopper loss observed; estimates need 5; 9 days of observations; estimates need 14\)/);assert.match(paybackEvidenceNote(few),/Gather more/);
+ const two=investment(synthetic({leased:2,losses:2}),plan());assert.match(paybackText(two),/2 leased 5x10 standard to compare; estimates need 3; 2 matching shopper losses observed; estimates need 5/);
+ const supported=investment(synthetic(),plan());assert.ok(supported.range);assert.equal(paybackEvidenceNote(supported),'');
+ const margin=investment(synthetic(),plan(undefined,{opex:100}));assert.equal(margin.range,null);assert.equal(paybackEvidenceNote(margin),'');
+ assert.equal(paybackEvidenceNote(null),'');
+});
+test('lost-shopper action follows suitable vacant stock by size and climate class',()=>{
+ const s=makeMaple();s.s.tut={on:false,done:true};s.ensure();
+ const units=s.objs('unit'),std=units.filter(u=>u.size==='10x20'&&(u.env||'std')==='std');assert.ok(std.length,'maple has a standard 10x20');
+ const action=label=>s.diagnostics().find(d=>d.cause.endsWith(`wanted ${label} and found none`))?.action;
+ const loss=(sz,climate,n)=>Array.from({length:n},()=>({d:s.day,sz,climate,r:climate?'noClimate':'noReady'}));
+ for(const u of std)Object.assign(u,{lease:u.lease||'test',cstate:'operating'});
+ s.s.mkt.lostLog=[...loss('10x20',false,6),...loss('10x20',true,4)];
+ assert.equal(action('10x20'),'No vacant 10x20 units to rent or turn over; place a 10x20 build to review its demand evidence');
+ assert.equal(action('10x20 climate'),'No vacant 10x20 climate units to rent or turn over; place a 10x20 climate build to review its demand evidence');
+ const u=std[0];delete u.lease;Object.assign(u,{commercial:'ready',blocked:false,missing:[]});
+ assert.equal(action('10x20'),'Rent the 1 ready 10x20 unit first');
+ assert.match(action('10x20 climate'),/^No vacant 10x20 climate/,'a ready standard unit does not satisfy climate demand');
+ u.commercial='unready';assert.equal(action('10x20'),'Restore or turn over the 1 unavailable 10x20 unit first, then assess an expansion');
+ Object.assign(u,{commercial:'ready',blocked:true});assert.match(action('10x20'),/^Restore or turn over the 1 unavailable/);
+ Object.assign(u,{blocked:false,cstate:'construction'});assert.equal(action('10x20'),'1 10x20 unit under construction; see how it leases before assessing more');
+ Object.assign(u,{cstate:'operating',lease:'test2',blocked:true});assert.match(action('10x20'),/^No vacant 10x20 units/,'a leased blocked unit is not vacant inventory');
+ for(const d of s.diagnostics())assert.doesNotMatch(d.action,/Turn over suitable units first/);
+});
+test('construction header and added-cost line show the same complete daily cost',()=>{
+ const s=makeMaple();s.s.tut={on:false,done:true};s.s.speed=0;assert.equal(s.pressureOn(),true);
+ const{u,boxes}=uiFor(s);u.tool='du10x20';u.plan=s.plan({tool:u.tool,a:{x:13,y:21},b:{x:13,y:21},axis:'y',f:0});u.planArgs=u.plan.args;
+ if(u.plan.status==='invalid'){u.tool='du5x10';u.plan=s.plan({tool:u.tool,a:{x:13,y:21},b:{x:13,y:21},axis:'y',f:0});u.planArgs=u.plan.args;}
+ assert.notEqual(u.plan.status,'invalid');u.renderActionBar();const html=boxes.abar.innerHTML,daily=planDailyCost(s,u.plan);
+ assert.ok(daily>u.plan.opex,'complete cost includes per-unit tax and cost index');
+ const shown=[...html.matchAll(/\$([\d,.]+)\/day/g)].map(m=>+m[1].replace(/,/g,''));assert.ok(shown.length>=2,html);
+ for(const v of shown)assert.equal(v,daily);assert.ok(!shown.includes(u.plan.opex));assert.equal(s.s.speed,0);
 });
 const baseline=process.argv[2];
 if(baseline){
