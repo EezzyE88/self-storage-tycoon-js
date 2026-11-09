@@ -1,5 +1,27 @@
 # Self Storage Tycoon
 
+An iPhone-first JavaScript/Three.js self-storage management game. This section is the current orientation, reconciled November 9, 2026 (America/Los_Angeles) against exact master `2f8b377`. The November 5 and October 30 orientation records are retained unchanged below as history.
+
+## Current source, testing and hosting
+
+- **Active repository:** [EezzyE88/self-storage-tycoon-js](https://github.com/EezzyE88/self-storage-tycoon-js). **Active integration branch:** `master`, which is also the default branch.
+- **Current master:** `2f8b377e4a81361b7652f90a2b1373514a3f2ff6` (`2f8b377`), tree `57fdb0172cabdbfa65a7bb7719d089a377b9fd2f`, sole parent `f1ebd1e`. This is the [PR #40](https://github.com/EezzyE88/self-storage-tycoon-js/pull/40) squash of the owner-accepted AG-01 Rev 1 candidate `7a98e3d`, which has the same tree. It was pushed November 9, 8:37 AM Pacific.
+- **Regression gate:** [Pages run #28](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42656665611) ran the current native gate on the exact commit. The log reads **139 PASS**, 0 FAIL, 0 ERROR, 0 BLOCKED, 0 TIMEOUT, 0 OBSERVATION and 0 NOT_RUN. The deploy job succeeded.
+- **Live deployment:** the [Pages site](https://eezzye88.github.io/self-storage-tycoon-js/) serves `js/build-stamp.js` with sha `2f8b377e4a81361b7652f90a2b1373514a3f2ff6`. That stamp was fetched directly on November 9. The AG-01 merge record also reports 56/56 served files byte-identical to a local build of `2f8b377`, and a "Build 2f8b377" title label in Chromium emulation.
+- **Since the November 5 checkpoint:** seven gameplay PRs integrated: #33, #34, #35, #37, #38, #39 and #40. The only economy change is the authorized PR #38 advertising rebalance in `js/sim.js`. The PR #39 changes to `js/economics.js` are presentation only. See [Current Status](docs/CURRENT-STATUS.md) for the per-PR record.
+- **Physical iPhone Safari:** owner-reported results exist for AG-01 Rev 1, IFM-01A and the chapter-pause checkpoint. Claude has not independently verified any of them. Six physical-device cases remain unrun and are listed in [Current Status](docs/CURRENT-STATUS.md). Emulation is not physical Safari evidence.
+- **Governing policy:** SST Project Runtime v3 revision 5, unchanged. Master Blueprint Option B and AM-01 Draft 0.2 remain accepted. AG-01 D1 is unresolved. OT-01 and every other HOLD are unchanged. Beta/release acceptance remains HOLD. The budget is $0.
+
+## Current navigation
+
+[Status](docs/CURRENT-STATUS.md) · [Handoff](docs/HANDOFF.md) · [Overview](docs/PROJECT-OVERVIEW.md) · [Integration](docs/INTEGRATION-SUMMARY.md) · [Recovery](docs/RECOVERY-INDEX.md) · [Earlier Pages evidence](docs/releases/PAGES-PR30-20261105.md).
+
+---
+
+## Preserved November 5 orientation record (historical; verbatim)
+
+# Self Storage Tycoon
+
 An iPhone-first JavaScript/Three.js self-storage management game. This section is the current orientation, verified November 5, 2026. The historical October 30 README is retained unchanged below.
 
 ## Current source, testing and hosting

@@ -1,3 +1,36 @@
+# Recovery and evidence index — current November 9, 2026
+
+**Current source:** https://github.com/EezzyE88/self-storage-tycoon-js at `2f8b377e4a81361b7652f90a2b1373514a3f2ff6`, tree `57fdb0172cabdbfa65a7bb7719d089a377b9fd2f`, sole parent `f1ebd1ecc66cce301823870b94eae48ce5f5f342`. Source is recovered from `master`, the active integration branch.
+- Every post-November 5 candidate is recoverable: `9e6eb63`, `6c286d5`, `4f3bd9f` and `a122665` are merge parents in master history; `099aa04`, `37e9a24` and `7a98e3d` were squashed into master commits with identical trees (`645c27a`, `f1ebd1e`, `2f8b377`); the candidate commits themselves remain on `review/ad-balance-064d3ed`, `review/investment-guidance-37e9a24` and `review/ag01-facility-guidance-7a98e3d`.
+- `development` (`d3c9e13`) is a stale historical ancestor and is not a recovery source for current work.
+- No older commits are replaced.
+
+**Deploy proof:** [Pages #28](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42656665611), run ID `42656665611`.
+- Gate job `129296845246` logs **139 PASS, 0 FAIL**.
+- Deploy job `129297679262` was successful.
+- The live `build-stamp.js` sha was `2f8b377`, observed November 9.
+- The served-asset comparison (56/56) is recorded in the AG-01 merge record.
+
+**Retained candidate evidence (project files, outside the repository):** per-unit reports, bundles, gate summaries and rendered screenshots live under `reports/<unit>/`, named by topic, short SHA and date. Examples:
+- `reports/ag01_facility_guidance_7a98e3d_20261108/`
+- `reports/ad_balance_successor_099aa04_20261108/`
+- `reports/ifm01a_notice_successor_a122665_20261108/`
+- `reports/act4_unit7_plan_2f8b377_20261109/` (planning only)
+
+Source backup does not include personal or browser company saves.
+
+**Qualification gaps:**
+- Six never-run physical iPhone Safari cases (see [Current Status](CURRENT-STATUS.md)). Existing owner-reported iPhone results are not independently verified.
+- Novice comprehension, broader accessibility/performance and beta/release acceptance.
+- All historical qualification is source-specific.
+- Runtime v3 revision 5 is unchanged. The $0 budget and the save, economy and Pause protections remain.
+
+**Historical boundary:** the November 5 and October 30 recovery ledgers follow verbatim. Their source, deploy and temporary-host references remain for traceability; do not mistake them for November 9 live status.
+
+---
+
+## Preserved November 5 orientation record (historical; verbatim)
+
 # Recovery and evidence index — current November 5, 2026
 
 **Current source:** https://github.com/EezzyE88/self-storage-tycoon-js at `d7f49903076fd6bb3a70189b7e6efb9a7c0d9db9`, tree `04a0d67232b375a699c905e20186f4cc5d9a284e`; merge parents `b483fc6607b7cbad506b6e55b037783be673c000` and `72a779ee6d6a40185dd94af12a36f79c1b56c0bf`. [PR #30](https://github.com/EezzyE88/self-storage-tycoon-js/pull/30) is merged. Historical source and evidence remain accessible in Git history; no older commits are replaced.

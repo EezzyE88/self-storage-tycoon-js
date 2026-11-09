@@ -1,3 +1,39 @@
+# Integration summary — current verified November 9, 2026
+
+## Integration model
+
+- `master` is the active integration branch and the repository default.
+- Units integrate through pull requests with Eddie's authorization.
+  - Merge commits: PRs #31, #33, #34, #35 and #37.
+  - Squash merges: PRs #38, #39 and #40.
+- There is no pre-merge CI. The exact-commit gate runs on each master push, and Pages deploys only after it passes.
+- `development` (`d3c9e13`) is a stale historical ancestor: 0 commits ahead of master, 88 behind. It is not used for integration. This record does not retire, move or delete it.
+
+## Integrated after the November 5 checkpoint (`53fb2b3`, PR #31 docs only)
+
+| PR | Master commit | Candidate (tree) | Summary |
+|---|---|---|---|
+| #33 | `1bd9eac` | `9e6eb63` | Five bug fixes: scenario strip name, camera restore after save/reload/Continue, two labels, Go Vertical goal after reload |
+| #34 | `c1d0dd1` | `6c286d5` | Checkpointed automatic chapter pauses |
+| #35 | `1139e87` | `4f3bd9f` | Paired automatic-Pause cues, two-floor lesson tool handoffs |
+| #37 | `4d64b99` | `a122665` | IFM-01A elevator inspection, restored-access count and notice, truthful blocked status |
+| #38 | `645c27a` | `099aa04` (`99d99181`) | Authorized advertising rebalance in `js/sim.js`: targeted ×1.5→×2.5, local search ×1.15→×1.45. Wording in `js/ui.js` |
+| #39 | `f1ebd1e` | `37e9a24` | Presentation-only investment guidance in `js/economics.js` and `js/ui.js`. Thresholds and payback math unchanged |
+| #40 | `2f8b377` | `7a98e3d` (`57fdb017`) | AG-01 Rev 1 acquisition guidance, presentation only. D1 unresolved |
+
+## Qualification and deployment
+
+- [GitHub Pages run #28](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42656665611) (`42656665611`): gate log 139/139 on exact `2f8b377`; deploy job successful.
+- Live stamp `2f8b377`, observed November 9. 56/56 served files byte-identical to a local build is recorded in the AG-01 merge record.
+- Per-PR local evidence is retained in project reports. Physical iPhone results exist only as owner reports for AG-01 Rev 1, IFM-01A and the chapter-pause checkpoint. Six physical-device cases remain unrun; see [Current Status](CURRENT-STATUS.md).
+- Acceptance, beta and release remain unchanged. Unit 7 Rev 1 is planning only and not integrated.
+
+**Historical boundary:** the November 5 (PR #30) and October 30 integration accounts below remain unchanged and must not be read as the current master or deployment state.
+
+---
+
+## Preserved November 5 orientation record (historical; verbatim)
+
 # Integration summary — current verified November 5, 2026
 
 ## PR #30 integrated
