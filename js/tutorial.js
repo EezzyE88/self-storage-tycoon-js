@@ -94,6 +94,30 @@ const climateWait = (placed) => (sim) => {
   return { state: 'ordered', t: `Let the ${names.join(' and ')} finish`, d: `Climate units need a <b>finished</b> HVAC Plant and a <b>working</b> corridor light. ${both ? 'The HVAC Plant and light are' : `The ${names[0]} is`} still under construction. Tap <b>4x</b> to run time. This step continues by itself when ${both ? 'they are' : 'it is'} built.` };
 };
 const waitBuild = (label, doneFn) => ({ t: label || 'Let construction finish', d: 'Construction takes game hours. Tap <b>4x</b> at the top to speed up. A progress ring shows over the site.', sel: FAST, done: doneFn });
+// Act IV Beat 13 (campaign Unit 7a): one connected upstairs unit on the existing interior building. The player orders the
+// Go Vertical package (structure only, or the full copy if they choose and can pay), then places one F2 hallway, light
+// and unit. Completion is objective: any working, accessible, rent-ready upstairs unit, however it was built. Read-only
+// helpers; every money figure is read live from the current quote and position (nothing here is a fixed price).
+const interiorShell = (sim) => sim.objs('shell').filter((o) => o.cstate === 'operating' && (o.floors || 1) < 2).sort((a, b) => a.id - b.id)[0] || sim.objs('shell').sort((a, b) => a.id - b.id)[0] || null;
+const verticalOrder = (sim) => sim.s.orders.find((o) => o.vertical && o.st === 'construction');
+const upstairsUnits = (sim) => sim.objs('unit').filter((u) => (u.f || 0) >= 1);
+export const upstairsReady = (sim) => upstairsUnits(sim).some((u) => u.cstate === 'operating' && !u.blocked && !(u.missing && u.missing.length) && (u.commercial === 'ready' || !!u.lease));
+const upperFloorDone = (sim) => !verticalOrder(sim) && sim.objs('shell').some((o) => (o.floors || 1) >= 2) && sim.objs('elevator').some((e) => e.cstate === 'operating');
+const verticalStarted = (sim) => !!verticalOrder(sim) || upperFloorDone(sim) || upstairsUnits(sim).length > 0;
+const hallF2 = (sim) => { const h = sim.s.hall && sim.s.hall[1]; if (!h) return 'missing'; let ordered = false; for (const v of h) { if (v === 1) return 'built'; if (v) ordered = true; } return ordered ? 'ordered' : 'missing'; };
+const lightF2 = (sim) => sim.objs('light').some((l) => (l.f || 0) >= 1);
+const usd = (v) => '$' + Math.round(v).toLocaleString('en-US');
+// The structure-only quote for the next floor of the interior building, or null once that floor exists or cannot be quoted.
+const verticalQuote = (sim) => { const sh = interiorShell(sim); if (!sh || (sh.floors || 1) >= 2 || verticalStarted(sim)) return null; const q = sim.verticalPlan(sh.id, { fitout: false }); return q && q.ok ? q : null; };
+const minFitout = () => 2 * TOOLS.hall.costPerCell + TOOLS.light.cost + TOOLS.iu5x10.cost; // two hallway cells, one light, one Interior 5x10, from the price list
+const verticalShort = (sim) => { const q = verticalQuote(sim); return q ? Math.max(0, q.cost + minFitout() - sim.financialPosition().available) : 0; };
+const verticalMoneyLine = (sim) => {
+  const q = verticalQuote(sim); if (!q) return '';
+  const av = sim.financialPosition().available, gap = verticalShort(sim);
+  return ` <b>Structure only:</b> ${usd(q.cost)} for reinforcement, the second floor and the freight elevator. One hallway, light and unit add about ${usd(minFitout())}. Available after bills and reserve: <b>${usd(av)}</b>.` +
+    (gap > 0 ? ` That is <b>${usd(gap)}</b> short. Let time run: rent comes in and this quote stays current. You do not need to borrow for this beat.` : '');
+};
+const hallWait = (placed) => (sim) => placed(sim) || hallF2(sim) !== 'ordered' ? null : { state: 'ordered', t: 'Let the F2 hallway finish', d: 'The upstairs hallway is still under construction. Lights and unit doors need a <b>finished</b> hallway. Tap <b>4x</b> to run time; this step continues by itself.' };
 
 // Generic chapter break: a paused card with a deliberate Continue. Continue (flag = id) releases the owner reviews held
 // during the act; the break completes, and the next act's first beat enters, only once none of them is still waiting.
@@ -292,9 +316,36 @@ export const BEATS = [
     button: 'Got it', flag: 'climateDemandAck', buttonWhen: (sim) => !flag(sim, 'climateDemandAck'),
     check: (sim) => !!sim.s.milestones.first_climate || sim.objs('unit').some((u) => u.env === 'climate' && u.cstate === 'operating') },
 
-  chapterBreak({ id: 'actIII_break', act: 'III', chapter: 'Improve', next: 'Graduation', title: 'Maple Street works better because you listened', progress: investmentText,
-    body: 'You followed a customer, read what went wrong, diagnosed the property with an overlay and invested in a customer need. <b>Maple Street is paused.</b> This is a good place to stop before graduation.',
+  chapterBreak({ id: 'actIII_break', act: 'III', chapter: 'Improve', next: 'Act IV · Grow', title: 'Maple Street works better because you listened', progress: investmentText,
+    body: 'You followed a customer, read what went wrong, diagnosed the property with an overlay and invested in a customer need. <b>Maple Street is paused.</b> This is a good place to stop before Act IV.',
     why: 'What you learned in Act III: customers experience the physical route through the property; feedback records real events; satisfaction summarizes repeated service; overlays turn hidden systems into visible evidence; improvements should answer a diagnosed problem; and different products serve different demand.' }),
+
+  // Act IV "Grow" (campaign Unit 7). Beat 13: the existing building grows one floor. Objective-driven; no camera focus.
+  { id: 'vertical', act: 'IV', chapter: 'Grow', title: 'Connect a second floor',
+    body: (sim) => `Maple Street still has open land, and building out is cheaper here. But land is the scarce thing at most storage sites, so learn how a second floor connects while one unit is enough to try it.${verticalMoneyLine(sim)}`,
+    why: 'An upstairs unit only works when the whole route connects: <b>gate → loading → entrance → elevator → upstairs unit</b>. The freight elevator comes with the new floor; the hallway, light and unit are yours to place. One working unit is the goal, not a full floor, and upstairs units are not guaranteed to rent.',
+    steps: [
+      { t: 'Let rent cover the new floor', d: 'The structure-only quote is more than Maple Street can spend after bills and reserve. Tap <b>4x</b> to let rent come in; this step continues by itself when the quote fits. Borrowing is not needed.', sel: FAST, run: true, done: (sim) => verticalShort(sim) === 0 || verticalStarted(sim) },
+      { t: 'Tap the <b>interior building</b>', d: 'Close any open panel with <b>×</b>, then tap the large interior building on the map. Its panel shows its floors.', obj: (sim) => interiorShell(sim) && interiorShell(sim).id,
+        done: (sim, ui) => !!ui && ((interiorShell(sim) && ui.sel === interiorShell(sim).id) || !!ui.verticalReview) || verticalStarted(sim) },
+      { t: 'Tap <b>Plan next floor</b>', d: 'In the building panel, tap <b>Plan next floor</b>. The review lists every cost before anything is charged.', sel: '[data-a="verticalReview"]', done: (sim, ui) => (!!ui && !!ui.verticalReview) || verticalStarted(sim) },
+      { t: 'Choose <b>structure only</b>', d: 'Untick <b>Copy this floor’s unit layout and lighting</b>. You will add one hallway, light and unit yourself, which costs far less than copying the whole floor.', sel: '[data-vertical-option="fitout"]',
+        done: (sim, ui) => (!!ui && !!ui.verticalReview && ui.verticalReview.fitout === false) || verticalStarted(sim) },
+      { t: 'Tap <b>Confirm</b>', d: 'Check the cost and the cash after, then tap <b>Confirm</b>. Nothing is charged before this.', sel: '[data-a="verticalConfirm"]', done: verticalStarted },
+      waitBuild('Let the new floor and elevator finish', (sim) => upperFloorDone(sim) || upstairsUnits(sim).length > 0),
+      ...buildSteps({ cat: 'interior', catName: 'Interior', tool: 'hall', toolName: 'Hallway', cell: { x: 17, y: 5 }, end: { x: 17, y: 6 }, f: 1, after: upperFloorDone,
+        placed: (sim) => hallF2(sim) !== 'missing' || upstairsUnits(sim).length > 0,
+        place: 'Tap <b>F2</b>, then drag a short hallway from the elevator', placeD: 'Tap <b>F2</b> on the right rail. Start on the floor just below the new elevator and drag two cells down. Upstairs units open onto a hallway.' })
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> (F2 hallway)' } : st),
+      ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'light', toolName: 'Light', cell: { x: 17, y: 6 }, f: 1, after: (sim) => hallF2(sim) !== 'missing',
+        placed: (sim) => lightF2(sim) || upstairsReady(sim), place: 'Tap the new <b>F2</b> hallway to light it', placeD: 'On <b>F2</b>, tap the new hallway. Customers will not use a dark corridor.' })
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (Light)' } : st).map((st) => ({ ...st, prereq: hallWait((sim) => lightF2(sim) || upstairsReady(sim)) })),
+      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'iu5x10', toolName: 'Interior 5x10', cell: { x: 18, y: 5 }, f: 1, axis: 'y', after: lightF2,
+        placed: (sim) => upstairsUnits(sim).length > 0, place: 'Place one <b>Interior 5x10</b> facing the F2 hallway', placeD: 'On <b>F2</b>, tap the floor just right of the new hallway. The unit door must face the hallway.' })
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (unit)' } : st).map((st) => ({ ...st, prereq: hallWait((sim) => upstairsUnits(sim).length > 0) })),
+      waitBuild('Let the upstairs unit open', upstairsReady),
+    ],
+    check: upstairsReady },
 
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
   { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
@@ -315,6 +366,7 @@ export const BEAT_ALIASES = {};
 // (At run time, a position written without an id is a position in the current layout, as before.)
 export const LEGACY_BEATS = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'actII_break'];
 const OLD_EXPAND_AT = 4;
+const PRE_ACT4_GRAD_AT = 15; // Unit 6 ended here: active saves at that old graduation resume from the Act III break (D4 precedent), so Act IV is not skipped.
 const PRE_ACT3_GRAD_AT = 10; // Unit 5 ended here; active saves at that old graduation resume from the Act II break (D4). // `expand` sat here, and began with the Asking rents stop, until Beat 5 took that stop over (Unit 4)
 // An `expand` save from before Unit 4: unless the Drive-Up 10x10 row was ordered or the expansion already opened, the
 // player resumes at Beat 5 (`pricing`, short and read-only, so nothing is completed for them); otherwise at `expand`.
@@ -342,6 +394,7 @@ function resolveBeat(s) {
   if (Number.isInteger(t.beat) && t.beat !== t.beatAt) return t.beat; // position changed without the id
   if (t.beatId === 'expand' && t.beatAt === OLD_EXPAND_AT && t.beat === OLD_EXPAND_AT) { const to = oldExpandTarget(s); return to ? beatIndex(to) : null; }
   if (t.beatId === 'grad' && t.beatAt === PRE_ACT3_GRAD_AT && t.beat === PRE_ACT3_GRAD_AT) return beatIndex('actII_break'); // D4: do not skip Act III
+  if (t.beatId === 'grad' && t.beatAt === PRE_ACT4_GRAD_AT && t.beat === PRE_ACT4_GRAD_AT) return beatIndex('actIII_break'); // same rule: do not skip Act IV
   return i;
 }
 // Mutating sync, used when a game is loaded and on each tutorial tick. Only an active tutorial carries an id.
@@ -358,6 +411,7 @@ export function syncTutBeat(t, s) {
   if (!Number.isInteger(i) || !BEATS[i]) return; // unknown or not yet resolvable: leave untouched
   if (BEATS[i].id === 'pricing' && t.beatId === 'expand') t.entered = false; // an old expand save resumes at Beat 5: enter it
   if (BEATS[i].id === 'actII_break' && t.beatId === 'grad') t.entered = false; // D4 migration from the old graduation
+  if (BEATS[i].id === 'actIII_break' && t.beatId === 'grad') t.entered = false; // the same migration from the Act III-era graduation
   t.beat = i; t.beatId = BEATS[i].id; t.beatAt = i;
 }
 
@@ -514,6 +568,7 @@ const UNLOCK = [
   ['repair', ['light']],
   ['overlays', ['camera']],
   ['climate', ['hvac', 'iu5x5', 'iu5x10', 'iu10x10', 'iu10x20']],
+  ['vertical', ['hall']], // Act IV Beat 13: the upstairs hallway (the elevator comes inside the Go Vertical package)
 ]; // everything else unlocks at graduation
 export function toolUnlocked(sim, tool) {
   const s = sim.s; if (!s.tut.on) return true;
