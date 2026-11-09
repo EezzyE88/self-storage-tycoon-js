@@ -289,6 +289,65 @@
           ]
         }
       }
+    },
+    {
+      "commit": "f63d15d5e7fc13e8150098ea49c4a34fec6e2f13",
+      "parent_commit": "645c27ae30686953d1d6ff29f4026f79f29a7c98",
+      "tree": "33920564030da92516c78a6c4027cf8a0fcb0839",
+      "files": {
+        "js/economics.js": {
+          "parent_sha256": "aaadc8f9ea858f3fdd5971c9369569a1c61647678d9eaca2cb266978ba1f6bf7",
+          "current_sha256": "43cbe6501d0f73211fdd9e820a015590202479d259e5f2792e5a9afd0374da22",
+          "hunks": [
+            {
+              "before": "const key = (u) => `${u.size}|${u.env || 'std'}`;\nconst sum = (a, f) => a.reduce((n, x) => n + f(x), 0);\n",
+              "after": "const key = (u) => `${u.size}|${u.env || 'std'}`;\n// Evidence thresholds for payback estimates and demand support (values unchanged; named so the text can state them).\nexport const EVIDENCE_MIN = Object.freeze({ window: 14, comparables: 3, losses: 5 });\nconst sum = (a, f) => a.reduce((n, x) => n + f(x), 0);\n"
+            },
+            {
+              "before": "}\nexport function diagnostics(sim) {\n",
+              "after": "}\n// Lost-shopper rows: recommend from the matching product's actual stock (same size and standard/climate classification).\n// Only vacant units count; ready uses the same unit states as investmentEvidence.\nfunction lostShopperAction(sim, label) {\n  const [size, climate] = label.split(' '), k = `${size}|${climate ? 'climate' : 'std'}`;\n  const stock = sim.objs('unit').filter(u => key(u) === k), plural = n => n === 1 ? '' : 's';\n  const ready = stock.filter(u => u.cstate === 'operating' && !u.lease && !u.blocked && !u.missing?.length && u.commercial === 'ready').length;\n  if (ready) return `Rent the ${ready} ready ${label} unit${plural(ready)} first`;\n  const restore = stock.filter(u => !u.lease && u.cstate !== 'construction' && (u.cstate !== 'operating' || u.blocked || u.missing?.length || u.commercial !== 'ready')).length;\n  if (restore) return `Restore or turn over the ${restore} unavailable ${label} unit${plural(restore)} first, then assess an expansion`;\n  const building = stock.filter(u => u.cstate === 'construction').length;\n  if (building) return `${building} ${label} unit${plural(building)} under construction; see how ${building === 1 ? 'it leases' : 'they lease'} before assessing more`;\n  return `No vacant ${label} units to rent or turn over; place a ${label} build to review its demand evidence`;\n}\nexport function diagnostics(sim) {\n"
+            },
+            {
+              "before": "  }\n  for (const [size, n] of Object.entries(bySize).sort((a, b) => b[1] - a[1]).slice(0, 2)) add(`${n} shoppers wanted ${size} and found none`, 'Suitable rentable inventory missing', 'Observed demand opportunity; shoppers are not promised leases', 'Turn over suitable units first, then assess an expansion', 'growth');\n  if (o.exhausted >= 3) add(`Owner capacity exhausted on ${o.exhausted} of ${o.workDays.length} measured days`, 'Office service and property work compete for time', 'Backlogs can keep inventory unavailable', 'Hire for the measured workload or schedule work before expanding');\n",
+              "after": "  }\n  for (const [size, n] of Object.entries(bySize).sort((a, b) => b[1] - a[1]).slice(0, 2)) add(`${n} shoppers wanted ${size} and found none`, 'Suitable rentable inventory missing', 'Observed demand opportunity; shoppers are not promised leases', lostShopperAction(sim, size), 'growth');\n  if (o.exhausted >= 3) add(`Owner capacity exhausted on ${o.exhausted} of ${o.workDays.length} measured days`, 'Office service and property work compete for time', 'Backlogs can keep inventory unavailable', 'Hire for the measured workload or schedule work before expanding');\n"
+            },
+            {
+              "before": "    const n = losses.filter(x => lossKey(x) === k).length, occupancy = operating.length ? contracted.length / operating.length : null;\n    const reasons = [...(window < 14 ? ['insufficient_window'] : []), ...(contracted.length < 3 ? ['insufficient_comparables'] : []), ...(n < 5 ? ['insufficient_losses'] : [])];\n    const demandReasons = [...(window < 14 ? ['insufficient_window'] : []), ...(n < 5 ? ['insufficient_losses'] : []), ...(!operating.length ? ['no_operating_stock'] : occupancy < 0.9 ? ['low_contractual_occupancy'] : []), ...(readyVacancies ? ['ready_vacancies'] : [])];\n    const [size, env] = k.split('|');\n",
+              "after": "    const n = losses.filter(x => lossKey(x) === k).length, occupancy = operating.length ? contracted.length / operating.length : null;\n    const reasons = [...(window < EVIDENCE_MIN.window ? ['insufficient_window'] : []), ...(contracted.length < EVIDENCE_MIN.comparables ? ['insufficient_comparables'] : []), ...(n < EVIDENCE_MIN.losses ? ['insufficient_losses'] : [])];\n    const demandReasons = [...(window < EVIDENCE_MIN.window ? ['insufficient_window'] : []), ...(n < EVIDENCE_MIN.losses ? ['insufficient_losses'] : []), ...(!operating.length ? ['no_operating_stock'] : occupancy < 0.9 ? ['low_contractual_occupancy'] : []), ...(readyVacancies ? ['ready_vacancies'] : [])];\n    const [size, env] = k.split('|');\n"
+            },
+            {
+              "before": "}\nexport function paybackText(I) {\n",
+              "after": "}\n// Why a selected product has no payback estimate: the existing thresholds and the actual matching observations.\nfunction evidenceShortfallText(p, window) {\n  const label = productLabel(p), why = [];\n  if (p.reasons.includes('insufficient_comparables')) why.push(`${p.contractedStock} leased ${label} to compare; estimates need ${EVIDENCE_MIN.comparables}`);\n  if (p.reasons.includes('insufficient_losses')) why.push(`${p.losses} matching shopper loss${p.losses === 1 ? '' : 'es'} observed; estimates need ${EVIDENCE_MIN.losses}`);\n  if (p.reasons.includes('insufficient_window')) why.push(`${window} day${window === 1 ? '' : 's'} of observations; estimates need ${EVIDENCE_MIN.window}`);\n  return `insufficient comparable evidence for ${label}${why.length ? ` (${why.join('; ')})` : ''}`;\n}\n// Construction review: when evidence (not margin or layout) is what blocks an estimate, show the existing observed demand evidence.\nexport function paybackEvidenceNote(I) {\n  if (!I || I.range || !I.unavailableReasons.some(r => r.code === 'insufficient_evidence')) return '';\n  return demandEvidenceText(I.evidence);\n}\nexport function paybackText(I) {\n"
+            },
+            {
+              "before": "  if (!I) return 'Payback unavailable: select a unit proposal.';\n  if (!I.range) return 'Payback unavailable: ' + I.unavailableReasons.map(r => r.code === 'insufficient_evidence' ? `insufficient comparable evidence for ${productLabel(I.evidence.products.find(p => p.key === r.product))}` : r.code === 'non_positive_margin' ? 'modeled incremental margin is non-positive under the stated assumptions' : 'layout or access prerequisites remain unresolved').join('; ') + '.';\n  const assumptions = I.productEstimates.map(p => `${productLabel(p)} ${Math.round(p.lowOccupancy * 100)}\u2013${Math.round(p.highOccupancy * 100)}% contracted-stock occupancy`).join('; ');\n",
+              "after": "  if (!I) return 'Payback unavailable: select a unit proposal.';\n  if (!I.range) return 'Payback unavailable: ' + I.unavailableReasons.map(r => r.code === 'insufficient_evidence' ? evidenceShortfallText(I.evidence.products.find(p => p.key === r.product), I.evidence.window) : r.code === 'non_positive_margin' ? 'modeled incremental margin is non-positive under the stated assumptions' : 'layout or access prerequisites remain unresolved').join('; ') + '.';\n  const assumptions = I.productEstimates.map(p => `${productLabel(p)} ${Math.round(p.lowOccupancy * 100)}\u2013${Math.round(p.highOccupancy * 100)}% contracted-stock occupancy`).join('; ');\n"
+            }
+          ]
+        },
+        "js/ui.js": {
+          "parent_sha256": "c3deaa4742ea0c27fd89f3f01e65c52aef02873fd8b43200be03a0c321644f56",
+          "current_sha256": "03f1de4d03a8277e4d0e1e67ff3e3a34490d1df1dcaf33052194da4c5e4e4037",
+          "hunks": [
+            {
+              "before": "import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';\nimport { demandEvidenceText, paybackText } from './economics.js';\nimport { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';\n",
+              "after": "import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';\nimport { demandEvidenceText, paybackText, paybackEvidenceNote } from './economics.js';\nimport { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';\n"
+            },
+            {
+              "before": "        const inv = this.sim.investment(R);\n        if (inv) status += `<details class=\"build-details\"><summary>Payback &amp; build terms</summary><div class=\"refund-note\">${esc(paybackText(inv))} Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class=\"note\">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;\n      }\n",
+              "after": "        const inv = this.sim.investment(R);\n        if (inv) status += `<details class=\"build-details\"><summary>Payback &amp; build terms</summary><div class=\"refund-note\">${esc(paybackText(inv))}${paybackEvidenceNote(inv) ? ' ' + esc(paybackEvidenceNote(inv)) : ''} Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class=\"note\">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;\n      }\n"
+            },
+            {
+              "before": "    const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';\n    const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' \u00b7 ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${R.opex ? ' \u00b7 +' + money(R.opex, true) + '/day' : ''}</small>` : '&nbsp;';\n    // Keep the same financial calculation beside Confirm, outside optional review details.\n",
+              "after": "    const isUnit = T.unit; const isInterior = isUnit && T.access === 'interior';\n    // One daily figure: the header shows the same complete planDailyCost as the added-cost line.\n    const daily = this.sim.planDailyCost(R);\n    const costTxt = R ? `${money(R.cost)}<small>${R.count ? R.count + (isUnit ? ' unit' + (R.count > 1 ? 's' : '') : T.shape === 'tap' ? '' : ' cells') : ''}${R.dur ? ' \u00b7 ~' + Math.max(1, Math.round(R.dur / 60)) + 'h build' : ''}${daily ? ' \u00b7 +' + money(daily, true) + '/day' : ''}</small>` : '&nbsp;';\n    // Keep the same financial calculation beside Confirm, outside optional review details.\n"
+            },
+            {
+              "before": "    // Keep the same financial calculation beside Confirm, outside optional review details.\n    const daily = this.sim.planDailyCost(R);\n    const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });\n",
+              "after": "    // Keep the same financial calculation beside Confirm, outside optional review details.\n    const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });\n"
+            }
+          ]
+        }
+      }
     }
   ]
 }
