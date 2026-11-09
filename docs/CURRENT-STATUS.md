@@ -1,3 +1,127 @@
+# Current project status — November 9, 2026
+
+Reconciled November 9, 2026 (America/Los_Angeles) against exact master `2f8b377`. These are dated observations; refresh remote refs before any consequential action. Evidence labels:
+- **Observed:** checked directly during this reconciliation.
+- **Recorded:** retained in project reports and not re-run.
+- **Owner-reported:** reported by Eddie and not independently verified.
+
+## Verified source and publication
+
+- Active repository: [EezzyE88/self-storage-tycoon-js](https://github.com/EezzyE88/self-storage-tycoon-js). The active integration branch and default branch is `master`.
+- Current master: `2f8b377e4a81361b7652f90a2b1373514a3f2ff6` (`2f8b377`), tree `57fdb0172cabdbfa65a7bb7719d089a377b9fd2f`, sole parent `f1ebd1ecc66cce301823870b94eae48ce5f5f342`. It is the [PR #40](https://github.com/EezzyE88/self-storage-tycoon-js/pull/40) squash of the owner-accepted candidate `7a98e3d1fc7cd79d6fcd491462b5b51c9645c915`, which has the same tree. Observed.
+- [Pages run #28](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42656665611) (`42656665611`) ran on the exact master SHA.
+  - Gate job `129296845246`: **139 PASS, 0 FAIL, 0 ERROR, 0 BLOCKED, 0 TIMEOUT, 0 OBSERVATION, 0 NOT_RUN**.
+  - Deploy job `129297679262`: succeeded.
+  - Observed.
+- Live site: `https://eezzye88.github.io/self-storage-tycoon-js/js/build-stamp.js` serves sha `2f8b377e4a81361b7652f90a2b1373514a3f2ff6`. Observed November 9.
+  - The AG-01 merge record reports 56/56 served files byte-identical to a local `build-pages-site` build of `2f8b377`, and a "Build 2f8b377" label at 390×844 in Chromium emulation. Recorded.
+  - The live-stamp item from November 5 is closed for the current build.
+- Pages runs #21 through #27 completed successfully. Their per-run gate counts were not re-read for this record.
+
+## Integration and deployment workflow
+
+1. Each unit is developed on an isolated branch and integrated through a pull request into `master` with Eddie's authorization.
+   - Merge commits: PRs #31, #33, #34, #35 and #37.
+   - Squash merges: PRs #38, #39 and #40.
+2. **There is no pre-merge CI.** `.github/workflows/pages.yml` triggers only on `push` to `master` and on `workflow_dispatch`. Pre-merge test evidence comes from the authoring session's local runs on the exact candidate.
+3. On every master push, the `gate` job checks out full history and runs `tests/headless/run_current_regressions.py --profile current` on the exact commit. The `deploy` job runs only if the gate passes.
+   - Deploy builds `_site` with `tools/build-pages-site.mjs`, asserts that the stamp contains the deployed SHA and that the repository `js/build-stamp.js` is still `null`, then deploys to GitHub Pages.
+   - A failed gate blocks deployment but does not undo the merge.
+4. `js/version.js` trusts the deploy-time stamp only on the real Pages host. This mechanism is the standing answer to the older stale build-label finding.
+
+## Branch status
+
+- `master` is the active integration branch.
+- `development` is at `d3c9e130e9b5dce309aec6cb4c0652de9d094610` (October 30, 9:25 PM Pacific). It is classified as a **stale historical ancestor**: an ancestor of master, 0 commits ahead and 88 behind, with no unique work.
+  - Do not resume work from it. It predates the camera-save, chapter-pause, IFM-01A, advertising, investment-guidance and AG-01 integrations.
+  - This record neither retires, moves, resets nor deletes it. That decision remains Eddie's.
+  - The October 30 "keep master and development matched" instruction survives only in the preserved historical records below and does not describe the current workflow.
+
+## Integrated since the November 5 checkpoint
+
+PR #31 (`53fb2b3`) was the documentation-only November 5 reconciliation. The seven gameplay integrations after it are listed below. Older changes, including the PR #28/#29 Act III Security guidance fixes already in `d7f4990`, are not repeated here.
+
+| PR | Master commit | Candidate | Pages | Runtime files | Change |
+|---|---|---|---|---|---|
+| [#33](https://github.com/EezzyE88/self-storage-tycoon-js/pull/33) | `1bd9eac` (merge) | `9e6eb63` | #22 | `main.js`, `render.js`, `showcase.js`, `tutorial.js`, `ui.js` | Five bug fixes: scenario name kept on the minimized strip; player camera restored after save, reload and Continue; beat-banner count and rent-roll "past due" labels; Go Vertical elevator goal correct after reload |
+| [#34](https://github.com/EezzyE88/self-storage-tycoon-js/pull/34) | `c1d0dd1` (merge) | `6c286d5` | #23 | `main.js` | Automatic Maple Street chapter pauses are checkpointed (saved) |
+| [#35](https://github.com/EezzyE88/self-storage-tycoon-js/pull/35) | `1139e87` (merge) | `4f3bd9f` | #24 | `ui.js` | Paired automatic-Pause cues; two-floor lesson tool handoffs |
+| [#37](https://github.com/EezzyE88/self-storage-tycoon-js/pull/37) | `4d64b99` (merge) | `a122665` | #25 | `main.js`, `sim.js`, `ui.js` | IFM-01A: inspect the elevator from blocked units; restored-access count held until readable; truthful blocked status. The `sim.js` addition is a transient, never-saved repair watch that only emits a notification |
+| [#38](https://github.com/EezzyE88/self-storage-tycoon-js/pull/38) | `645c27a` (squash) | `099aa04` | #26 | `sim.js`, `ui.js` | **Authorized advertising rebalance** (see below) |
+| [#39](https://github.com/EezzyE88/self-storage-tycoon-js/pull/39) | `f1ebd1e` (squash) | `37e9a24` | #27 | `economics.js`, `ui.js` | Investment guidance, presentation only. `economics.js` names the existing evidence thresholds (values unchanged) and makes lost-shopper actions stock-aware. Payback math, prices, saves and Pause unchanged |
+| [#40](https://github.com/EezzyE88/self-storage-tycoon-js/pull/40) | `2f8b377` (squash) | `7a98e3d` | #28 | `main.js`, `ui.js` | AG-01 Rev 1 operating-facility acquisition guidance, presentation only. Prices, loans, career rules, economy and saves unchanged. D1 unresolved |
+
+### PR #38 advertising change
+
+- **Change:** `js/sim.js` `adFactor`.
+  - Targeted campaigns: shopper traffic for the chosen size goes from +50% to **+150%** (×1.5 → ×2.5).
+  - Local search: from +15% to **+45%** (×1.15 → ×1.45).
+  - `js/ui.js` break-even text now uses the asking rent of ready units of the targeted size, and results are labeled campaign-attributed, not total profit.
+  - Prices ($250/$500), the 30-day duration, shopper qualification, attribution, lease eligibility and the save format are unchanged.
+- **Authorization (recorded), November 8, Pacific:**
+  - Eddie authorized the review push of `064d3ed` (1:20 PM).
+  - Eddie authorized the fast-forward to `099aa04`, tree `99d99181c787eb80975653f5c1d80d4876d74340` (1:42 PM).
+  - A merge-readiness review passed (1:55 PM).
+  - Eddie authorized the squash merge to `645c27a` (2:20 PM).
+  - The master tree equals the reviewed `099aa04` tree. Observed.
+- **Evidence (recorded):**
+  - Gate 137/137 and `tads` 15/15 on `099aa04`.
+  - A 300-seed paired simulation from a graduated Maple Day 19 checkpoint:
+    - Targeted ad leases rise from 1.26 to 3.42, and first-month rent vs cost goes from −$124 to +$92.
+    - Local search still loses money.
+    - Back-to-back year-long campaigns lose money in every variant.
+  - Rendered cards at 375×667 and 390×844 in Chromium emulation.
+  - Save compatibility was reviewed by inspection: no fields were added. No save/reload with an active campaign was executed. **Physical iPhone: not tested.**
+
+This is the only economy change since November 5. The November 5 statement that "the economy [is] unchanged" applied to PR #30 and is superseded.
+
+## Physical iPhone Safari evidence
+
+None of the following was independently verified. Claude did not observe the device in any case.
+
+| Feature | Build | Result | Limits | Relation to `2f8b377` |
+|---|---|---|---|---|
+| AG-01 Rev 1 | `7a98e3d` | **Owner-reported PASS** (November 9) | Career → Acquisitions navigation, Pause and cash were reported with Eddie's screenshots, which Claude has not reviewed. Purchase review, purchase and device save/reload are covered only by the overall owner report | Same tree as current master |
+| IFM-01A | `a122665` | **Owner-reported PASS** (November 8, decision card) | Item detail not recorded | Earlier tree; later `ui.js` changes not device-tested |
+| Chapter-pause checkpoint | `6c286d5` | **Owner-reported PASS** (November 7) | Details not given | Earlier tree |
+
+Earlier scoped owner iPhone results (PRs #14, #19 and #20, November 1–2) are historical and source-specific.
+
+**Remaining physical-device qualification gaps** (never run on a physical iPhone):
+1. Investment Progress at its four placements (PR #30).
+2. Player camera restore after save, reload and Continue (PR #33, `b8d4180`).
+3. Paired automatic-Pause cues and two-floor lesson tools (PR #35).
+4. One advertising purchase, including card and result wording (PR #38).
+5. Investment-guidance review and attention actions (PR #39).
+6. An itemized AG-01 purchase followed by device save and reload (PR #40).
+
+Rendered Chromium emulation at 375×667 and 390×844 is recorded for these units but is not physical Safari evidence. Accessibility, sustained performance, novice comprehension/enjoyment and beta/release qualification are also outstanding.
+
+## Current planning: Unit 7 Rev 1 (Act IV, planning only)
+
+Unit 7 Rev 1 is a plan, not an implementation. Nothing from it is in `master`, and nothing is accepted. Decisions recorded on November 9 (Pacific):
+- **D3 = Option 2** (9:37 AM): Beat 15 is anchored to the real current route quote. It shows cost, cash, reserve, demand and terms, and teaches that financing availability is not the same as a worthwhile project. The player inspects, compares and may decline without penalty. No borrowing is required, and no profitability is implied.
+- **P1 = inspection-only** (10:13 AM): the tutorial loan lock and loan rules are unchanged. There is no Confirm and no debt. The loan figures are read-only calculations, and declining completes the lesson.
+- **Beat 14 S2** (10:58 AM): a returned-payment authored delinquency was approved as design direction only.
+
+Any implementation work happens separately and is not described or qualified by this record. Plan: `reports/act4_unit7_plan_2f8b377_20261109/Unit7_ActIV_ImplementationPlan_2f8b377_20261109_PLAN.md` (project files).
+
+## Preserved decisions and authority
+
+- Master Blueprint Option B and AM-01 Draft 0.2 (Achievements & Milestones specification) remain accepted.
+- OT-01 remains a planning HOLD.
+- AG-01 D1 (unopened-parcel eligibility) is unresolved.
+- The $100 observation stays PARKED.
+- The Version 1.0 roadmap and SST Project Runtime v3 revision 5 are unchanged.
+- Saves, manual Pause, the economy outside the authorized PR #38 change, and the $0 budget are protected.
+- Beta/release acceptance remains HOLD. This record changes no acceptance.
+
+**Record boundary:** the November 5 and October 30 status records below are preserved verbatim. Their commits, gate counts, hosting and outstanding-item statements are historical, not November 9 assertions.
+
+---
+
+## Preserved November 5 orientation record (historical; verbatim)
+
 # Current project status — November 5, 2026
 
 ## Verified source and publication
