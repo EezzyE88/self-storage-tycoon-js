@@ -2295,7 +2295,7 @@ export class UI {
     const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim, this));
     const bk = isLesson ? 'L' + s.lesson.id : tutBeatIndex(s);
     const heldN = this.sim.heldReviews().length;
-    const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || '', heldN, b.id === 'vertical' ? step?.t : ''].join(':'); // Beat 13 step text carries live figures
+    const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || '', heldN, ['vertical', 'collections'].includes(b.id) ? step?.t : ''].join(':'); // Beat 13 and 14 step text carries live figures
     this.guideStep = step; this.guideKey = bk + ':' + cur + (step?.redirect || '');
     // Build-status lesson: the review drops its optional sections so the footprint, cost and cash after show together.
     this.root?.classList?.toggle('tut-review-compact', !!(step?.compactReview && showBtn));

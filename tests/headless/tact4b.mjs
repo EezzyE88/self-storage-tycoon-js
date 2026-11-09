@@ -187,7 +187,7 @@ function renderCard(sim) {
   Object.assign(u, { title: false, tutMin: true, tutWhy: false, toasts: [], tab: null, sel: null, tool: null, plan: null, popupBlocks: new Set() });
   u.$ = (id) => (id === 'tut' ? box : { innerHTML: '', querySelector: () => null, firstChild: null }); u.root = { querySelector: () => null, querySelectorAll: () => [], classList: { toggle() {}, remove() {} } };
   for (const k of ['sfx', 'renderSheet', 'renderActionBar', 'currentBlueprintPlan']) u[k] = () => null; u.resolveStep = (st) => st;
-  u.renderTut(true); return box.innerHTML;
+  u.renderTut(true); renderCard.last = { u, box }; return box.innerHTML;
 }
 test('rendered step text: the wait, then the live account story (stage, amount owed, lockout) in the step title the card shows', () => {
   const sim = at14(); let html = renderCard(sim);
@@ -195,5 +195,8 @@ test('rendered step text: the wait, then the live account story (stage, amount o
   run1(sim); const L = sim.s.leases[sim.s.tut.flags.act4Account]; html = renderCard(sim);
   assert.match(html, /<span class="tx">Open <b>Business<\/b> <span class="tut-money" data-qa="tut-act4-account">Unit 1010’s \$119 rent payment came back on Day \d+\. Now <b>Delinquent<\/b>, <b>\$139<\/b> owed, locked out\.<\/span>/);
   assert.equal(sim.owed(L), 139); assert.doesNotMatch(html, /loan|borrow/i);
+  // the same card, re-rendered without force (as every frame does), follows the live account when the tenant pays mid-step
+  const { u, box } = renderCard.last; sim.payUp(L); u.renderTut(false);
+  assert.match(box.innerHTML, /data-qa="tut-act4-account">Unit 1010’s \$119 rent payment came back on Day \d+\. The tenant has since paid in full; the account is current\.<\/span>/);
 });
 console.log(`${passed} Act IV Beat 14 checks passed`);
