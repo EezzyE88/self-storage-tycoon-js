@@ -3,6 +3,8 @@ import { ROLES, OPEX, SIZES, MIN_PER_DAY } from './data.js';
 import { cents } from './finance.js';
 import { rollingShopperPeriod, periodText } from './reporting.js';
 const key = (u) => `${u.size}|${u.env || 'std'}`;
+// Evidence thresholds for payback estimates and demand support (values unchanged; named so the text can state them).
+export const EVIDENCE_MIN = Object.freeze({ window: 14, comparables: 3, losses: 5 });
 const sum = (a, f) => a.reduce((n, x) => n + f(x), 0);
 
 export function operations(sim) {
@@ -34,6 +36,19 @@ export function operations(sim) {
     lost: sim.lostRecent(30),
   };
 }
+// Lost-shopper rows: recommend from the matching product's actual stock (same size and standard/climate classification).
+// Only vacant units count; ready uses the same unit states as investmentEvidence.
+function lostShopperAction(sim, label) {
+  const [size, climate] = label.split(' '), k = `${size}|${climate ? 'climate' : 'std'}`;
+  const stock = sim.objs('unit').filter(u => key(u) === k), plural = n => n === 1 ? '' : 's';
+  const ready = stock.filter(u => u.cstate === 'operating' && !u.lease && !u.blocked && !u.missing?.length && u.commercial === 'ready').length;
+  if (ready) return `Rent the ${ready} ready ${label} unit${plural(ready)} first`;
+  const restore = stock.filter(u => !u.lease && u.cstate !== 'construction' && (u.cstate !== 'operating' || u.blocked || u.missing?.length || u.commercial !== 'ready')).length;
+  if (restore) return `Restore or turn over the ${restore} unavailable ${label} unit${plural(restore)} first, then assess an expansion`;
+  const building = stock.filter(u => u.cstate === 'construction').length;
+  if (building) return `${building} ${label} unit${plural(building)} under construction; see how ${building === 1 ? 'it leases' : 'they lease'} before assessing more`;
+  return `No vacant ${label} units to rent or turn over; place a ${label} build to review its demand evidence`;
+}
 export function diagnostics(sim) {
   const o = operations(sim), s = sim.s, out = [];
   const add = (cause, effect, consequence, action, tab = 'operate', obj = null) => out.push({ cause, effect, consequence, action, tab, obj });
@@ -47,7 +62,7 @@ export function diagnostics(sim) {
   for (const x of s.mkt.lostLog) if (x.d >= period.start && x.d <= period.end && ['noSize', 'noReady', 'noClimate'].includes(x.r)) {
     const k = x.sz + (x.climate || x.r === 'noClimate' ? ' climate' : ''); bySize[k] = (bySize[k] || 0) + 1;
   }
-  for (const [size, n] of Object.entries(bySize).sort((a, b) => b[1] - a[1]).slice(0, 2)) add(`${n} shoppers wanted ${size} and found none`, 'Suitable rentable inventory missing', 'Observed demand opportunity; shoppers are not promised leases', 'Turn over suitable units first, then assess an expansion', 'growth');
+  for (const [size, n] of Object.entries(bySize).sort((a, b) => b[1] - a[1]).slice(0, 2)) add(`${n} shoppers wanted ${size} and found none`, 'Suitable rentable inventory missing', 'Observed demand opportunity; shoppers are not promised leases', lostShopperAction(sim, size), 'growth');
   if (o.exhausted >= 3) add(`Owner capacity exhausted on ${o.exhausted} of ${o.workDays.length} measured days`, 'Office service and property work compete for time', 'Backlogs can keep inventory unavailable', 'Hire for the measured workload or schedule work before expanding');
   if (o.officeQueue || o.lost.service) {
     const waiting = o.officeWaiting;
@@ -107,8 +122,8 @@ export function investmentEvidence(sim, plan = null) {
     const readyVacancies = operating.filter(u => !u.lease && !u.blocked && !u.missing?.length && u.commercial === 'ready').length;
     const unavailableStock = stock.filter(u => u.cstate !== 'operating' || u.blocked || u.missing?.length || !u.lease && u.commercial !== 'ready').length;
     const n = losses.filter(x => lossKey(x) === k).length, occupancy = operating.length ? contracted.length / operating.length : null;
-    const reasons = [...(window < 14 ? ['insufficient_window'] : []), ...(contracted.length < 3 ? ['insufficient_comparables'] : []), ...(n < 5 ? ['insufficient_losses'] : [])];
-    const demandReasons = [...(window < 14 ? ['insufficient_window'] : []), ...(n < 5 ? ['insufficient_losses'] : []), ...(!operating.length ? ['no_operating_stock'] : occupancy < 0.9 ? ['low_contractual_occupancy'] : []), ...(readyVacancies ? ['ready_vacancies'] : [])];
+    const reasons = [...(window < EVIDENCE_MIN.window ? ['insufficient_window'] : []), ...(contracted.length < EVIDENCE_MIN.comparables ? ['insufficient_comparables'] : []), ...(n < EVIDENCE_MIN.losses ? ['insufficient_losses'] : [])];
+    const demandReasons = [...(window < EVIDENCE_MIN.window ? ['insufficient_window'] : []), ...(n < EVIDENCE_MIN.losses ? ['insufficient_losses'] : []), ...(!operating.length ? ['no_operating_stock'] : occupancy < 0.9 ? ['low_contractual_occupancy'] : []), ...(readyVacancies ? ['ready_vacancies'] : [])];
     const [size, env] = k.split('|');
     return { key: k, size, env, proposedCount: proposed.filter(u => key(u) === k).length, losses: n,
       operatingStock: operating.length, contractedStock: contracted.length, readyVacancies, unavailableStock, occupancy,
@@ -160,9 +175,22 @@ export function investment(sim, plan, { extraStaff = null, completePackage = fal
     daily, staffDaily, lowNet, highNet, range, enough, unavailableReasons, completePackage, leaseUpMonths, repairAllowance, cost: plan.cost,
     position: sim.financialPosition({ spend: plan.cost, extraDaily: daily }), layoutReady };
 }
+// Why a selected product has no payback estimate: the existing thresholds and the actual matching observations.
+function evidenceShortfallText(p, window) {
+  const label = productLabel(p), why = [];
+  if (p.reasons.includes('insufficient_comparables')) why.push(`${p.contractedStock} leased ${label} to compare; estimates need ${EVIDENCE_MIN.comparables}`);
+  if (p.reasons.includes('insufficient_losses')) why.push(`${p.losses} matching shopper loss${p.losses === 1 ? '' : 'es'} observed; estimates need ${EVIDENCE_MIN.losses}`);
+  if (p.reasons.includes('insufficient_window')) why.push(`${window} day${window === 1 ? '' : 's'} of observations; estimates need ${EVIDENCE_MIN.window}`);
+  return `insufficient comparable evidence for ${label}${why.length ? ` (${why.join('; ')})` : ''}`;
+}
+// Construction review: when evidence (not margin or layout) is what blocks an estimate, show the existing observed demand evidence.
+export function paybackEvidenceNote(I) {
+  if (!I || I.range || !I.unavailableReasons.some(r => r.code === 'insufficient_evidence')) return '';
+  return demandEvidenceText(I.evidence);
+}
 export function paybackText(I) {
   if (!I) return 'Payback unavailable: select a unit proposal.';
-  if (!I.range) return 'Payback unavailable: ' + I.unavailableReasons.map(r => r.code === 'insufficient_evidence' ? `insufficient comparable evidence for ${productLabel(I.evidence.products.find(p => p.key === r.product))}` : r.code === 'non_positive_margin' ? 'modeled incremental margin is non-positive under the stated assumptions' : 'layout or access prerequisites remain unresolved').join('; ') + '.';
+  if (!I.range) return 'Payback unavailable: ' + I.unavailableReasons.map(r => r.code === 'insufficient_evidence' ? evidenceShortfallText(I.evidence.products.find(p => p.key === r.product), I.evidence.window) : r.code === 'non_positive_margin' ? 'modeled incremental margin is non-positive under the stated assumptions' : 'layout or access prerequisites remain unresolved').join('; ') + '.';
   const assumptions = I.productEstimates.map(p => `${productLabel(p)} ${Math.round(p.lowOccupancy * 100)}–${Math.round(p.highOccupancy * 100)}% contracted-stock occupancy`).join('; ');
   return `Steady-state payback ${Math.floor(I.range[0])}–${Math.ceil(I.range[1])} months; ${assumptions}${I.leaseUpMonths ? `; includes ${I.leaseUpMonths}-month lease-up allowance` : ''}. Assumptions, not guaranteed profit.`;
 }

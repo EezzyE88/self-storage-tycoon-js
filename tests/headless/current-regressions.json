@@ -516,14 +516,14 @@
           "@node",
           "tests/headless/tinvestment_guidance.mjs"
         ],
-        "completion": "ALL\\ PASS\\ 16\\ groups",
-        "minimum_pass_lines": 16,
+        "completion": "ALL\\ PASS\\ 19\\ groups",
+        "minimum_pass_lines": 19,
         "timeout": 180,
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim",
         "allowed_notes": [
           "^NOT TESTED baseline parity:.*"
         ],
-        "scope": "16 native groups; optional protected-parent comparison not in current profile"
+        "scope": "19 native groups; optional protected-parent comparison not in current profile"
       },
       {
         "id": "tlayout_hierarchy",
