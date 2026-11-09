@@ -14,7 +14,7 @@ const base = clone(makeMaple(7).s);
 const load = (tut, patch = {}) => { const st = clone(base); Object.assign(st, patch); st.tut = clone(tut); return new Sim(st); };
 // Campaign Unit 4 inserted Beat 5 (pricing) and the Act I break; ids never change, positions did.
 // Campaign Unit 5 added the Act II break before graduation; campaign Unit 6 added Act III (beats 9-12 and its break).
-const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'grad']; // Act IV Beat 13 since campaign Unit 7a (tact4)
+const IDS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'collections', 'grad']; // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
 const IDS8 = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'grad']; // the layout saves had before ids
 // Where each pre-id position resumes: the same beat, except D4 (campaign Unit 6): the old graduation (index 7, not
 // graduated) resumes at the Act II break and then continues into Act III.
@@ -148,6 +148,9 @@ function play(strip, onBeat) {
   assert.equal(d({ type: 'build', tool: 'hall', a: { x: 17, y: 5 }, b: { x: 17, y: 6 }, f: 1 }).ok, true); until(idle);
   assert.equal(d({ type: 'build', tool: 'light', a: { x: 17, y: 6 }, b: { x: 17, y: 6 }, f: 1 }).ok, true); until(idle);
   assert.equal(d({ type: 'build', tool: 'iu5x10', a: { x: 18, y: 5 }, b: { x: 18, y: 5 }, f: 1, axis: 'y' }).ok, true); beat('vertical');
+  // Act IV Beat 14 (campaign Unit 7b, as tact4b): one real returned payment, then the collections lesson's Got it.
+  assert.equal(curBeat(sim).id, 'collections'); until(() => s.tut.flags.act4Account != null, 1440 * 40);
+  d({ type: 'tutFlag', flag: 'collAck' }); beat('collections');
   assert.equal(curBeat(sim).id, 'grad');
   d({ type: 'tutFlag', flag: 'grad' }); tick(2);
   return { sim, s, log };

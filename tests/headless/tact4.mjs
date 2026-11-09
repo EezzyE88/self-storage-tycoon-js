@@ -47,9 +47,9 @@ function playRoute(sim) {
   return q;
 }
 
-test('Beat 13 opens Act IV right after the Act III break and before graduation; no camera focus, no pause', () => {
+test('Beat 13 opens Act IV right after the Act III break, before Beat 14 and graduation; no camera focus, no pause', () => {
   const ids = BEATS.map((b) => b.id), v = beatIndex('vertical');
-  assert.equal(ids[v - 1], 'actIII_break'); assert.equal(ids[v + 1], 'grad'); assert.equal(v + 2, BEATS.length);
+  assert.equal(ids[v - 1], 'actIII_break'); assert.equal(ids[v + 1], 'collections'); assert.equal(ids[v + 2], 'grad'); assert.equal(v + 3, BEATS.length); // Beat 14 since Unit 7b (tact4b)
   const b = BEATS[v]; assert.equal(b.act, 'IV'); assert.equal(b.chapter, 'Grow'); assert.equal('focus' in b, false); assert.equal(!!b.pause, false);
   assert.equal(beatHeader(v), 'Act IV · Grow · Beat 13');
   assert.equal(BEATS[v - 1].next, 'Act IV · Grow'); assert.match(BEATS[v - 1].body, /stop before Act IV/);
@@ -79,7 +79,7 @@ test('Day 18 break: the beat starts incomplete, shows the live structure-only qu
 test('the full player route completes Beat 13 with real charges only; reserve stays covered; access route is real', () => {
   const sim = atVertical(), c0 = sim.s.cash, q = playRoute(sim);
   until(sim, () => upstairsReady(sim)); tutorialTick(sim);
-  assert.equal(curBeat(sim).id, 'grad'); assert.equal(sim.s.speed, 0, 'graduation pauses as before');
+  assert.equal(curBeat(sim).id, 'collections', 'Beat 14 follows (Unit 7b)'); assert.equal(sim.s.speed, 0, 'completing Beat 13 never changes speed');
   const u = sim.objs('unit').find((x) => (x.f || 0) === 1); assert.equal(u.cstate, 'operating'); assert.equal(u.commercial, 'ready'); assert.equal(!!u.blocked, false); assert.deepEqual(u.missing || [], []);
   assert.ok(sim.financialPosition().available > 0, 'reserve and bills still covered');
   const capex = sim.s.ledger.filter((r) => r.cat === 'capex' && r.t >= BASE.s.t).reduce((a, r) => a - r.amt, 0);
@@ -105,8 +105,8 @@ function playRouteUntilUnitOrdered(sim) {
 
 test('prebuilt work: a working upstairs unit built before Act IV completes Beat 13 on its first tick; an order in progress shows the wait', () => {
   const pre = clone(BASE); playRoute(pre); until(pre, () => upstairsReady(pre));
-  pre.dispatch({ type: 'tutFlag', flag: 'actIII_break' }); for (let i = 0; i < 6 && curBeat(pre).id !== 'grad'; i++) tutorialTick(pre);
-  assert.equal(curBeat(pre).id, 'grad', 'already-working upstairs unit is recognised');
+  pre.dispatch({ type: 'tutFlag', flag: 'actIII_break' }); for (let i = 0; i < 6 && curBeat(pre).id !== 'collections'; i++) tutorialTick(pre);
+  assert.equal(curBeat(pre).id, 'collections', 'already-working upstairs unit is recognised');
   const mid = atVertical(), q = quote(mid);
   assert.equal(mid.dispatch({ type: 'verticalUpgrade', shell: shellOf(mid).id, fitout: false, stairs: false, stamp: q.stamp }).ok, true); steps(mid, 60);
   const st = stepState(mid, ui()); assert.deepEqual(st.done.slice(0, 5), [true, true, true, true, true]); assert.equal(st.cur, 5); assert.match(mid.s.tut.beatId, /vertical/);

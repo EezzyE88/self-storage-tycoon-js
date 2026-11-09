@@ -2,7 +2,7 @@ import { tutorialUnit } from './unitnumbering.js';
 import { careerEligibility } from './career.js';
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
-import { TOOLS, ROLES } from './data.js';
+import { TOOLS, ROLES, BILLING_CYCLE_DAYS } from './data.js';
 import { verticalDone, verticalLayout, shaftHallState } from './blueprint.js';
 import { investmentEvidence } from './economics.js';
 import { actIIProgress, investmentText, gradProgress } from './investmentprogress.js';
@@ -123,6 +123,49 @@ const verticalMoneyTag = (sim) => {
   const q = verticalQuote(sim); if (!q) return '';
   const gap = verticalShort(sim);
   return ` <span class="tut-money" data-qa="tut-vertical-money">Structure only <b>${usd(q.cost)}</b> · one unit about <b>${usd(minFitout())}</b> · available <b>${usd(sim.financialPosition().available)}</b>${gap > 0 ? ` · <b>${usd(gap)} short</b>` : ''}</span>`;
+};
+// Act IV Beat 14 (campaign Unit 7b): one real account falls behind, the approved S2 "returned payment". A current lease
+// whose most recent bill was actually collected (its ledger line, exact amount, at nextBill - 30) at least 15 days ago
+// has that one payment returned through the normal money path, and the lease takes exactly the state billLease would
+// have produced had that bill been missed. Nothing is invented: the reversal nets the collected bill to $0 and only the
+// rent the tenant really owes can be collected later. No RNG draw, no policy change; once per tutorial (guarded by flag).
+const dayAt = (t) => Math.floor(t / 1440) + 1;
+const RETURNED = 'Returned payment - Unit ';
+export function act4Eligible(sim) {
+  const s = sim.s, day = sim.day, roles = new Set(Object.values(s.unitRoles || {}));
+  const lastRent = (L, num) => { const note = `Rent - Unit ${num}`; for (let i = s.ledger.length - 1; i >= 0; i--) { const x = s.ledger[i]; if (x.cat === 'rent' && x.note === note) return x; } return null; };
+  const out = [];
+  for (const L of Object.values(s.leases)) {
+    const u = s.objects[L.unit]; if (!u || L.status !== 'current' || roles.has(L.unit)) continue;
+    const x = lastRent(L, u.num); if (!x) continue;
+    const bill = dayAt(x.t); // the verified prior payment: this lease's latest bill, collected in full
+    if (bill !== L.nextBill - BILLING_CYCLE_DAYS || bill < L.start || Math.abs(x.amt - L.rent) >= 0.005 || day - bill < 15) continue;
+    out.push({ L, u, bill });
+  }
+  return out.sort((a, b) => a.bill - b.bill || a.u.num - b.u.num);
+}
+export function authorAct4Account(sim) {
+  const s = sim.s, f = s.tut.flags; if (f.act4Account != null) return { ok: false, dup: true };
+  const pick = act4Eligible(sim)[0]; if (!pick) return { ok: false, none: true }; // wait for a genuine account; never fabricate one
+  const { L, u, bill } = pick, late = sim.day - bill, pol = s.policies;
+  sim.money(-L.rent, 'rent', RETURNED + u.num);
+  L.status = 'pastdue'; L.balance = L.rent; L.fees = 0; L.dueSince = bill; L.feeDone = false; // as billLease on a missed bill
+  if (late >= 5 && pol.lateFee > 0) { L.feeDone = true; L.fees = pol.lateFee; } // the fee billLease adds at 5 days
+  if (late >= 15) { L.status = 'delinquent'; if (pol.overlock) { u.overlock = true; sim.emit('overlock', { unit: u.id, x: u.x, y: u.y, f: u.f || 0 }); } }
+  f.act4Account = L.id;
+  sim.emit('pastdue', { unit: u.id });
+  return { ok: true, lease: L.id, unit: u.num, bill, late };
+}
+const act4Authored = (sim) => sim.s.tut.flags.act4Account != null;
+// Live story of that account for the rendered step text (beat bodies are not shown on phone cards).
+const act4Line = (sim) => {
+  const s = sim.s, id = s.tut.flags.act4Account; if (id == null) return '';
+  const r = [...s.ledger].reverse().find((x) => x.note && x.note.startsWith(RETURNED));
+  const num = r ? r.note.slice(RETURNED.length) : null, who = num ? `Unit ${num}` : 'One tenant', L = s.leases[id];
+  const head = r ? `${who}’s ${usd(-r.amt)} rent payment came back on Day ${dayAt(r.t)}.` : `${who}’s rent payment came back.`;
+  const now = !L ? 'The account has since closed.' : L.status === 'current' ? 'The tenant has since paid in full; the account is current.'
+    : `Now <b>${sim.stageOf(L)}</b>, <b>${usd(sim.owed(L))}</b> owed${s.objects[L.unit]?.overlock ? ', locked out' : ''}.`;
+  return ` <span class="tut-money" data-qa="tut-act4-account">${head} ${now}</span>`;
 };
 const hallWait = (placed) => (sim) => placed(sim) || hallF2(sim) !== 'ordered' ? null : { state: 'ordered', t: 'Let the F2 hallway finish', d: 'The upstairs hallway is still under construction. Lights and unit doors need a <b>finished</b> hallway. Tap <b>4x</b> to run time; this step continues by itself.' };
 
@@ -354,6 +397,20 @@ export const BEATS = [
     ],
     check: upstairsReady },
 
+  // Act IV Beat 14: collections, the existing lesson contract (LESSONS.collections) on one real returned payment.
+  { id: 'collections', act: 'IV', chapter: 'Grow', title: 'When rent goes unpaid',
+    body: 'An account is falling behind. Unpaid rent climbs a ladder: past due, delinquent (locked out), lien, notice, then auction.',
+    why: 'You set the policies (late fee, overlocks, automatic notices, auction or clean-out) and handle the exceptions. A payment plan often saves the tenant and the money.',
+    tick: (sim) => { if (!act4Authored(sim) && sim.s.speed > 0) authorAct4Account(sim); }, // arrives with running time, never during manual Pause
+    ownsRequest: (sim, c) => !!c && sim.s.tut.flags.act4Account != null && c.key === 'lien' + sim.s.tut.flags.act4Account,
+    steps: [
+      { t: 'Let time run until a payment comes back', d: 'No tenant has a paid rent bill old enough yet. Tap <b>4x</b>; this step continues by itself once one does. The tutorial only uses a real payment; it never invents rent.', sel: FAST, run: true, done: act4Authored },
+      { t: 'Open <b>Business</b>{act4Account}', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => (act4Authored(sim) && tabIs(ui, 'business')) || ctx(sim).flags.collAck },
+      { t: 'Find <b>Collections</b>{act4Account}', d: 'In the Business panel, choose <b>Collections</b> in the section selector to reach the ladder. Each rung counts accounts at that stage; the list below has actions for each account (notice, plan, waive, unlock).', sel: '.ladder', done: (sim) => ctx(sim).flags.collAck },
+      { t: 'Tap <b>Got it</b>', d: 'Or act on an account first. The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => ctx(sim).flags.collAck },
+    ],
+    button: 'Got it', flag: 'collAck', buttonWhen: act4Authored, check: (sim) => act4Authored(sim) && !!ctx(sim).flags.collAck },
+
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
   { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
     body: 'You’ve taken Maple Street from a property you barely knew into one you can operate, diagnose, improve and grow. You understand how customers, staff, buildings and money fit together. There is still plenty to master, but the property is yours now. <b>Maple Street is paused.</b> Take your time, look around, and start the clock when you’re ready.',
@@ -542,7 +599,7 @@ export function beatHeader(i) {
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
 export function tutorialText(sim, value, live = {}) { // `live`: per-card cache, so one card reads each live figure once
-  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/\{verticalMoney\}/g, () => (live.vm ??= verticalMoneyTag(sim))).replace(/Unit (107|203)\b/g, (_, n) => {
+  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/\{verticalMoney\}/g, () => (live.vm ??= verticalMoneyTag(sim))).replace(/\{act4Account\}/g, () => (live.a4 ??= act4Line(sim))).replace(/Unit (107|203)\b/g, (_, n) => {
     const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
     return u ? `Unit ${u.num}` : 'the tutorial unit';
   }) : value;
@@ -606,8 +663,9 @@ export function tutorialTick(sim) {
   if (b.pause) holdPause(sim);
   if (b.brk && s.tut.flags[b.flag]) sim.releaseHeld({ chapter: true }); // after Continue, still paused: held reviews come out first
   if (!s.tut.entered) { s.tut.entered = true; s.tut.enteredAt = s.t; if (b.enter) b.enter(sim); sim.emit('tut_beat', { beat: s.tut.beat }); }
+  if (b.tick) b.tick(sim); // a beat's own once-guarded state (Beat 14's returned payment); runs while the beat is current
   if (b.check(sim)) {
-    const lesson = { interior_customer: 'interior', overlays: 'quality', climate: 'climate' }[b.id];
+    const lesson = { interior_customer: 'interior', overlays: 'quality', climate: 'climate', collections: 'collections' }[b.id];
     if (lesson) { s.lessonsDone ||= {}; s.lessonsDone[lesson] ||= sim.day; }
     sim.emit('tut_done', { beat: s.tut.beat });
     s.tut.beat++; s.tut.entered = false; s.tut.idMark = s.nextId;

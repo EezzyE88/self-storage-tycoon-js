@@ -52,10 +52,10 @@ function play(seed, { stopAt = 'grad', row = ROW, log, hook } = {}) {
 const ask = (sim, key, extra = {}) => { sim.convo({ key, who: 'Tester', sev: 'attention', ttl: 60, def: 0, text: 'Test ' + key, actions: [{ label: 'Default', action: { type: 'tutFlag', flag: 'def_' + key } }, { label: 'Other' }], ...extra }); return sim.s.convos.find((c) => c.key === key); };
 
 test('Act II is beats 6-8 under "Act II · Stabilize", then the paused Act II break, then Act III and graduation', () => {
-  assert.deepEqual(BEATS.map((b) => b.id), ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', ...ACT2, 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'grad']); // Act III since campaign Unit 6 (tact3); Act IV Beat 13 since Unit 7a (tact4)
+  assert.deepEqual(BEATS.map((b) => b.id), ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', ...ACT2, 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'collections', 'grad']); // + Beat 14 since Unit 7b (tact4b); // Act III since campaign Unit 6 (tact3); Act IV Beat 13 since Unit 7a (tact4)
   for (const id of [...ACT2, 'actII_break']) { const b = BEATS[beatIndex(id)]; assert.equal(b.act, 'II'); assert.equal(b.chapter, 'Stabilize'); }
   assert.deepEqual(ACT2.map((id) => beatHeader(beatIndex(id))), [6, 7, 8].map((n) => `Act II · Stabilize · Beat ${n}`));
-  assert.equal(beatHeader(BREAK), 'Act II · Stabilize · Chapter break'); assert.equal(beatHeader(GRAD), 'Graduation · Part 14 of 14'); // Act IV Beat 13 since campaign Unit 7a (tact4)
+  assert.equal(beatHeader(BREAK), 'Act II · Stabilize · Chapter break'); assert.equal(beatHeader(GRAD), 'Graduation · Part 15 of 15'); // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
   assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Act III · Improve', 'Act IV · Grow', 'Graduation']); // Act IV since campaign Unit 7a (tact4)
   assert.deepEqual(ACT2.map((id) => BEATS[beatIndex(id)].title), ['Maple Street is full', 'A hallway light has failed', 'The Owner is the bottleneck']);
   assert.equal(brk.title, 'Maple Street is stable again'); assert.equal(brk.pause, true); assert.equal(brk.brk, true); assert.equal(brk.button, 'Continue'); assert.equal(brk.flag, 'actII_break');
@@ -307,7 +307,7 @@ test('R2: only the Beat 6 build-status step folds the review to name, cost, cash
 
 test('R3: let-time-run steps count any running speed: 1x is ringed only from Pause, never at 1x/2x/4x, and no speed is changed', () => {
   const runs = BEATS.flatMap((b) => (b.steps || []).map((st, i) => (st.run ? b.id + ':' + i : null))).filter(Boolean);
-  assert.deepEqual(runs, ['repair:7', 'hire:3', 'interior_customer:1', 'feedback:0', 'overlays:8', 'overlays:14', 'vertical:0'], 'Act II Owner and Porter work, the Act III let-time-run steps (campaign Unit 6) and the Act IV Beat 13 wait for rent (Unit 7a); Act I clock steps unchanged');
+  assert.deepEqual(runs, ['repair:7', 'hire:3', 'interior_customer:1', 'feedback:0', 'overlays:8', 'overlays:14', 'vertical:0', 'collections:0'], 'Act II Owner and Porter work, the Act III let-time-run steps (campaign Unit 6), the Act IV Beat 13 wait for rent (Unit 7a) and the Beat 14 wait for a real payment (Unit 7b); Act I clock steps unchanged');
   for (const [beat, at] of [['repair', 7], ['hire', 3]]) {
     const { sim } = play(20260929, { stopAt: beat }), U = camUI(sim).u, raw = BEATS[beatIndex(beat)].steps[at];
     for (const sp of [0, 1, 2, 4]) {
