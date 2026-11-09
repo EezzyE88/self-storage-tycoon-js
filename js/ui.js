@@ -3098,6 +3098,7 @@ export class UI {
     }else body+=`<p class="vr-verdict unsupported">${esc(R.msg)}</p>`;
     const acts=R.ok?`<button class="btn" data-a="verticalPreview" data-qa="vr-preview">Preview on map</button><button class="btn pri${G&&G.target==='confirm'?' vr-guide':''}" data-a="verticalConfirm" data-qa="vr-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button>`:'';
     this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal vreview" role="dialog" aria-modal="true" aria-labelledby="vr-title"><div class="row"><h2 id="vr-title">Building ${id} · ${R.ok?`F${R.f+1} expansion review`:'vertical expansion'}<small class="vr-paused">Paused while you review · nothing is charged until Confirm</small></h2><button class="x" data-a="modalClose" data-qa="vr-close" aria-label="Close review" title="Close review">${I.x}</button></div>${G?`<div class="vr-coach" data-qa="vr-coach" role="status"><small>${G.header}</small><b>${G.t}</b><span>${G.d}</span></div>`:''}<div class="vr-body">${body}</div><div class="row wrap vr-acts">${acts}<button class="btn" data-a="modalClose" data-qa="vr-close-review">Close review</button></div></div></div>`;
+    if(G){const el=this.$('modal').querySelector?.('.vr-body .vr-guide');if(el&&el.scrollIntoView)el.scrollIntoView({block:'nearest'});} // short screens: the ringed option starts in view
   }
   // Hide the review sheet so the proposed floor can be inspected; the quote and ghost stay, time stays paused.
   previewVertical() {
