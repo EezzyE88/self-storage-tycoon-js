@@ -1,3 +1,37 @@
+# Project overview — current direction (November 9, 2026)
+
+**End goal:** an understandable, satisfying iPhone-first self-storage tycoon game where layout, leasing, operations, finances and multi-property growth form a coherent loop. Preserve player-controlled time, save integrity and established behavior.
+
+**Newest source:** master `2f8b377e4a81361b7652f90a2b1373514a3f2ff6`, tree `57fdb0172cabdbfa65a7bb7719d089a377b9fd2f`.
+- [Pages #28](https://github.com/EezzyE88/self-storage-tycoon-js/actions/runs/42656665611) ran **139/139** on that SHA and deployed.
+- The live build stamp matched it on November 9.
+- This is technical qualification, **not** player acceptance.
+- Since November 5 the game gained:
+  - camera restore after save and reload, plus label fixes (PR #33)
+  - checkpointed chapter pauses (PR #34)
+  - paired Pause cues and lesson-tool handoffs (PR #35)
+  - IFM-01A elevator access feedback (PR #37)
+  - an authorized advertising rebalance (PR #38, the only economy change)
+  - investment-guidance explanations (PR #39, presentation only)
+  - AG-01 Rev 1 operating-facility acquisition guidance (PR #40, presentation only)
+
+**Immediate priority:** physical iPhone qualification of the six never-device-tested cases listed in [Current Status](CURRENT-STATUS.md). Owner-reported iPhone passes for AG-01 Rev 1, IFM-01A and the chapter-pause checkpoint are retained but not independently verified. After that comes bounded player feedback on financial clarity, enjoyment and stopping points.
+
+**Planned next content:** Unit 7 Rev 1 (Act IV "Grow") is planning only. The decisions are D3 Option 2 (Beat 15 anchored to a real quote; financing availability is not the same as worthwhile), P1 inspection-only (no loan Confirm, no debt) and Beat 14 S2 returned-payment design direction. It is not implemented in master and not accepted.
+
+**Deferred/protected:**
+- Master Blueprint Option B and AM-01 Draft 0.2 remain accepted. OT-01 is a planning HOLD. AG-01 D1 is unresolved.
+- HUD cash-today clarity remains a separate possible unit. The $100 observation stays PARKED.
+- The Version 1.0 roadmap and Runtime v3 revision 5 are unchanged.
+- Preserve the accepted construction, the economy outside the authorized PR #38 change, Pause, save compatibility, user-controlled timing and the $0 budget.
+- No beta/release acceptance is inferred.
+
+**Historical boundary:** the November 5 and October 30 overviews remain below unchanged. Their dates, baselines and priorities are not the current baseline.
+
+---
+
+## Preserved November 5 orientation record (historical; verbatim)
+
 # Project overview — current direction (November 5, 2026)
 
 **End goal:** an understandable, satisfying iPhone-first self-storage tycoon game where layout, leasing, operations, finances and multi-property growth form a coherent loop. Players should be able to explain why units are vacant, why cash changes, and whether investments are beginning to work. Preserve player-controlled time, save integrity and established behavior.
