@@ -1277,3 +1277,5 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
   #ui:has(#modal .request-decision-head),
   #ui:not(:has(.modal-bg)):has(.decision-prompt) { animation: none; }
 }
+/* AG-01: the operating-facility details open full width under the offer row. */
+.item.acq-facility { flex-wrap: wrap; } .item.acq-facility > .facility-details { flex: 1 1 100%; margin-top: 2px; }
