@@ -1047,6 +1047,13 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .cancel-kv b.good { color:#2f8f57; }
 #ui .vr-paused { display:block; font-size:12px; font-weight:500; opacity:.75; }
 #ui .vr-opt.off { opacity:.6; }
+/* Beat 13 (U7a-r1): the tutorial step inside the Go Vertical review, and a ring on the control it names */
+#ui .modal.vreview .vr-coach { flex-shrink:0; display:flex; flex-direction:column; gap:2px; margin:8px 0 4px; padding:8px 10px; border-radius:10px; background:#22343f; color:#f3efe6; border:2px solid var(--yellow); font-size:13px; line-height:1.35; }
+#ui .modal.vreview .vr-coach small { color:var(--yellow); font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+#ui .modal.vreview .vr-coach b { font-size:15px; } #ui .modal.vreview .vr-coach b b { color:var(--yellow); }
+#ui .modal.vreview .vr-coach .tut-money { display:block; font-weight:400; font-size:13px; margin-top:2px; }
+#ui .modal.vreview .vr-guide { outline:3px solid var(--yellow); outline-offset:3px; border-radius:10px; box-shadow:0 0 0 6px rgba(245,197,66,0.25); }
+.tut .tut-money { display:block; font-weight:400; font-size:13px; line-height:1.35; margin-top:2px; color:#e9e4d8; }
 #ui .floors .inprog { border-style:dashed; }
 
 /* Candidate 22 review: the docked instruction strip keeps the step's how-to line visible (the expandable help is hidden there). */

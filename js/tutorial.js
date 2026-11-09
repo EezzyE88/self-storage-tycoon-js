@@ -117,6 +117,13 @@ const verticalMoneyLine = (sim) => {
   return ` <b>Structure only:</b> ${usd(q.cost)} for reinforcement, the second floor and the freight elevator. One hallway, light and unit add about ${usd(minFitout())}. Available after bills and reserve: <b>${usd(av)}</b>.` +
     (gap > 0 ? ` That is <b>${usd(gap)}</b> short. Let time run: rent comes in and this quote stays current. You do not need to borrow for this beat.` : '');
 };
+// Rendered step text (U7a-r1): beat bodies are not shown on phone cards, so the live figures ride in the step titles.
+// Empty once the floor is ordered or built. Every figure is the current quote and position.
+const verticalMoneyTag = (sim) => {
+  const q = verticalQuote(sim); if (!q) return '';
+  const gap = verticalShort(sim);
+  return ` <span class="tut-money" data-qa="tut-vertical-money">Structure only <b>${usd(q.cost)}</b> · one unit about <b>${usd(minFitout())}</b> · available <b>${usd(sim.financialPosition().available)}</b>${gap > 0 ? ` · <b>${usd(gap)} short</b>` : ''}</span>`;
+};
 const hallWait = (placed) => (sim) => placed(sim) || hallF2(sim) !== 'ordered' ? null : { state: 'ordered', t: 'Let the F2 hallway finish', d: 'The upstairs hallway is still under construction. Lights and unit doors need a <b>finished</b> hallway. Tap <b>4x</b> to run time; this step continues by itself.' };
 
 // Generic chapter break: a paused card with a deliberate Continue. Continue (flag = id) releases the owner reviews held
@@ -325,13 +332,13 @@ export const BEATS = [
     body: (sim) => `Maple Street still has open land, and building out is cheaper here. But land is the scarce thing at most storage sites, so learn how a second floor connects while one unit is enough to try it.${verticalMoneyLine(sim)}`,
     why: 'An upstairs unit only works when the whole route connects: <b>gate → loading → entrance → elevator → upstairs unit</b>. The freight elevator comes with the new floor; the hallway, light and unit are yours to place. One working unit is the goal, not a full floor, and upstairs units are not guaranteed to rent.',
     steps: [
-      { t: 'Let rent cover the new floor', d: 'The structure-only quote is more than Maple Street can spend after bills and reserve. Tap <b>4x</b> to let rent come in; this step continues by itself when the quote fits. Borrowing is not needed.', sel: FAST, run: true, done: (sim) => verticalShort(sim) === 0 || verticalStarted(sim) },
-      { t: 'Tap the <b>interior building</b>', d: 'Close any open panel with <b>×</b>, then tap the large interior building on the map. Its panel shows its floors.', obj: (sim) => interiorShell(sim) && interiorShell(sim).id,
+      { t: 'Let rent cover the new floor{verticalMoney}', d: 'The structure-only quote plus one hallway, light and unit is more than Maple Street can spend after bills and reserve. Tap <b>4x</b> to let rent come in; the figures update as it does, and this step continues by itself when the quote fits. You do not need to borrow.', sel: FAST, run: true, done: (sim) => verticalShort(sim) === 0 || verticalStarted(sim) },
+      { t: 'Tap the <b>interior building</b>{verticalMoney}', d: 'Close any open panel with <b>×</b>, then tap the large interior building on the map. Its panel shows its floors.', obj: (sim) => interiorShell(sim) && interiorShell(sim).id,
         done: (sim, ui) => !!ui && ((interiorShell(sim) && ui.sel === interiorShell(sim).id) || !!ui.verticalReview) || verticalStarted(sim) },
-      { t: 'Tap <b>Plan next floor</b>', d: 'In the building panel, tap <b>Plan next floor</b>. The review lists every cost before anything is charged.', sel: '[data-a="verticalReview"]', done: (sim, ui) => (!!ui && !!ui.verticalReview) || verticalStarted(sim) },
-      { t: 'Choose <b>structure only</b>', d: 'Untick <b>Copy this floor’s unit layout and lighting</b>. You will add one hallway, light and unit yourself, which costs far less than copying the whole floor.', sel: '[data-vertical-option="fitout"]',
+      { t: 'Tap <b>Plan next floor</b>{verticalMoney}', d: 'In the building panel, tap <b>Plan next floor</b>. The review lists every cost before anything is charged.', sel: '[data-a="verticalReview"]', done: (sim, ui) => (!!ui && !!ui.verticalReview) || verticalStarted(sim) },
+      { t: 'Choose <b>structure only</b>{verticalMoney}', d: 'Untick <b>Copy this floor’s unit layout and lighting</b>. You will add one hallway, light and unit yourself, which costs far less than copying the whole floor.', sel: '[data-vertical-option="fitout"]',
         done: (sim, ui) => (!!ui && !!ui.verticalReview && ui.verticalReview.fitout === false) || verticalStarted(sim) },
-      { t: 'Tap <b>Confirm</b>', d: 'Check the cost and the cash after, then tap <b>Confirm</b>. Nothing is charged before this.', sel: '[data-a="verticalConfirm"]', done: verticalStarted },
+      { t: 'Tap <b>Confirm</b>{verticalMoney}', d: 'Check the cost and the cash after, then tap <b>Confirm</b>. Nothing is charged before this.', sel: '[data-a="verticalConfirm"]', done: verticalStarted },
       waitBuild('Let the new floor and elevator finish', (sim) => upperFloorDone(sim) || upstairsUnits(sim).length > 0),
       ...buildSteps({ cat: 'interior', catName: 'Interior', tool: 'hall', toolName: 'Hallway', cell: { x: 17, y: 5 }, end: { x: 17, y: 6 }, f: 1, after: upperFloorDone,
         placed: (sim) => hallF2(sim) !== 'missing' || upstairsUnits(sim).length > 0,
@@ -534,8 +541,8 @@ export function beatHeader(i) {
 }
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
-export function tutorialText(sim, value) {
-  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/Unit (107|203)\b/g, (_, n) => {
+export function tutorialText(sim, value, live = {}) { // `live`: per-card cache, so one card reads each live figure once
+  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/\{verticalMoney\}/g, () => (live.vm ??= verticalMoneyTag(sim))).replace(/Unit (107|203)\b/g, (_, n) => {
     const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
     return u ? `Unit ${u.num}` : 'the tutorial unit';
   }) : value;
@@ -543,8 +550,17 @@ export function tutorialText(sim, value) {
 export function curBeat(sim) {
   const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[tutBeatIndex(sim.s)] : null;
   if(!b)return null;
-  const text = value => tutorialText(sim, value);
+  const live = {}, text = value => tutorialText(sim, value, live);
   return {...b,title:text(b.title),body:text(typeof b.body === 'function' ? b.body(sim) : b.body)+(b.progress ? b.progress(sim) : ''),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
+}
+// Beat 13 guidance inside the Go Vertical review (U7a-r1): the coach card and ring are hidden while a modal is open, so
+// the review shows the current step itself. Only for Beat 13's own review steps; null everywhere else.
+export function verticalReviewGuide(sim, ui) {
+  const b = curBeat(sim); if (!b || b.id !== 'vertical' || sim.s.lesson || !ui || !ui.verticalReview) return null;
+  const { cur } = stepState(sim, ui), st = b.steps[cur]; if (!st || !st.sel) return null;
+  const target = st.sel === '[data-vertical-option="fitout"]' ? 'fitout' : st.sel === '[data-a="verticalConfirm"]' ? 'confirm' : null;
+  if (!target) return null;
+  return { target, header: `${beatHeader(tutBeatIndex(sim.s))} · Step ${cur + 1} of ${b.steps.length}`, t: st.t, d: st.d };
 }
 // A navigation step whose destination is already showing is complete: never ask the player to tap what is selected.
 export function alreadyShowing(st, ui) {

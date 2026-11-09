@@ -20,7 +20,7 @@ import { complaintCopy, requestCopy } from './feedbackcopy.js';
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK, BILLING_CYCLE_DAYS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
-import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup } from './tutorial.js';
+import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup, verticalReviewGuide } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
@@ -2295,7 +2295,7 @@ export class UI {
     const showBtn = !!b.button && (!b.buttonWhen || b.buttonWhen(this.sim, this));
     const bk = isLesson ? 'L' + s.lesson.id : tutBeatIndex(s);
     const heldN = this.sim.heldReviews().length;
-    const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || '', heldN].join(':');
+    const key = [bk, this.tutMin, cur, st.done.join(''), showBtn, this.tutWhy, step?.redirect || '', heldN, b.id === 'vertical' ? step?.t : ''].join(':'); // Beat 13 step text carries live figures
     this.guideStep = step; this.guideKey = bk + ':' + cur + (step?.redirect || '');
     // Build-status lesson: the review drops its optional sections so the footprint, cost and cash after show together.
     this.root?.classList?.toggle('tut-review-compact', !!(step?.compactReview && showBtn));
@@ -3081,7 +3081,8 @@ export class UI {
     const inv=R.ok?this.sim.investment({...R,status:'valid',missing:[],warn:[]},{completePackage:true,leaseUpMonths:2}):null;
     const row=r=>`<div class="kv"><span>${esc(r.label)}</span><b>${money(r.cost)}</b></div>`;
     const isReq=r=>/^(Structural reinforcement|F\d structure|Required freight)/.test(r.label), isOpt=r=>/^Optional/.test(r.label);
-    const opt=(k,label,note,disabled=false)=>`<label class="vr-opt${disabled?' off':''}"><input type="checkbox" data-vertical-option="${k}" data-qa="vr-opt-${k}" aria-describedby="vr-note-${k}" ${this.verticalReview[k]?'checked':''} ${disabled?'disabled':''}><span><b>${label}</b><small id="vr-note-${k}">${note}</small></span></label>`;
+    const G=verticalReviewGuide(this.sim,this); // Beat 13 only: the current step, shown inside the review (the coach card is hidden by the modal)
+    const opt=(k,label,note,disabled=false)=>`<label class="vr-opt${disabled?' off':''}${G&&G.target===k?' vr-guide':''}"><input type="checkbox" data-vertical-option="${k}" data-qa="vr-opt-${k}" aria-describedby="vr-note-${k}" ${this.verticalReview[k]?'checked':''} ${disabled?'disabled':''}><span><b>${label}</b><small id="vr-note-${k}">${note}</small></span></label>`;
     let body=`<h3>Required</h3><p class="note">Freight elevator access to the new floor is required and always included. It is separate from stairs.</p>${R.ok?R.rows.filter(isReq).map(row).join(''):''}
       <h3>Options</h3>${opt('fitout','Copy this floor’s unit layout and lighting','Fit-out. Leave unchecked for structure only and choose units later.')}${stairsHere?opt('stairs','Extend existing stairs','Optional redundancy for people; carts still need the freight elevator.'):opt('stairs','Extend existing stairs','Not available: this building has no stairwell. Stairs are optional; build a Stairwell separately (Build → Interior) if you want redundancy. The package below is unaffected.',true)}${stairsReverted?'<p class="note vr-reverted" role="status">Stairs option turned off: there is no stairwell to extend. The package and price are unchanged.</p>':''}<p class="note">A second elevator is optional redundancy; build it separately after handover.</p>`;
     if(R.ok){
@@ -3095,8 +3096,8 @@ export class UI {
         <p class="note">Vacant = matching rent-ready vacancies now; unmet and leased = matching shopper outcomes in the last 30 days. This is observed evidence, not a revenue promise. Structure only lets you choose a different fit-out later.</p>`;
       body+=`<h3>Complete package ${money(R.cost)}</h3>${this.spendingHtml(R.cost,this.sim.planDailyCost(R),'after full package')}<p>F${R.from} → F${R.f+1}. ~${Math.ceil(R.dur/1440)} financial days, plus time to clear and test the elevator: reinforce → structure → fit-out → freight extension → service test → automatic opening. Existing leases and units stay in service; the freight elevator pauses briefly for its service test.</p><p class="note">${esc(R.warning)}</p><p class="note">${esc(paybackText(inv))} Prices are provisional prototype values.</p><p class="note">Cancellation: full undo within 30 minutes before any stage finishes; otherwise 60% of unbuilt work until the structure is complete. After that the package must finish.</p>`;
     }else body+=`<p class="vr-verdict unsupported">${esc(R.msg)}</p>`;
-    const acts=R.ok?`<button class="btn" data-a="verticalPreview" data-qa="vr-preview">Preview on map</button><button class="btn pri" data-a="verticalConfirm" data-qa="vr-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button>`:'';
-    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal vreview" role="dialog" aria-modal="true" aria-labelledby="vr-title"><div class="row"><h2 id="vr-title">Building ${id} · ${R.ok?`F${R.f+1} expansion review`:'vertical expansion'}<small class="vr-paused">Paused while you review · nothing is charged until Confirm</small></h2><button class="x" data-a="modalClose" data-qa="vr-close" aria-label="Close review" title="Close review">${I.x}</button></div><div class="vr-body">${body}</div><div class="row wrap vr-acts">${acts}<button class="btn" data-a="modalClose" data-qa="vr-close-review">Close review</button></div></div></div>`;
+    const acts=R.ok?`<button class="btn" data-a="verticalPreview" data-qa="vr-preview">Preview on map</button><button class="btn pri${G&&G.target==='confirm'?' vr-guide':''}" data-a="verticalConfirm" data-qa="vr-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button>`:'';
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal vreview" role="dialog" aria-modal="true" aria-labelledby="vr-title"><div class="row"><h2 id="vr-title">Building ${id} · ${R.ok?`F${R.f+1} expansion review`:'vertical expansion'}<small class="vr-paused">Paused while you review · nothing is charged until Confirm</small></h2><button class="x" data-a="modalClose" data-qa="vr-close" aria-label="Close review" title="Close review">${I.x}</button></div>${G?`<div class="vr-coach" data-qa="vr-coach" role="status"><small>${G.header}</small><b>${G.t}</b><span>${G.d}</span></div>`:''}<div class="vr-body">${body}</div><div class="row wrap vr-acts">${acts}<button class="btn" data-a="modalClose" data-qa="vr-close-review">Close review</button></div></div></div>`;
   }
   // Hide the review sheet so the proposed floor can be inspected; the quote and ghost stay, time stays paused.
   previewVertical() {
