@@ -1189,15 +1189,15 @@
           "@node",
           "tests/headless/tact4_render.mjs"
         ],
-        "completion": "5 Act IV Beat 13 rendered checks passed",
-        "minimum_pass_lines": 5,
+        "completion": "6 Act IV Beat 13 rendered checks passed",
+        "minimum_pass_lines": 6,
         "timeout": 900,
         "required_files": [
           "tests/headless/fixtures/act3_break_trace_20260929.json",
           "css/game.css"
         ],
         "evidence": "production renderTut()/showVertical() markup on the ordinary Day 18 Act III break replay, with the shipped stylesheet rules; browser geometry checked separately (rendered walk)",
-        "scope": "Campaign Unit 7a-r1: Beat 13 live structure-only quote, fit-out estimate, available funds and shortfall in the rendered step text (collapsed card, low-cash rent wait updating as rent arrives, no borrowing wording); Beat 13 step and ring inside the Go Vertical review (structure-only option, then Confirm), bounded to Beat 13; no fixed prices"
+        "scope": "Campaign Unit 7a-r1: Beat 13 live structure-only quote, fit-out estimate, available funds and shortfall in the rendered step text (collapsed card, low-cash rent wait updating as rent arrives, no borrowing wording); Beat 13 step and ring inside the Go Vertical review (structure-only option, then Confirm), bounded to Beat 13; no fixed prices; D1: on a floor view the Tap the interior building step first asks for EXT (ring on EXT, live figures kept)"
       },
       {
         "id": "tact4b",
