@@ -78,9 +78,14 @@ test('live figures: the card and the review read the current quote, position, cr
 test('inspection before the decision: no Continue until the review was opened; Continue alone never completes', () => {
   const sim = at15(); let html = card(sim);
   assert.match(html, /data-a="finReview">Review the project<\/button>/); assert.doesNotMatch(html, /data-a="tutNext"/);
+  // The phone card starts collapsed and a collapsed card shows only its primary action (shipped CSS): before the review that
+  // action is Review the project; afterwards it is Continue without borrowing, and the review stays reopenable from Details.
+  const CSS = readFileSync(new URL('../../css/game.css', import.meta.url), 'utf8'); assert.match(CSS, /\.tut\.min \.tut-actions > :not\(\.pri\) \{ display: none; \}/);
+  assert.match(html, /<button class="btn sm pri" data-a="finReview">/); assert.equal((html.match(/class="btn[^"]*\bpri\b/g) || []).length, 1, 'one primary action');
   sim.dispatch({ type: 'tutFlag', flag: 'finAck' }); tutorialTick(sim); assert.equal(curBeat(sim).id, 'financing', 'no decision without the review');
   delete sim.s.tut.flags.finAck; const { u } = makeUI(sim); u.showFinancingReview(); assert.equal(sim.s.tut.flags.finSeen, true);
-  assert.equal(stepState(sim, u).cur, 1); html = card(sim); assert.match(html, /data-a="tutNext">Continue without borrowing<\/button>/); assert.match(html, /data-a="finReview"/, 'the review can be reopened');
+  assert.equal(stepState(sim, u).cur, 1); html = card(sim); assert.match(html, /data-a="tutNext">Continue without borrowing<\/button>/); assert.match(html, /<button class="btn sm" data-a="finReview">/, 'the review can be reopened (secondary)');
+  assert.equal((html.match(/class="btn[^"]*\bpri\b/g) || []).length, 1, 'one primary action: Continue');
   tutorialTick(sim); assert.equal(curBeat(sim).id, 'financing', 'the review alone does not complete');
 });
 test('the review is read-only and complete: project rows, money, demand evidence, credit line, term-loan quote only, saving, decline; no Confirm, draw, loan or build control', () => {
