@@ -111,4 +111,28 @@ test('no fixed prices: the rendered figures follow the live quote when the build
   assert.ok(L2.q.cost < L.q.cost, 'cheaper live quote'); assert.ok(!curText(boxes.tut.innerHTML).includes(usd(L.q.cost)));
   assert.doesNotMatch(readFileSync(new URL('../../js/tutorial.js', import.meta.url), 'utf8'), /12,?470|13,?035|19,?101/);
 });
+test('D1: on a floor view, "Tap the interior building" first asks for EXT (ring on EXT, live figures kept); on EXT the map step is unchanged', () => {
+  const sim = atVertical(), { ui, boxes } = makeUI(sim), L = live(sim); ui.resolveStep = UI.prototype.resolveStep;
+  assert.equal(stepState(sim, ui).cur, 1);
+  const raw = curBeat(sim).steps[1]; assert.equal(raw.view, 'ext');
+  for (const v of [0, 1]) { // F1 (the natural view at the end of Act III) and F2
+    ui.g.rend.view = v; const st = ui.resolveStep(raw);
+    assert.equal(st.redirect, 'view'); assert.equal(st.sel, '#floors [data-v="ext"]'); assert.equal(st.obj, undefined, 'no map ring on the building centre');
+    assert.match(st.t, /Switch to <b>EXT<\/b>/); assert.match(st.d, /inside a floor/);
+    ui.renderTut(true); const tx = curText(boxes.tut.innerHTML);
+    assert.match(plain(tx), /Switch to EXT/); assert.ok(tx.includes(usd(L.q.cost)) && tx.includes(usd(L.av)), 'live figures still on the card');
+    ui.guideStep = st; const el = { getClientRects: () => [1] }; ui.guideVisible = () => true; ui.root = { ...ui.root, querySelector: (q) => (q === '#floors [data-v="ext"]' ? el : null) };
+    const g = ui.guideTarget(); assert.ok(g && g.el === el, 'ring on EXT'); assert.equal(g.lbl, 'Exterior view');
+  }
+  // The player taps EXT (the real control action): the step is the map step again, ringed on the building.
+  ui.g.rend.view = 'ext';
+  const st2 = ui.resolveStep(raw); assert.equal(st2.redirect, undefined); assert.equal(st2.sel, undefined); assert.equal(typeof st2.obj, 'function');
+  assert.equal(stepState(sim, ui).cur, 1, 'switching view alone does not complete the step');
+  ui.sel = L.sh.id; assert.equal(stepState(sim, ui).cur, 2, 'selecting the building completes it');
+  // Selecting the building another way while on F1 (a bare floor cell) also completes it: the redirect never blocks progress.
+  ui.sel = null; ui.g.rend.view = 0; assert.equal(stepState(sim, ui).cur, 1); ui.sel = L.sh.id; assert.equal(stepState(sim, ui).cur, 2);
+  // Bounded: no other Beat 13 step carries the view requirement, so the F1/F2 hallway, unit and light steps are unchanged.
+  assert.deepEqual(curBeat(sim).steps.map((x, i) => x.view ? i : -1).filter((i) => i >= 0), [1]);
+  assert.equal(sim.s.cash, JSON.parse(BASE).cash, 'nothing charged'); assert.equal(sim.s.speed, 0, 'no time change');
+});
 console.log(`${passed} Act IV Beat 13 rendered checks passed`);
