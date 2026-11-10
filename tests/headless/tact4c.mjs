@@ -75,6 +75,22 @@ test('live figures: the card and the review read the current quote, position, cr
   // a cheaper state (a building already reinforced is not this route; use more cash): the line follows the state
   const rich = at15(); rich.s.cash += 30000; const R2 = financingReview(rich); assert.equal(R2.gap, 0); assert.doesNotMatch(plain(card(rich)), /short/);
 });
+test('asking-rent changes invalidate the live route quote without touching money, debt, RNG, construction, Pause or saved state', () => {
+  const sim = at15(), first = financingReview(sim), key = '5x5|std', beforeAsk = sim.s.market.ask[key];
+  const matching = first.q.units.filter((u) => u.size === '5x5' && u.env === 'std').length;
+  assert.ok(matching > 0, 'the quoted route contains applicable 5x5 standard units');
+  assert.equal(sim.dispatch({ type: 'setRent', key, v: beforeAsk + 25 }).ok, true);
+  sim.s.tut.flags.finSeen = true; // opening the already-inspected review must now be entirely read-only
+  const saved = JSON.stringify(sim.s), events = JSON.stringify(sim.events), cash = sim.s.cash, debt = JSON.stringify(sim.s.debt), loan = JSON.stringify(sim.s.loan);
+  const rngS = sim.s.rngS, orders = JSON.stringify(sim.s.orders), speed = sim.s.speed;
+  const second = financingReview(sim), { u, boxes } = makeUI(sim); u.showFinancingReview();
+  assert.equal(second.q.askRoll, first.q.askRoll + matching * 25, 'quote follows the applicable asking-rent change');
+  assert.ok(plain(boxes.modal.innerHTML).includes(`asking rents total ${usd(second.q.askRoll)} a month`), plain(boxes.modal.innerHTML));
+  assert.equal(sim.s.cash, cash); assert.equal(JSON.stringify(sim.s.debt), debt); assert.equal(JSON.stringify(sim.s.loan), loan);
+  assert.equal(sim.s.rngS, rngS); assert.equal(JSON.stringify(sim.s.orders), orders); assert.equal(sim.s.speed, speed);
+  assert.equal(JSON.stringify(sim.events), events); assert.equal(JSON.stringify(sim.s), saved, 'review and quote add nothing to the save state');
+  assert.ok(!/"quote"|"upRoute"/.test(saved), 'no derived quote is serialized');
+});
 test('inspection before the decision: no Continue until the review was opened; Continue alone never completes', () => {
   const sim = at15(); let html = card(sim);
   assert.match(html, /data-a="finReview">Review the project<\/button>/); assert.doesNotMatch(html, /data-a="tutNext"/);

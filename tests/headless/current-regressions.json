@@ -1220,14 +1220,14 @@
           "@node",
           "tests/headless/tact4c.mjs"
         ],
-        "completion": "12 Act IV Beat 15 checks passed",
-        "minimum_pass_lines": 12,
+        "completion": "13 Act IV Beat 15 checks passed",
+        "minimum_pass_lines": 13,
         "timeout": 900,
         "required_files": [
           "tests/headless/fixtures/act3_break_trace_20260929.json"
         ],
         "evidence": "native current behavior: the ordinary Day 18 Act III break replayed through Beats 13-14 into Beat 15, production renderTut()/showFinancingReview() markup and click path, sim tutorial ticks, save/reload",
-        "scope": "Campaign Unit 7c: Act IV Beat 15 (D3 Option 2, P1 inspection-only): live route quote, position, credit line, term-loan quote on a copy, 30-day schedule and demand evidence; review required before the decision; read-only review with no Confirm/draw/loan/build control and no profitability claim; Continue without borrowing completes with money, debt and leases unchanged; tutorial loan lock holds; no tutorial dispatch; Act IV chapter break pauses and releases held reviews before graduation; manual Pause; save/reload; old-save mapping; no-route honesty"
+        "scope": "Campaign Unit 7c: Act IV Beat 15 (D3 Option 2, P1 inspection-only): live route quote, including asking-rent cache invalidation with money, debt, RNG, construction, Pause and save state preserved; position, credit line, term-loan quote on a copy, 30-day schedule and demand evidence; review required before the decision; read-only review with no Confirm/draw/loan/build control and no profitability claim; Continue without borrowing completes with money, debt and leases unchanged; tutorial loan lock holds; no tutorial dispatch; Act IV chapter break pauses and releases held reviews before graduation; manual Pause; save/reload; old-save mapping; no-route honesty"
       },
       {
         "id": "tup_route_quote",

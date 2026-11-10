@@ -175,7 +175,14 @@ const act4Line = (sim) => {
 // upper-floor route. Every figure is computed from the current state; nothing here orders, charges, borrows or saves.
 // The term-loan figures come from a disposable copy with the tutorial loan lock lifted on the copy only.
 const quoteCache = new WeakMap();
-const routeQuote = (sim) => { const k = `${sim.s.structV}:${sim.s.nextId}`, o = quoteCache.get(sim); if (o?.k === k) return o.q; const q = upRouteQuote(sim); quoteCache.set(sim, { k, q }); return q; };
+const routeQuote = (sim) => {
+  // The route's units use the live asking-rent table. Pricing changes do not change structV or nextId,
+  // so include the complete table in the cache identity or Beat 15 can show a stale asking-rent total.
+  const asks = Object.keys(sim.s.market.ask).sort().map((key) => `${key}:${sim.s.market.ask[key]}`).join('|');
+  const k = `${sim.s.structV}:${sim.s.nextId}:${asks}`, o = quoteCache.get(sim);
+  if (o?.k === k) return o.q;
+  const q = upRouteQuote(sim); quoteCache.set(sim, { k, q }); return q;
+};
 export function financingReview(sim) {
   const s = sim.s, q = routeQuote(sim), now = sim.financialPosition(), roll = cents(sim.rentRoll());
   if (!q.ok) return { ok: false, reason: q.reason, now, roll };
