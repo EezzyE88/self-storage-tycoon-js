@@ -4,6 +4,7 @@ import { newState, Sim } from './sim.js';
 import { makeMaple } from './maple.js';
 import { G, WORK } from './data.js';
 import { COMEBACK_GOALS, comebackProgress, isComeback } from './comeback.js';
+import { ensureCustomerAccounts } from './customeraccounts.js';
 
 export const SCENARIOS = {
   comeback: {
@@ -60,6 +61,7 @@ export function makeScenario(id, seed = 4401) {
       sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Make-ready ' + u.name, work: 150 });
     }
     s.visits = s.visits.filter((v) => !v.tenant || s.tenants[v.tenant]);
+    ensureCustomerAccounts(s); // CR-01: setup removed leases outside endLease; keep account lease lists equal to what a reload derives
     for (const o of sim.objs('light')) o.cond = 0.22 + rnd() * 0.3;
     for (const o of sim.objs('gate')) o.cond = 0.3;
     for (const c of s.carts) c.cond = 0.3 + rnd() * 0.3;
@@ -127,6 +129,7 @@ export function makeComeback(seed = 4401) {
     sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Make-ready ' + u.name, work: WORK.makeready });
   }
   s.visits = s.visits.filter(v => !v.tenant || s.tenants[v.tenant]);
+  ensureCustomerAccounts(s); // CR-01: same reconciliation as load, so the running and reloaded states match
   s.scenario = { id: 'comeback', name: SCENARIOS.comeback.name, v: 1, goals: COMEBACK_GOALS.map(g => ({ ...g })),
     targets: targets.map(u => ({ id:u.id, ids:[u.id], num:u.num, x:u.x,y:u.y,w:u.w,h:u.h,f:u.f||0, access:u.access, env:u.env, dir:[...u.dir] })),
     deadline: null, fail: null, status: 'active', ownerDone: [], staffDone: [], earned: [false,false,false], acknowledged: false };
