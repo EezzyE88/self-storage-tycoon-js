@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { makeMaple } from '../../js/maple.js';
 import { Sim } from '../../js/sim.js';
-import { BEATS, beatIndex, curBeat, tutorialTick, installTutorial, upstairsReady } from '../../js/tutorial.js';
+import { BEATS, beatIndex, curBeat, tutorialTick, installTutorial, upstairsReady, beatHeader, beatGroup, LESSONS } from '../../js/tutorial.js';
 import { UI } from '../../js/ui.js';
 
 globalThis.innerWidth = 390; globalThis.innerHeight = 844; // phone viewport for the card layout paths
@@ -163,6 +163,50 @@ test('graduation reached with the Operate panel open closes the panel so the ful
   // Other beats keep their panel: only the pausing graduation beat closes it.
   const other = makeMaple(78), u2 = uiFor(other); u2.g.rend.setSelection = () => {}; u2.renderSheet = () => {}; u2.tab = 'operate';
   tutorialTick(other); for (const e of other.events.filter((x) => x.type === 'tut_beat')) u2.onEvent(e); assert.equal(u2.tab, 'operate');
+});
+
+// Campaign Unit 8: Act V content. Presentation only: the beat list, positions, Pause and the economy are unchanged.
+const A2E418B_BEATS = ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', 'expand', 'repair', 'hire', 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'collections', 'financing', 'actIV_break', 'grad'];
+test('Act V: graduation is "Act V · Graduate · Beat 16" and no beat was added, removed or moved', () => {
+  assert.deepEqual(BEATS.map((b) => b.id), A2E418B_BEATS); assert.equal(BEATS.length, 20); assert.equal(GRAD, 19);
+  assert.equal(beatHeader(GRAD), 'Act V · Graduate · Beat 16'); assert.equal(beatGroup(BEATS[GRAD]), 'Act V · Graduate');
+  assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Act III · Improve', 'Act IV · Grow', 'Act V · Graduate']);
+  assert.equal(BEATS[beatIndex('actIV_break')].next, 'Act V · Graduate');
+});
+
+// One entry per item of the spec's Act V final review (Beat 16), in the spec's order.
+const FINAL_REVIEW = [/prepare a vacant unit/, /lease it/, /read property performance/, /asking rents/, /expand capacity/, /build and confirm construction/, /repair work/, /hire help/, /interior customer routes/, /carts and loading/, /read feedback/, /use and close overlays/, /improve security/, /climate-controlled space/, /upstairs access/, /unpaid rent through Collections/, /judge financing/, /<b>Pause<\/b> before a consequential decision/];
+test('Act V: the final review covers every spec item as a folded summary, and introduces no new system', () => {
+  const b = BEATS[GRAD]; assert.equal(FINAL_REVIEW.length, 18);
+  for (const re of FINAL_REVIEW) assert.match(b.why, re);
+  assert.equal(b.whyLabel, 'What you can do now'); assert.equal(b.steps.length, 1); assert.equal(b.button, 'Finish tutorial');
+  for (const k of ['review', 'tick', 'enter', 'ownsRequest', 'flag', 'brk', 'buttonWhen']) assert.equal(b[k], undefined, 'no ' + k);
+  assert.ok(!b.steps.some((st) => st.blueprint || st.placement || st.run || st.obj));
+  assert.ok(BEATS.every((x, i) => i === GRAD || !x.whyLabel), 'other beats keep "Why this matters"');
+  const sim = atGrad(4), ui = uiFor(sim); ui.renderTut(true);
+  assert.match(ui.renderTutBox.innerHTML, /data-a="tutWhy">What you can do now<\/button>/); assert.ok(!/You now know how to/.test(ui.renderTutBox.innerHTML), 'folded by default');
+  assert.match(ui.renderTutBox.innerHTML, /Act V · Graduate · Beat 16/);
+  ui.tutWhy = true; ui.renderTut(true);
+  for (const re of FINAL_REVIEW) assert.match(ui.renderTutBox.innerHTML, re);
+  assert.match(ui.renderTutBox.innerHTML, /data-a="tutNext">Finish tutorial/); assert.equal(sim.s.speed, 0);
+});
+
+test('Act V: the "what next" pointers name only an offer that can still happen', () => {
+  const b = BEATS[GRAD], sim = atGrad(4); finish(sim);
+  const done = sim.s.lessonsDone || {};
+  for (const id of ['collections', 'financing']) assert.ok(done[id] != null, id + ' marked done by Beats 14-15'); // this fixture jumps over Act III, whose beats mark interior, quality and climate the same way
+  assert.equal(done.up, undefined, 'the two-floor lesson can still be offered'); assert.ok(LESSONS.some((L) => L.id === 'up' && L.offer));
+  assert.match(b.why, /a lesson on adding a two-floor building is offered when the situation comes up/);
+  assert.ok(!/lessons<\/b> on building up, collections and financing are offered/.test(b.why), 'no offer claimed for lessons already done');
+  for (const re of [/Growth &rarr; Operator career/, /Growth Readiness/, /Growth &rarr; Lessons/, /Builder’s handbook<\/b> \(Menu\)/, /report card<\/b> arrives every 30 days/]) assert.match(b.why, re);
+  assert.ok(!/\$\d/.test(b.why), 'no dollar figure in the recap');
+});
+
+test('Act V: opening and closing the recap never starts time; Finish still leaves it paused', () => {
+  const sim = beforeGrad(4), ui = uiFor(sim); tutorialTick(sim); ui.renderTut(true); assert.equal(sim.s.speed, 0);
+  for (let i = 0; i < 3; i++) { ui.onClick({ target: { closest: () => ({ dataset: { a: 'tutWhy' } }) } }); ui.renderTut(true); assert.equal(sim.s.speed, 0); assert.ok(curBeat(sim)); }
+  ui.onClick({ target: { closest: () => ({ dataset: { a: 'tutNext' } }) } }); ui.renderTut(true);
+  assert.equal(sim.s.tut.done, true); assert.equal(sim.s.speed, 0);
 });
 
 console.log(`${passed} paused graduation checks passed`);

@@ -1126,8 +1126,8 @@
           "@node",
           "tests/headless/tgraduation_pause.mjs"
         ],
-        "completion": "13 paused graduation checks passed",
-        "minimum_pass_lines": 13,
+        "completion": "17 paused graduation checks passed",
+        "minimum_pass_lines": 17,
         "timeout": 300,
         "evidence": "native current behavior: graduation entered at 1x/2x/4x, run speeds held at Pause on the card, Finish keeps time paused with no restored speed (sim and production UI popup path), manual Pause, held reviews released only after Finish, reload on the card, graduated/sentinel saves, skip cleanup, graduation reached with the Operate panel open",
         "scope": "Campaign Unit 3: paused graduation with Maple Street is yours / Finish tutorial"

@@ -55,8 +55,8 @@ test('Act II is beats 6-8 under "Act II · Stabilize", then the paused Act II br
   assert.deepEqual(BEATS.map((b) => b.id), ['welcome', 'makeready', 'lease', 'money', 'pricing', 'actI_break', ...ACT2, 'actII_break', 'interior_customer', 'feedback', 'overlays', 'climate', 'actIII_break', 'vertical', 'collections', 'financing', 'actIV_break', 'grad']); // + Beat 14 since Unit 7b (tact4b); // Act III since campaign Unit 6 (tact3); Act IV Beat 13 since Unit 7a (tact4)
   for (const id of [...ACT2, 'actII_break']) { const b = BEATS[beatIndex(id)]; assert.equal(b.act, 'II'); assert.equal(b.chapter, 'Stabilize'); }
   assert.deepEqual(ACT2.map((id) => beatHeader(beatIndex(id))), [6, 7, 8].map((n) => `Act II · Stabilize · Beat ${n}`));
-  assert.equal(beatHeader(BREAK), 'Act II · Stabilize · Chapter break'); assert.equal(beatHeader(GRAD), 'Graduation · Part 16 of 16'); // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
-  assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Act III · Improve', 'Act IV · Grow', 'Graduation']); // Act IV since campaign Unit 7a (tact4)
+  assert.equal(beatHeader(BREAK), 'Act II · Stabilize · Chapter break'); assert.equal(beatHeader(GRAD), 'Act V · Graduate · Beat 16'); // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
+  assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Act III · Improve', 'Act IV · Grow', 'Act V · Graduate']); // Act IV since campaign Unit 7a (tact4)
   assert.deepEqual(ACT2.map((id) => BEATS[beatIndex(id)].title), ['Maple Street is full', 'A hallway light has failed', 'The Owner is the bottleneck']);
   assert.equal(brk.title, 'Maple Street is stable again'); assert.equal(brk.pause, true); assert.equal(brk.brk, true); assert.equal(brk.button, 'Continue'); assert.equal(brk.flag, 'actII_break');
   assert.match(brk.body, /Maple Street is paused/); assert.match(brk.body, /Act III · Improve/); assert.match(brk.body, /follow a customer/); assert.ok(!brk.enter, 'the break authors no event');
