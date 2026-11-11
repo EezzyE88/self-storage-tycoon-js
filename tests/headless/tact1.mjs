@@ -40,8 +40,8 @@ test('Act I is beats 1-5, then the Act I break, then the rest of the tutorial in
   assert.deepEqual(ACT1.map((id) => beatHeader(beatIndex(id))), [1, 2, 3, 4, 5].map((n) => `Act I · Take Over · Beat ${n}`));
   assert.equal(beatHeader(BREAK), 'Act I · Take Over · Chapter break');
   assert.equal(beatHeader(EXPAND), 'Act II · Stabilize · Beat 6'); // Act II since campaign Unit 5 (tact2)
-  assert.equal(beatHeader(beatIndex('grad')), 'Graduation · Part 16 of 16'); // Act III since campaign Unit 6 (tact3); Act IV Beats 13-14 since Unit 7a/7b (tact4, tact4b)
-  assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Act III · Improve', 'Act IV · Grow', 'Graduation']); // Act IV since campaign Unit 7a (tact4)
+  assert.equal(beatHeader(beatIndex('grad')), 'Act V · Graduate · Beat 16'); // Act III since campaign Unit 6 (tact3); Act IV Beats 13-14 since Unit 7a/7b (tact4, tact4b)
+  assert.deepEqual([...new Set(BEATS.map(beatGroup))], ['Act I · Take Over', 'Act II · Stabilize', 'Act III · Improve', 'Act IV · Grow', 'Act V · Graduate']); // Act IV since campaign Unit 7a (tact4)
   const brk = BEATS[BREAK]; assert.equal(brk.title, 'You have control of Maple Street'); assert.equal(brk.pause, true); assert.equal(brk.brk, true);
   assert.equal(brk.button, 'Continue'); assert.match(brk.body, /Act II · Stabilize/); assert.match(brk.body, /Maple Street is paused/);
   assert.ok(!brk.enter, 'the break authors no event');

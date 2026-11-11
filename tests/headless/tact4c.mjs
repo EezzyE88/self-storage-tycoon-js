@@ -57,11 +57,11 @@ function makeUI(sim) {
 const card = (sim) => { const { u, boxes } = makeUI(sim); u.renderTut(true); return boxes.tut.innerHTML; };
 const money = (sim) => ({ cash: sim.s.cash, ledger: sim.s.ledger.length, debt: JSON.stringify(sim.s.debt), loan: JSON.stringify(sim.s.loan), orders: sim.s.orders.length, objs: Object.keys(sim.s.objects).length, leases: JSON.stringify(sim.s.leases) });
 
-test('Act IV order and headers: Beat 15 after Beat 14, then the paused Act IV break, then graduation (Part 16 of 16)', () => {
+test('Act IV order and headers: Beat 15 after Beat 14, then the paused Act IV break, then graduation (Act V, Beat 16)', () => {
   const ids = BEATS.map((b) => b.id), f = beatIndex('financing'), k = beatIndex('actIV_break');
   assert.deepEqual(ids.slice(beatIndex('actIII_break')), ['actIII_break', 'vertical', 'collections', 'financing', 'actIV_break', 'grad']);
-  assert.equal(beatHeader(f), 'Act IV · Grow · Beat 15'); assert.equal(beatHeader(k), 'Act IV · Grow · Chapter break'); assert.equal(beatHeader(beatIndex('grad')), 'Graduation · Part 16 of 16');
-  const b = BEATS[k]; assert.equal(b.pause, true); assert.equal(b.brk, true); assert.equal(b.next, 'Graduation'); assert.match(b.body, /Maple Street is paused/);
+  assert.equal(beatHeader(f), 'Act IV · Grow · Beat 15'); assert.equal(beatHeader(k), 'Act IV · Grow · Chapter break'); assert.equal(beatHeader(beatIndex('grad')), 'Act V · Graduate · Beat 16');
+  const b = BEATS[k]; assert.equal(b.pause, true); assert.equal(b.brk, true); assert.equal(b.next, 'Act V · Graduate'); assert.match(b.body, /Maple Street is paused/);
   assert.equal(BEATS[beatIndex('actIII_break')].next, 'Act IV · Grow'); assert.ok(!BEATS[f].pause, 'Beat 15 itself never pauses or runs time');
 });
 test('live figures: the card and the review read the current quote, position, credit, loan terms and 30-day schedule', () => {
