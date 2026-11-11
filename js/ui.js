@@ -131,7 +131,7 @@ export function completeText(e) {
 }
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const NO_AISLE = 'Door faces no drive aisle yet';
-const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control', noReady: 'Nothing rent-ready', price: 'Rent too high', convenience: 'Not convenient enough', shopping: 'Kept shopping', service: 'No one at the office' };
+const LOST = { noSize: 'Size not available', noClimate: 'Wanted climate control', noReady: 'Nothing rent-ready', price: 'Rent too high', convenience: 'Not convenient enough', shopping: 'Kept shopping', ownerDeferred: 'Additional rental deferred by owner', service: 'No one at the office' };
 export const MILESTONES = { first_makeready: 'First make-ready', first_lease_after_turnover: 'Leased a turned-over unit', first_expansion: 'First expansion ready', first_cart_trip: 'Interior cart trip completed', first_repair: 'First repair', first_delegated: 'Delegated work completed', first_climate: 'Climate units open', first_upper: 'Upper floor open', graduated: 'Maple Street graduate', first_retention: 'Kept a tenant from leaving', first_auction: 'First lien auction', first_loan: 'Financed growth' };
 const EXP = { access: 'Access', convenience: 'Convenience', cleanliness: 'Cleanliness', security: 'Security', climate: 'Climate', service: 'Service', value: 'Value', comfort: 'Comfort' };
 
@@ -367,6 +367,7 @@ export class UI {
         const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'delegateTask', 'delegateTaskFor', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
       case 'convo': this.answerConversation(+el.dataset.id, +el.dataset.i); break;
+      case 'accountList': this.accountListAll = !this.accountListAll; this.renderSheet(true); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
       case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = true; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
@@ -625,7 +626,7 @@ export class UI {
   }
   sheet(title, sub, body, extra = '') {
     if (title === 'Operate') extra += '<button class="btn" data-a="feedback">Customer feedback</button>';
-    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Manager log', 'Log'], ['Overlays', 'Overlays'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement']], Growth: [['Your next improvement', 'My yard'], ['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
+    const sections = { Operate: [['Work queue', 'Jobs'], ['Staff', 'Staff'], ['Hire capacity', 'Hire'], ['Manager log', 'Log'], ['Overlays', 'Overlays'], ['Carts', 'Carts'], ['Policies', 'Policies']], Business: [['Bills &amp; reserve', 'Bills'], ['Your market', 'Demand'], ['Asking rents', 'Pricing'], ['Collections', 'Collections'], ['Financing', 'Financing'], ['Operating performance', 'Statement'], ['Customer relationships', 'Customers']], Growth: [['Your next improvement', 'My yard'], ['Growth Readiness', 'Readiness'], ['Operator career', 'Career'], ['Customer experience', 'Experience'], ['Lessons', 'Lessons'], ['Acquisitions', 'Properties']] }[title];
     if (sections) {
       const jumps = [];
       body = body.replace(/<h3>(.*?)<\/h3>/g, (html, text) => {
@@ -633,7 +634,7 @@ export class UI {
         jumps.push(`<button data-a="section" data-v="${section[0]}">${section[1]}</button>`);
         return `<h3 data-section="${section[0]}">${text}</h3>`;
       });
-      const order = title === 'Business' ? ['Bills', 'Financing', 'Pricing', 'Demand', 'Collections', 'Statement'] : sections.map(([, label]) => label);
+      const order = title === 'Business' ? ['Customers', 'Bills', 'Financing', 'Pricing', 'Demand', 'Collections', 'Statement'] : sections.map(([, label]) => label);
       jumps.sort((a, b) => order.findIndex((label) => a.endsWith(`>${label}</button>`)) - order.findIndex((label) => b.endsWith(`>${label}</button>`)));
       const menuOpen = this.sectionMenuKey === this.tab && !!this.sectionMenuKey;
       const choice = this.sectionChoice?.tab === this.tab ? this.sectionChoice?.label : null;
@@ -1787,7 +1788,7 @@ export class UI {
     h += this.advertisingHtml();
     // why shoppers didn't sign
     const lost = sim.lostRecent(30); const tot = Object.values(lost).reduce((a, b) => a + b, 0);
-    const WHY = { noReady: ['Nothing ready to rent', 'Review the requested size: occupied/reserved, unfinished, unready and blocked units are different causes. Inspect access and make-ready before expanding.'], noSize: ['Size not offered', 'No suitable ready unit of the requested size was available. Review inventory and repeated size demand before building.'], noClimate: ['Needed climate control', 'Review ready climate inventory and existing HVAC capacity/eligibility before adding climate units.'], price: ['Too expensive', 'This shopper rejected the asking rent. Compare market rents and quality; one refusal does not require a price cut.'], competitor: ['Went to a competitor', 'A cheaper facility nearby. Close the price gap or out-compete on quality.'], convenience: ['Inconvenient', 'Long walks, cart shortages or elevator waits.'], reputation: ['Put off by reputation', 'Low reputation and reviews. Fix what customers complain about.'], shopping: ['Kept shopping', 'Normal: some shoppers always compare.'], service: ['Gave up waiting', 'Check office coverage, hours and Owner capacity. A Clerk serves during office hours; hiring does not recover departed shoppers.'] };
+    const WHY = { noReady: ['Nothing ready to rent', 'Review the requested size: occupied/reserved, unfinished, unready and blocked units are different causes. Inspect access and make-ready before expanding.'], noSize: ['Size not offered', 'No suitable ready unit of the requested size was available. Review inventory and repeated size demand before building.'], noClimate: ['Needed climate control', 'Review ready climate inventory and existing HVAC capacity/eligibility before adding climate units.'], price: ['Too expensive', 'This shopper rejected the asking rent. Compare market rents and quality; one refusal does not require a price cut.'], competitor: ['Went to a competitor', 'A cheaper facility nearby. Close the price gap or out-compete on quality.'], convenience: ['Inconvenient', 'Long walks, cart shortages or elevator waits.'], reputation: ['Put off by reputation', 'Low reputation and reviews. Fix what customers complain about.'], shopping: ['Kept shopping', 'Normal: some shoppers always compare.'], ownerDeferred: ['Owner deferred returning request', 'The customer asked about another unit. You chose not to pursue the existing prospect opportunity; no new lease was signed.'], service: ['Gave up waiting', 'Check office coverage, hours and Owner capacity. A Clerk serves during office hours; hiring does not recover departed shoppers.'] };
     h += `<h3>Why shoppers didn't sign · rolling 30-day window</h3><p class="note">${periodText(rollingShopperPeriod(sim.day))} · today so far. Recorded losses across all sizes and climate preferences; separate from the saved monthly report.</p>`;
     if (!tot) h += `<p class="note">No lost shoppers in the last 30 days.</p>`;
     else h += `<div class="list">${Object.entries(lost).sort((a, b) => b[1] - a[1]).map(([k, n]) => { const w = WHY[k] || [k, '']; return `<div class="item"><div class="grow"><b>${w[0]}</b><small>${w[1]}</small></div><b class="num">${n}</b></div>`; }).join('')}</div>`;
@@ -1889,7 +1890,7 @@ export class UI {
       <div class="stat"><small>Operating cost / day</small><b>${money(ox.total + pay)}</b><div class="n">${money(ox.total, true)} ops${ox.tax ? ` (incl. ${money(ox.tax, true)} tax & insurance)` : ''} + ${money(pay)} payroll</div></div>
       </div>`;
     h += businessProgressHtml(sim, this.g && this.g.tierInfo && careerEligibility(s).eligible ? this.g.tierInfo() : null); // read-only Investment Progress (graduated campaign only)
-    h += this.financialHtml() + this.diagnosticHtml();
+    h += this.financialHtml() + this.diagnosticHtml() + this.customerAccountsHtml();
     h += this.reportHtml() + this.marketHtml();
     // GDD §63.1–63.2: operating contribution, with capital and financing shown separately
     const anc = sum('anc'), svc = sum('service'), marketing = sum('marketing');
@@ -2977,6 +2978,19 @@ export class UI {
     const rows = this.sim.diagnostics().filter((d) => obj == null || d.obj === obj).slice(0, obj == null ? 4 : 2);
     if (!rows.length) return '';
     return `<h3>What needs attention</h3><p class="note">Current conditions now. Shopper losses: rolling 30-day window · ${periodText(rollingShopperPeriod(this.sim.day))}, today so far. Availability counts separate standard and climate requests; saved monthly size advice combines them and lists climate losses separately.</p><div class="list">${rows.map((d) => `<div class="item"><div class="grow"><b>${esc(d.cause)}</b><small>${esc(d.effect)} → ${esc(d.consequence)}</small><small><b>Action:</b> ${esc(d.action)}</small></div></div>`).join('')}</div>`;
+  }
+  customerAccountsHtml() {
+    const s = this.sim.s, accounts = Object.values(s.customerAccounts || {});
+    if (!accounts.length) return '';
+    accounts.sort((a,b) => (b.events?.at(-1)?.day ?? 0) - (a.events?.at(-1)?.day ?? 0) || (b.leaseIds?.length || 0) - (a.leaseIds?.length || 0) || String(a.id).localeCompare(String(b.id)));
+    const shown = this.accountListAll ? accounts : accounts.slice(0, 8);
+    const item = a => {
+      const active = (a.leaseIds || []).map(id => s.leases[id]).filter(Boolean);
+      const units = active.map(L => s.objects[L.unit]?.num ?? L.unit).join(', ');
+      const events = (a.events || []).slice(-5).reverse();
+      return `<details class="item customer-account"><summary><b>${esc(a.name)}</b> · ${active.length} active rental${active.length === 1 ? '' : 's'}</summary><p class="note">${active.length ? `Units: ${esc(units)}` : 'Former customer · account retained'}</p>${events.length ? `<ul>${events.map(e => `<li>Day ${e.day}: ${esc(e.note)}</li>`).join('')}</ul>` : '<p class="note">No recorded history before account tracking.</p>'}</details>`;
+    };
+    return `<h3>Customer relationships</h3><p class="note">${accounts.length} property-specific customer accounts. Each rental has separate billing and collections. Most recent history is factual, not a loyalty score.</p><div class="list">${shown.map(item).join('')}</div>${accounts.length > 8 ? `<button class="btn sm" data-a="accountList">${this.accountListAll ? 'Show recent customers' : `Show all ${accounts.length} customers`}</button>` : ''}`;
   }
   financialHtml() {
     const sim = this.sim, P = sim.financialPosition(), F = sim.scheduledOutlook();
