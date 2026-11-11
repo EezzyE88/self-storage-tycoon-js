@@ -22,11 +22,11 @@ const failHall = (sim) => { const L=hallLight(sim); if(sim.works(L)){sim.wear(L,
 const ACT3=['interior_customer','feedback','overlays','climate'];
 
 test('Act III is beats 9-12 under Improve, then a paused Act III break and graduation',()=>{
-  assert.deepEqual(BEATS.map(b=>b.id),['welcome','makeready','lease','money','pricing','actI_break','expand','repair','hire','actII_break',...ACT3,'actIII_break','grad']);
+  assert.deepEqual(BEATS.map(b=>b.id),['welcome','makeready','lease','money','pricing','actI_break','expand','repair','hire','actII_break',...ACT3,'actIII_break','vertical','collections','financing','actIV_break','grad']); // Act IV Beats 13-14 since campaign Unit 7a/7b (tact4, tact4b)
   for(const id of [...ACT3,'actIII_break']){const b=BEATS[beatIndex(id)];assert.equal(b.act,'III');assert.equal(b.chapter,'Improve'); if(ACT3.includes(id)) assert.equal('focus' in b,false,`${id} must not move the camera automatically`);}
   assert.deepEqual(ACT3.map(id=>beatHeader(beatIndex(id))),[9,10,11,12].map(n=>`Act III · Improve · Beat ${n}`));
   assert.equal(beatHeader(beatIndex('actIII_break')),'Act III · Improve · Chapter break');
-  assert.deepEqual([...new Set(BEATS.map(beatGroup))],['Act I · Take Over','Act II · Stabilize','Act III · Improve','Graduation']);
+  assert.deepEqual([...new Set(BEATS.map(beatGroup))],['Act I · Take Over','Act II · Stabilize','Act III · Improve','Act IV · Grow','Graduation']); // Act IV since campaign Unit 7a (tact4)
   const brk=BEATS[beatIndex('actIII_break')]; assert.equal(brk.pause,true); assert.equal(brk.brk,true); assert.match(brk.why,/feedback records real events/); assert.match(brk.why,/overlays turn hidden systems into visible evidence/);
 });
 

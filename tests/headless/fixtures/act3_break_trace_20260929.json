@@ -1,0 +1,967 @@
+{
+ "seed": 20260929,
+ "meta": {
+  "name": "Maple Street Storage",
+  "mode": "Tutorial",
+  "day": 18,
+  "time": "12:25 AM",
+  "cash": 16700,
+  "props": 1,
+  "build": "dev-unverified"
+ },
+ "actions": [
+  {
+   "n": 0,
+   "t": 420,
+   "day": 1,
+   "speedBefore": 0,
+   "cashBefore": 26000,
+   "cashAfter": 26000,
+   "beat": "welcome",
+   "a": {
+    "type": "tutFlag",
+    "flag": "welcome"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 1,
+   "t": 420,
+   "day": 1,
+   "speedBefore": 0,
+   "cashBefore": 26000,
+   "cashAfter": 26000,
+   "beat": "makeready",
+   "a": {
+    "type": "ownerMakeReady",
+    "unit": 9,
+    "forceOwner": true
+   },
+   "ok": true,
+   "msg": "Owner started this work (2.5h) · 5.5h left today",
+   "same": true
+  },
+  {
+   "n": 2,
+   "t": 420,
+   "day": 1,
+   "speedBefore": 4,
+   "cashBefore": 26000,
+   "cashAfter": 26000,
+   "beat": "makeready",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 3,
+   "t": 1516,
+   "day": 2,
+   "speedBefore": 4,
+   "cashBefore": 26118.75,
+   "cashAfter": 26118.75,
+   "beat": "money",
+   "a": {
+    "type": "tutFlag",
+    "flag": "businessOpened"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 4,
+   "t": 1979,
+   "day": 2,
+   "speedBefore": 4,
+   "cashBefore": 26475.75,
+   "cashAfter": 26475.75,
+   "beat": "money",
+   "a": {
+    "type": "tutFlag",
+    "flag": "moneyAck"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 5,
+   "t": 2427,
+   "day": 2,
+   "speedBefore": 0,
+   "cashBefore": 26475.75,
+   "cashAfter": 26475.75,
+   "beat": "pricing",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 6,
+   "t": 2427,
+   "day": 2,
+   "speedBefore": 0,
+   "cashBefore": 26475.75,
+   "cashAfter": 26475.75,
+   "beat": "pricing",
+   "a": {
+    "type": "tutFlag",
+    "flag": "pricingSeen"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 7,
+   "t": 2427,
+   "day": 2,
+   "speedBefore": 0,
+   "cashBefore": 26475.75,
+   "cashAfter": 26475.75,
+   "beat": "pricing",
+   "a": {
+    "type": "tutFlag",
+    "flag": "pricingAck"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 8,
+   "t": 2427,
+   "day": 2,
+   "speedBefore": 0,
+   "cashBefore": 26475.75,
+   "cashAfter": 26475.75,
+   "beat": "actI_break",
+   "a": {
+    "type": "tutFlag",
+    "flag": "actI_break"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 9,
+   "t": 2427,
+   "day": 2,
+   "speedBefore": 0,
+   "cashBefore": 26475.75,
+   "cashAfter": 26475.75,
+   "beat": "expand",
+   "a": {
+    "type": "tutFlag",
+    "flag": "buildStatusAck"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 10,
+   "t": 2427,
+   "day": 2,
+   "speedBefore": 0,
+   "cashBefore": 26475.75,
+   "cashAfter": 22555.75,
+   "beat": "expand",
+   "a": {
+    "type": "build",
+    "tool": "du10x10",
+    "a": {
+     "x": 13,
+     "y": 21
+    },
+    "b": {
+     "x": 13,
+     "y": 28
+    },
+    "axis": "y",
+    "rotation": null,
+    "f": 0,
+    "climate": false,
+    "flip": false,
+    "rush": false,
+    "lighting": "none",
+    "outsideCameras": false,
+    "excludedFixtures": []
+   },
+   "ok": true,
+   "msg": "4 x Drive-Up 10x10 committed",
+   "same": true
+  },
+  {
+   "n": 11,
+   "t": 2427,
+   "day": 2,
+   "speedBefore": 4,
+   "cashBefore": 22555.75,
+   "cashAfter": 22555.75,
+   "beat": "expand",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 12,
+   "t": 5728,
+   "day": 4,
+   "speedBefore": 0,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "repair",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 13,
+   "t": 5728,
+   "day": 4,
+   "speedBefore": 0,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "repair",
+   "a": {
+    "type": "tutFlag",
+    "flag": "jobsSeen"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 14,
+   "t": 5728,
+   "day": 4,
+   "speedBefore": 0,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "repair",
+   "a": {
+    "type": "tutFlag",
+    "flag": "jobsAck"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 15,
+   "t": 5728,
+   "day": 4,
+   "speedBefore": 4,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "repair",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 16,
+   "t": 6735,
+   "day": 5,
+   "speedBefore": 4,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "repair",
+   "a": {
+    "type": "ownerTask",
+    "task": 108,
+    "forceOwner": true
+   },
+   "ok": true,
+   "msg": "Owner started this work (1.5h) · 6.5h left today",
+   "same": true
+  },
+  {
+   "n": 17,
+   "t": 8075,
+   "day": 6,
+   "speedBefore": 0,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "hire",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 18,
+   "t": 8075,
+   "day": 6,
+   "speedBefore": 0,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "hire",
+   "a": {
+    "type": "hire",
+    "role": "porter"
+   },
+   "ok": true,
+   "msg": "Hired Dev (Porter) - $12.5/day",
+   "same": true
+  },
+  {
+   "n": 19,
+   "t": 8075,
+   "day": 6,
+   "speedBefore": 0,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "hire",
+   "a": {
+    "type": "tutFlag",
+    "flag": "rolesAck"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 20,
+   "t": 8075,
+   "day": 6,
+   "speedBefore": 4,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "hire",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 21,
+   "t": 8216,
+   "day": 6,
+   "speedBefore": 0,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "actII_break",
+   "a": {
+    "type": "tutFlag",
+    "flag": "actII_break"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 22,
+   "t": 8216,
+   "day": 6,
+   "speedBefore": 0,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "interior_customer",
+   "a": {
+    "type": "tutFlag",
+    "flag": "corralInspected"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 23,
+   "t": 8216,
+   "day": 6,
+   "speedBefore": 4,
+   "cashBefore": 22662.75,
+   "cashAfter": 22662.75,
+   "beat": "feedback",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 24,
+   "t": 9284,
+   "day": 7,
+   "speedBefore": 0,
+   "cashBefore": 22456.95,
+   "cashAfter": 22456.95,
+   "beat": "feedback",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 25,
+   "t": 9284,
+   "day": 7,
+   "speedBefore": 0,
+   "cashBefore": 22456.95,
+   "cashAfter": 22456.95,
+   "beat": "feedback",
+   "a": {
+    "type": "tutFlag",
+    "flag": "feedbackAck"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 26,
+   "t": 9284,
+   "day": 7,
+   "speedBefore": 4,
+   "cashBefore": 22456.95,
+   "cashAfter": 22456.95,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 27,
+   "t": 9876,
+   "day": 7,
+   "speedBefore": 0,
+   "cashBefore": 22644.45,
+   "cashAfter": 22644.45,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 28,
+   "t": 9876,
+   "day": 7,
+   "speedBefore": 4,
+   "cashBefore": 22644.45,
+   "cashAfter": 22644.45,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 29,
+   "t": 10460,
+   "day": 8,
+   "speedBefore": 4,
+   "cashBefore": 22644.45,
+   "cashAfter": 22644.45,
+   "beat": "overlays",
+   "a": {
+    "type": "tutFlag",
+    "flag": "securityOverlaySeen"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 30,
+   "t": 10988,
+   "day": 8,
+   "speedBefore": 0,
+   "cashBefore": 22763.45,
+   "cashAfter": 22763.45,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 31,
+   "t": 10988,
+   "day": 8,
+   "speedBefore": 4,
+   "cashBefore": 22763.45,
+   "cashAfter": 22763.45,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 32,
+   "t": 12096,
+   "day": 9,
+   "speedBefore": 4,
+   "cashBefore": 22882.2,
+   "cashAfter": 22882.2,
+   "beat": "overlays",
+   "a": {
+    "type": "ownerTask",
+    "task": 141,
+    "forceOwner": true
+   },
+   "ok": true,
+   "msg": "Owner started this work (1.5h) · 6.5h left today",
+   "same": true
+  },
+  {
+   "n": 33,
+   "t": 13524,
+   "day": 10,
+   "speedBefore": 0,
+   "cashBefore": 23296.2,
+   "cashAfter": 23296.2,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 34,
+   "t": 13524,
+   "day": 10,
+   "speedBefore": 4,
+   "cashBefore": 23296.2,
+   "cashAfter": 23296.2,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 35,
+   "t": 15180,
+   "day": 11,
+   "speedBefore": 0,
+   "cashBefore": 23296.2,
+   "cashAfter": 23296.2,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 36,
+   "t": 15180,
+   "day": 11,
+   "speedBefore": 0,
+   "cashBefore": 23296.2,
+   "cashAfter": 22796.2,
+   "beat": "overlays",
+   "a": {
+    "type": "build",
+    "tool": "camera",
+    "a": {
+     "x": 16,
+     "y": 4,
+     "fx": 16.6699538705517,
+     "fy": 4.534886678580484
+    },
+    "b": {
+     "x": 16,
+     "y": 4,
+     "fx": 16.6699538705517,
+     "fy": 4.534886678580484
+    },
+    "rotation": null,
+    "f": 0,
+    "climate": false,
+    "flip": false,
+    "rush": false,
+    "lighting": "none",
+    "outsideCameras": false,
+    "excludedFixtures": []
+   },
+   "ok": true,
+   "msg": "Camera committed",
+   "same": true
+  },
+  {
+   "n": 37,
+   "t": 15180,
+   "day": 11,
+   "speedBefore": 4,
+   "cashBefore": 22796.2,
+   "cashAfter": 22796.2,
+   "beat": "overlays",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 38,
+   "t": 16120,
+   "day": 12,
+   "speedBefore": 4,
+   "cashBefore": 22796.2,
+   "cashAfter": 22796.2,
+   "beat": "climate",
+   "a": {
+    "type": "tutFlag",
+    "flag": "climateDemandAck"
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 39,
+   "t": 18496,
+   "day": 13,
+   "speedBefore": 0,
+   "cashBefore": 22914.95,
+   "cashAfter": 22914.95,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 40,
+   "t": 18496,
+   "day": 13,
+   "speedBefore": 4,
+   "cashBefore": 22914.95,
+   "cashAfter": 22914.95,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 41,
+   "t": 18496,
+   "day": 13,
+   "speedBefore": 0,
+   "cashBefore": 22914.95,
+   "cashAfter": 22914.95,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 42,
+   "t": 18496,
+   "day": 13,
+   "speedBefore": 0,
+   "cashBefore": 22914.95,
+   "cashAfter": 18714.95,
+   "beat": "climate",
+   "a": {
+    "type": "build",
+    "tool": "hvac",
+    "a": {
+     "x": 14,
+     "y": 8
+    },
+    "b": {
+     "x": 14,
+     "y": 8
+    },
+    "rotation": null,
+    "f": 0,
+    "climate": false,
+    "flip": false,
+    "rush": false,
+    "lighting": "none",
+    "outsideCameras": false,
+    "excludedFixtures": []
+   },
+   "ok": true,
+   "msg": "HVAC Plant committed",
+   "same": true
+  },
+  {
+   "n": 43,
+   "t": 18496,
+   "day": 13,
+   "speedBefore": 4,
+   "cashBefore": 18714.95,
+   "cashAfter": 18714.95,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 44,
+   "t": 21024,
+   "day": 15,
+   "speedBefore": 0,
+   "cashBefore": 18787.6,
+   "cashAfter": 18787.6,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 45,
+   "t": 21024,
+   "day": 15,
+   "speedBefore": 4,
+   "cashBefore": 18787.6,
+   "cashAfter": 18787.6,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 46,
+   "t": 21024,
+   "day": 15,
+   "speedBefore": 0,
+   "cashBefore": 18787.6,
+   "cashAfter": 18787.6,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 47,
+   "t": 21024,
+   "day": 15,
+   "speedBefore": 0,
+   "cashBefore": 18787.6,
+   "cashAfter": 18587.6,
+   "beat": "climate",
+   "a": {
+    "type": "build",
+    "tool": "light",
+    "a": {
+     "x": 17,
+     "y": 8
+    },
+    "b": {
+     "x": 17,
+     "y": 8
+    },
+    "rotation": null,
+    "f": 0,
+    "climate": false,
+    "flip": false,
+    "rush": false,
+    "lighting": "none",
+    "outsideCameras": false,
+    "excludedFixtures": []
+   },
+   "ok": true,
+   "msg": "Light committed",
+   "same": true
+  },
+  {
+   "n": 48,
+   "t": 21024,
+   "day": 15,
+   "speedBefore": 4,
+   "cashBefore": 18587.6,
+   "cashAfter": 18587.6,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 49,
+   "t": 23720,
+   "day": 17,
+   "speedBefore": 0,
+   "cashBefore": 18882.6,
+   "cashAfter": 18882.6,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 50,
+   "t": 23720,
+   "day": 17,
+   "speedBefore": 4,
+   "cashBefore": 18882.6,
+   "cashAfter": 18882.6,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 51,
+   "t": 23720,
+   "day": 17,
+   "speedBefore": 0,
+   "cashBefore": 18882.6,
+   "cashAfter": 18882.6,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 0
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  },
+  {
+   "n": 52,
+   "t": 23720,
+   "day": 17,
+   "speedBefore": 0,
+   "cashBefore": 18882.6,
+   "cashAfter": 16699.6,
+   "beat": "climate",
+   "a": {
+    "type": "build",
+    "tool": "iu5x5",
+    "a": {
+     "x": 16,
+     "y": 5
+    },
+    "b": {
+     "x": 16,
+     "y": 11
+    },
+    "axis": "y",
+    "rotation": null,
+    "f": 0,
+    "climate": true,
+    "flip": false,
+    "rush": false,
+    "lighting": "none",
+    "outsideCameras": false,
+    "excludedFixtures": []
+   },
+   "ok": true,
+   "msg": "7 x Climate Interior 5x5 committed",
+   "same": true
+  },
+  {
+   "n": 53,
+   "t": 23720,
+   "day": 17,
+   "speedBefore": 4,
+   "cashBefore": 16699.6,
+   "cashAfter": 16699.6,
+   "beat": "climate",
+   "a": {
+    "type": "speed",
+    "v": 4
+   },
+   "ok": true,
+   "msg": null,
+   "same": true
+  }
+ ]
+}

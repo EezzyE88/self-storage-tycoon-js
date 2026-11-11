@@ -1169,6 +1169,82 @@
         "scope": "Campaign Unit 6: Act III beat order and header, D4 migration, interior customer route, real dark-hall complaint and feedback, Security overlay on/off and coverage fail-forward, climate demand/HVAC/units fail-forward, lesson completion, reload mid-overlay and mid-climate build, climate construction-wait card (Act III and Climate lesson)"
       },
       {
+        "id": "tact4",
+        "command": [
+          "@node",
+          "tests/headless/tact4.mjs"
+        ],
+        "completion": "15 Act IV Beat 13 checks passed",
+        "minimum_pass_lines": 15,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json"
+        ],
+        "evidence": "native current behavior: the ordinary Day 18 Act III break replayed from a recorded coach-follow run, sim tutorial ticks with stubbed UI states, real Go Vertical and build actions, save/reload",
+        "scope": "Campaign Unit 7a: Act IV Beat 13 order and header, bounded Hallway unlock, objective upstairs-unit completion (F1, unfinished and blocked units do not count), prebuilt and full fit-out recognition, live quote and affordability rent wait without borrowing, guidance over real UI states, no tutorial dispatch, Pause kept, Act III-era graduation save migration, reload mid-build, determinism"
+      },
+      {
+        "id": "tact4_render",
+        "command": [
+          "@node",
+          "tests/headless/tact4_render.mjs"
+        ],
+        "completion": "6 Act IV Beat 13 rendered checks passed",
+        "minimum_pass_lines": 6,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json",
+          "css/game.css"
+        ],
+        "evidence": "production renderTut()/showVertical() markup on the ordinary Day 18 Act III break replay, with the shipped stylesheet rules; browser geometry checked separately (rendered walk)",
+        "scope": "Campaign Unit 7a-r1: Beat 13 live structure-only quote, fit-out estimate, available funds and shortfall in the rendered step text (collapsed card, low-cash rent wait updating as rent arrives, no borrowing wording); Beat 13 step and ring inside the Go Vertical review (structure-only option, then Confirm), bounded to Beat 13; no fixed prices; D1: on a floor view the Tap the interior building step first asks for EXT (ring on EXT, live figures kept)"
+      },
+      {
+        "id": "tact4b",
+        "command": [
+          "@node",
+          "tests/headless/tact4b.mjs"
+        ],
+        "completion": "15 Act IV Beat 14 checks passed",
+        "minimum_pass_lines": 15,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json"
+        ],
+        "evidence": "native current behavior: the ordinary Day 18 Act III break replayed through Beat 13 into Beat 14, sim tutorial ticks with the real collections ladder (billLease) under forced and seeded draws, save/reload, production tutorialText",
+        "scope": "Campaign Unit 7b: Act IV Beat 14 S2 returned payment: verified prior rent payment, one labelled reversal through sim.money netting to zero, state equivalent to a real missed bill, normal delinquency progression and early payment, unrelated tenants and RNG untouched, persistent duplicate guard, no-eligible-account wait, lien card owned by the beat while other reviews stay held, manual Pause, live account line in step text; Collections inspection required before completion (Got it shown and counted only after the ladder was on screen with the account authored), including early payment and across reload"
+      },
+      {
+        "id": "tact4c",
+        "command": [
+          "@node",
+          "tests/headless/tact4c.mjs"
+        ],
+        "completion": "13 Act IV Beat 15 checks passed",
+        "minimum_pass_lines": 13,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json"
+        ],
+        "evidence": "native current behavior: the ordinary Day 18 Act III break replayed through Beats 13-14 into Beat 15, production renderTut()/showFinancingReview() markup and click path, sim tutorial ticks, save/reload",
+        "scope": "Campaign Unit 7c: Act IV Beat 15 (D3 Option 2, P1 inspection-only): live route quote, including asking-rent cache invalidation with money, debt, RNG, construction, Pause and save state preserved; position, credit line, term-loan quote on a copy, 30-day schedule and demand evidence; review required before the decision; read-only review with no Confirm/draw/loan/build control and no profitability claim; Continue without borrowing completes with money, debt and leases unchanged; tutorial loan lock holds; no tutorial dispatch; Act IV chapter break pauses and releases held reviews before graduation; manual Pause; save/reload; old-save mapping; no-route honesty"
+      },
+      {
+        "id": "tup_route_quote",
+        "command": [
+          "@node",
+          "tests/headless/tup_route_quote.mjs"
+        ],
+        "completion": "5 upper-floor route quote checks passed",
+        "minimum_pass_lines": 5,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json"
+        ],
+        "evidence": "native current behavior: upRouteQuote against an independent stepped dry run (actual charges, construction run in game minutes) on the Day 18 break, after Beat 13, mirrored Maple and a post-graduation state",
+        "scope": "Campaign Unit 7c: read-only current-state quote of the unbuilt upper-floor route: parity with the stepped dry run, real state byte-identical, deterministic, no lesson marker on the real state, pinned fixture oracle, no hardcoded quote in source, honest blocked result"
+      },
+      {
         "id": "tlesson_offer_gate",
         "command": [
           "@node",

@@ -2,9 +2,10 @@ import { tutorialUnit } from './unitnumbering.js';
 import { careerEligibility } from './career.js';
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
 // Authored world events (a keen prospect, a failing light, a move-out) use the normal simulation paths.
-import { TOOLS, ROLES } from './data.js';
-import { verticalDone, verticalLayout, shaftHallState } from './blueprint.js';
-import { investmentEvidence } from './economics.js';
+import { TOOLS, ROLES, BILLING_CYCLE_DAYS } from './data.js';
+import { verticalDone, verticalLayout, shaftHallState, upRouteQuote } from './blueprint.js';
+import { investmentEvidence, demandEvidenceText } from './economics.js';
+import { creditNeeded, creditProjection, outlook, cents } from './finance.js';
 import { actIIProgress, investmentText, gradProgress } from './investmentprogress.js';
 
 const unitByRole = (sim, role) => tutorialUnit(sim, role);
@@ -94,6 +95,114 @@ const climateWait = (placed) => (sim) => {
   return { state: 'ordered', t: `Let the ${names.join(' and ')} finish`, d: `Climate units need a <b>finished</b> HVAC Plant and a <b>working</b> corridor light. ${both ? 'The HVAC Plant and light are' : `The ${names[0]} is`} still under construction. Tap <b>4x</b> to run time. This step continues by itself when ${both ? 'they are' : 'it is'} built.` };
 };
 const waitBuild = (label, doneFn) => ({ t: label || 'Let construction finish', d: 'Construction takes game hours. Tap <b>4x</b> at the top to speed up. A progress ring shows over the site.', sel: FAST, done: doneFn });
+// Act IV Beat 13 (campaign Unit 7a): one connected upstairs unit on the existing interior building. The player orders the
+// Go Vertical package (structure only, or the full copy if they choose and can pay), then places one F2 hallway, light
+// and unit. Completion is objective: any working, accessible, rent-ready upstairs unit, however it was built. Read-only
+// helpers; every money figure is read live from the current quote and position (nothing here is a fixed price).
+const interiorShell = (sim) => sim.objs('shell').filter((o) => o.cstate === 'operating' && (o.floors || 1) < 2).sort((a, b) => a.id - b.id)[0] || sim.objs('shell').sort((a, b) => a.id - b.id)[0] || null;
+const verticalOrder = (sim) => sim.s.orders.find((o) => o.vertical && o.st === 'construction');
+const upstairsUnits = (sim) => sim.objs('unit').filter((u) => (u.f || 0) >= 1);
+export const upstairsReady = (sim) => upstairsUnits(sim).some((u) => u.cstate === 'operating' && !u.blocked && !(u.missing && u.missing.length) && (u.commercial === 'ready' || !!u.lease));
+const upperFloorDone = (sim) => !verticalOrder(sim) && sim.objs('shell').some((o) => (o.floors || 1) >= 2) && sim.objs('elevator').some((e) => e.cstate === 'operating');
+const verticalStarted = (sim) => !!verticalOrder(sim) || upperFloorDone(sim) || upstairsUnits(sim).length > 0;
+const hallF2 = (sim) => { const h = sim.s.hall && sim.s.hall[1]; if (!h) return 'missing'; let ordered = false; for (const v of h) { if (v === 1) return 'built'; if (v) ordered = true; } return ordered ? 'ordered' : 'missing'; };
+const lightF2 = (sim) => sim.objs('light').some((l) => (l.f || 0) >= 1);
+const usd = (v) => '$' + Math.round(v).toLocaleString('en-US');
+// The structure-only quote for the next floor of the interior building, or null once that floor exists or cannot be quoted.
+const verticalQuote = (sim) => { const sh = interiorShell(sim); if (!sh || (sh.floors || 1) >= 2 || verticalStarted(sim)) return null; const q = sim.verticalPlan(sh.id, { fitout: false }); return q && q.ok ? q : null; };
+const minFitout = () => 2 * TOOLS.hall.costPerCell + TOOLS.light.cost + TOOLS.iu5x10.cost; // two hallway cells, one light, one Interior 5x10, from the price list
+const verticalShort = (sim) => { const q = verticalQuote(sim); return q ? Math.max(0, q.cost + minFitout() - sim.financialPosition().available) : 0; };
+const verticalMoneyLine = (sim) => {
+  const q = verticalQuote(sim); if (!q) return '';
+  const av = sim.financialPosition().available, gap = verticalShort(sim);
+  return ` <b>Structure only:</b> ${usd(q.cost)} for reinforcement, the second floor and the freight elevator. One hallway, light and unit add about ${usd(minFitout())}. Available after bills and reserve: <b>${usd(av)}</b>.` +
+    (gap > 0 ? ` That is <b>${usd(gap)}</b> short. Let time run: rent comes in and this quote stays current. You do not need to borrow for this beat.` : '');
+};
+// Rendered step text (U7a-r1): beat bodies are not shown on phone cards, so the live figures ride in the step titles.
+// Empty once the floor is ordered or built. Every figure is the current quote and position.
+const verticalMoneyTag = (sim) => {
+  const q = verticalQuote(sim); if (!q) return '';
+  const gap = verticalShort(sim);
+  return ` <span class="tut-money" data-qa="tut-vertical-money">Structure only <b>${usd(q.cost)}</b> · one unit about <b>${usd(minFitout())}</b> · available <b>${usd(sim.financialPosition().available)}</b>${gap > 0 ? ` · <b>${usd(gap)} short</b>` : ''}</span>`;
+};
+// Act IV Beat 14 (campaign Unit 7b): one real account falls behind, the approved S2 "returned payment". A current lease
+// whose most recent bill was actually collected (its ledger line, exact amount, at nextBill - 30) at least 15 days ago
+// has that one payment returned through the normal money path, and the lease takes exactly the state billLease would
+// have produced had that bill been missed. Nothing is invented: the reversal nets the collected bill to $0 and only the
+// rent the tenant really owes can be collected later. No RNG draw, no policy change; once per tutorial (guarded by flag).
+const dayAt = (t) => Math.floor(t / 1440) + 1;
+const RETURNED = 'Returned payment - Unit ';
+export function act4Eligible(sim) {
+  const s = sim.s, day = sim.day, roles = new Set(Object.values(s.unitRoles || {}));
+  const lastRent = (L, num) => { const note = `Rent - Unit ${num}`; for (let i = s.ledger.length - 1; i >= 0; i--) { const x = s.ledger[i]; if (x.cat === 'rent' && x.note === note) return x; } return null; };
+  const out = [];
+  for (const L of Object.values(s.leases)) {
+    const u = s.objects[L.unit]; if (!u || L.status !== 'current' || roles.has(L.unit)) continue;
+    const x = lastRent(L, u.num); if (!x) continue;
+    const bill = dayAt(x.t); // the verified prior payment: this lease's latest bill, collected in full
+    if (bill !== L.nextBill - BILLING_CYCLE_DAYS || bill < L.start || Math.abs(x.amt - L.rent) >= 0.005 || day - bill < 15) continue;
+    out.push({ L, u, bill });
+  }
+  return out.sort((a, b) => a.bill - b.bill || a.u.num - b.u.num);
+}
+export function authorAct4Account(sim) {
+  const s = sim.s, f = s.tut.flags; if (f.act4Account != null) return { ok: false, dup: true };
+  const pick = act4Eligible(sim)[0]; if (!pick) return { ok: false, none: true }; // wait for a genuine account; never fabricate one
+  const { L, u, bill } = pick, late = sim.day - bill, pol = s.policies;
+  sim.money(-L.rent, 'rent', RETURNED + u.num);
+  L.status = 'pastdue'; L.balance = L.rent; L.fees = 0; L.dueSince = bill; L.feeDone = false; // as billLease on a missed bill
+  if (late >= 5 && pol.lateFee > 0) { L.feeDone = true; L.fees = pol.lateFee; } // the fee billLease adds at 5 days
+  if (late >= 15) { L.status = 'delinquent'; if (pol.overlock) { u.overlock = true; sim.emit('overlock', { unit: u.id, x: u.x, y: u.y, f: u.f || 0 }); } }
+  f.act4Account = L.id;
+  sim.emit('pastdue', { unit: u.id });
+  return { ok: true, lease: L.id, unit: u.num, bill, late };
+}
+const act4Authored = (sim) => sim.s.tut.flags.act4Account != null;
+// Beat 14 completes only after the player has actually looked at Collections with the authored account on the books: the UI
+// sets act4Seen (persistent, read-only) when the ladder is on screen during Beat 14. Early payment does not skip the inspection.
+const act4Seen = (sim) => act4Authored(sim) && !!sim.s.tut.flags.act4Seen;
+// Live story of that account for the rendered step text (beat bodies are not shown on phone cards).
+const act4Line = (sim) => {
+  const s = sim.s, id = s.tut.flags.act4Account; if (id == null) return '';
+  const r = [...s.ledger].reverse().find((x) => x.note && x.note.startsWith(RETURNED));
+  const num = r ? r.note.slice(RETURNED.length) : null, who = num ? `Unit ${num}` : 'One tenant', L = s.leases[id];
+  const head = r ? `${who}’s ${usd(-r.amt)} rent payment came back on Day ${dayAt(r.t)}.` : `${who}’s rent payment came back.`;
+  const now = !L ? 'The account has since closed.' : L.status === 'current' ? 'The tenant has since paid in full; the account is current.'
+    : `Now <b>${sim.stageOf(L)}</b>, <b>${usd(sim.owed(L))}</b> owed${s.objects[L.unit]?.overlock ? ', locked out' : ''}.`;
+  return ` <span class="tut-money" data-qa="tut-act4-account">${head} ${now}</span>`;
+};
+// Act IV Beat 15 (campaign Unit 7c, D3 Option 2, P1 inspection-only): a read-only financing review of the real, unbuilt
+// upper-floor route. Every figure is computed from the current state; nothing here orders, charges, borrows or saves.
+// The term-loan figures come from a disposable copy with the tutorial loan lock lifted on the copy only.
+const quoteCache = new WeakMap();
+const routeQuote = (sim) => {
+  // The route's units use the live asking-rent table. Pricing changes do not change structV or nextId,
+  // so include the complete table in the cache identity or Beat 15 can show a stale asking-rent total.
+  const asks = Object.keys(sim.s.market.ask).sort().map((key) => `${key}:${sim.s.market.ask[key]}`).join('|');
+  const k = `${sim.s.structV}:${sim.s.nextId}:${asks}`, o = quoteCache.get(sim);
+  if (o?.k === k) return o.q;
+  const q = upRouteQuote(sim); quoteCache.set(sim, { k, q }); return q;
+};
+export function financingReview(sim) {
+  const s = sim.s, q = routeQuote(sim), now = sim.financialPosition(), roll = cents(sim.rentRoll());
+  if (!q.ok) return { ok: false, reason: q.reason, now, roll };
+  const ctx = { spend: q.total, extraDaily: q.dailyCost }, after = sim.financialPosition(ctx), gap = Math.max(0, cents(-after.available));
+  const room = Math.max(0, Math.floor(sim.creditLimit() - s.loan.bal)), needed = creditNeeded(sim, ctx);
+  const credit = { limit: sim.creditLimit(), owed: cents(s.loan.bal), room, needed, projection: needed ? creditProjection(sim, needed, ctx) : null };
+  const c = new sim.constructor(JSON.parse(JSON.stringify(s))); c.ensure(); c.s.tut.done = true; c.s.tut.on = false;
+  const { rate, months } = c.loanTerms(), limit = c.loanLimit(), amount = gap > 0 ? Math.max(5000, Math.ceil(gap / 5000) * 5000) : 0;
+  const loan = { lockedHere: sim.loanLimit() === 0, limit, rate, months, amount, approved: amount > 0 && amount <= limit };
+  if (amount) {
+    loan.pmt = c.loanPmt(amount, rate, months); loan.share = roll ? loan.pmt / roll : null; loan.totalPaid = cents(loan.pmt * months); loan.interest = cents(loan.totalPaid - amount);
+    if (loan.approved && c.dispatch({ type: 'borrow', amt: amount }).ok) loan.after = c.financialPosition(ctx); // the copy only
+  }
+  const ev = investmentEvidence(sim, { creates: q.units.map((u) => ({ type: 'unit', size: u.size, env: u.env })) });
+  return { ok: true, q, now, after, gap, credit, loan, roll, demand: { evidence: ev, text: demandEvidenceText(ev) }, saving: outlook(sim) };
+}
+const finSeen = (sim) => !!sim.s.tut.flags.finSeen;
+const finLine = (sim) => { const R = financingReview(sim); if (!R.ok) return ''; return ` <span class="tut-money" data-qa="tut-fin-money">Upper-floor route ${usd(R.q.total)} · available ${usd(R.now.available)}${R.gap ? ` · ${usd(R.gap)} short` : ''}</span>`; };
+
+const hallWait = (placed) => (sim) => placed(sim) || hallF2(sim) !== 'ordered' ? null : { state: 'ordered', t: 'Let the F2 hallway finish', d: 'The upstairs hallway is still under construction. Lights and unit doors need a <b>finished</b> hallway. Tap <b>4x</b> to run time; this step continues by itself.' };
 
 // Generic chapter break: a paused card with a deliberate Continue. Continue (flag = id) releases the owner reviews held
 // during the act; the break completes, and the next act's first beat enters, only once none of them is still waiting.
@@ -292,9 +401,64 @@ export const BEATS = [
     button: 'Got it', flag: 'climateDemandAck', buttonWhen: (sim) => !flag(sim, 'climateDemandAck'),
     check: (sim) => !!sim.s.milestones.first_climate || sim.objs('unit').some((u) => u.env === 'climate' && u.cstate === 'operating') },
 
-  chapterBreak({ id: 'actIII_break', act: 'III', chapter: 'Improve', next: 'Graduation', title: 'Maple Street works better because you listened', progress: investmentText,
-    body: 'You followed a customer, read what went wrong, diagnosed the property with an overlay and invested in a customer need. <b>Maple Street is paused.</b> This is a good place to stop before graduation.',
+  chapterBreak({ id: 'actIII_break', act: 'III', chapter: 'Improve', next: 'Act IV · Grow', title: 'Maple Street works better because you listened', progress: investmentText,
+    body: 'You followed a customer, read what went wrong, diagnosed the property with an overlay and invested in a customer need. <b>Maple Street is paused.</b> This is a good place to stop before Act IV.',
     why: 'What you learned in Act III: customers experience the physical route through the property; feedback records real events; satisfaction summarizes repeated service; overlays turn hidden systems into visible evidence; improvements should answer a diagnosed problem; and different products serve different demand.' }),
+
+  // Act IV "Grow" (campaign Unit 7). Beat 13: the existing building grows one floor. Objective-driven; no camera focus.
+  { id: 'vertical', act: 'IV', chapter: 'Grow', title: 'Connect a second floor',
+    body: (sim) => `Maple Street still has open land, and building out is cheaper here. But land is the scarce thing at most storage sites, so learn how a second floor connects while one unit is enough to try it.${verticalMoneyLine(sim)}`,
+    why: 'An upstairs unit only works when the whole route connects: <b>gate → loading → entrance → elevator → upstairs unit</b>. The freight elevator comes with the new floor; the hallway, light and unit are yours to place. One working unit is the goal, not a full floor, and upstairs units are not guaranteed to rent.',
+    steps: [
+      { t: 'Let rent cover the new floor{verticalMoney}', d: 'The structure-only quote plus one hallway, light and unit is more than Maple Street can spend after bills and reserve. Tap <b>4x</b> to let rent come in; the figures update as it does, and this step continues by itself when the quote fits. You do not need to borrow.', sel: FAST, run: true, done: (sim) => verticalShort(sim) === 0 || verticalStarted(sim) },
+      { t: 'Tap the <b>interior building</b>{verticalMoney}', d: 'Close any open panel with <b>×</b>, then tap the large interior building on the map. Its panel shows its floors.', obj: (sim) => interiorShell(sim) && interiorShell(sim).id, view: 'ext', // inside a floor, a tap picks what is inside: switch to EXT first
+
+        done: (sim, ui) => !!ui && ((interiorShell(sim) && ui.sel === interiorShell(sim).id) || !!ui.verticalReview) || verticalStarted(sim) },
+      { t: 'Tap <b>Plan next floor</b>{verticalMoney}', d: 'In the building panel, tap <b>Plan next floor</b>. The review lists every cost before anything is charged.', sel: '[data-a="verticalReview"]', done: (sim, ui) => (!!ui && !!ui.verticalReview) || verticalStarted(sim) },
+      { t: 'Choose <b>structure only</b>{verticalMoney}', d: 'Untick <b>Copy this floor’s unit layout and lighting</b>. You will add one hallway, light and unit yourself, which costs far less than copying the whole floor.', sel: '[data-vertical-option="fitout"]',
+        done: (sim, ui) => (!!ui && !!ui.verticalReview && ui.verticalReview.fitout === false) || verticalStarted(sim) },
+      { t: 'Tap <b>Confirm</b>{verticalMoney}', d: 'Check the cost and the cash after, then tap <b>Confirm</b>. Nothing is charged before this.', sel: '[data-a="verticalConfirm"]', done: verticalStarted },
+      waitBuild('Let the new floor and elevator finish', (sim) => upperFloorDone(sim) || upstairsUnits(sim).length > 0),
+      ...buildSteps({ cat: 'interior', catName: 'Interior', tool: 'hall', toolName: 'Hallway', cell: { x: 17, y: 5 }, end: { x: 17, y: 6 }, f: 1, after: upperFloorDone,
+        placed: (sim) => hallF2(sim) !== 'missing' || upstairsUnits(sim).length > 0,
+        place: 'Tap <b>F2</b>, then drag a short hallway from the elevator', placeD: 'Tap <b>F2</b> on the right rail. Start on the floor just below the new elevator and drag two cells down. Upstairs units open onto a hallway.' })
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> (F2 hallway)' } : st),
+      ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'light', toolName: 'Light', cell: { x: 17, y: 6 }, f: 1, after: (sim) => hallF2(sim) !== 'missing',
+        placed: (sim) => lightF2(sim) || upstairsReady(sim), place: 'Tap the new <b>F2</b> hallway to light it', placeD: 'On <b>F2</b>, tap the new hallway. Customers will not use a dark corridor.' })
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (Light)' } : st).map((st) => ({ ...st, prereq: hallWait((sim) => lightF2(sim) || upstairsReady(sim)) })),
+      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'iu5x10', toolName: 'Interior 5x10', cell: { x: 18, y: 5 }, f: 1, axis: 'y', after: lightF2,
+        placed: (sim) => upstairsUnits(sim).length > 0, place: 'Place one <b>Interior 5x10</b> facing the F2 hallway', placeD: 'On <b>F2</b>, tap the floor just right of the new hallway. The unit door must face the hallway.' })
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (unit)' } : st).map((st) => ({ ...st, prereq: hallWait((sim) => upstairsUnits(sim).length > 0) })),
+      waitBuild('Let the upstairs unit open', upstairsReady),
+    ],
+    check: upstairsReady },
+
+  // Act IV Beat 14: collections, the existing lesson contract (LESSONS.collections) on one real returned payment.
+  { id: 'collections', act: 'IV', chapter: 'Grow', title: 'When rent goes unpaid',
+    body: 'An account is falling behind. Unpaid rent climbs a ladder: past due, delinquent (locked out), lien, notice, then auction.',
+    why: 'You set the policies (late fee, overlocks, automatic notices, auction or clean-out) and handle the exceptions. A payment plan often saves the tenant and the money.',
+    tick: (sim) => { if (!act4Authored(sim) && sim.s.speed > 0) authorAct4Account(sim); }, // arrives with running time, never during manual Pause
+    ownsRequest: (sim, c) => !!c && sim.s.tut.flags.act4Account != null && c.key === 'lien' + sim.s.tut.flags.act4Account,
+    steps: [
+      { t: 'Let time run until a payment comes back', d: 'No tenant has a paid rent bill old enough yet. Tap <b>4x</b>; this step continues by itself once one does. The tutorial only uses a real payment; it never invents rent.', sel: FAST, run: true, done: act4Authored },
+      { t: 'Open <b>Business</b>{act4Account}', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => (act4Authored(sim) && tabIs(ui, 'business')) || act4Seen(sim) },
+      { t: 'Find <b>Collections</b>{act4Account}', d: 'In the Business panel, choose <b>Collections</b> in the section selector to reach the ladder. Each rung counts accounts at that stage; the list below has actions for each account (notice, plan, waive, unlock).', sel: '.ladder', done: act4Seen },
+      { t: 'Tap <b>Got it</b>', d: 'Or act on an account first. The button is on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => act4Seen(sim) && !!ctx(sim).flags.collAck },
+    ],
+    button: 'Got it', flag: 'collAck', buttonWhen: act4Seen, check: (sim) => act4Seen(sim) && !!ctx(sim).flags.collAck },
+  // Beat 15 (D3 Option 2, P1 inspection-only): the live quote of the unbuilt upper-floor route, the money, the demand evidence
+  // and the ways to pay, then a free decision. Declining completes it; borrowing is neither offered nor required here.
+  { id: 'financing', act: 'IV', chapter: 'Grow', title: 'Can Maple afford to build up?', review: 'fin',
+    body: 'Maple Street could add a second building with an upstairs floor on its open land. Today it costs more than Maple can spend and still keep its reserve. A loan or the credit line could cover the gap, but being able to borrow does not make a project worth doing.',
+    why: 'A term loan is long-term capital: you repay it every month for years, whether or not the new units rent. The credit line is for short gaps in cash. Judge a project by the money you have, the demand you can see and the payments you would owe.',
+    steps: [
+      { t: 'Review the upper-floor project{finMoney}', d: 'Tap <b>Review the project</b> on this card. It prices the route at today’s costs and compares the ways to pay. Nothing is ordered, charged or borrowed.', sel: '.tut [data-a="finReview"]', lbl: 'Review the project', done: finSeen },
+      { t: 'Decide, then tap <b>Continue without borrowing</b>{finMoney}', d: 'Borrowing is not required, and declining has no penalty. You can reopen the review first. The button is on this card and in the review.', sel: '.tut [data-a="tutNext"]', lbl: 'Continue', done: (sim) => finSeen(sim) && !!sim.s.tut.flags.finAck },
+    ],
+    button: 'Continue without borrowing', flag: 'finAck', buttonWhen: finSeen, check: (sim) => finSeen(sim) && !!sim.s.tut.flags.finAck },
+  chapterBreak({ id: 'actIV_break', act: 'IV', chapter: 'Grow', next: 'Graduation', title: 'You are managing Maple Street now',
+    body: 'You connected a second floor, followed a returned payment through Collections and weighed financing against what Maple can afford. <b>Maple Street is paused.</b> One final review remains before the property is fully yours.',
+    why: 'What you learned in Act IV: vertical growth needs connected infrastructure; larger growth needs planning; unpaid rent moves through staged decisions and can escalate; borrowing adds capital but creates repayment obligations; and financing should be judged against the project’s need and Maple’s capacity.' }),
 
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
   { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
@@ -315,6 +479,7 @@ export const BEAT_ALIASES = {};
 // (At run time, a position written without an id is a position in the current layout, as before.)
 export const LEGACY_BEATS = ['welcome', 'makeready', 'lease', 'money', 'expand', 'repair', 'hire', 'actII_break'];
 const OLD_EXPAND_AT = 4;
+const PRE_ACT4_GRAD_AT = 15; // Unit 6 ended here: active saves at that old graduation resume from the Act III break (D4 precedent), so Act IV is not skipped.
 const PRE_ACT3_GRAD_AT = 10; // Unit 5 ended here; active saves at that old graduation resume from the Act II break (D4). // `expand` sat here, and began with the Asking rents stop, until Beat 5 took that stop over (Unit 4)
 // An `expand` save from before Unit 4: unless the Drive-Up 10x10 row was ordered or the expansion already opened, the
 // player resumes at Beat 5 (`pricing`, short and read-only, so nothing is completed for them); otherwise at `expand`.
@@ -342,6 +507,7 @@ function resolveBeat(s) {
   if (Number.isInteger(t.beat) && t.beat !== t.beatAt) return t.beat; // position changed without the id
   if (t.beatId === 'expand' && t.beatAt === OLD_EXPAND_AT && t.beat === OLD_EXPAND_AT) { const to = oldExpandTarget(s); return to ? beatIndex(to) : null; }
   if (t.beatId === 'grad' && t.beatAt === PRE_ACT3_GRAD_AT && t.beat === PRE_ACT3_GRAD_AT) return beatIndex('actII_break'); // D4: do not skip Act III
+  if (t.beatId === 'grad' && t.beatAt === PRE_ACT4_GRAD_AT && t.beat === PRE_ACT4_GRAD_AT) return beatIndex('actIII_break'); // same rule: do not skip Act IV
   return i;
 }
 // Mutating sync, used when a game is loaded and on each tutorial tick. Only an active tutorial carries an id.
@@ -358,6 +524,7 @@ export function syncTutBeat(t, s) {
   if (!Number.isInteger(i) || !BEATS[i]) return; // unknown or not yet resolvable: leave untouched
   if (BEATS[i].id === 'pricing' && t.beatId === 'expand') t.entered = false; // an old expand save resumes at Beat 5: enter it
   if (BEATS[i].id === 'actII_break' && t.beatId === 'grad') t.entered = false; // D4 migration from the old graduation
+  if (BEATS[i].id === 'actIII_break' && t.beatId === 'grad') t.entered = false; // the same migration from the Act III-era graduation
   t.beat = i; t.beatId = BEATS[i].id; t.beatAt = i;
 }
 
@@ -480,8 +647,8 @@ export function beatHeader(i) {
 }
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
-export function tutorialText(sim, value) {
-  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/Unit (107|203)\b/g, (_, n) => {
+export function tutorialText(sim, value, live = {}) { // `live`: per-card cache, so one card reads each live figure once
+  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/\{verticalMoney\}/g, () => (live.vm ??= verticalMoneyTag(sim))).replace(/\{act4Account\}/g, () => (live.a4 ??= act4Line(sim))).replace(/\{finMoney\}/g, () => (live.fin ??= finLine(sim))).replace(/Unit (107|203)\b/g, (_, n) => {
     const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
     return u ? `Unit ${u.num}` : 'the tutorial unit';
   }) : value;
@@ -489,8 +656,17 @@ export function tutorialText(sim, value) {
 export function curBeat(sim) {
   const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[tutBeatIndex(sim.s)] : null;
   if(!b)return null;
-  const text = value => tutorialText(sim, value);
+  const live = {}, text = value => tutorialText(sim, value, live);
   return {...b,title:text(b.title),body:text(typeof b.body === 'function' ? b.body(sim) : b.body)+(b.progress ? b.progress(sim) : ''),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};
+}
+// Beat 13 guidance inside the Go Vertical review (U7a-r1): the coach card and ring are hidden while a modal is open, so
+// the review shows the current step itself. Only for Beat 13's own review steps; null everywhere else.
+export function verticalReviewGuide(sim, ui) {
+  const b = curBeat(sim); if (!b || b.id !== 'vertical' || sim.s.lesson || !ui || !ui.verticalReview) return null;
+  const { cur } = stepState(sim, ui), st = b.steps[cur]; if (!st || !st.sel) return null;
+  const target = st.sel === '[data-vertical-option="fitout"]' ? 'fitout' : st.sel === '[data-a="verticalConfirm"]' ? 'confirm' : null;
+  if (!target) return null;
+  return { target, header: `${beatHeader(tutBeatIndex(sim.s))} · Step ${cur + 1} of ${b.steps.length}`, t: st.t, d: st.d };
 }
 // A navigation step whose destination is already showing is complete: never ask the player to tap what is selected.
 export function alreadyShowing(st, ui) {
@@ -514,6 +690,7 @@ const UNLOCK = [
   ['repair', ['light']],
   ['overlays', ['camera']],
   ['climate', ['hvac', 'iu5x5', 'iu5x10', 'iu10x10', 'iu10x20']],
+  ['vertical', ['hall']], // Act IV Beat 13: the upstairs hallway (the elevator comes inside the Go Vertical package)
 ]; // everything else unlocks at graduation
 export function toolUnlocked(sim, tool) {
   const s = sim.s; if (!s.tut.on) return true;
@@ -535,8 +712,9 @@ export function tutorialTick(sim) {
   if (b.pause) holdPause(sim);
   if (b.brk && s.tut.flags[b.flag]) sim.releaseHeld({ chapter: true }); // after Continue, still paused: held reviews come out first
   if (!s.tut.entered) { s.tut.entered = true; s.tut.enteredAt = s.t; if (b.enter) b.enter(sim); sim.emit('tut_beat', { beat: s.tut.beat }); }
+  if (b.tick) b.tick(sim); // a beat's own once-guarded state (Beat 14's returned payment); runs while the beat is current
   if (b.check(sim)) {
-    const lesson = { interior_customer: 'interior', overlays: 'quality', climate: 'climate' }[b.id];
+    const lesson = { interior_customer: 'interior', overlays: 'quality', climate: 'climate', collections: 'collections', financing: 'financing' }[b.id];
     if (lesson) { s.lessonsDone ||= {}; s.lessonsDone[lesson] ||= sim.day; }
     sim.emit('tut_done', { beat: s.tut.beat });
     s.tut.beat++; s.tut.entered = false; s.tut.idMark = s.nextId;
