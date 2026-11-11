@@ -456,14 +456,17 @@ export const BEATS = [
       { t: 'Decide, then tap <b>Continue without borrowing</b>{finMoney}', d: 'Borrowing is not required, and declining has no penalty. You can reopen the review first. The button is on this card and in the review.', sel: '.tut [data-a="tutNext"]', lbl: 'Continue', done: (sim) => finSeen(sim) && !!sim.s.tut.flags.finAck },
     ],
     button: 'Continue without borrowing', flag: 'finAck', buttonWhen: finSeen, check: (sim) => finSeen(sim) && !!sim.s.tut.flags.finAck },
-  chapterBreak({ id: 'actIV_break', act: 'IV', chapter: 'Grow', next: 'Graduation', title: 'You are managing Maple Street now',
+  chapterBreak({ id: 'actIV_break', act: 'IV', chapter: 'Grow', next: 'Act V · Graduate', title: 'You are managing Maple Street now',
     body: 'You connected a second floor, followed a returned payment through Collections and weighed financing against what Maple can afford. <b>Maple Street is paused.</b> One final review remains before the property is fully yours.',
     why: 'What you learned in Act IV: vertical growth needs connected infrastructure; larger growth needs planning; unpaid rent moves through staged decisions and can escalate; borrowing adds capital but creates repayment obligations; and financing should be judged against the project’s need and Maple’s capacity.' }),
 
   // Paused graduation (campaign Unit 3): entering this beat pauses time and keeps it paused; the player restarts it.
-  { id: 'grad', chapter: 'Graduation', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
+  // Act V (campaign Unit 8): the final review is a folded summary, not a checklist; no new system is introduced.
+  { id: 'grad', act: 'V', chapter: 'Graduate', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
     body: 'You’ve taken Maple Street from a property you barely knew into one you can operate, diagnose, improve and grow. You understand how customers, staff, buildings and money fit together. There is still plenty to master, but the property is yours now. <b>Maple Street is paused.</b> Take your time, look around, and start the clock when you’re ready.',
-    why: 'Deeper <b>lessons</b> on building up, collections and financing are offered when the situation comes up, or anytime from <b>Growth &rarr; Lessons</b>. A <b>report card</b> arrives every 30 days in <b>Business</b>.',
+    whyLabel: 'What you can do now',
+    why: '<b>You now know how to:</b><br><b>Act I:</b> prepare a vacant unit, lease it, read property performance and judge asking rents.<br><b>Act II:</b> expand capacity, build and confirm construction, manage repair work and hire help.<br><b>Act III:</b> follow interior customer routes, keep carts and loading moving, read feedback, use and close overlays, improve security and create climate-controlled space.<br><b>Act IV:</b> build working upstairs access, follow unpaid rent through Collections and judge financing.<br>And always <b>Pause</b> before a consequential decision.'
+      + '<br><br><b>What happens next is your call.</b> Your next career goal appears at the top of the screen and in <b>Growth &rarr; Operator career</b>. <b>Growth Readiness</b> shows what demand supports before you spend. Start or replay lessons from <b>Growth &rarr; Lessons</b>; a lesson on adding a two-floor building is offered when the situation comes up. The <b>Builder’s handbook</b> (Menu) explains each tool. A <b>report card</b> arrives every 30 days in <b>Business</b>.',
     steps: [{ t: 'Tap <b>Finish tutorial</b>', d: 'The tutorial closes and every tool is unlocked. Time stays paused until you choose a speed.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.grad }],
     button: 'Finish tutorial', check: (sim) => sim.s.tut.flags.grad },
 
