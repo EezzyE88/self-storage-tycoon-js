@@ -14,6 +14,7 @@ export function customerHistory(account, day, kind, note, leaseId = null) {
 export function ensureCustomerAccounts(state) {
   const accounts = state.customerAccounts ||= {};
   state.cr01 ||= { lastOfferDay: -100000, pending: null };
+  migrateWithdrawnHold(state);
   for (const tenant of Object.values(state.tenants || {})) {
     const id = tenant.accountId || `customer-${tenant.id}`;
     tenant.accountId = id;
@@ -45,4 +46,31 @@ export function returningAccount(state, prospect) {
   if (seed % 7 !== 0) return null; // selected existing shopper, never bonus traffic
   accounts.sort((a,b) => String(a.id).localeCompare(String(b.id)));
   return accounts[seed % accounts.length];
+}
+
+// Saves from the withdrawn scarce-unit hold build may hold `cr01.hold`, a hold-type pending request or a
+// hold-type card. The held shopper was never counted or charged, so it becomes the same single pending
+// request with the immediate Offer / Wait choice. No lease, money, RNG draw, ID or extra shopper is created;
+// the card is recreated by the running game (Sim.cr01RestoreCard), never at load.
+function migrateWithdrawnHold(state) {
+  const c = state.cr01;
+  if (Object.hasOwn(c, 'hold')) {
+    const h = c.hold; delete c.hold;
+    const account = h && state.customerAccounts?.[h.accountId];
+    if (h && account && h.requestId && h.prospect) {
+      if (!c.pending) {
+        c.pending = { id: h.requestId, accountId: h.accountId, prospect: { size: h.prospect.size, climate: !!h.prospect.climate, ad: h.prospect.ad ?? null, kind: h.prospect.kind } };
+        customerHistory(account, Math.floor((state.t || 0) / 1440) + 1, 'hold_reopened', 'Unit hold ended by game update; request reopened as an immediate offer');
+      } else customerHistory(account, Math.floor((state.t || 0) / 1440) + 1, 'hold_released', 'Unit hold ended by game update; no additional rental');
+    }
+  }
+  if (c.pending && Object.hasOwn(c.pending, 'scarceUnitId')) delete c.pending.scarceUnitId;
+  for (const cv of state.convos || []) {
+    if (cv.key !== 'cr01' || !Array.isArray(cv.actions)) continue;
+    for (const a of cv.actions) {
+      if (a.action?.type !== 'cr01Reply') continue;
+      if (a.action.decision === 'hold') { a.action.decision = 'check'; a.label = 'Offer a suitable unit'; }
+      else if (a.action.decision === 'wait') a.label = 'Wait / not now';
+    }
+  }
 }

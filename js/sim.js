@@ -1450,7 +1450,7 @@ export class Sim {
     if (mod === 0) this.newDay();
     if (mod === FINANCIAL_MINUTE) this.financialBatch();
     this.auctionTick();
-    if (mod % 5 === 0) this.convoTick();
+    if (mod % 5 === 0) { this.cr01RestoreCard(); this.convoTick(); }
     // construction
     for (const ord of s.orders) if (ord.st === 'construction') {
       if(ord.vertical){tickVertical(this,ord);continue;}
@@ -2259,13 +2259,25 @@ export class Sim {
     s.cr01.pending = { id: requestId, accountId: account.id, prospect: offered };
     s.cr01.lastOfferDay = this.day;
     customerHistory(account, this.day, 'request', `Asked about an additional ${v.size} ${v.climate ? 'climate' : 'standard'} unit`);
+    this.cr01Card(account, s.cr01.pending);
+    return true;
+  }
+  cr01Card(account, pending) {
+    const p = pending.prospect, requestId = pending.id;
     this.convo({ key: 'cr01', who: account.name, sev: 'attention', ttl: 3 * MIN_PER_DAY,
-      text: `I already rent here. Do you have another ${v.size} ${v.climate ? 'climate-controlled' : 'standard'} unit?`,
+      text: `I already rent here. Do you have another ${p.size} ${p.climate ? 'climate-controlled' : 'standard'} unit?`,
       actions: [
         { label: 'Offer a suitable unit', action: { type: 'cr01Reply', requestId, decision: 'check' } },
         { label: 'Wait / not now', action: { type: 'cr01Reply', requestId, decision: 'wait' } },
       ], def: 1 });
-    return true;
+  }
+  // A request reopened at load (see ensureCustomerAccounts) gets its card on the next running game minute, never at load.
+  cr01RestoreCard() {
+    const s = this.s, pending = s.cr01?.pending;
+    if (!pending || s.convos.some((c) => c.key === 'cr01')) return;
+    const account = s.customerAccounts?.[pending.accountId];
+    if (!account || !account.leaseIds?.some((id) => s.leases[id])) { s.cr01.pending = null; customerHistory(account, this.day, 'request_closed', 'Reopened additional-unit request closed: no active rental'); return; }
+    this.cr01Card(account, pending);
   }
   act_cr01Reply(a) {
     const s = this.s, pending = s.cr01?.pending;
