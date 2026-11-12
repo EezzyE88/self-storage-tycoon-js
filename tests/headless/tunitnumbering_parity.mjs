@@ -43,6 +43,12 @@ function expectedLegacyGateMigration(raw){
  for(const a of e.agents)if(a.kind==='cust'&&a.veh){assert.equal(a.gateId,undefined);a.gateId=g.id;}
  delete e.gateQ;delete g.serving;
  e.gateAccess={v:1,gateIds:[g.id],connections:{[g.id]:{gateId:g.id,kind:'front-street',boundary:'front',x:g.x,y:g.y,outside:{x:g.x,y:g.y+1}}},queues:{[g.id]:q},serving:{[g.id]:serving},migration:{legacy,issues:[]}};
+ // CR-01 additive migration: one property-local account per existing tenant, keyed by tenant ID (never by name),
+ // listing only that tenant's existing leases, with no invented history and no pending request.
+ assert.equal(e.customerAccounts,undefined);assert.equal(e.cr01,undefined);
+ e.customerAccounts={};e.cr01={lastOfferDay:-100000,pending:null};
+ for(const tn of Object.values(e.tenants)){assert.equal(tn.accountId,undefined);const id='customer-'+tn.id;tn.accountId=id;
+  e.customerAccounts[id]={id,name:tn.name,since:tn.since??e.t,leaseIds:Object.values(e.leases).filter(L=>L.tenant===tn.id).map(L=>L.id),events:[]};}
  return e;
 }
 function migrate(raw,label,days){
