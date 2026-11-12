@@ -657,7 +657,7 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 }
 
 .item.job { display: block; }
-.item.customer-account { display: block; } /* CR-01: an opened account stacks its summary above units and history */
+.item.customer-account, .item.customer-hold { display: block; } /* CR-01: an opened account stacks its summary above units and history */
 .item.job > .row { margin-top: 8px; }
 
 .performance-panel { margin: 12px 0; }
