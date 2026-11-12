@@ -230,7 +230,7 @@
           "@node",
           "tests/headless/tcalm.mjs"
         ],
-        "completion": "PASS\\ notices\\ stop\\ after\\ two\\ acknowledgements\\ unless\\ security\\ worsens\\ notices\\ on\\ days\\ 3,\\ 49\\ at\\ security\\ 0\\.65,\\ 0\\.5",
+        "completion": "PASS\\ notices\\ stop\\ after\\ two\\ acknowledgements\\ unless\\ security\\ worsens\\ notices\\ on\\ days\\ 3,\\ 49,\\ 408\\ at\\ security\\ 0\\.65,\\ 0\\.52,\\ 0\\.44",
         "minimum_pass_lines": 5,
         "timeout": 180,
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
