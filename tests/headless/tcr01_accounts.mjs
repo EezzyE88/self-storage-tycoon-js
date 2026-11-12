@@ -62,8 +62,12 @@ t('acceptance uses normal leasing rules, independent obligations, partial move-o
  const cv=s.convos.find(c=>c.key==='cr01');
  // Existing price/suitability behavior remains authoritative. A valid low draw may convert.
  const originalRnd=sim.rnd.bind(sim);sim.rnd=()=>0;
- const result=sim.dispatch({type:'convo',id:cv.id,i:0});sim.rnd=originalRnd;
+ const result=sim.dispatch({type:'convo',id:cv.id,i:0});
  assert.equal(result.ok,true,result.msg);
+ if (s.cr01.hold) { // scarce unit: one original conversion after the provisional hold ends
+   s.t=s.cr01.hold.until;sim.cr01HoldTick();
+ }
+ sim.rnd=originalRnd;
  assert.equal(account.leaseIds.length,prior.length+1);
  const second=account.leaseIds.find(id=>!prior.includes(id));const L=s.leases[second];
  assert.equal(L.rent,sim.askFor(free));assert.equal(L.status,'current');

@@ -1449,6 +1449,7 @@ export class Sim {
     const mod = this.mod;
     if (mod === 0) this.newDay();
     if (mod === FINANCIAL_MINUTE) this.financialBatch();
+    this.cr01HoldTick(); // exact game clock after daily rollover; Pause never calls step()
     this.auctionTick();
     if (mod % 5 === 0) this.convoTick();
     // construction
@@ -2197,13 +2198,26 @@ export class Sim {
     const s = this.s, M = MARKETS[s.market.id];
     s.today.prospects++;
     const all = this.objs('unit').filter((u) => u.cstate === 'operating' && !u.blocked && u.size === v.size);
-    const ready = all.filter((u) => u.commercial === 'ready');
-    let cands = ready.filter((u) => (v.climate ? u.env === 'climate' : u.env === 'std'));
+    const hold = s.cr01?.hold;
+    const ownsHold = hold && v.accountId === hold.accountId && v.holdRequestId === hold.requestId;
+    const ready = all.filter((u) => u.commercial === 'ready' && (!hold || u.id !== hold.unitId || ownsHold));
+    let cands = ready.filter((u) => (v.climate ? u.env === 'climate' : u.env === 'std') && (!v.heldUnitId || u.id === v.heldUnitId));
     let settling = false;
-    if (!cands.length && v.climate) { cands = ready.filter((u) => u.env === 'std'); settling = true; }
-    if (!cands.length && !v.climate) { cands = ready.filter((u) => u.env === 'climate'); }
+    if (!cands.length && v.climate && !v.heldUnitId) { cands = ready.filter((u) => u.env === 'std'); settling = true; }
+    if (!cands.length && !v.climate && !v.heldUnitId) { cands = ready.filter((u) => u.env === 'climate'); }
     const lose = (reason) => { s.lost[reason] = (s.lost[reason] || 0) + 1; s.today.lost++; s.mkt.lostLog.push({ d: this.day, r: reason, sz: v.size, climate: !!v.climate }); s.mkt.lostLog = s.mkt.lostLog.filter((x) => x.d > this.day - 30); this.emit('lost', { reason, size: v.size }); if (ag) this.thought(ag, { noSize: `No ${v.size} available.`, noClimate: 'I need climate control.', price: 'Too expensive for me.', convenience: 'Not convenient enough.', shopping: 'I\'ll keep shopping.', competitor: 'The place down the road is cheaper.', reputation: 'The reviews put me off.', noReady: this.availabilityReport(v.size).text }[reason] || 'I\'ll keep shopping.', 'bad', {requestedSize:v.size,requestedClimate:!!v.climate,...(reason === 'noReady' ? {complaint:'noReady',availability:this.availabilityReport(v.size).availability} : v.climate && ['noClimate','noSize'].includes(reason) ? (()=>{const climateAvailability=climateInventory(this,v.size);return {climateAvailability,availability:climateCauseKey(climateAvailability)};})() : {})}); return null; };
-    if (!cands.length) return lose(all.length ? (v.climate ? 'noClimate' : 'noReady') : v.climate && this.objs('unit').some((u) => u.size === v.size) ? 'noClimate' : 'noSize');
+    if (!cands.length) {
+      // A real ordinary shopper requested the scarce unit during its hold; no extra prospect is generated.
+      const heldUnit = hold && s.objects[hold.unitId];
+      const heldMatch = !ownsHold && heldUnit && heldUnit.size === v.size && heldUnit.env === (v.climate ? 'climate' : 'std')
+        && heldUnit.cstate === 'operating' && !heldUnit.blocked && heldUnit.commercial === 'ready';
+      if (heldMatch) {
+        hold.competingRequests = (hold.competingRequests || 0) + 1;
+        customerHistory(s.customerAccounts?.[hold.accountId], this.day, 'competing_demand', `Ordinary shopper requested held ${v.size} ${v.climate ? 'climate' : 'standard'} inventory`);
+        return lose('ownerHeld');
+      }
+      return lose(all.length ? (v.climate ? 'noClimate' : 'noReady') : v.climate && this.objs('unit').some((u) => u.size === v.size) ? 'noClimate' : 'noSize');
+    }
     const rep = this.reputation(); const cp = this.compPrice();
     let best = null, bestP = -1;
     for (const u of cands) {
@@ -2255,24 +2269,35 @@ export class Sim {
     const account = returningAccount(s, v);
     if (!account) return false;
     const offered = { size: v.size, climate: !!v.climate, ad: v.ad || null, kind: v.kind };
+    const exact = this.objs('unit').filter(u => u.cstate === 'operating' && !u.blocked && u.commercial === 'ready' && u.size === v.size && u.env === (v.climate ? 'climate' : 'std') && !u.lease);
+    const scarceUnit = exact.length === 1 && !s.cr01.hold ? exact[0] : null;
     const requestId = `return-${s.t}-${account.id}`;
-    s.cr01.pending = { id: requestId, accountId: account.id, prospect: offered };
+    s.cr01.pending = { id: requestId, accountId: account.id, prospect: offered, scarceUnitId: scarceUnit?.id ?? null };
     s.cr01.lastOfferDay = this.day;
     customerHistory(account, this.day, 'request', `Asked about an additional ${v.size} ${v.climate ? 'climate' : 'standard'} unit`);
     this.convo({ key: 'cr01', who: account.name, sev: 'attention', ttl: 3 * MIN_PER_DAY,
       text: `I already rent here. Do you have another ${v.size} ${v.climate ? 'climate-controlled' : 'standard'} unit?`,
       actions: [
-        { label: 'Offer a suitable unit', action: { type: 'cr01Reply', requestId, decision: 'check' } },
-        { label: 'Wait / not now', action: { type: 'cr01Reply', requestId, decision: 'wait' } },
+        { label: scarceUnit ? 'Hold unit for 24h' : 'Offer a suitable unit', action: { type: 'cr01Reply', requestId, decision: scarceUnit ? 'hold' : 'check' } },
+        { label: scarceUnit ? 'Keep unit available' : 'Wait / not now', action: { type: 'cr01Reply', requestId, decision: 'wait' } },
       ], def: 1 });
     return true;
   }
   act_cr01Reply(a) {
     const s = this.s, pending = s.cr01?.pending;
-    if (!pending || pending.id !== a.requestId || !['check', 'wait'].includes(a.decision)) return { ok: false, msg: 'That request is no longer active' };
+    if (!pending || pending.id !== a.requestId || !['check', 'wait', 'hold'].includes(a.decision)) return { ok: false, msg: 'That request is no longer active' };
     const account = s.customerAccounts[pending.accountId];
-    s.cr01.pending = null;
     if (!account || !account.leaseIds?.some(id => s.leases[id])) return { ok: false, msg: 'Customer account is no longer active' };
+    if (a.decision === 'hold') {
+      const u = s.objects[pending.scarceUnitId];
+      const matches = this.objs('unit').filter(x => x.cstate === 'operating' && !x.blocked && x.commercial === 'ready' && !x.lease && x.size === pending.prospect.size && x.env === (pending.prospect.climate ? 'climate' : 'std'));
+      if (s.cr01.hold || !u || matches.length !== 1 || matches[0].id !== u.id) return { ok: false, msg: 'The unit is no longer the only suitable rent-ready option' };
+      s.cr01.pending = null;
+      s.cr01.hold = { requestId: pending.id, accountId: account.id, prospect: { ...pending.prospect }, unitId: u.id, until: s.t + 1440, competingRequests: 0 };
+      customerHistory(account, this.day, 'unit_held', `Held Unit ${u.num} for 24 in-game hours`);
+      return { ok: true, msg: `Unit ${u.num} is held for ${account.name} for 24 game hours; ordinary shoppers cannot rent it during the hold.` };
+    }
+    s.cr01.pending = null;
     if (a.decision === 'wait') {
       s.today.prospects++; s.today.lost++;
       s.lost.ownerDeferred = (s.lost.ownerDeferred || 0) + 1;
@@ -2284,6 +2309,41 @@ export class Sim {
     const lease = this.decideLease({ ...pending.prospect, accountId: account.id }, null);
     if (!lease) customerHistory(account, this.day, 'unfilled', `Additional ${pending.prospect.size} request did not convert under normal leasing conditions`);
     return { ok: true, msg: lease ? `${account.name} leased an additional unit under its own agreement.` : `${account.name} did not rent another unit. Existing leases are unchanged.` };
+  }
+
+  // The original online shopper is retained as a single deferred prospect. A hold
+  // never creates traffic or a second conversion attempt. Time only advances in step().
+  cr01HoldTick() {
+    const s = this.s, hold = s.cr01?.hold;
+    if (!hold || s.t < hold.until) return;
+    // Release before deciding: the original shopper takes the usual conversion roll.
+    s.cr01.hold = null;
+    const account = s.customerAccounts?.[hold.accountId];
+    if (!account || !account.leaseIds?.some(id => s.leases[id])) return;
+    const u = s.objects[hold.unitId];
+    // Do not silently switch the promised unit or create an alternative conversion.
+    if (!u || u.commercial !== 'ready' || u.cstate !== 'operating' || u.blocked || u.lease) {
+      s.today.prospects++; s.today.lost++;
+      s.lost.noReady = (s.lost.noReady || 0) + 1;
+      s.mkt.lostLog.push({ d: this.day, r: 'noReady', sz: hold.prospect.size, climate: !!hold.prospect.climate });
+      s.mkt.lostLog = s.mkt.lostLog.filter(x => x.d > this.day - 30);
+      customerHistory(account, this.day, 'hold_unfilled', 'Held unit became unavailable; no additional rental');
+      return;
+    }
+    const lease = this.decideLease({ ...hold.prospect, accountId: account.id, holdRequestId: hold.requestId, heldUnitId: hold.unitId }, null);
+    customerHistory(account, this.day, lease ? 'hold_leased' : 'hold_unfilled', lease ? `Held Unit ${u.num} rented` : `Hold on Unit ${u.num} expired without a lease`);
+  }
+  act_cr01CancelHold(a) {
+    const s = this.s, hold = s.cr01?.hold;
+    if (!hold || hold.requestId !== a.requestId) return { ok: false, msg: 'That hold is no longer active' };
+    const account = s.customerAccounts?.[hold.accountId];
+    s.cr01.hold = null;
+    s.today.prospects++; s.today.lost++;
+    s.lost.ownerDeferred = (s.lost.ownerDeferred || 0) + 1;
+    s.mkt.lostLog.push({ d: this.day, r: 'ownerDeferred', sz: hold.prospect.size, climate: !!hold.prospect.climate });
+    s.mkt.lostLog = s.mkt.lostLog.filter(x => x.d > this.day - 30);
+    customerHistory(account, this.day, 'hold_cancelled', 'Owner cancelled additional-unit hold; unit returned to ordinary availability');
+    return { ok: true, msg: 'Hold cancelled. The unit is again available to ordinary shoppers.' };
   }
 
   // ============================================================ VISITS / AGENTS
