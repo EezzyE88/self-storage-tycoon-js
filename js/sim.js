@@ -22,6 +22,7 @@ import {
 import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, outlook, recordCash, cashWindow, firstFinancialDay } from './finance.js';
 import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';
 import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
+import { ensureCustomerAccounts, customerHistory, returningAccount } from './customeraccounts.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -44,7 +45,7 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     ground: new Array(WH).fill(G.GRASS),
     hall: [new Array(WH).fill(0), new Array(WH).fill(0)], // 0 none, 1 built, 2 under construction
     dirt: [new Array(WH).fill(0), new Array(WH).fill(0)],
-    objects: {}, orders: [], leases: {}, tenants: {}, carts: [], vehicles: [], agents: [], staff: [], tasks: [],
+    objects: {}, orders: [], leases: {}, tenants: {}, customerAccounts: {}, cr01: { lastOfferDay: -100000, pending: null }, carts: [], vehicles: [], agents: [], staff: [], tasks: [],
     visits: [], gateAccess: { v: 1, gateIds: [], connections: {}, queues: {}, serving: {}, migration: { legacy: false, issues: [] } }, officeQ: [],
     market: { id: market, ask: {} },
     ledger: [], days: [], today: null, finance: financeState(),
@@ -80,6 +81,7 @@ function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payro
 export class Sim {
   constructor(state) {
     this.s = state; this.events = []; this.D = null; this.dirty = true;
+    ensureCustomerAccounts(state);
     // forward-compatible defaults for older saves
     state.policies ||= {}; if (state.policies.ownerChores === undefined) state.policies.ownerChores = true;
     state.loan ||= { bal: 0, warnT: -1e9 };
@@ -1448,7 +1450,7 @@ export class Sim {
     if (mod === 0) this.newDay();
     if (mod === FINANCIAL_MINUTE) this.financialBatch();
     this.auctionTick();
-    if (mod % 5 === 0) this.convoTick();
+    if (mod % 5 === 0) { this.cr01RestoreCard(); this.convoTick(); }
     // construction
     for (const ord of s.orders) if (ord.st === 'construction') {
       if(ord.vertical){tickVertical(this,ord);continue;}
@@ -2177,7 +2179,12 @@ export class Sim {
   }
   endLease(L, why) {
     const s = this.s, u = s.objects[L.unit];
-    delete s.leases[L.id]; const tn = s.tenants[L.tenant]; if (tn) { delete s.tenants[tn.id]; this.dropConvo('mo' + tn.id); } this.dropConvo('lien' + L.id); this.dropConvo('rate' + L.id);
+    const tn = s.tenants[L.tenant], account = tn && s.customerAccounts?.[tn.accountId];
+    if (account) {
+      customerHistory(account, this.day, 'lease_closed', `Unit ${u?.num ?? u?.name ?? L.unit} closed (${why || 'move-out'})`, L.id);
+      account.leaseIds = account.leaseIds.filter(id => id !== L.id);
+    }
+    delete s.leases[L.id]; if (tn) { delete s.tenants[tn.id]; this.dropConvo('mo' + tn.id); } this.dropConvo('lien' + L.id); this.dropConvo('rate' + L.id);
     u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t; u.overlock = false;
     { const fc = this.unitFront(u)[0]; if (fc) s.dirt[u.f || 0][this.idx(fc.x, fc.y)] += 0.25; }
     this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Make-ready ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) });
@@ -2217,6 +2224,13 @@ export class Sim {
     const s = this.s;
     const tn = { id: this.id(), name: `${this.pick(NAMES_FIRST)} ${this.pick(NAMES_LAST)}`, sat: 0.8, lease: null, since: s.t };
     const L = { id: this.id(), unit: u.id, tenant: tn.id, rent: this.askFor(u), start: this.day, nextBill: this.day + BILLING_CYCLE_DAYS, status: 'current', balance: 0, fees: 0 };
+    const returning = v?.accountId && s.customerAccounts[v.accountId];
+    const accountId = returning ? returning.id : `customer-${tn.id}`;
+    tn.accountId = accountId;
+    if (returning) tn.name = returning.name;
+    const account = returning || (s.customerAccounts[accountId] = { id: accountId, name: tn.name, since: s.t, leaseIds: [], events: [] });
+    account.leaseIds.push(L.id);
+    customerHistory(account, this.day, 'lease_opened', `Unit ${u.num ?? u.name} leased at $${L.rent}/month`, L.id);
     tn.lease = L.id; s.tenants[tn.id] = tn; s.leases[L.id] = L;
     u.lease = L.id; u.commercial = 'reserved';
     this.money(L.rent, 'rent', `First month - ${u.name}`);
@@ -2233,10 +2247,64 @@ export class Sim {
     return L;
   }
 
+  // CR-01 uses one already scheduled online shopper, not additional demand.
+  // A bounded owner decision uses the same suitability, rent and conversion path.
+  offerReturningCustomer(v) {
+    const s = this.s;
+    if (s.convos.length >= 8 || s.cr01?.pending) return false;
+    const account = returningAccount(s, v);
+    if (!account) return false;
+    const offered = { size: v.size, climate: !!v.climate, ad: v.ad || null, kind: v.kind };
+    const requestId = `return-${s.t}-${account.id}`;
+    s.cr01.pending = { id: requestId, accountId: account.id, prospect: offered };
+    s.cr01.lastOfferDay = this.day;
+    customerHistory(account, this.day, 'request', `Asked about an additional ${v.size} ${v.climate ? 'climate' : 'standard'} unit`);
+    this.cr01Card(account, s.cr01.pending);
+    return true;
+  }
+  cr01Card(account, pending) {
+    const p = pending.prospect, requestId = pending.id;
+    this.convo({ key: 'cr01', who: account.name, sev: 'attention', ttl: 3 * MIN_PER_DAY,
+      text: `I already rent here. Do you have another ${p.size} ${p.climate ? 'climate-controlled' : 'standard'} unit?`,
+      actions: [
+        { label: 'Offer a suitable unit', action: { type: 'cr01Reply', requestId, decision: 'check' } },
+        { label: 'Wait / not now', action: { type: 'cr01Reply', requestId, decision: 'wait' } },
+      ], def: 1 });
+  }
+  // A request reopened at load (see ensureCustomerAccounts) gets its card on the next running game minute, never at load.
+  cr01RestoreCard() {
+    const s = this.s, pending = s.cr01?.pending;
+    if (!pending || s.convos.some((c) => c.key === 'cr01')) return;
+    const account = s.customerAccounts?.[pending.accountId];
+    if (!account || !account.leaseIds?.some((id) => s.leases[id])) { s.cr01.pending = null; customerHistory(account, this.day, 'request_closed', 'Reopened additional-unit request closed: no active rental'); return; }
+    this.cr01Card(account, pending);
+  }
+  act_cr01Reply(a) {
+    const s = this.s, pending = s.cr01?.pending;
+    if (!pending || pending.id !== a.requestId || !['check', 'wait'].includes(a.decision)) return { ok: false, msg: 'That request is no longer active' };
+    const account = s.customerAccounts[pending.accountId];
+    s.cr01.pending = null;
+    if (!account || !account.leaseIds?.some(id => s.leases[id])) return { ok: false, msg: 'Customer account is no longer active' };
+    if (a.decision === 'wait') {
+      s.today.prospects++; s.today.lost++;
+      s.lost.ownerDeferred = (s.lost.ownerDeferred || 0) + 1;
+      s.mkt.lostLog.push({ d: this.day, r: 'ownerDeferred', sz: pending.prospect.size, climate: !!pending.prospect.climate });
+      s.mkt.lostLog = s.mkt.lostLog.filter(x => x.d > this.day - 30);
+      customerHistory(account, this.day, 'deferred', 'Player chose not to pursue the additional unit');
+      return { ok: true, msg: `${account.name}'s additional-unit request was deferred. No lease signed.` };
+    }
+    const lease = this.decideLease({ ...pending.prospect, accountId: account.id }, null);
+    if (!lease) customerHistory(account, this.day, 'unfilled', `Additional ${pending.prospect.size} request did not convert under normal leasing conditions`);
+    return { ok: true, msg: lease ? `${account.name} leased an additional unit under its own agreement.` : `${account.name} did not rent another unit. Existing leases are unchanged.` };
+  }
+
   // ============================================================ VISITS / AGENTS
   startVisit(v) {
     const s = this.s;
-    if (v.kind === 'online') { this.decideLease(v, null); return; }
+    if (v.kind === 'online') {
+      if (this.offerReturningCustomer(v)) return;
+      this.decideLease(v, null); return;
+    }
     const mod = this.mod;
     if (mod < ACCESS_HOURS[0] * 60 || mod > ACCESS_HOURS[1] * 60 - 30) { this.schedule(v, this.randomAccessTime(this.day + 1)); return; }
     if (!this.routeGateIds().length) { this.schedule(v, s.t + 240); return; }
@@ -2376,7 +2444,7 @@ export class Sim {
   convo(c) {
     const s = this.s; if (s.convos.some((x) => x.key && x.key === c.key)) return;
     s.convos.push({ id: this.id(), t: s.t, ttl: 12 * 60, ...c });
-    if (s.convos.length > 8) { const i = s.convos.findIndex((x) => !this.reviewHeld(x)); if (i >= 0) s.convos.splice(i, 1); } // a held owner review is never dropped
+    if (s.convos.length > 8) { const i = s.convos.findIndex((x) => x.key !== 'cr01' && !this.reviewHeld(x)); if (i >= 0) s.convos.splice(i, 1); } // a held owner review is never dropped
     this.emit('convo', { sev: c.sev || 'attention' });
   }
 
