@@ -19,7 +19,7 @@ import {
   SIZES, TOOLS, MARKETS, CART_COST, CLIMATE_COST_MULT, ROLES, OPEX, WORK, NAMES_FIRST, NAMES_LAST, POWER,
 } from './data.js';
 
-import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, outlook, recordCash, cashWindow, firstFinancialDay } from './finance.js';
+import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, outlook, recordCash, cashWindow, firstFinancialDay, financialTime } from './finance.js';
 import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';
 import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
 import { ensureCustomerAccounts, customerHistory, returningAccount } from './customeraccounts.js';
@@ -1160,27 +1160,50 @@ export class Sim {
   rentReviewCands(key) {
     const s = this.s, ask = s.market.ask[key];
     return Object.values(s.leases).filter((L) => {
-      const u = s.objects[L.unit]; if (!u || productKey(u.size, u.env) !== key || L.status !== 'current' || (L.holdUntil && L.holdUntil > s.t)) return false;
+      const u = s.objects[L.unit]; if (!u || productKey(u.size, u.env) !== key || L.status !== 'current' || L.rentNotice || (L.holdUntil && L.holdUntil > s.t)) return false;
       const since = Math.max(L.start != null ? (L.start - 1) * MIN_PER_DAY : -1e9, L.incT ?? -1e9);
       return s.t - since >= 180 * MIN_PER_DAY && L.rent < ask;
     });
   }
   rentReviewPreview(key, pct) {
-    const ask = this.s.market.ask[key]; const c = this.rentReviewCands(key);
+    const ask = this.s.market.ask[key];
+    if (!Number.isFinite(ask)) return { n: 0, delta: 0 };
+    const c = this.rentReviewCands(key).filter(L => Math.round(Math.min(Math.round(L.rent * (1 + pct)), ask)) > Math.round(L.rent));
     return { n: c.length, delta: c.reduce((a, L) => a + Math.min(Math.round(L.rent * (1 + pct)), ask) - L.rent, 0) };
   }
+  // Notice is per lease. Existing rent, receivables, and increase consequences stay unchanged until a due bill.
   act_rentReview(a) {
     const s = this.s, pct = clamp(Number(a.pct) || 0, 0.01, 0.15), ask = s.market.ask[a.key];
-    if (ask == null) return { ok: false };
-    const c = this.rentReviewCands(a.key); if (!c.length) { this.emit('refuse'); return { ok: false, msg: 'No eligible tenants (need 6+ months tenure and rent below asking)' }; }
+    if (!Number.isFinite(ask)) return { ok: false };
+    const c = this.rentReviewCands(a.key).filter(L => Math.round(Math.min(Math.round(L.rent * (1 + pct)), ask)) > Math.round(L.rent));
+    if (!c.length) { this.emit('refuse'); return { ok: false, msg: 'No eligible tenants with a positive rent increase' }; }
     let delta = 0;
     for (const L of c) {
-      const nr = Math.min(Math.round(L.rent * (1 + pct)), ask); delta += nr - L.rent; L.prevRent = L.rent; L.rent = nr; L.incT = s.t; L.asked = false;
-      const tn = s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - pct * 1.6, 0, 1);
+      const nr = Math.min(Math.round(L.rent * (1 + pct)), ask);
+      let effectiveDay = L.nextBill;
+      // The financial batch is at 7:00 game time; notice requires 30 *complete* 24-hour days.
+      while (financialTime(effectiveDay) < s.t + 30 * MIN_PER_DAY) effectiveDay += BILLING_CYCLE_DAYS;
+      L.rentNotice = { rent: nr, previousRent: L.rent, issuedAt: s.t, effectiveDay, expiresDay: effectiveDay + 60, pct, valueHit: 0.1 / Math.max(1, Object.keys(s.leases).length), asked: false };
+      delta += nr - L.rent;
     }
-    s.exp.value = clamp(s.exp.value - 0.01 * c.length / Math.max(1, Object.keys(s.leases).length) * 10, 0, 1);
     this.emit('rent_review', { n: c.length, delta });
-    return { ok: true, msg: `${c.length} tenant${c.length > 1 ? 's' : ''} notified: +$${delta.toLocaleString()}/mo from next bill. Expect a few more move-outs.` };
+    return { ok: true, msg: `${c.length} tenant${c.length > 1 ? 's' : ''} notified of +$${delta.toLocaleString()}/mo, effective on each lease's first eligible bill after 30 full days.` };
+  }
+  // The expiry day's billing opportunity is valid. No back charges, duplicate application, or auto-reissue.
+  applyRentNotice(L, day) {
+    const N = L.rentNotice;
+    if (!N) return;
+    if (day > N.expiresDay) { delete L.rentNotice; this.dropConvo('rate' + L.id); return; }
+    if (L.status === 'current' && day >= N.effectiveDay && day >= L.nextBill && financialTime(day) >= N.issuedAt + 30 * MIN_PER_DAY) {
+      const old = L.rent;
+      if (N.rent > old) {
+        L.prevRent = old; L.rent = N.rent; L.incT = this.s.t; L.asked = true; // Complaint was offered during notice.
+        const tn = this.s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - N.pct * 1.6, 0, 1);
+        this.s.exp.value = clamp(this.s.exp.value - N.valueHit, 0, 1);
+        this.emit('rent_effective', { lease: L.id, delta: N.rent - old });
+      }
+      delete L.rentNotice;
+    } else if (day >= N.expiresDay) { delete L.rentNotice; this.dropConvo('rate' + L.id); }
   }
   // ---------------------------------------------------------------- Manager automation (GDD §46.3)
   hasManager() { return this.s.staff.some((x) => x.role === 'manager'); }
@@ -1495,8 +1518,13 @@ export class Sim {
     for (const t of s.tasks) if (t.workBookedDay && t.workBookedDay !== day) { t.workBooked = null; t.workBookedDay = null; }
     if (s.sb && s.sb.goal && !s.sb.goal.done) { const P = this.sbGoalProgress(); if (P && P.met) { s.sb.goal.done = day; this.sbLog('Goal met: ' + s.sb.goal.label); this.emit('sb_goal', { label: s.sb.goal.label }); } }
     // tenants whose rent was just raised sometimes ask about it (GDD §26 pricing question)
-    { const asked = Object.values(s.leases).filter((L) => L.incT != null && !L.asked && s.t - L.incT < 5 * MIN_PER_DAY && s.tenants[L.tenant]);
-      for (const L of asked.slice(0, 2)) { L.asked = true; if (this.rnd() < 0.4) this.pricingConvo(L); } }
+    { const asked = Object.values(s.leases).filter(L => s.tenants[L.tenant] &&
+        (L.rentNotice && !L.rentNotice.asked && s.t - L.rentNotice.issuedAt < 5 * MIN_PER_DAY ||
+         L.incT != null && !L.asked && s.t - L.incT < 5 * MIN_PER_DAY));
+      for (const L of asked.slice(0, 2)) {
+        if (L.rentNotice) L.rentNotice.asked = true; else L.asked = true;
+        if (this.rnd() < 0.4) this.pricingConvo(L);
+      } }
     // tenant move-out pressure (accumulated satisfaction, not single trips)
     for (const tn of Object.values(s.tenants)) {
       const L = s.leases[tn.lease]; if (!L || L.status !== 'current' || tn.leaving) continue;
@@ -1534,7 +1562,7 @@ export class Sim {
     const s = this.s, F = s.finance, day = this.day;
     if (this.mod !== FINANCIAL_MINUTE || day <= F.lastDay) return false;
     F.lastDay = day; // persisted before all effects; repeat calls/reloads cannot repeat the batch
-    for (const L of Object.values(s.leases)) this.billLease(L, day);
+    for (const L of Object.values(s.leases)) { this.applyRentNotice(L, day); this.billLease(L, day); }
     const ox = cents(this.dailyOpex().total), pay = cents(s.staff.reduce((a, st) => a + (st.wage || 0), 0));
     recordPayroll(s, pay);
     const values = { opex: ox, payroll: pay, interest: cents(s.loan.bal * 0.0004) };
@@ -1985,10 +2013,13 @@ export class Sim {
   // ============================================================ CONVERSATIONS (GDD §26)
   // Every answer maps to real state. Routine ones are answered by a Clerk/Manager per policy; unanswered ones expire to a default.
   pricingConvo(L) {
-    const s = this.s, u = s.objects[L.unit], tn = s.tenants[L.tenant]; if (!u || !tn || L.prevRent == null) return;
+    const s = this.s, u = s.objects[L.unit], tn = s.tenants[L.tenant], N = L.rentNotice;
+    if (!u || !tn || (!N && L.prevRent == null)) return;
+    const old = N ? N.previousRent : L.prevRent, proposed = N ? N.rent : L.rent;
     this.convo({ key: 'rate' + L.id, who: tn.name, obj: u.id, sev: 'attention', ttl: 8 * 60, def: 2, auto: 0,
-      text: `Why did my rate change? Unit ${u.num} went from ${this.fmtMoney(L.prevRent)} to ${this.fmtMoney(L.rent)}.`,
-      actions: [{ label: 'Explain the market rate', action: { type: 'cv', op: 'rateExplain', lease: L.id } }, { label: `Hold ${this.fmtMoney(L.prevRent)} for 6 months`, action: { type: 'cv', op: 'rateHold', lease: L.id } }, { label: 'Ignore', action: { type: 'cv', op: 'rateIgnore', lease: L.id } }] });
+      text: N ? `I received notice that Unit ${u.num} will increase from ${this.fmtMoney(old)} to ${this.fmtMoney(proposed)} at a future bill. Why?`
+        : `Why did my rate change? Unit ${u.num} went from ${this.fmtMoney(old)} to ${this.fmtMoney(proposed)}.`,
+      actions: [{ label: 'Explain the market rate', action: { type: 'cv', op: 'rateExplain', lease: L.id } }, { label: `Hold ${this.fmtMoney(old)} for 6 months`, action: { type: 'cv', op: 'rateHold', lease: L.id } }, { label: 'Ignore', action: { type: 'cv', op: 'rateIgnore', lease: L.id } }] });
   }
   moveoutConvo(tn, L, u, price) {
     const offer = this.s.policies.retention && !tn.retainTried;
@@ -2007,17 +2038,21 @@ export class Sim {
       case 'pwMatch': { for (const k of Object.keys(s.market.ask)) s.market.ask[k] = Math.round(s.market.ask[k] * 0.94); return { ok: true, msg: 'Asking rents cut 6%. Existing tenants keep their rates.' }; }
       case 'pwHold': return { ok: true, msg: 'Holding prices. Expect fewer price shoppers; quality has to win them.' };
       case 'pwAd': return this.act_ad({ kind: 'local' });
-      case 'rateExplain': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.02, 0, 1); return { ok: true, msg: 'Explained: rates follow the local market. The new rate stands.' }; }
+      case 'rateExplain': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.02, 0, 1); return { ok: true, msg: L?.rentNotice ? 'Explained: the proposed rate follows the local market. The notice remains scheduled.' : 'Explained: rates follow the local market. The new rate stands.' }; }
       case 'rateIgnore': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.07, 0, 1); return { ok: true }; }
       case 'rateHold': {
-        const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (!L || L.prevRent == null) return { ok: false, msg: 'That lease has changed' };
-        const was = L.rent; L.rent = L.prevRent; L.prevRent = null; L.incT = null; L.holdUntil = s.t + 180 * MIN_PER_DAY; if (tn) tn.sat = clamp(tn.sat + 0.08, 0, 1);
-        return { ok: true, msg: `Rate held at ${this.fmtMoney(L.rent)} (−${this.fmtMoney(was - L.rent)}/mo). They're grateful.` };
+        const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (!L || (!L.rentNotice && L.prevRent == null)) return { ok: false, msg: 'That lease has changed' };
+        const N = L.rentNotice, was = N ? N.rent : L.rent;
+        if (N) { delete L.rentNotice; } else { L.rent = L.prevRent; L.incT = null; }
+        L.prevRent = null; L.holdUntil = s.t + 180 * MIN_PER_DAY; if (tn) tn.sat = clamp(tn.sat + 0.08, 0, 1);
+        return { ok: true, msg: N ? `Increase notice canceled. Current rent of ${this.fmtMoney(L.rent)}/mo protected for 6 months.`
+          : `Rate held at ${this.fmtMoney(L.rent)} (−${this.fmtMoney(was - L.rent)}/mo). They're grateful.` };
       }
       case 'retain': {
         const tn = s.tenants[a.tenant], L = tn && s.leases[tn.lease]; if (!tn || !L || !tn.leaving) return { ok: false, msg: 'Too late: they have already moved out' };
         if (tn.retainTried) return { ok: false, msg: 'Already made them an offer' }; tn.retainTried = true;
         if (this.rnd() < clamp(0.1 + tn.sat * 0.55, 0.15, 0.7)) {
+          if (L.rentNotice) { delete L.rentNotice; this.dropConvo('rate' + L.id); }
           L.rent = Math.round(L.rent * 0.9); tn.leaving = false; tn.sat = clamp(tn.sat + 0.1, 0, 1);
           s.visits = s.visits.filter((v) => !(v.kind === 'moveout' && v.tenant === tn.id));
           this.milestone('first_retention'); this.emit('retained', { unit: L.unit });

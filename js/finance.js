@@ -47,7 +47,11 @@ export function outlook(sim, { extraDaily = 0 } = {}) {
     if (L.status !== 'current') continue;
     let next = L.nextBill;
     for (let day = start; day <= end; day++) if (day >= next) {
-      bills.push({ day, amount: L.rent, lease: L.id }); next += BILLING_CYCLE_DAYS;
+      const N = L.rentNotice;
+      // Forecast the scheduled rate only on a bill whose notice is still valid.
+      const amount = N && day >= N.effectiveDay && day <= N.expiresDay && financialTime(day) >= N.issuedAt + 30 * MIN_PER_DAY
+        ? N.rent : L.rent;
+      bills.push({ day, amount, lease: L.id }); next += BILLING_CYCLE_DAYS;
     }
   }
   const terms = termPayments(sim, start, end), settlements = [];
