@@ -1925,8 +1925,8 @@ export class UI {
     h += `<h3>Existing-tenant rent review</h3>`;
     if (!rv.length) h += `<p class="note">No tenants are eligible. Tenants qualify after 6 months without an increase, when they pay below your asking rent.</p>`;
     else {
-      h += `<div class="list">${rv.map(({ k, p5, p10 }) => { const [sz, env] = k.split('|'); return `<div class="item"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>${Math.max(p5.n, p10.n)} eligible tenant${Math.max(p5.n, p10.n) > 1 ? 's' : ''} for at least one increase</small></div>
-        ${p5.n ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.05 })}'>Notify +5% (+${money(p5.delta)}/mo)</button>` : ''}${p10.n ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.1 })}'>Notify +10% (+${money(p10.delta)}/mo)</button>` : ''}</div>`; }).join('')}</div>
+      h += `<div class="list">${rv.map(({ k, p5, p10 }) => { const [sz, env] = k.split('|'); return `<div class="item rent-review-card"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>${Math.max(p5.n, p10.n)} eligible tenant${Math.max(p5.n, p10.n) > 1 ? 's' : ''} for at least one increase</small></div>
+        <div class="rent-review-actions">${p5.n ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.05 })}'>Notify +5% (+${money(p5.delta)}/mo)</button>` : ''}${p10.n ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.1 })}'>Notify +10% (+${money(p10.delta)}/mo)</button>` : ''}</div></div>`; }).join('')}</div>
         <p class="note">Notice requires 30 full game days; the increase starts on each lease’s next eligible bill. Rent never exceeds the asking rent when notified. Satisfaction and 60-day departure pressure begin when the new rate takes effect.</p>`;
     }
     const rentNotices = Object.values(s.leases).filter(L => L.rentNotice);
