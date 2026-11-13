@@ -1921,13 +1921,20 @@ export class UI {
         <div class="stepper"><button data-a="rent" data-k="${k}" data-v="-5" aria-label="Lower rent">-</button><b class="num" style="min-width:48px;text-align:center">${money(ask)}</b><button data-a="rent" data-k="${k}" data-v="5" aria-label="Raise rent">+</button></div></div>`;
     }
     h += `</div><p class="note">Asking rent affects how strongly the market responds. Existing leases keep their rent unless you run a rent review.</p>`;
-    const rv = [...products].map((k) => ({ k, p5: sim.rentReviewPreview(k, 0.05), p10: sim.rentReviewPreview(k, 0.1) })).filter((r) => r.p5.n);
+    const rv = [...products].map((k) => ({ k, p5: sim.rentReviewPreview(k, 0.05), p10: sim.rentReviewPreview(k, 0.1) })).filter((r) => r.p5.n || r.p10.n);
     h += `<h3>Existing-tenant rent review</h3>`;
     if (!rv.length) h += `<p class="note">No tenants are eligible. Tenants qualify after 6 months without an increase, when they pay below your asking rent.</p>`;
     else {
-      h += `<div class="list">${rv.map(({ k, p5, p10 }) => { const [sz, env] = k.split('|'); return `<div class="item"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>${p5.n} eligible tenant${p5.n > 1 ? 's' : ''} below asking</small></div>
-        <button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.05 })}'>+5% (+${money(p5.delta)}/mo)</button><button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.1 })}'>+10% (+${money(p10.delta)}/mo)</button></div>`; }).join('')}</div>
-        <p class="note">Increases never exceed your current asking rent. Tenants notice: satisfaction drops and move-out risk is higher for 60 days.</p>`;
+      h += `<div class="list">${rv.map(({ k, p5, p10 }) => { const [sz, env] = k.split('|'); return `<div class="item rent-review-card"><div class="grow"><b>${sz}${env === 'climate' ? ' climate' : ''}</b><small>${Math.max(p5.n, p10.n)} eligible tenant${Math.max(p5.n, p10.n) > 1 ? 's' : ''} for at least one increase</small></div>
+        <div class="rent-review-actions">${p5.n ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.05 })}'>Notify +5% (+${money(p5.delta)}/mo)</button>` : ''}${p10.n ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'rentReview', key: k, pct: 0.1 })}'>Notify +10% (+${money(p10.delta)}/mo)</button>` : ''}</div></div>`; }).join('')}</div>
+        <p class="note">Notice requires 30 full game days; the increase starts on each lease’s next eligible bill. Rent never exceeds the asking rent when notified. Satisfaction and 60-day departure pressure begin when the new rate takes effect.</p>`;
+    }
+    const rentNotices = Object.values(s.leases).filter(L => L.rentNotice);
+    if (rentNotices.length) {
+      h += `<h3>Pending rent notices · ${rentNotices.length}</h3><div class="list">${rentNotices.slice(0, 12).map(L => {
+        const N = L.rentNotice, u = s.objects[L.unit];
+        return `<div class="item"><div class="grow"><b>Unit ${esc(u?.num ?? L.unit)}</b><small>${money(L.rent)} now · ${money(N.rent)} proposed · originally Day ${N.effectiveDay} · expires after Day ${N.expiresDay}${L.status !== 'current' ? ' · suspended (' + esc(sim.stageOf(L)) + ')' : ''}</small></div></div>`;
+      }).join('')}</div>${rentNotices.length > 12 ? `<p class="note">${rentNotices.length - 12} additional notices pending.</p>` : ''}`;
     }
     const P = sim.D.power;
     if (P) {

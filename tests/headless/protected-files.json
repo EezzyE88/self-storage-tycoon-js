@@ -18,7 +18,7 @@
       "protects": "cloud save fallback"
     },
     "js/finance.js": {
-      "sha256": "fc53b3d54969aedc4d36ac3cb2e9e9640de5b235d89ad04defea49088af831e9",
+      "sha256": "2ff000e86aece9803f7576c22388c5edd4bd11ead4894943fba339d95705b707",
       "protects": "loans, credit and financial calculations"
     },
     "js/data.js": {
