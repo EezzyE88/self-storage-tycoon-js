@@ -14,6 +14,7 @@ import { businessProgressHtml, investmentCheckinHtml } from './investmentprogres
 import { yardInfill } from './yardinfill.js';
 import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
 import { climateSuggestionText } from './climateavailability.js';
+import { priceAdviceText, pricingActivityHtml } from './pricingguidance.js';
 import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget, reviewRemedy } from './complaints.js';
 import { complaintCopy, requestCopy } from './feedbackcopy.js';
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
@@ -1745,7 +1746,7 @@ export class UI {
     return `<h3>Monthly report · Month ${R.month}</h3><p class="note">${esc(reportDates)}</p><div class="report"><div class="grade g${R.grade}">${R.grade}</div><div class="rgrow">
       <div class="kv"><span>Occupancy</span><span>${pct(R.occ)} (${R.occN}/${R.units})</span><span>Rent roll</span><span>${money(R.roll)}${chg(R.roll, R.rollPrev, money)}</span><span>Operating contribution</span><span class="${R.contrib < 0 ? 'neg' : ''}">${money(R.contrib)}</span><span>Reputation</span><span>${pct(R.rep)}${chg(R.rep, R.repPrev, pct)}</span><span>Reviews</span><span>${R.rating != null ? R.rating.toFixed(1) + ' ★' : 'Not enough yet'}</span><span>Leases / move-outs</span><span>${R.leases} / ${R.moveouts}</span>${R.upkeep != null ? `<span>Upkeep</span><span class="${R.upkeep < 6 ? 'neg' : ''}">${R.upkeep}/10</span><span>Growth</span><span>${R.growPts}/15</span>` : ''}<span>Unconverted shoppers</span><span>${lostN}</span></div>${R.stale ? `<p class="note">${R.stale} job${R.stale > 1 ? 's' : ''} waiting 2+ days.</p>` : ''}${R.upkeep != null ? `<p class="note">Rent roll ${R.growth >= 0 ? '+' : ''}${Math.round(R.growth * 100)}% over 3 months.</p>` : ''}${(() => { const ti = this.g.tierInfo && careerEligibility(s).eligible && this.g.tierInfo(), nx = ti && ti.next; return nx ? `<p class="note goalnote"><b>Next goal: ${esc(nx.name)}.</b> Career rent roll ${money(ti.roll)} of ${money(nx.roll)}/mo (${Math.round(Math.min(1, ti.roll / nx.roll) * 100)}%)${nx.props > 1 ? `, career properties ${ti.n} of ${nx.props}` : ''}. Unlocks ${nx.perks.map(esc).join('; ')}.</p>` : ''; })()}
       <small class="note">${esc(R.season)}${R.comps.length ? ' · Competing with ' + esc(R.comps.join(', ')) : ''}</small></div></div>
-      ${R.sug.length ? `<div class="list sug">${R.sug.map((t, i) => `<div class="item"><span class="num">${i + 1}</span><div class="grow">${esc(climateSuggestionText(t))}</div></div>`).join('')}</div>` : '<p class="note">Nothing urgent. Keep it up.</p>'}`;
+      ${R.sug.length ? `<div class="list sug">${R.sug.map((t, i) => `<div class="item"><span class="num">${i + 1}</span><div class="grow">${esc(priceAdviceText(climateSuggestionText(t)))}</div></div>`).join('')}</div>` : '<p class="note">Nothing urgent. Keep it up.</p>'}`;
   }
   advertisingHtml() {
     const sim = this.sim, s = sim.s, active = sim.activeAd();
@@ -1921,6 +1922,7 @@ export class UI {
         <div class="stepper"><button data-a="rent" data-k="${k}" data-v="-5" aria-label="Lower rent">-</button><b class="num" style="min-width:48px;text-align:center">${money(ask)}</b><button data-a="rent" data-k="${k}" data-v="5" aria-label="Raise rent">+</button></div></div>`;
     }
     h += `</div><p class="note">Asking rent affects how strongly the market responds. Existing leases keep their rent unless you run a rent review.</p>`;
+    h += pricingActivityHtml(sim);
     const rv = [...products].map((k) => ({ k, p5: sim.rentReviewPreview(k, 0.05), p10: sim.rentReviewPreview(k, 0.1) })).filter((r) => r.p5.n || r.p10.n);
     h += `<h3>Existing-tenant rent review</h3>`;
     if (!rv.length) h += `<p class="note">No tenants are eligible. Tenants qualify after 6 months without an increase, when they pay below your asking rent.</p>`;
