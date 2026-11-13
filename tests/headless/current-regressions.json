@@ -1713,7 +1713,7 @@
         "scope": "Scenario goal comparison rules survive save/reload; damaged saves repaired; non-scenario saves untouched"
       }
     ,
-      {"id":"tinvestment_checkin","command":["@node","tests/headless/tinvestment_checkin.mjs"],"completion":"7 Investment Check-in focused checks passed","minimum_pass_lines":7,"timeout":120,"evidence":"native derived per-property construction group, lease totals, mixed product, demand windows, no state writes","scope":"IP-01 read-only presentation; no Safari claim"}
+      {"id":"tinvestment_checkin","command":["@node","tests/headless/tinvestment_checkin.mjs"],"completion":"8 Investment Check-in focused checks passed","minimum_pass_lines":8,"timeout":120,"evidence":"native derived per-property construction group, lease totals, mixed product, demand windows, no state writes","scope":"IP-01 read-only presentation; no Safari claim"}
     ,
       {"id":"trn01_notice","command":["@node","tests/headless/trn01_notice.mjs"],"completion":"17\\ RN\\-01\\ focused\\ checks\\ passed","minimum_pass_lines":17,"timeout":120,"evidence":"native Sim rent notice, billing, customer response, delinquency/expiry, forecast, save/Pause, account independence","scope":"RN-01A–E isolated notice lifecycle; no rendered/browser/Safari or player acceptance claim"}
     ,

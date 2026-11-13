@@ -59,11 +59,12 @@ export function investmentCheckin(sim) {
     if (!byOrder.has(u.order)) byOrder.set(u.order, []);
     byOrder.get(u.order).push(u);
   }
-  const groups = [...byOrder].filter(([id, members]) => members.length &&
-    members.every(u => u.cstate === 'operating') &&
+  // Newest finished order with at least one operating unit; units of it that never opened are counted, not hidden.
+  const groups = [...byOrder].filter(([id, members]) => members.some(u => u.cstate === 'operating') &&
     !sim.s.orders.some(o => o.id === id && o.st === 'construction'));
   if (!groups.length) return null;
-  const [order, members] = groups.sort((a, b) => b[0] - a[0])[0];
+  const [order, all] = groups.sort((a, b) => b[0] - a[0])[0];
+  const members = all.filter(u => u.cstate === 'operating');
   const products = new Map();
   for (const u of members) {
     const key = `${u.size}|${u.env}`;
@@ -80,7 +81,7 @@ export function investmentCheckin(sim) {
     if (products.has(key)) products.get(key).losses++;
   }
   const rows = [...products.values()].sort((a, b) => a.size.localeCompare(b.size) || a.env.localeCompare(b.env));
-  return { order, total: members.length, leased: rows.reduce((n, p) => n + p.leased, 0),
+  return { order, total: members.length, notOpen: all.length - members.length, leased: rows.reduce((n, p) => n + p.leased, 0),
     rent: rows.reduce((n, p) => n + p.rent, 0), products: rows,
     period: { from: firstDay, through: lastDay },
     daysObserved: Math.min(30, Math.max(0, sim.day - sim.s.finance.observedFrom)) };
@@ -93,5 +94,6 @@ export function investmentCheckinHtml(sim) {
   const rows = C.products.map(p => `<div class="item"><div class="grow"><b>${label(p)} · ${p.leased}/${p.total} leased</b><small>${dollars(p.rent)}/mo contracted · ${p.losses} matching unmet request${p.losses === 1 ? '' : 's'} recorded (Days ${C.period.from}–${C.period.through})</small></div></div>`).join('');
   const outcome = C.leased === 0 ? 'None of these units currently produces contracted rent.'
     : `${C.leased} of ${C.total} units currently produce contracted rent.`;
-  return `<h3>Investment Check-in</h3><div class="note invest-progress"><p><b>Latest completed rental-unit group:</b> ${C.leased} of ${C.total} operating units leased · ${dollars(C.rent)}/mo contracted rent.</p><p>${outcome} Review matching demand and existing vacancies before building more.</p></div><div class="list">${rows}</div><p class="note">Recent recorded unmet requests are not total demand; zero recorded losses does not prove zero demand. Contracted monthly rent is not cash collected or profit.${C.daysObserved < 14 ? ' Demand observation history is limited.' : ''}</p>`;
+  const closed = C.notOpen ? ` ${C.notOpen} more unit${C.notOpen === 1 ? '' : 's'} from this build ${C.notOpen === 1 ? 'is' : 'are'} not open yet.` : '';
+  return `<h3>Investment Check-in</h3><div class="note invest-progress"><p><b>Latest completed rental-unit group:</b> ${C.leased} of ${C.total} operating units leased · ${dollars(C.rent)}/mo contracted rent.${closed}</p><p>${outcome} Review matching demand and existing vacancies before building more.</p></div><div class="list">${rows}</div><p class="note">Recent recorded unmet requests are not total demand; zero recorded losses does not prove zero demand. Contracted monthly rent is not cash collected or profit.${C.daysObserved < 14 ? ' Demand observation history is limited.' : ''}</p>`;
 }

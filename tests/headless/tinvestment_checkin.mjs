@@ -17,6 +17,11 @@ test('newest complete order used; incomplete newer order excluded',()=>{
  const sim=state();add(sim,901,40);add(sim,902,40);add(sim,903,41,'10x10','std','construction');
  const c=investmentCheckin(sim);assert.equal(c.order,40);assert.equal(c.total,2);assert.equal(c.leased,0);assert.equal(c.rent,0);
 });
+test('newest finished order shown even when one unit never opened; unopened unit counted, not hidden',()=>{
+ const sim=state();add(sim,901,40);add(sim,902,41);add(sim,903,41,'5x5','std','built');leased(sim,sim.s.objects[902],704,70);
+ const c=investmentCheckin(sim);assert.equal(c.order,41);assert.equal(c.total,1);assert.equal(c.notOpen,1);assert.equal(c.leased,1);assert.equal(c.rent,70);
+ assert.match(investmentCheckinHtml(sim),/1 more unit from this build is not open yet/);
+});
 test('active incomplete order excluded even when its units operating',()=>{
  const sim=state();add(sim,901,40);add(sim,902,41);sim.s.orders.push({id:41,st:'construction'});
  assert.equal(investmentCheckin(sim).order,40);
