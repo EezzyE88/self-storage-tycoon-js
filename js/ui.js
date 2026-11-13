@@ -10,7 +10,7 @@ import { PROJECTS, projectOffers, projectStatus, matchesProject } from './proper
 import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
 import { careerGoalPresentation } from './careerhud.js';
-import { businessProgressHtml } from './investmentprogress.js';
+import { businessProgressHtml, investmentCheckinHtml } from './investmentprogress.js';
 import { yardInfill } from './yardinfill.js';
 import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
 import { climateSuggestionText } from './climateavailability.js';
@@ -1979,6 +1979,7 @@ export class UI {
     }
     if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>${isComeback(s)?'Pacing':'Deadline'}</span><span>${isComeback(s)?`No deadline (${s.scenario.status})`:`Day ${s.scenario.deadline} (${s.scenario.status})`}</span></div>`; }
     h += this.yardInfillHtml();
+    h += investmentCheckinHtml(sim);
     const growthPlan = this.growthPlanArgs ? sim.plan(this.growthPlanArgs) : null;
     if (growthPlan && this.growthPlanArgs.rush && (s.coTier || 1) >= 2 && !sim.instantOn() && growthPlan.dur) {
       growthPlan.cost = Math.round(growthPlan.cost * 1.25); growthPlan.dur *= 0.5;
