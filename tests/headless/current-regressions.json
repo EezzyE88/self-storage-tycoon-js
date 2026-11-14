@@ -1720,6 +1720,10 @@
       {"id":"trn01_notice","command":["@node","tests/headless/trn01_notice.mjs"],"completion":"17\\ RN\\-01\\ focused\\ checks\\ passed","minimum_pass_lines":17,"timeout":120,"evidence":"native Sim rent notice, billing, customer response, delinquency/expiry, forecast, save/Pause, account independence","scope":"RN-01A–E isolated notice lifecycle; no rendered/browser/Safari or player acceptance claim"}
     ,
       {"id":"trn01_save","command":["@node","tests/headless/trn01_save.mjs"],"completion":"5\\ RN\\-01\\ production\\ save\\ checks\\ passed","minimum_pass_lines":5,"timeout":120,"evidence":"real game saveJSON, compressed and raw saveCode, prepareLoad/applyLoad with RN-01 notices, legacy optional fields, Pause and exact-once financial batch","scope":"production save migration and billing state for RN-01; native-only, no Safari or rendered device acceptance"}
+    ,
+      {"id":"tmg01_moveout","command":["@node","tests/headless/tmg01_moveout.mjs"],"completion":"11 MG-01 move-out focused checks passed","minimum_pass_lines":11,"timeout":120,"evidence":"native Sim make-ready jobs, Porter/Owner/vendor/delegation refusal, work report and Owner capacity, economy/RNG/Pause unchanged","scope":"MG-01 Move-Out Turnaround: genuine eligible jobs, one featured per five per property, exclusive Owner claim, leave/reload recovery, exactly-once completion; native only, no rendered/Safari claim"}
+    ,
+      {"id":"tmg01_save","command":["@node","tests/headless/tmg01_save.mjs"],"completion":"3 MG-01 production save checks passed","minimum_pass_lines":3,"timeout":120,"evidence":"real game saveJSON, raw and compressed saveCode, prepareLoad/applyLoad, two-property company, legacy save","scope":"production save handling for MG-01: in-progress claim released on load, single completion, per-property cadence; native only"}
     ],
     "historical": [
       {

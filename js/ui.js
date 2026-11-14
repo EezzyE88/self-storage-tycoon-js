@@ -28,6 +28,8 @@ import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './report
 import { guideFor } from './handbook.js';
 import { verticalLayout, verticalDone, verticalCheck, authoredPlacement } from './blueprint.js';
 import { expansionEvidence, cancellationBreakdown, served } from './vertical.js';
+import { moveOutCheck } from './moveout.js';
+import { playMoveOut } from './moveoutplay.js';
 import { layoutCaptions, edgePoint, CAPTION_PRIORITY as CP } from './captions.js';
 // Results of savearchive.keep(): older callers and test doubles may still return a plain boolean.
 const stored = (r) => r === true || !!(r && r.ok);
@@ -367,6 +369,7 @@ export class UI {
         if (act.type === 'cancelOrder') this.closeModal(); // the confirmed tap closes its dialog, restoring the previous speed
         const result = this.do(act, true); if (result.ok && ['loan', 'borrow'].includes(act.type) && this.sim.s.lesson?.id === 'financing') { this.do({ type: 'tutFlag', flag: 'finAck' }); this.sim.poll(); this.renderTut(true); } if (act.type === 'renovate') { this.sim.poll(); if (!this.sim.s.objects[this.sel]) { const nu = this.sim.objs('unit').filter((u) => u.id > act.unit).pop(); this.sel = nu ? nu.id : null; } } if (['commission', 'delegateTask', 'delegateTaskFor', 'ownerTask', 'ownerMakeReady', 'renovate', 'collect', 'policy', 'borrow', 'payoff', 'loan', 'repay', 'ad'].includes(act.type)) this.renderSheet(true); break; }
       case 'sel': this.select(+v, true); break;
+      case 'mg01': this.openMoveOut(+v); break;
       case 'convo': this.answerConversation(+el.dataset.id, +el.dataset.i); break;
       case 'accountList': this.accountListAll = !this.accountListAll; this.renderSheet(true); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
@@ -1533,7 +1536,7 @@ export class UI {
         if (o.cstate === 'ready') h += '<p class="note">Construction is complete. This unit becomes rent-ready automatically when time advances.</p>';
         const mr = s.tasks.find((t) => t.type === 'makeready' && t.obj === o.id);
         if (mr && !mr.assigned) { h += this.delegationHtml(mr); const row = sim.staffForTask(mr); if (row && sim.taskDelegation(mr)?.status !== 'available') h += this.cmdBtn('Queue Porter', { type: 'ownerTask', task: mr.id }, 'pri'); }
-        if (mr) { const mh = sim.taskHours(mr), ow = s.staff.find((x) => x.role === 'owner'), left = ow ? sim.workRemaining(ow) : 0; acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id, forceOwner: true })}' ${mh > left ? 'disabled' : ''}>Owner Make-Ready · ${mh}h</button>`); }
+        if (mr) { const mh = sim.taskHours(mr), ow = s.staff.find((x) => x.role === 'owner'), left = ow ? sim.workRemaining(ow) : 0; acts.push(mr.assigned ? `<span class="pill b">Make-ready ${mr.prog ? pct(mr.prog) : 'assigned'}</span>` : `<button class="btn pri ${this.tutFocus() && this.tutFocus().obj === o.id ? 'pulse' : ''}" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerMakeReady', unit: o.id, forceOwner: true })}' ${mh > left ? 'disabled' : ''}>Owner Make-Ready · ${mh}h</button>`); if (mr.mg01Featured) acts.push(this.moveOutButton(mr, '')); }
         for (const op of sim.renovateOptions ? sim.renovateOptions(o) : []) acts.push(op.ok ? `<button class="btn" data-a="cmd" data-cmd='${JSON.stringify({ type: 'renovate', unit: o.id, kind: op.kind })}'>${op.label} · ${money(op.cost)}</button>` : `<button class="btn" disabled title="${esc(op.why)}">${op.label} · ${esc(op.why)}</button>`);
         if (acts.length) h += `<div class="row wrap" style="margin-top:8px">${acts.join('')}</div>`;
         return this.sheet(nm, `${o.access === 'drive' ? 'Drive-up' : 'Interior'} ${o.size}`, h);
@@ -1693,10 +1696,11 @@ export class UI {
       const delegateSt = delegate && delegate.st;
       const who = t.assigned === 'vendor' ? 'Vendor booked' : t.assigned ? staffName(t.assigned) + (t.queued ? ' (queued)' : '') : t.unreachable ? 'Unreachable - check routes' : 'Unassigned';
       const loc = t.obj && s.objects[t.obj] ? s.objects[t.obj] : t.x != null ? t : null;
-      h += `<div class="item job"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small>${t.assigned ? `<p class="note">${esc(this.jobWait(t))}</p>` : ''}${!t.assigned ? this.delegationHtml(t) : ''}${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor') : ''}</div><div class="row wrap">
+      h += `<div class="item job"><div class="grow"><b>${t.pri >= 2 ? '<span class="pill r">Urgent</span> ' : ''}${t.mg01Featured && !t.assigned ? '<span class="pill g">Featured</span> ' : ''}${esc(t.label)}</b><small>${who}${t.prog ? ' · ' + pct(t.prog) : ''} · ${hrs}h work</small>${t.mg01Featured && !t.assigned && moveOutCheck(sim, t).ok ? '<p class="note">Optional: sweep and mop it yourself. The unit is rent-ready the moment it is clean.</p>' : ''}${t.assigned ? `<p class="note">${esc(this.jobWait(t))}</p>` : ''}${!t.assigned ? this.delegationHtml(t) : ''}${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? this.spendingHtml(t.need === 'repair_complex' ? 650 : 250, 0, 'after vendor') : ''}</div><div class="row wrap">
         ${loc ? `<button class="btn sm" data-a="focus" data-x="${loc.x}" data-y="${loc.y}">View</button>` : ''}
         ${!t.assigned && delegateSt && sim.taskDelegation(t)?.status !== 'available' ? `<button class="btn sm pri" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id })}'>Queue ${ROLES[delegateSt.role].name} · ${hrs}h</button>` : ''}
         ${!t.assigned && ownerCan ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'ownerTask', task: t.id, forceOwner: true })}' ${hrs > ownerLeft ? 'disabled' : ''}>Send Owner · ${hrs}h</button>` : ''}
+        ${t.type === 'makeready' ? this.moveOutButton(t) : ''}
         ${!t.assigned && (t.need === 'repair_complex' || t.need === 'repair_simple') ? `<button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'callVendor', task: t.id })}'>Vendor</button>` : ''}
         <button class="btn sm" data-a="cmd" data-cmd='${JSON.stringify({ type: 'taskPri', task: t.id, pri: t.pri >= 2 ? 0 : 2 })}'>${t.pri >= 2 ? 'Normal' : 'Urgent'}</button></div></div>`;
     }
@@ -2168,7 +2172,7 @@ export class UI {
       }
       case 'commissioned': if(e.automatic)this.toast(`${e.n} new unit${e.n===1?' is':'s are'} now rent-ready.${e.propertyOpen?' Available to rent.':' Property remains closed.'}`, 'good'); this.sfx('confirm'); break;
       case 'lease': { const u = s.objects[e.unit]; this.toast(`Lease signed: ${u ? u.name : 'unit'} at ${money(e.rent,true)}/mo · reserved for move-in`, 'good'); if(u&&s.yardLoop?.targets.some(t=>t.id===u.id))this.rend.highlightProject?.({x:u.x,y:u.y,w:u.w,h:u.h});this.sfx('lease'); break; }
-      case 'moveout': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'A unit'} moved out - needs make-ready`); break; }
+      case 'moveout': { const u = s.objects[e.unit], mr = u && s.tasks.find((t) => t.type === 'makeready' && t.obj === u.id); this.toast(`${u ? u.name : 'A unit'} moved out - needs make-ready${mr && mr.mg01Featured && moveOutCheck(this.sim, mr).ok ? '. Featured: clean it yourself from Operate → Jobs' : ''}`); break; }
       case 'fault': { const o = s.objects[e.obj]; if (!o && s.carts.some((c) => c.id === e.obj)) { this.toast('A cart was damaged - it needs repair'); break; } this.toast(`${o ? this.sim.objName(o) : 'Equipment'} has failed`, 'bad'); this.sfx('fault'); break; }
       case 'repaired': this.sfx('repair'); break;
       case 'rentready': { const u = s.objects[e.unit]; this.toast(`${u ? u.name : 'Unit'} is rent-ready`, 'good'); this.sfx('complete'); break; }
@@ -3185,6 +3189,33 @@ export class UI {
   verticalBarHtml() {
     const R=this.verticalQuote; if(!R) return '';
     return `<div class="actionbar vpreview"><div class="top"><div class="nm">Proposed F${R.f+1} · Building ${R.shell}<small>Preview only — not built · ${money(R.cost)} complete package</small></div></div><div class="bot"><button class="btn" data-a="verticalBack" data-qa="vp-back">Back to review</button><button class="btn pri" data-a="verticalConfirm" data-qa="vp-confirm" ${!this.sim.unlimited()&&this.sim.s.cash<R.cost?'disabled':''}>Confirm · ${money(R.cost)}</button><button class="btn" data-a="verticalCancel" data-qa="vp-discard">Discard preview</button></div></div>`;
+  }
+  // MG-01 Move-Out Turnaround: optional personal sweep-and-mop for one available make-ready job.
+  moveOutButton(t, size = 'sm') {
+    const c = moveOutCheck(this.sim, t); if (!c.ok && c.why !== 'hours') return '';
+    return `<button class="btn ${size} ${c.featured ? 'pri' : ''}" data-a="mg01" data-v="${t.id}" ${c.ok ? '' : 'disabled'}>Clean it yourself · ${this.sim.taskHours(t)}h</button>`;
+  }
+  openMoveOut(id) {
+    if (this.mg01 || this.title) return false;
+    const sim = this.sim, t = sim.s.tasks.find((x) => x.id === id);
+    if (!t || !moveOutCheck(sim, t).ok) { this.toast('This make-ready job is not available to clean yourself right now.', 'bad'); this.sfx('refuse'); return false; }
+    this.pauseForPopup('mg01');
+    const r = this.do({ type: 'mg01Start', task: id });
+    if (!r.ok) { this.resumePopup('mg01'); this.toast(r.msg, 'bad'); this.sfx('refuse'); return false; }
+    const u = sim.s.objects[r.unit], a = this.g.audio, token = r.token;
+    const session = this.mg01 = { sim, token, task: id, unit: r.unit };
+    session.play = playMoveOut({
+      unitName: u ? u.name : 'Unit', hours: sim.taskHours(t), audio: a && a.ctx && a.sfx ? { ctx: a.ctx, dest: a.sfx } : null,
+      onFinish: () => { const res = sim.dispatch({ type: 'mg01Finish', token }); if (res.ok) this.g.autosavePaused?.(); return res; },
+      onLeave: () => { sim.dispatch({ type: 'mg01Leave', token }); this.g.autosavePaused?.(); },
+      onClose: (fin) => {
+        if (this.mg01 === session) this.mg01 = null;
+        if (this.sim === sim) this.resumePopup('mg01');
+        this.toast(fin && fin.ok ? fin.msg : fin ? fin.msg || 'The job could not be completed.' : 'Make-ready returned to the work queue. No Owner hours used.', fin && fin.ok ? 'good' : fin ? 'bad' : '');
+        this.renderSheet(true);
+      },
+    });
+    return true;
   }
   modalOpen() { return !!this.$('modal').firstChild; }
   closeModal() { this.gateRemovalReview=null; this.acquisitionReview=null; this.creditReview=null; this.termLoanReview=null; this.transferReview=null; this.floorsOpen=false; if(this.verticalReview)this.endVerticalReview(); this.requestPanel=false; this.$('modal').innerHTML = ''; this.title = false; this.resumePopup('modal'); this.renderTut(true); }
