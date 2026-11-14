@@ -55,7 +55,7 @@ const pricingSeen = (sim) => !!sim.s.tut.flags.pricingSeen;
 // current step's text (not the beat body) on every screen, so the steps carry the short form as an {occupancy} token,
 // filled in by tutorialText() when the card is built (step texts stay plain strings).
 const occLine = (sim) => { const o = sim.occupancy(), vac = o.n - o.occ; return vac ? `<b>${o.occ} of ${o.n}</b> units are leased and <b>${vac}</b> ${vac === 1 ? 'is' : 'are'} vacant.` : `All <b>${o.n}</b> units are leased.`; };
-const pricingStory = (sim) => `${occLine(sim)} Prospects keep asking about space. Before you decide Maple Street needs more units, check what new customers pay.`;
+const pricingStory = (sim) => `${occLine(sim)} Before expanding, check what new customers would pay.`;
 // Act II (campaign Unit 5). Beat 6 explains the build status and "cash after" once a green preview is showing (Got it).
 // Beat 7 shows the failure as a queued job in Operate -> Jobs before it is assigned (at 4x a sent Owner finishes in about
 // a real second, so the queue is shown first). The UI records `jobsSeen` (read-only, like `pricingSeen`); the card gives the
@@ -219,60 +219,60 @@ function chapterBreak({ id, ...rest }) {
 export const BEATS = [
   // Act I "Take Over" (campaign Unit 4): beats 1-5, then the Act I chapter break.
   { id: 'welcome', act: 'I', chapter: 'Take Over', title: 'Welcome to Maple Street Storage',
-    body: 'You own a small, working self-storage property. Most units are rented. Time is <b>paused</b> until you start the clock, so explore freely. The clock controls are at the top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>.',
-    why: 'Everything on the map is real: customers drive in, open doors, use carts and pay rent. Each tutorial step tells you exactly where to tap.',
+    body: 'Welcome to Maple Street! You\'re in charge now. Time is <b>paused</b>, so take a look around. The clock is at the top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>.',
+    why: 'Customers visit the property, use carts and rent units. Follow the highlighted steps to get started.',
     steps: [
-      { t: 'Look around the property', d: '<b>Drag</b> to pan (two fingers on a phone). <b>Pinch</b> to zoom. The curved arrows rotate the view. On the right-hand rail, <b>EXT</b> shows the roofs and <b>F1</b> looks inside a building.', done: (sim, ui) => ui && ui.tutLooked },
-      { t: 'The clock (top left) is <b>paused</b>. Tap <b>Look around</b> when ready', d: 'Time stays paused until you start it. The clock controls are at the top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>. Then tap the yellow button below.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.welcome },
+      { t: 'Look around the property', d: '<b>Drag</b> to pan (two fingers on a phone) and <b>pinch</b> to zoom. On the right-hand rail, <b>EXT</b> shows roofs and <b>F1</b> looks inside.', done: (sim, ui) => ui && ui.tutLooked },
+      { t: 'The clock (top left) is <b>paused</b>. Tap <b>Look around</b> when ready', d: 'Time stays paused until you start it. Clock controls, top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>. Tap the yellow button below when you\'re ready.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.welcome },
     ],
     button: 'Look around', check: (sim) => sim.s.tut.flags.welcome },
   { id: 'makeready', act: 'I', chapter: 'Take Over', title: 'Turn over Unit 107',
-    body: 'A tenant moved out of Unit 107. It must be cleaned and checked (a <b>make-ready</b>) before it can rent again.',
-    why: 'Vacant units earn nothing until they are rent-ready. Make-ready is the most common job on a storage property.',
+    body: 'Unit 107 just became vacant. Let\'s get it ready for the next tenant.',
+    why: 'A <b>make-ready</b> cleans and checks a vacant unit so it can rent again. Vacant units earn nothing until they are rent-ready.',
     focus: (sim) => ({ obj: unitByRole(sim, 'mapleTurnover').id }),
     steps: [
-      { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin (the ring points at it). Tap the unit itself.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim, ui) => (ui && ui.sel === unitByRole(sim, 'mapleTurnover').id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
-      { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap the <b>Owner Make-Ready</b> button at the top. The Owner (you) walks over to do the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
-      { t: 'Start the clock: tap <b>1x</b>', d: 'At <b>1x</b>, a day takes <b>24 real seconds</b>; <b>2x</b> takes 12 seconds and <b>4x</b> takes 6. Tap <b>Pause</b> whenever you want to inspect or plan.', sel: PLAY, done: (sim) => running(sim) || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
-      { t: 'Watch the Owner finish', d: 'The Owner walks from the office to Unit 107. The pin fills as work progresses (about 2-3 game hours). Use <b>4x</b> to hurry.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
+      { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin. Follow the ring and tap the unit.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim, ui) => (ui && ui.sel === unitByRole(sim, 'mapleTurnover').id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap <b>Owner Make-Ready</b> at the top. The Owner (you) does the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Start the clock: tap <b>1x</b>', d: 'At <b>1x</b>, a day takes <b>24 real seconds</b>. Tap <b>Pause</b> whenever you want.', sel: PLAY, done: (sim) => running(sim) || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Watch the Owner finish', d: 'Watch the progress pin fill (about 2-3 game hours). Use <b>4x</b> if you\'d like to speed things up.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
     ],
     check: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
   { id: 'lease', act: 'I', chapter: 'Take Over', title: 'Rent-ready units can lease',
-    body: 'Unit 107 is on the market. A prospect is driving over to the office to rent it.',
-    why: 'Prospects compare your asking rent with the market. Price higher and fewer sign; price lower and you fill faster but earn less.',
+    body: 'Unit 107 is ready to rent. A customer is on the way!',
+    why: 'Customers compare your price with the market. Higher prices may mean fewer leases.',
     enter: (sim) => { const t = sim.s.t; const m = t % 1440; const at = m < 8.5 * 60 ? t - m + 8.5 * 60 : m > 17 * 60 ? t - m + 1440 + 8.5 * 60 : t + 45; sim.schedule({ kind: 'prospect', size: '5x10', climate: false, keen: true }, at); },
     steps: [
-      { t: 'Keep time running', d: 'If paused, tap <b>1x</b> or faster. The office opens at 8:30 AM.', sel: PLAY, done: (sim) => running(sim) || sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
-      { t: 'Watch for the prospect', d: 'A car enters through the gate at the bottom, parks by the <b>Office</b> (lower left) and the customer walks inside.', done: (sim) => sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
-      { t: 'They sign a lease', d: 'At the counter they pick a unit. A green <b>+$/mo</b> pop shows the new rent, and the feed on the right logs the lease.', done: (sim) => !!sim.s.milestones.first_lease_after_turnover },
+      { t: 'Keep time running', d: 'If paused, tap <b>1x</b>. The office opens at 8:30 AM.', sel: PLAY, done: (sim) => running(sim) || sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
+      { t: 'Watch the customer arrive', d: 'Look for a car parking by the <b>Office</b> (lower left).', done: (sim) => sim.s.agents.some((a) => a.kind === 'cust' && a.vt === 'prospect') || !!sim.s.milestones.first_lease_after_turnover },
+      { t: 'Watch the lease come in', d: 'Watch for the green <b>+$/mo</b> when the customer rents a unit.', done: (sim) => !!sim.s.milestones.first_lease_after_turnover },
     ],
     check: (sim) => !!sim.s.milestones.first_lease_after_turnover },
   { id: 'money', act: 'I', chapter: 'Take Over', title: 'Money without a spreadsheet',
-    body: 'Your first new lease is signed. Here\'s where to see how the business is doing.',
-    why: 'Rent bills <b>monthly</b> on each lease\'s anniversary, while operating costs accrue <b>daily at 7:00 AM</b> and settle weekly. A quiet week can look negative while the business is healthy - watch the <b>rent roll</b> and <b>occupancy</b>.',
+    body: 'Your new lease is in! Let\'s check how Maple Street is doing.',
+    why: 'Rent is billed <b>monthly</b>; costs build up <b>daily</b> and settle weekly. A quiet week can look negative while the business is healthy, so watch the <b>rent roll</b> and <b>occupancy</b>.',
     focus: () => ({ tab: 'business' }),
     steps: [
-      { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar (the bar-chart icon).', sel: TAB('business'), done: (sim, ui) => sim.s.tut.flags.businessOpened },
-      { t: 'Read the cards, then tap <b>Got it</b>', d: '<b>Rent roll</b> is monthly rent from all leases. <b>Occupancy</b> is the share of units leased. Choose <b>Statement</b> in the section selector for the last 30 days: rent in, costs out. Tap <b>Got it</b> on this card when done.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.moneyAck },
+      { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => sim.s.tut.flags.businessOpened },
+      { t: 'Check <b>Rent roll</b> and <b>Occupancy</b>', d: '<b>Rent roll</b> is monthly lease rent; <b>Occupancy</b> is the share of units leased. Tap <b>Got it</b> when ready.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.moneyAck },
     ],
     button: 'Got it', buttonWhen: (sim) => sim.s.tut.flags.businessOpened, flag: 'moneyAck',
     check: (sim) => sim.s.tut.flags.businessOpened && sim.s.tut.flags.moneyAck },
   // Beat 5: read-only Asking rents comprehension. No rent change is asked for or made; Got it needs Pricing seen.
   { id: 'pricing', act: 'I', chapter: 'Take Over', title: 'What should new tenants pay?',
     body: pricingStory,
-    why: 'Asking rent is what a <b>new lease</b> pays. Price higher and fewer prospects sign; price lower and units fill faster but earn less each month. Signed leases keep their rent.',
+    why: 'Asking rents affect <b>new leases</b> only. Higher prices can slow leasing; existing tenants keep their signed rent.',
     steps: [
-      { t: 'Open <b>Business</b>', d: '{occupancy} Before you add units, check what new tenants pay. Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || pricingSeen(sim) },
-      { t: 'Choose <b>Pricing</b>', d: '{occupancy} Before you add units, check what new tenants pay. In the Business panel, open the section selector at the top and choose <b>Pricing</b>. It shows your <b>Asking rents</b>.', sel: '.sheet [data-section-picker]', section: ['business', 'Asking rents', 'Pricing'], lbl: 'Choose Pricing', done: (sim, ui) => rentsShowing(ui) || pricingSeen(sim) },
-      { t: 'Asking rents apply to <b>future leases</b>', d: 'Each row is a unit size with your asking rent, the market rent and how many are vacant. Changing an asking rent only affects <b>leases signed after the change</b>. Tenants with signed leases keep their current rent. You don\'t need to change anything now. Tap <b>Got it</b> on this card when you\'re ready.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.pricingAck },
+      { t: 'Open <b>Business</b>', d: '{occupancy} Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || pricingSeen(sim) },
+      { t: 'Choose <b>Pricing</b>', d: '{occupancy} In Business, open the section selector and choose <b>Pricing</b>.', sel: '.sheet [data-section-picker]', section: ['business', 'Asking rents', 'Pricing'], lbl: 'Choose Pricing', done: (sim, ui) => rentsShowing(ui) || pricingSeen(sim) },
+      { t: 'Asking rents apply to <b>future leases</b>', d: 'Changing an asking rent affects only <b>future leases</b>. Tenants with signed leases keep their current rent. You don\'t need to change anything now; tap <b>Got it</b>.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.pricingAck },
     ],
     button: 'Got it', buttonWhen: pricingSeen, flag: 'pricingAck',
     check: (sim) => pricingSeen(sim) && !!sim.s.tut.flags.pricingAck },
   // Act I chapter break: paused, nothing authored pending. Continue releases held owner reviews (still paused); the next
   // act's first beat enters only after they are answered (or retired as stale).
   chapterBreak({ id: 'actI_break', act: 'I', chapter: 'Take Over', next: 'Act II · Stabilize', title: 'You have control of Maple Street',
-    body: 'The basics are working: units turn over, prospects sign leases, and rent comes in every month. <b>Maple Street is paused.</b> This is a good place to stop. Next, in <b>Act II · Stabilize</b>, demand keeps growing and you learn to grow without losing control of operations.',
-    why: 'What you learned in Act I: a vacant unit needs a make-ready before it can lease; work takes game time; <b>Pause</b> and the speeds run the clock; prospects become tenants by signing leases; leases bring in rent every month; cash alone doesn\'t show how the business is doing; and asking rents set what <b>future</b> leases pay.' }),
+    body: 'Nice work! You turned over a unit, watched it lease and checked your business. <b>Maple Street is paused.</b> This is a good place to stop. Continue when you\'re ready for <b>Act II · Stabilize</b>.',
+    why: 'What you learned: a vacant unit needs a make-ready before it can lease; work takes game time, and <b>Pause</b> and the speeds run the clock; signed leases bring in rent every month; cash alone doesn\'t show how the business is doing; and asking rents set what <b>future</b> leases pay.' }),
   // Act II "Stabilize" (campaign Unit 5): beats 6-8, then the Act II chapter break.
   { id: 'expand', act: 'II', chapter: 'Stabilize', title: 'Maple Street is full',
     body: 'Every unit is leased and prospects are still asking. Build a new row of drive-up units on the empty grass east of the main aisle.',
