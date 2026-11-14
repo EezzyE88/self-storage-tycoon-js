@@ -23,7 +23,7 @@ Source backup does not include personal or browser company saves.
 - Six never-run physical iPhone Safari cases (see [Current Status](CURRENT-STATUS.md)). Existing owner-reported iPhone results are not independently verified.
 - Novice comprehension, broader accessibility/performance and beta/release acceptance.
 - All historical qualification is source-specific.
-- Runtime v3 revision 5 is unchanged. The $0 budget and the save, economy and Pause protections remain.
+- The governing runtime is SST Project Runtime v3 revision 6 (adopted by Eddie November 14, 2026; supersedes revision 5, which is retained as historical evidence; the runtime text is kept in the project files governance/ folder, not in this repository). The $0 budget and the save, economy and Pause protections remain.
 
 **Historical boundary:** the November 5 and October 30 recovery ledgers follow verbatim. Their source, deploy and temporary-host references remain for traceability; do not mistake them for November 9 live status.
 

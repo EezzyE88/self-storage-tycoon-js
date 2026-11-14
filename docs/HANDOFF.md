@@ -28,7 +28,7 @@ Existing iPhone results for AG-01 Rev 1 (`7a98e3d`, same tree as master), IFM-01
 **Planning in progress:** Unit 7 Rev 1 (Act IV) is planning only. The decisions are D3 Option 2, P1 inspection-only and Beat 14 S2 returned-payment design direction. It is not implemented in master and not accepted. Separate implementation work must not be disturbed or described as integrated.
 
 **Governance:**
-- SST Project Runtime v3 revision 5 and its protected ENM are unchanged.
+- The governing runtime is SST Project Runtime v3 revision 6 (adopted by Eddie November 14, 2026; supersedes revision 5, which is retained as historical evidence; the runtime text is kept in the project files governance/ folder, not in this repository). Its protected ENM specification is unchanged.
 - Master Blueprint Option B and AM-01 Draft 0.2 remain accepted, and the Version 1.0 roadmap is unchanged.
 - D1 is unresolved. OT-01 and every other HOLD are unchanged. Beta/release acceptance remains HOLD.
 - The budget is $0.
