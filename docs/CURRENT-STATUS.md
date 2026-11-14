@@ -112,7 +112,7 @@ Any implementation work happens separately and is not described or qualified by 
 - OT-01 remains a planning HOLD.
 - AG-01 D1 (unopened-parcel eligibility) is unresolved.
 - The $100 observation stays PARKED.
-- The Version 1.0 roadmap and SST Project Runtime v3 revision 5 are unchanged.
+- The Version 1.0 roadmap is unchanged. The governing runtime is SST Project Runtime v3 revision 6 (adopted by Eddie November 14, 2026; supersedes revision 5, which is retained as historical evidence; the runtime text is kept in the project files governance/ folder, not in this repository).
 - Saves, manual Pause, the economy outside the authorized PR #38 change, and the $0 budget are protected.
 - Beta/release acceptance remains HOLD. This record changes no acceptance.
 

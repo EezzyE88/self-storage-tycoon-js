@@ -22,7 +22,7 @@
 **Deferred/protected:**
 - Master Blueprint Option B and AM-01 Draft 0.2 remain accepted. OT-01 is a planning HOLD. AG-01 D1 is unresolved.
 - HUD cash-today clarity remains a separate possible unit. The $100 observation stays PARKED.
-- The Version 1.0 roadmap and Runtime v3 revision 5 are unchanged.
+- The Version 1.0 roadmap is unchanged. The governing runtime is SST Project Runtime v3 revision 6 (adopted by Eddie November 14, 2026; supersedes revision 5, which is retained as historical evidence; the runtime text is kept in the project files governance/ folder, not in this repository).
 - Preserve the accepted construction, the economy outside the authorized PR #38 change, Pause, save compatibility, user-controlled timing and the $0 budget.
 - No beta/release acceptance is inferred.
 
