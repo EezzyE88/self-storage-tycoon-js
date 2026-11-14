@@ -23,6 +23,7 @@ import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, ou
 import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';
 import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
 import { ensureCustomerAccounts, customerHistory, returningAccount } from './customeraccounts.js';
+import { recoverMoveOut, noteMoveOutJob, moveOutClaimed, startMoveOut, leaveMoveOut, finishMoveOut } from './moveout.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -121,6 +122,7 @@ export class Sim {
     normalizeGateAccess(state);
     if (state.lessonOffer === 'financing') state.lessonOffer = null;
     this.rebuild();
+    recoverMoveOut(this);
   }
   // deterministic rng (mulberry32) stored in state
   rnd() {
@@ -1270,6 +1272,7 @@ export class Sim {
     const owner = s.staff.find((x) => x.role === 'owner'); const ag = owner && s.agents.find((g) => g.sid === owner.id);
     if (!ag) { this.emit('refuse'); return { ok: false, msg: 'The Owner needs an operating office first - call a vendor instead' }; }
     if (t.vendor) return { ok: false, msg: 'A vendor is already booked for this' };
+    if (moveOutClaimed(t)) return { ok: false, msg: 'The Owner is cleaning this unit now' };
     if (t.assigned && t.assigned !== owner.id) return { ok: false, msg: 'Already assigned to someone else' };
     // Asking again for work the Owner already holds succeeds without touching progress, queue, capacity or cost.
     if (ag.task === t.id) return { ok: true, already: true, msg: 'Owner is already on it' };
@@ -1326,6 +1329,7 @@ export class Sim {
   act_delegateTask(a) {
     const t = this.s.tasks.find(t => t.id === a.task);
     if (!t) return { ok: false, msg: 'Task gone' };
+    if (moveOutClaimed(t)) return { ok: false, msg: 'The Owner is cleaning this unit now' };
     const d = this.taskDelegation(t);
     if (!d || d.status !== 'available') return { ok: false, msg: d?.message || 'No staff role can handle this job' };
     const ag = this.s.agents.find(ag => ag.kind === 'staff' && ag.sid === d.staff);
@@ -1344,10 +1348,15 @@ export class Sim {
     return this.act_delegateTask({ task: (existing || this.ensureRepairTask(o)).id });
   }
   act_ownerMakeReady(a) { const t = this.s.tasks.find((x) => x.type === 'makeready' && x.obj === a.unit); if (!t) return { ok: false, msg: 'No make-ready needed' }; return this.act_ownerTask({ task: t.id, forceOwner: a.forceOwner }); }
+  // MG-01 Move-Out Turnaround: claim, leave and finish one make-ready job personally (js/moveout.js).
+  act_mg01Start(a) { return startMoveOut(this, a); }
+  act_mg01Leave(a) { return leaveMoveOut(this, a); }
+  act_mg01Finish(a) { return finishMoveOut(this, a); }
   act_taskPri(a) { const t = this.s.tasks.find((x) => x.id === a.task); if (t) t.pri = a.pri; return { ok: true }; }
   act_callVendor(a) {
     const s = this.s, t = s.tasks.find((x) => x.id === a.task); if (!t) return { ok: false };
     if (t.vendor) return { ok: false, msg: 'A vendor is already booked' };
+    if (moveOutClaimed(t)) return { ok: false, msg: 'The Owner is cleaning this unit now' };
     const cost = t.need === 'repair_complex' ? 650 : 250;
     if (!this.unlimited() && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     for (const ag of s.agents) { if (ag.task === t.id) { if (ag.cart) this.dropCart(ag); ag.task = null; ag.st = 'idle'; } if (ag.queue) ag.queue = ag.queue.filter((x) => x !== t.id); }
@@ -2222,7 +2231,8 @@ export class Sim {
     delete s.leases[L.id]; if (tn) { delete s.tenants[tn.id]; this.dropConvo('mo' + tn.id); } this.dropConvo('lien' + L.id); this.dropConvo('rate' + L.id);
     u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t; u.overlock = false;
     { const fc = this.unitFront(u)[0]; if (fc) s.dirt[u.f || 0][this.idx(fc.x, fc.y)] += 0.25; }
-    this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Make-ready ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) });
+    const mr = this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Make-ready ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) });
+    if (why !== 'auction') noteMoveOutJob(this, mr);
     s.today.moveouts++;
     this.emit('moveout', { unit: u.id });
   }
