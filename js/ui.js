@@ -9,6 +9,7 @@ import { applyBorrowSettle, operatingNet } from './borrowsettle.js';
 import { PROJECTS, projectOffers, projectStatus, matchesProject } from './propertyprojects.js';
 import { workingYard } from './workreport.js';
 import { careerEligibility } from './career.js';
+import { careerDriveOpportunity } from './careeropportunity.js';
 import { careerGoalPresentation } from './careerhud.js';
 import { businessProgressHtml, investmentCheckinHtml } from './investmentprogress.js';
 import { yardInfill } from './yardinfill.js';
@@ -429,6 +430,7 @@ export class UI {
       case 'reserveReview': this.reviewReserveWait(); break;
       case 'reservePreview': if(this.reserveResult)this.previewYardOpportunity(null,this.reserveResult); break;
       case 'reserveStop': this.reserveWait?.stop('You stopped waiting.'); break;
+      case 'careerDrivePreview': this.previewCareerDriveOpportunity(); break;
       case 'yardOpportunity': this.previewYardOpportunity(v); break;
       case 'yardUnit': { const u=this.sim.s.objects[+v]; if(u?.type==='unit'){this.setTab(null);this.select(null);this.setView(u.access==='drive'?'ext':u.f||0);this.rend.lookAt(u.x+u.w/2,u.y+u.h/2);this.select(u.id);}break; }
       case 'yardPrices': this.setTab('business',true); this.jumpSection('Asking rents'); break;
@@ -779,6 +781,30 @@ export class UI {
     if(r.kind==='financial'){this.showFinances();return;}
     this.setTab(r.kind==='work'?'operate':'growth',true);
     this.jumpSection(r.kind==='work'?'Work queue':'Your next improvement');
+  }
+  previewCareerDriveOpportunity() {
+    // Recompute against the active property at click time; the visible card is never authority.
+    const c = careerDriveOpportunity(this.sim, this.g.company);
+    if (!c || !toolUnlocked(this.sim, c.args.tool)) {
+      this.toast('That opportunity changed. Review Growth again.', 'bad');
+      this.renderSheet(true);
+      return false;
+    }
+    this.pauseForPopup('review');
+    this.setTab(null); this.select(null); this.setView('ext');
+    this.pickTool(c.args.tool); this.flip = false; this.climate = false; this.rush = false;
+    this.buildRotation = null;
+    this.upgradeOptions = {lighting:'none',outsideCameras:false,excludedFixtures:[]};
+    this.planArgs = structuredClone({a:c.args.a,b:c.args.b,axis:c.args.axis});
+    this.replan();
+    const p = this.plan;
+    if (!p || p.status !== 'valid' || p.warn?.length || p.missing?.length || p.creates?.length !== 1) {
+      this.toast('The construction placement changed. Review the site again.', 'bad');
+      return false;
+    }
+    const u = p.creates[0];
+    this.rend.lookAt(u.x+u.w/2,u.y+u.h/2); this.frameOutline();
+    return true;
   }
   previewYardOpportunity(size, args=null) {
     const c=args?reserveQuote(this.sim,args):yardChoices(this.sim).find(c=>c.size===size);
@@ -1984,6 +2010,12 @@ export class UI {
       h += `<h3>Open for business</h3>${iss.length ? `<div class="miss"><b>Before you can open</b><ul>${iss.map((m) => `<li>${esc(m)} ${fix(m)}</li>`).join('')}</ul></div>` : '<p class="note">Everything needed is in place.</p>'}<button class="btn go" data-a="cmd" data-cmd='${JSON.stringify({ type: 'open' })}' ${iss.length ? 'disabled' : ''}>Open property</button>`;
     }
     if (s.scenario) { const prog = scenarioProgress(sim); h += `<h3>Scenario goals · ${esc(s.scenario.name)}</h3><div class="kv">${prog.map((g) => `<span>${g.met ? '&#10003; ' : ''}${esc(g.label)}</span><span>${this.fmtGoal(g, g.cur)}</span>`).join('')}<span>${isComeback(s)?'Pacing':'Deadline'}</span><span>${isComeback(s)?`No deadline (${s.scenario.status})`:`Day ${s.scenario.deadline} (${s.scenario.status})`}</span></div>`; }
+    // Optional, derived Career-only expansion choice; no saved missions or automatic build.
+    const careerOffer = careerDriveOpportunity(sim, this.g.company);
+    if (careerOffer) {
+      const o = careerOffer, e = o.evidence, p = o.position;
+      h += `<h3>Business Opportunity</h3><section class="yard-loop"><b>Investigate one ${esc(o.size)} standard drive-up unit</b><p class="note">${e.matchingLosses} matching availability losses observed (Days ${e.period.start}–${e.period.end}). Existing matching inventory checked. Requests are not guaranteed leases.</p><p class="note">Build ${money(o.plan.cost)} · added operating costs ${money(o.daily,true)}/day · available after bills and reserve ${money(p.available,true)}. Affordability does not establish payback.</p><button class="btn" data-a="careerDrivePreview">Explore build</button><p class="note">Optional. You can keep operating or build something else.</p></section>`;
+    }
     h += this.yardInfillHtml();
     h += investmentCheckinHtml(sim);
     const growthPlan = this.growthPlanArgs ? sim.plan(this.growthPlanArgs) : null;
