@@ -323,6 +323,7 @@ export class UI {
       case 'goTool': if (TOOLS[v]) { this.select(null); this.cat = TOOLS[v].cat; this.setTab('build'); this.pickTool(v); } break; // opening checklist shortcuts
       case 'cancelTool': this.pickTool(null); break;
       case 'placementPeek': this.placementPeek = !this.placementPeek; this.renderActionBar(); this.sfx('click'); break;
+      case 'recoDetails': this.recoCompact = false; this.renderActionBar(); this.sfx('click'); break;
       case 'confirm': this.confirmPlan(); break;
       case 'returnGrowthProposal': this.returnGrowthProposal(); break;
       case 'rotateBuild': this.rotateBuild(); break;
@@ -796,14 +797,14 @@ export class UI {
     this.buildRotation = null;
     this.upgradeOptions = {lighting:'none',outsideCameras:false,excludedFixtures:[]};
     this.planArgs = structuredClone({a:c.args.a,b:c.args.b,axis:c.args.axis});
-    this.replan();
+    this.recoCompact = true; this.replan();
     const p = this.plan;
     if (!p || p.status !== 'valid' || p.warn?.length || p.missing?.length || p.creates?.length !== 1) {
       this.toast('The construction placement changed. Review the site again.', 'bad');
       return false;
     }
     const u = p.creates[0];
-    this.rend.lookAt(u.x+u.w/2,u.y+u.h/2); this.frameOutline();
+    this.rend.lookAt(u.x+u.w/2,u.y+u.h/2); this.frameRecommendation();
     return true;
   }
   previewYardOpportunity(size, args=null) {
@@ -812,8 +813,8 @@ export class UI {
     this.pauseForPopup('review');this.scMin=true;this.renderTut(true);this.setTab(null);this.select(null);
     this.setView(c.args.f||'ext');this.pickTool(c.args.tool);this.upgradeOptions={lighting:c.args.lighting||'none',outsideCameras:!!c.args.outsideCameras,excludedFixtures:c.args.excludedFixtures||[]};this.flip=!!c.args.flip;this.climate=!!c.args.climate;this.rush=!!c.args.rush;
     this.buildRotation=c.args.rotation??null;
-    this.planArgs=structuredClone({a:c.args.a,b:c.args.b,axis:c.args.axis,dir:c.args.dir});this.replan();
-    const u=this.plan?.creates?.[0];if(u){this.rend.lookAt(u.x+u.w/2,u.y+u.h/2);this.frameOutline();}
+    this.planArgs=structuredClone({a:c.args.a,b:c.args.b,axis:c.args.axis,dir:c.args.dir});this.recoCompact=true;this.replan();
+    const u=this.plan?.creates?.[0];if(u){this.rend.lookAt(u.x+u.w/2,u.y+u.h/2);this.frameRecommendation();}
     return true;
   }
   yardLoopHtml() {
@@ -1054,7 +1055,7 @@ export class UI {
     // within the camera bounds. This explicit preview brings the gate into view.
     if(this.rend.zoom<1.5)this.rend.zoomBy?.(1.5/this.rend.zoom);
     this.rend.lookAt(a.a.x,a.a.y);
-    this.planArgs={a:{...a.a},b:{...a.b}};this.replan();
+    this.planArgs={a:{...a.a},b:{...a.b}};this.recoCompact=true;this.replan();this.frameRecommendation();
     return true;
   }
   pickTool(k) {
@@ -1072,7 +1073,7 @@ export class UI {
       this.pauseForPopup('sandboxBuild'); this.notePause(0);
     }
     if (!k) this.resumePopup('sandboxBuild');
-    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.placementPeek = false; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
+    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
   }
@@ -1145,13 +1146,13 @@ export class UI {
   placeStart(cell) {
     if (!this.tool || !cell) return;
     const door = this.lessonDoorTarget(cell), target = door?.a || cell;
-    this.placementPeek = false; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]};
+    this.placementPeek = false; this.recoCompact = false; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]};
     this.buildPlacing = true; this.root?.classList.add('is-placing');
     this.planArgs = { a: { ...target }, b: { ...target }, dir: door?.dir };
     this.replan(); this.sfx('place');
   }
   finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.renderActionBar(); }
-  cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.rend.setPreview(null); this.renderActionBar(); }
+  cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.rend.setPreview(null); this.renderActionBar(); }
   placeMove(cell) {
     if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { const door = this.lessonDoorTarget(cell); this.planArgs.a = this.planArgs.b = { ...(door?.a || cell) }; this.planArgs.dir = door?.dir; this.replan(); return; }
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
@@ -1217,7 +1218,7 @@ export class UI {
     if (r.ok) this.g.autosavePaused?.();
     if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
     if(r.ok&&(finishesWait||finishesResult)){this.reserveResult=null;this.reserveNotice=null;this.renderTut(true);}
-    if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
+    if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); this.replan(); }
     if (r.ok && lessonBuild) {
       this.lessonBuild = lessonBuild;
@@ -1304,12 +1305,14 @@ export class UI {
       box.innerHTML = `<div class="actionbar unit-review peek-review${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${peekState} · show review to confirm</small></div><button class="btn sm peek-toggle" data-a="placementPeek">Show review</button><button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div></div>`;
       return;
     }
-    box.innerHTML = `<div class="actionbar${isUnit?' unit-review':''}${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div>${isUnit?'<button class="btn sm peek-toggle" data-a="placementPeek">Peek</button>':''}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
+    const reco = !!this.recoCompact;
+    box.innerHTML = `<div class="actionbar${isUnit?' unit-review':''}${reco?' reco-review':''}${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div>${isUnit?'<button class="btn sm peek-toggle" data-a="placementPeek">Peek</button>':''}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
       ${commitment}<div class="bot">
       ${this.rotationHtml()}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
       ${isInterior ? `<button class="btn sm ${this.climate ? 'pri' : ''}" data-a="climate">Climate ${this.climate ? 'on' : 'off'}</button>` : ''}
       ${this.tool==='demolish'?'<button class="btn" data-a="cancelTool">Cancel review</button>':''}
+      ${reco?'<button class="btn sm reco-details" data-a="recoDetails">Details</button>':''}
       <button class="btn pri" data-a="confirm" ${!R || R.status === 'invalid' || (R.cost && !this.sim.unlimited() && this.sim.s.cash < R.cost) || (this.sim.s.tut && this.sim.s.tut.on && (curBeat(this.sim) || {}).id === 'expand' && R.status !== 'valid') ? 'disabled' : ''}>Confirm</button></div></div>`;
   }
 
@@ -1369,6 +1372,24 @@ export class UI {
     return Number.isFinite(b.left+b.right+b.top+b.bottom) &&
       b.left>=r.left+margin-.01 && b.right<=r.right-margin+.01 &&
       b.top>=r.top+margin-.01 && b.bottom<=r.bottom-margin+.01;
+  }
+  // Recommendation previews only (Growth opportunity, yard opportunity, first gate, two-floor lesson): fit the suggested
+  // build into the map area the review leaves uncovered, now and once more after the panels settle, unless the player
+  // has moved the camera in between. Ordinary placement and the player's own camera are never reframed.
+  frameRecommendation(outline = false) {
+    if (typeof innerWidth === 'undefined' || typeof this.$ !== 'function' || !this.$('tabs')?.getBoundingClientRect || !this.rend?.project) return false; // headless
+    const R = this.rend, fit = () => outline ? this.frameOutline() : this.framePlacementReview();
+    const cam = () => JSON.stringify([R.center?.x, R.center?.z, R.zoom, R.rot, R.view]), key = () => JSON.stringify([this.tool, this.plan?.args]);
+    if (this.pointerBusy) return false;
+    fit();
+    const seenCam = cam(), seenKey = key();
+    clearTimeout(this.recoFrameTimer);
+    this.recoFrameTimer = setTimeout(() => {
+      this.recoFrameTimer = null;
+      if (this.pointerBusy || this.title || this.modalOpen() || !this.tool || !this.plan || this.buildPlacing || key() !== seenKey || cam() !== seenCam) return;
+      fit();
+    }, 260); // after the review's 0.2 s entry animation and the lesson card's collapse
+    return true;
   }
   syncControlLayout() {
     if (!this.root?.style || typeof innerWidth === 'undefined') return;
@@ -2402,7 +2423,9 @@ export class UI {
     // Act II keeps the player's camera: the floor changes only when the armed floor is wrong; no pan, zoom or framing.
     const keep=this.tutKeepsCamera();
     if(!keep||this.toolFloor()!==(a.f||0)) this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=!!a.climate;
-    this.planArgs={a:{...a.a},b:{...a.b},axis:a.axis,dir:a.dir}; this.replan(); if(!keep) this.showBlueprintTarget();
+    // Two-floor lesson on a phone: the review starts compact and the outline is refit once the panels settle.
+    const up=!keep&&this.sim.s.lesson?.id==='up'; this.recoCompact=up;
+    this.planArgs={a:{...a.a},b:{...a.b},axis:a.axis,dir:a.dir}; this.replan(); if(!keep) this.showBlueprintTarget(); if(up) this.frameRecommendation(true);
   }
   showBlueprintTarget() {
     const a=this.currentBlueprintPlan(); if(!a) return;
