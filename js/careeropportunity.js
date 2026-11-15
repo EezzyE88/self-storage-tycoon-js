@@ -16,7 +16,13 @@ export function careerDriveEligible(sim, company) {
   if (s.mode === 'tutorial') return !!s.tut?.done;
   // Acquired parcels and operating facilities are plain sandbox states with no stand-alone
   // sandbox settings. (Acquired operating facilities always carry s.mirror true/false.)
-  return company.active > 0 && s.mode === 'sandbox' && !s.sb;
+  // They belong to the Career only when the company began as graduated Maple Street:
+  // acquisitions inside a Business/Free Build sandbox or a scenario game stay out of Rev 1.
+  return company.active > 0 && s.mode === 'sandbox' && !s.sb && careerRoot(company);
+}
+function careerRoot(company) {
+  const r = company.props[0]?.sim?.s;
+  return !!r && r.mode === 'tutorial' && !!r.tut?.done && !r.creative && !r.scenario && !r.sb;
 }
 
 function reachable(sim, plan) {

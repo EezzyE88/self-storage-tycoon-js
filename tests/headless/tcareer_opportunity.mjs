@@ -150,4 +150,27 @@ const g=ctx.game;g.attach=function(sim){this.sim=sim;installTutorial(sim)};g.ui=
   assert.deepEqual(JSON.parse(JSON.stringify(a.s)),JSON.parse(JSON.stringify(b.s)),'exact state parity');
   ok(`10-day economy/RNG parity with ${shown} Growth renders showing the card`);
 }
+// 9. Career scope: acquisitions are eligible only when the company began as graduated Maple Street.
+{
+  const roots={career:graduated(),business:makeSandbox({kind:'business',market:'urban',cash:0}),starter:makeSandbox({kind:'business',start:'starter',cash:0}),
+    free:makeSandbox({kind:'free',cash:0}),comeback:makeScenario('comeback'),comebackWon:makeScenario('comeback')};
+  roots.comebackWon.s.scenario.status='won';roots.comebackWon.s.scenario.acknowledged=true;
+  const seen={};
+  for(const [k,root] of Object.entries(roots)){
+    root.s.cash=1e6;g.sim=root;g.company={props:[{name:'Root '+k,sim:root}],active:0,feed:[]};
+    assert.ok(g.acquire('parcel','blank').ok,k+' parcel');assert.ok(g.acquire('facility','maple').ok,k+' facility');
+    const [,parcel,fac]=g.company.props.map(p=>p.sim);parcel.s.open=true;
+    seen[k]=[1,2].map(i=>careerDriveEligible(g.company.props[i].sim,{...g.company,active:i}));
+    assert.equal(careerDriveEligible(root,g.company),k==='career','root property itself: only graduated Maple');
+  }
+  assert.deepEqual(seen.career,[true,true],'graduated Maple company: acquired parcel and facility eligible');
+  for(const k of ['business','starter','free','comeback','comebackWon'])assert.deepEqual(seen[k],[false,false],k+' company: acquisitions excluded');
+  // Same naturally-run acquired facility: an offer under a Career company, none under a sandbox company.
+  const fac=g.buildFacility(maple,[{name:'Maple Street Storage',sim:maple}]);
+  const career={props:[{sim:maple},{sim:fac}],active:1},sandbox={props:[{sim:roots.business},{sim:fac}],active:1};
+  let yes=null,days=0;for(;days<90&&!yes;days++){run(fac,1);yes=careerDriveOpportunity(fac,career);}assert.ok(yes,'natural facility offer under Career company');assert.equal(fac.plan(yes.args).status,'valid');
+  const b=JSON.stringify(fac.s);assert.equal(careerDriveOpportunity(fac,sandbox),null,'same facility under sandbox company: no offer');assert.equal(JSON.stringify(fac.s),b);
+  const {u}=uiFor(fac,sandbox);u.growthSheet();assert.doesNotMatch(u.growthSheet(),/Business Opportunity/);assert.equal(u.previewCareerDriveOpportunity(),false);assert.ok(!u.tool);
+  ok(`Career scope: graduated Maple acquisitions eligible; Business/starter/Free Build/Comeback company acquisitions excluded; natural facility offer (${yes.size} after ${days} days) shown only under Career`);
+}
 console.log(`${passed} Career Business Opportunities checks passed`);
