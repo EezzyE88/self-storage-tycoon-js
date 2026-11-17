@@ -1262,6 +1262,19 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui.tut-review-compact .unit-review .nm > small,
 #ui.tut-review-compact .unit-review .spend-more,
 #ui.tut-review-compact .unit-review .build-authorization { display:none; }
+/* A review opened from a recommendation starts compact on a phone held upright, so the suggested footprint and its
+   surroundings stay visible above it. Nothing is removed: Details shows the full review, Peek and the camera are unchanged. */
+#ui .reco-details { display:none; }
+@media (max-width:700px) and (orientation:portrait) {
+  #ui .actionbar.reco-review .reco-details { display:inline-flex; }
+  #ui .actionbar.reco-review .nm > small,
+  #ui .actionbar.reco-review .build-details,
+  #ui .actionbar.reco-review .spend-more,
+  #ui .actionbar.reco-review .build-authorization,
+  #ui .actionbar.reco-review .refund-note { display:none; }
+  /* The two-floor lesson's compact review: the plan already is the suggestion, so its button would only repeat it. */
+  #ui .actionbar.reco-review .suggest-match { display:none; }
+}
 
 /* Both ends of an automatic decision pause inherit the same pulse phase. */
 @property --decision-ring {
