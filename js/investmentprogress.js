@@ -2,6 +2,8 @@
 // Never saved, never written to sim state. Construction stamps each created object with `order`
 // (sim.js commit, vertical.js); authored starting units have none. Only operating units count,
 // the same base as HUD occupancy. Contracted monthly rent is not cash collected or profit.
+import { unitStatus } from './status.js';
+
 const dollars = (v) => '$' + Math.round(v).toLocaleString('en-US');
 
 export function investmentProgress(sim) {
@@ -49,6 +51,22 @@ export function businessProgressHtml(sim, career = null) {
     + `<p>${STATEMENT_POINTER}</p></div>`;
 }
 
+function driveUpStatus(sim, unit) {
+  const lease = sim.s.leases[unit.lease];
+  if (lease?.unit === unit.id) {
+    const dated = Number.isInteger(lease.start) && lease.start > 0 && lease.start <= sim.day;
+    const status = dated ? `Current lease signed Day ${lease.start}` : 'Leased';
+    const pending = unit.commercial === 'reserved' ? ' · Move-in pending' : '';
+    return status + pending + (unit.blocked ? ' · Access blocked' : '');
+  }
+  if (unit.retrofitOrder) return 'Vacant, upgrade in progress';
+  const state = unitStatus(unit);
+  if (state === 'blocked' || state === 'handover') return 'Vacant, access blocked';
+  if (state === 'turnover') return 'Vacant, needs make-ready';
+  if (!sim.s.open) return 'Vacant, property closed';
+  return state === 'available' ? 'Rent-ready, vacant' : 'Vacant, unavailable';
+}
+
 // Post-investment check-in: computed only from the selected property's live state.
 // Completed rental-unit orders retain object.order even after their order record is pruned.
 // Recent availability losses are observations, NOT all customer demand or caused leases.
@@ -81,10 +99,16 @@ export function investmentCheckin(sim) {
     if (products.has(key)) products.get(key).losses++;
   }
   const rows = [...products.values()].sort((a, b) => a.size.localeCompare(b.size) || a.env.localeCompare(b.env));
+  const [unit] = all;
+  const footprint = sim.s.orders.find(o => o.id === order)?.cells?.length;
+  // Use the original footprint when the order still exists so a partly removed row doesn't qualify.
+  const singleDrive = all.length === 1 && unit.access === 'drive' && unit.env === 'std' &&
+    Number.isInteger(unit.num) && (!footprint || footprint === unit.w * unit.h);
   return { order, total: members.length, notOpen: all.length - members.length, leased: rows.reduce((n, p) => n + p.leased, 0),
     rent: rows.reduce((n, p) => n + p.rent, 0), products: rows,
     period: { from: firstDay, through: lastDay },
-    daysObserved: Math.min(30, Math.max(0, sim.day - sim.s.finance.observedFrom)) };
+    daysObserved: Math.min(30, Math.max(0, sim.day - sim.s.finance.observedFrom)),
+    unitStatus: singleDrive ? { number: unit.num, text: driveUpStatus(sim, unit) } : null };
 }
 
 export function investmentCheckinHtml(sim) {
@@ -95,5 +119,6 @@ export function investmentCheckinHtml(sim) {
   const outcome = C.leased === 0 ? 'None of these units currently produces contracted rent.'
     : `${C.leased} of ${C.total} units currently produce contracted rent.`;
   const closed = C.notOpen ? ` ${C.notOpen} more unit${C.notOpen === 1 ? '' : 's'} from this build ${C.notOpen === 1 ? 'is' : 'are'} not open yet.` : '';
-  return `<h3>Investment Check-in</h3><div class="note invest-progress"><p><b>Latest completed rental-unit group:</b> ${C.leased} of ${C.total} operating units leased · ${dollars(C.rent)}/mo contracted rent.${closed}</p><p>${outcome} Review matching demand and existing vacancies before building more.</p></div><div class="list">${rows}</div><p class="note">Recent recorded unmet requests are not total demand; zero recorded losses does not prove zero demand. Contracted monthly rent is not cash collected or profit.${C.daysObserved < 14 ? ' Demand observation history is limited.' : ''}</p>`;
+  const unitStatus = C.unitStatus ? `<p><b>Unit ${C.unitStatus.number}</b> · ${C.unitStatus.text}</p>` : '';
+  return `<h3>Investment Check-in</h3><div class="note invest-progress"><p><b>Latest completed rental-unit group:</b> ${C.leased} of ${C.total} operating units leased · ${dollars(C.rent)}/mo contracted rent.${closed}</p>${unitStatus}<p>${outcome} Review matching demand and existing vacancies before building more.</p></div><div class="list">${rows}</div><p class="note">Recent recorded unmet requests are not total demand; zero recorded losses does not prove zero demand. Contracted monthly rent is not cash collected or profit.${C.daysObserved < 14 ? ' Demand observation history is limited.' : ''}</p>`;
 }
