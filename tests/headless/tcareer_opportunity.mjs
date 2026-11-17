@@ -173,4 +173,30 @@ const g=ctx.game;g.attach=function(sim){this.sim=sim;installTutorial(sim)};g.ui=
   const {u}=uiFor(fac,sandbox);u.growthSheet();assert.doesNotMatch(u.growthSheet(),/Business Opportunity/);assert.equal(u.previewCareerDriveOpportunity(),false);assert.ok(!u.tool);
   ok(`Career scope: graduated Maple acquisitions eligible; Business/starter/Free Build/Comeback company acquisitions excluded; natural facility offer (${yes.size} after ${days} days) shown only under Career`);
 }
+// 10. D2: unaffordable offers stay visible with a clear negative-funds warning; Confirm affordability checks unchanged.
+{
+  const sim=graduated(),co=solo(sim);let d=0;for(;d<40&&!careerDriveOpportunity(sim,co);d++)run(sim,1);
+  const o=careerDriveOpportunity(sim,co);assert.ok(o,'offer for D2 check');const played=sim.s.cash,cost=o.plan.cost;
+  const {u,boxes}=uiFor(sim,co);sim.s.speed=0;u.growthSheet();
+  const card=()=>(u.growthSheet().match(/<h3>Business Opportunity<\/h3>.*?<\/section>/s)||[])[0]||null;
+  const WARN=/<div class="miss"><b>Funds after bills and reserve would be negative<\/b><br>After this build, bills and reserve, you would be short \$([\d,.]+)\. Confirm still checks that you have enough cash\.<\/div><button class="btn" data-a="careerDrivePreview">/;
+  const rows=[];
+  for(const [label,cash] of [['as played',played],['available -$1.00',played-o.position.available-1],['cash below cost',cost-1],['cash 0',0]]){
+    sim.s.cash=cash;const c=careerDriveOpportunity(sim,co);assert.ok(c,label+': card stays offered');
+    const b=JSON.stringify(sim.s),h=card();assert.ok(h,label+': card visible');assert.equal(JSON.stringify(sim.s),b,label+': render read-only');assert.equal(sim.s.speed,0,label+': manual Pause kept');
+    const m=h.match(WARN),neg=c.position.available<0;
+    if(neg){assert.ok(m,label+': warning shown');assert.equal(m[1],Math.abs(c.position.available).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),label+': shortfall amount');}
+    else assert.doesNotMatch(h,/Funds after bills and reserve would be negative/,label+': no warning when available >= 0');
+    assert.equal(u.previewCareerDriveOpportunity(),true,label+': Explore build still opens');
+    const a=boxes.abar.innerHTML,dis=/data-a="confirm"[^>]*disabled/.test(a),short=/Not enough cash/.test(a),fund=/fundingReview/.test(a);
+    if(cash>=cost){assert.equal(dis,false,label+': Confirm enabled when cash covers cost');assert.equal(short,false);}
+    else{assert.equal(dis,true,label+': Confirm disabled when cash short');assert.equal(short,true,label+': Not enough cash shown');}
+    if(neg)assert.equal(fund,true,label+': funding review offered');
+    rows.push(`${label} ${neg?'warn':'none'} confirm ${dis?'off':'on'}`);
+    u.pickTool(null);sim.s.speed=0;
+  }
+  assert.equal(careerDriveOpportunity(sim,co).size,o.size,'D3 size unchanged by cash');
+  sim.s.cash=played;
+  ok(`D2 negative-funds warning: ${rows.join('; ')}`);
+}
 console.log(`${passed} Career Business Opportunities checks passed`);
