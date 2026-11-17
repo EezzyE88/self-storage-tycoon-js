@@ -50,9 +50,10 @@ function compactReview(u,{peek}){
   tap(u,'recoDetails');assert.equal(u.recoCompact,false);assert.doesNotMatch(abar(u),/reco-review|recoDetails/,'Details shows the ordinary full review');
   assert.match(abar(u),/data-a="placementPeek"/);
   tap(u,'placementPeek');assert.match(abar(u),/peek-review/,'Peek still works');tap(u,'placementPeek');
-  tap(u,'cancelTool');assert.equal(u.tool,null);assert.equal(u.recoCompact,false);
+  assert.equal(u.recoActive(),true,'the recommended spot stays marked through Details and Peek');
+  tap(u,'cancelTool');assert.equal(u.tool,null);assert.equal(u.recoCompact,false);assert.equal(u.recoActive(),false,'Cancel clears the marked spot');
   assert.equal(JSON.stringify(sim.s),before,'preview, Details, Peek and Cancel leave the save untouched');
-  tap(u,'careerDrivePreview');assert.equal(u.recoCompact,true);u.placeStart(u.plan.creates[0]);assert.equal(u.recoCompact,false,'a manual placement is an ordinary review');
+  tap(u,'careerDrivePreview');assert.equal(u.recoCompact,true);u.placeStart(u.plan.creates[0]);assert.equal(u.recoCompact,false,'a manual placement is an ordinary review');assert.equal(u.recoActive(),false,'a manual placement is not captioned as the recommendation');
   u.buildPlacing=false;u.cancelPlacement();
   tap(u,'careerDrivePreview');const cash=sim.s.cash,cost=u.plan.cost;tap(u,'confirm');
   assert.equal(sim.s.cash,cash-cost,'Confirm spends exactly the quoted cost');assert.equal(u.recoCompact,false);assert.equal(sim.s.speed,0,'manual Pause kept');
@@ -90,7 +91,10 @@ function compactReview(u,{peek}){
   tap(u,'suggestPlacement');assert.ok(u.tool&&u.plan,'suggested shell review open');assert.equal(u.plan.args.tool,'shell2');
   assert.equal(u.recoCompact,true);assert.equal(frames(),1,'refit requested once');compactReview(u,{peek:false});
   assert.match(abar(u),/data-a="suggestPlacement"/,'lesson recovery action kept');
+  assert.match(abar(u),/class="btn sm suggest-match" data-a="suggestPlacement"/,'compact review marks the button that would only repeat the plan');
+  assert.equal(u.recoActive(),true,'suggested spot remembered');
   tap(u,'recoDetails');assert.equal(u.recoCompact,false);
+  assert.doesNotMatch(abar(u),/suggest-match/,'Details shows the recovery button as before');assert.equal(u.recoActive(),true,'Details keeps the spot captioned');
   // Any other lesson's suggested placement keeps its existing presentation (same placement, lesson id changed).
   const shell=u.currentBlueprintPlan()||null;tap(u,'cancelTool');
   const other=new (sim.constructor)(structuredClone(sim.s));other.s.lesson.id='climate';installTutorial(other);
@@ -126,6 +130,12 @@ function compactReview(u,{peek}){
   // A changed placement or an active gesture is never reframed.
   u.frameRecommendation();const keep=cam();u.plan={...u.plan,args:{...args,a:{x:27,y:20},b:{x:27,y:20}}};safe={...safe,top:200};flush();assert.equal(cam(),keep);
   u.plan.args=args;u.pointerBusy=true;rend.lookAt(5,5);const busy=cam();assert.equal(u.frameRecommendation(),false);flush();assert.equal(cam(),busy);u.pointerBusy=false;
+  // A single small unit is zoomed in to at least the minimum size, staying inside the strip; ordinary review framing never zooms in.
+  const short=()=>{const p=[...(u.plan.units||[])].flatMap(s=>[s.x,s.x+s.w].flatMap(x=>[s.y,s.y+s.h].flatMap(y=>[0,1.9].map(z=>rend.project(x,y,z)))));return Math.min(Math.max(...p.map(q=>q.x))-Math.min(...p.map(q=>q.x)),Math.max(...p.map(q=>q.y))-Math.min(...p.map(q=>q.y)));};
+  safe={left:8,right:width-8,top:200,bottom:430};rend.zoom=0.45;rend.updateCamera();rend.lookAt(26,20);const z0=rend.zoom,s0=short();assert.ok(s0<64,`fixture unit starts small (${s0.toFixed(0)} px)`);
+  u.framePlacementReview();assert.equal(rend.zoom,z0,'ordinary review framing never zooms in');
+  assert.equal(u.framePlacementReview(64),true,'still fits');assert.ok(short()>=63.5,`unit now ${short().toFixed(0)} px`);assert.ok(inside());
+  safe={left:8,right:width-8,top:200,bottom:250};rend.zoom=0.45;rend.updateCamera();rend.lookAt(26,20);u.framePlacementReview(64);assert.ok(inside(),'a short strip limits the zoom: the unit still fits');
   delete globalThis.innerWidth;assert.equal(u.frameRecommendation(),false,'headless: nothing to measure');
   assert.equal(JSON.stringify(sim.s.objects).length>0,true);
   ok('frameRecommendation: immediate fit, one settled refit, player camera/changed placement/gesture never reframed, headless no-op');
@@ -136,7 +146,7 @@ function compactReview(u,{peek}){
   const css=readFileSync('css/game.css','utf8');const i=css.indexOf('#ui .reco-details { display:none; }');assert.ok(i>0);
   const block=css.slice(css.indexOf('@media (max-width:700px) and (orientation:portrait)',i));
   assert.match(block.slice(0,600),/\.actionbar\.reco-review \.reco-details \{ display:inline-flex; \}/);
-  assert.equal((css.match(/\.reco-review/g)||[]).length,6,'every compact rule sits in the phone-portrait block');
+  assert.equal((css.match(/\.reco-review/g)||[]).length,7,'every compact rule sits in the phone-portrait block');
   assert.doesNotMatch(block.slice(0,600),/confirm|status|cost|peek/i,'Confirm, status, cost and Peek are never hidden');
   ok('CSS: compact rules only in phone portrait; Confirm, status, cost and Peek never hidden');
 }

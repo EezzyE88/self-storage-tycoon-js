@@ -1272,6 +1272,8 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
   #ui .actionbar.reco-review .spend-more,
   #ui .actionbar.reco-review .build-authorization,
   #ui .actionbar.reco-review .refund-note { display:none; }
+  /* The two-floor lesson's compact review: the plan already is the suggestion, so its button would only repeat it. */
+  #ui .actionbar.reco-review .suggest-match { display:none; }
 }
 
 /* Both ends of an automatic decision pause inherit the same pulse phase. */

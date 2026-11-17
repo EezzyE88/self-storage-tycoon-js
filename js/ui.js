@@ -91,6 +91,7 @@ const I = {
 const money = (v, dec = false) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: dec ? 2 : 0, minimumFractionDigits: dec ? 2 : 0 });
 // Existing acquisition term, also disclosed in Growth; checked against actual engine purchases.
 const ACQUISITION_OPENING_CASH = 5000;
+const RECO_MIN_PX = 64; // a recommended single unit is framed at least this many screen px on its short side
 const LOAN_PRESETS = [10000, 25000, 50000, 100000]; // Financing's expansion-loan choices
 // AG-01: read-only operating-facility guidance from the shared preview constructor. Facts only; every choice stays the player's.
 function facilityGuidance(sim, pv, price, careerOk) {
@@ -1073,7 +1074,7 @@ export class UI {
       this.pauseForPopup('sandboxBuild'); this.notePause(0);
     }
     if (!k) this.resumePopup('sandboxBuild');
-    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
+    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.recoKey = null; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
   }
@@ -1146,13 +1147,13 @@ export class UI {
   placeStart(cell) {
     if (!this.tool || !cell) return;
     const door = this.lessonDoorTarget(cell), target = door?.a || cell;
-    this.placementPeek = false; this.recoCompact = false; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]};
+    this.placementPeek = false; this.recoCompact = false; this.recoKey = null; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]};
     this.buildPlacing = true; this.root?.classList.add('is-placing');
     this.planArgs = { a: { ...target }, b: { ...target }, dir: door?.dir };
     this.replan(); this.sfx('place');
   }
   finishPlacement() { if (!this.buildPlacing) return; this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.renderActionBar(); }
-  cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.rend.setPreview(null); this.renderActionBar(); }
+  cancelPlacement() { this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.recoKey = null; this.rend.setPreview(null); this.renderActionBar(); }
   placeMove(cell) {
     if (!this.tool || !this.planArgs || !cell) return; const T = TOOLS[this.tool]; if (T.shape === 'tap') { const door = this.lessonDoorTarget(cell); this.planArgs.a = this.planArgs.b = { ...(door?.a || cell) }; this.planArgs.dir = door?.dir; this.replan(); return; }
     if (this.planArgs.b.x === cell.x && this.planArgs.b.y === cell.y) return;
@@ -1218,7 +1219,7 @@ export class UI {
     if (r.ok) this.g.autosavePaused?.();
     if(r.ok&&finishesWait)this.reserveWait.stop('Selected investment confirmed.');
     if(r.ok&&(finishesWait||finishesResult)){this.reserveResult=null;this.reserveNotice=null;this.renderTut(true);}
-    if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
+    if (r.ok) { this.projectProposal = null; this.sfx('confirm'); this.toast(r.msg + (this.sim.instantOn() ? '' : ' - construction started'), 'good'); this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.recoKey = null; this.growthProposal = null; this.growthPlanArgs = null; this.rend.setPreview(null); }
     else { this.sfx('refuse'); this.toast(r.msg || 'Cannot build here', 'bad'); this.replan(); }
     if (r.ok && lessonBuild) {
       this.lessonBuild = lessonBuild;
@@ -1306,7 +1307,7 @@ export class UI {
       return;
     }
     const reco = !!this.recoCompact;
-    box.innerHTML = `<div class="actionbar${isUnit?' unit-review':''}${reco?' reco-review':''}${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div>${isUnit?'<button class="btn sm peek-toggle" data-a="placementPeek">Peek</button>':''}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button>' : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
+    box.innerHTML = `<div class="actionbar${isUnit?' unit-review':''}${reco?' reco-review':''}${wasOpen ? '' : ' enter'}"><div class="top"><div class="nm">${T.name}<small>${T.desc}</small><div class="cost">${costTxt}</div></div>${isUnit?'<button class="btn sm peek-toggle" data-a="placementPeek">Peek</button>':''}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div><div class="review-body">${status}${this.tool==='office' ? '<p class="note access-side">Yellow edge = door/access side. Rotate to face your aisle or hallway.</p>' : ''}${this.currentBlueprintPlan() ? `<button class="btn sm${reco&&this.planIsSuggestion()?' suggest-match':''}" data-a="suggestPlacement">Use suggested placement</button>` : ''}${this.sim.s.tut?.on && curBeat(this.sim)?.id==='expand' && R.status!=='valid' ? '<p class="note">Confirm unlocks when the doors face a connected aisle. Try Rotate or move the row beside the aisle.</p>' : ''}</div>
       ${commitment}<div class="bot">
       ${this.rotationHtml()}
       ${this.canRush() && T.cat !== 'site' && this.tool !== 'demolish' ? `<button class="btn sm ${this.rush ? 'pri' : ''}" data-a="rush" title="Rush contractors: +25% cost, twice as fast">Rush ${this.rush ? 'on' : 'off'}</button>` : ''}
@@ -1339,7 +1340,7 @@ export class UI {
       this.placementFrameFits = this.framePlacementReview();
     });
   }
-  framePlacementReview() {
+  framePlacementReview(minPx = 0) {
     if (!this.rend?.project || !this.rend?.pan || !this.rend?.zoomBy) return false;
     const args = this.plan?.args;
     if (!args?.a || !args?.b) return false;
@@ -1368,6 +1369,18 @@ export class UI {
     const dx=b.left<r.left+margin ? r.left+margin-b.left : b.right>r.right-margin ? r.right-margin-b.right : 0;
     const dy=b.top<r.top+margin ? r.top+margin-b.top : b.bottom>r.bottom-margin ? r.bottom-margin-b.bottom : 0;
     if(dx||dy) this.rend.pan(dx,dy);
+    if(minPx) { // recommendation previews: a single small unit is zoomed in until it reads as a building, never past the fit
+      const own=[...(this.plan.units || []), ...(this.plan.creates || []).filter(c => c.w && c.h)];
+      const op=own.flatMap(s => [s.x,s.x+s.w].flatMap(x => [s.y,s.y+s.h].flatMap(y =>
+        [s.f || 0,(s.f || 0)+(s.floors || 1)].map(f => this.rend.project(x,y,f*FLOOR_H)))));
+      if(op.length) {
+        const short=Math.min(Math.max(...op.map(p=>p.x))-Math.min(...op.map(p=>p.x)),Math.max(...op.map(p=>p.y))-Math.min(...op.map(p=>p.y)));
+        b=bounds();
+        const room=Math.min((r.right-r.left-margin*2)/Math.max(1,b.right-b.left),(r.bottom-r.top-margin*2)/Math.max(1,b.bottom-b.top));
+        const k=Math.min(minPx/Math.max(1,short),room*.97);
+        if(k>1.02) { this.rend.zoomBy(k); b=bounds(); this.rend.pan((r.left+r.right)/2-(b.left+b.right)/2,(r.top+r.bottom)/2-(b.top+b.bottom)/2); }
+      }
+    }
     b=bounds(); // zoom and pan both have limits; requested movement is not proof of fit.
     return Number.isFinite(b.left+b.right+b.top+b.bottom) &&
       b.left>=r.left+margin-.01 && b.right<=r.right-margin+.01 &&
@@ -1377,8 +1390,9 @@ export class UI {
   // build into the map area the review leaves uncovered, now and once more after the panels settle, unless the player
   // has moved the camera in between. Ordinary placement and the player's own camera are never reframed.
   frameRecommendation(outline = false) {
+    this.recoKey = this.recoPlanKey(); // the recommended spot stays captioned until the player moves or cancels it
     if (typeof innerWidth === 'undefined' || typeof this.$ !== 'function' || !this.$('tabs')?.getBoundingClientRect || !this.rend?.project) return false; // headless
-    const R = this.rend, fit = () => outline ? this.frameOutline() : this.framePlacementReview();
+    const R = this.rend, fit = () => outline ? this.frameOutline() : this.framePlacementReview(RECO_MIN_PX);
     const cam = () => JSON.stringify([R.center?.x, R.center?.z, R.zoom, R.rot, R.view]), key = () => JSON.stringify([this.tool, this.plan?.args]);
     if (this.pointerBusy) return false;
     fit();
@@ -1391,6 +1405,10 @@ export class UI {
     }, 260); // after the review's 0.2 s entry animation and the lesson card's collapse
     return true;
   }
+  recoPlanKey() { const a=this.plan?.args; return this.tool && a?.a && a?.b ? JSON.stringify([this.tool,a.a,a.b,a.f||0]) : null; }
+  recoActive() { return !!this.recoKey && !this.buildPlacing && this.recoKey === this.recoPlanKey(); }
+  planIsSuggestion() { const s=this.currentBlueprintPlan(), a=this.plan?.args; if(!s||!a?.a||!a?.b||s.tool!==this.tool||(s.f||0)!==(a.f||0)) return false;
+    const n=(p,q)=>[Math.min(p.x,q.x),Math.min(p.y,q.y),Math.max(p.x,q.x),Math.max(p.y,q.y)].join(); return n(s.a,s.b)===n(a.a,a.b); }
   syncControlLayout() {
     if (!this.root?.style || typeof innerWidth === 'undefined') return;
     let bottom=0;
@@ -2483,8 +2501,10 @@ export class UI {
   updateBlueprint() {
     const box=this.$('blueprint'); if(!box) return;
     const yard = this.yardGuide?.sim === this.sim && this.tool === this.yardGuide.args.tool && this.plan ? this.plan.args : null;
-    if(this.title||this.modalOpen()||(!curBeat(this.sim)&&!yard)||this.menuTouch) {box.innerHTML='';this.capPrev=null;return;}
-    const sim=this.sim,l=sim.s.lesson?.id==='up'?verticalLayout(sim):null,a=yard || this.currentBlueprintPlan(),pre=l?.plans?this.lessonPrereq():null; if(!a&&!l?.plans) {box.innerHTML='';return;}
+    // A recommended unit (Growth or yard opportunity) is outlined and captioned at its spot until the player moves it.
+    const recoUnit = this.recoActive() && this.plan?.units?.length && this.sim.s.lesson?.id!=='up';
+    if(this.title||this.modalOpen()||(!curBeat(this.sim)&&!yard&&!recoUnit)||this.menuTouch) {box.innerHTML='';this.capPrev=null;return;}
+    const sim=this.sim,l=sim.s.lesson?.id==='up'?verticalLayout(sim):null,a=yard || this.currentBlueprintPlan(),pre=l?.plans?this.lessonPrereq():null; if(!a&&!l?.plans&&!recoUnit) {box.innerHTML='';return;}
     const project=(x,y,f=0)=>this.rend.project(x,y,f*FLOOR_H);
     const caps=[]; let shapes='';
     // Outline only; its caption (if any) joins the shared layout with its priority.
@@ -2501,6 +2521,13 @@ export class UI {
       polygon(start,end,a.f,mm?'#9fb3c8':'#ffd23a',mm?`${TOOLS[a.tool].name} goes here · F${(a.f||0)+1}`:TOOLS[a.tool].name,CP.target); const uc=mm?'#9fb3c8':'#ffd23a'; for(const u of planned.units||[]) {polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},a.f,uc,'');const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,a.f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),a.f);if(c.vis&&d.vis)shapes+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="${uc}" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="${uc}"/>`; }
       const single=a.a.x===a.b.x&&a.a.y===a.b.y;
       if(!mm&&!yard) for(const [c,label] of [[a.a,single?'Place here':'Start here'],[a.b,single?'':'End here']]){const p=project(c.x+.5,c.y+.5,a.f);if(!p.vis)continue;shapes+=`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#ffd23a"/>`;if(label)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.target,dy:label==='End here'?23:-15});}}
+    if(recoUnit&&!a) { const f=this.plan.args.f||0, n=this.plan.units.length, T=TOOLS[this.tool];
+      for(const u of this.plan.units) { polygon({x:u.x,y:u.y},{x:u.x+u.w-1,y:u.y+u.h-1},f,'#ffd23a','');
+        if(u.dir){const c=project(u.x+u.w/2+u.dir[0]*u.w/2,u.y+u.h/2+u.dir[1]*u.h/2,f),d=project(u.x+u.w/2+u.dir[0]*(u.w/2+.6),u.y+u.h/2+u.dir[1]*(u.h/2+.6),f);if(c.vis&&d.vis)shapes+=`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" stroke="#ffd23a" stroke-width="4"/><circle cx="${d.x}" cy="${d.y}" r="3" fill="#ffd23a"/>`;} }
+      // Caption just above the outlined spot, so it names the spot without covering it.
+      const pts=this.plan.units.flatMap(u=>[u.x,u.x+u.w].flatMap(x=>[u.y,u.y+u.h].map(y=>project(x,y,f)))).filter(p=>p.vis);
+      if(pts.length) caps.push({t:`New ${n>1?n+' × ':''}${T.name} here`,ax:(Math.min(...pts.map(p=>p.x))+Math.max(...pts.map(p=>p.x)))/2,ay:Math.min(...pts.map(p=>p.y)),prio:CP.target,dy:-8});
+    }
     if(l?.plans) { // secondary route context, only while that part is still to be placed
       for(const [c,label,k] of [[l.door,'Entrance','doorWide'],[l.outer,'Loading','loading'],[l.plans.elevator.a,'Elevator','elevator']]) {if(!c||done(k)||(k==='elevator'&&(pre||a?.tool==='elevator')))continue;const p=project(c.x+.5,c.y+.5,a?.f||0);if(p.vis)caps.push({t:label,ax:p.x,ay:p.y,prio:CP.secondary,cls:'secondary',dy:-9});} }
     const L=layoutCaptions(caps,{width:innerWidth,height:innerHeight,obstacles:this.captionObstacles(),measure:(t,c)=>this.measureCaption(t,c),prev:this.capPrev});
