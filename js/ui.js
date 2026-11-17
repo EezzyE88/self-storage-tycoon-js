@@ -1265,6 +1265,7 @@ export class UI {
     const mm=curBeat(this.sim)?this.placementMismatch(curBeat(this.sim).steps[stepState(this.sim,this).cur]):null;
     if(!R) { const gate=this.tool==='gate'?this.firstGateGuidance():null; box.innerHTML=`<div class="actionbar idle-strip${mm?' mismatch':''}"><b>${T.name}</b><span>${gate?.args?`<button class="btn sm" data-a="previewFirstGate">Preview ${money(gate.plan.cost)} gate</button>`:`${this.currentBlueprintPlan() ? '<button class="btn sm" data-a="suggestPlacement">Use suggested placement</button> ' : ''}${mm?`Hold places another ${T.name} on F${this.toolFloor()+1} · lesson needs ${TOOLS[mm.want.tool].name} on F${(mm.want.f||0)+1}`:`Hold to place · double-tap zooms${this.toolFloor()?` · F${this.toolFloor()+1}`:''}`}`}</span>${this.rotationHtml()}<button class="x" data-a="cancelTool" aria-label="Stop building">${I.x}</button></div>`; return; }
     let status = `<div class="status idle"><span class="ic">i</span><span>${T.shape === 'tap' ? 'Press and hold the map to place. Double-tap still zooms.' : 'Press and hold, then drag to size it. A quick drag pans. Double-tap still zooms. Two fingers also pan and zoom.'}${this.toolFloor() ? ` Placing on Floor ${this.toolFloor()+1}.` : ''}</span></div>`;
+    let demandSummary = '';
     if (R) {
       const projectMarker = this.projectProposal?.sim === this.sim ? `<p class="project-review">${matchesProject(R.args, this.projectProposal.key) ? esc(PROJECTS[this.projectProposal.key].label) + ' · project preview' : 'Placement changed · ordinary build, not a tracked project'}</p>` : '';
       const compareProjects = this.projectProposal?.sim === this.sim && this.projectProposal.key !== 'cover' ? '<div class="row wrap project-switch"><button class="btn sm" data-a="projectPreview" data-v="small">Two 5×10s</button><button class="btn sm" data-a="projectPreview" data-v="large">One 10×10</button></div>' : '';
@@ -1287,6 +1288,11 @@ export class UI {
           if(sandboxReserveQuote(this.sim,R.args))status += '<button class="btn sm" data-a="sandboxReserveStart">Fast-forward to reserve</button><p class="note">Runs normal time for up to 7 game days, then pauses. Owner decisions stop the wait. Stop or Pause ends it. Return to this placement and Confirm separately to buy.</p>';
         }
         const inv = this.sim.investment(R);
+        const property = this.g.company?.props?.[this.g.company.active]?.name;
+        if (property && inv?.evidence?.scope === 'selected' && !this.sim.s.tut?.on && !this.sim.s.lesson) {
+          const { matchingLosses, period } = inv.evidence;
+          demandSummary = `<p class="note placement-demand"><b>${esc(property)}</b> · ${matchingLosses} matching unmet request${matchingLosses === 1 ? '' : 's'} · ${esc(periodText(period))}</p>`;
+        }
         if (inv) status += `<details class="build-details"><summary>Payback &amp; build terms</summary><div class="refund-note">${esc(paybackText(inv))}${paybackEvidenceNote(inv) ? ' ' + esc(paybackEvidenceNote(inv)) : ''} Selected construction only; add required infrastructure and staffing. Lease-up, future repairs and missed payments can extend payback.</div><p class="note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</p></details>`;
       }
       if (R.status !== 'invalid' && R.dur && !this.sim.instantOn() && (this.sim.s.creative || !R.cost)) status += `<div class="refund-note">Undo within 30 min is a full refund; cancelling later refunds 60% of the unbuilt share.</div>`;
@@ -1298,7 +1304,7 @@ export class UI {
     // Keep the same financial calculation beside Confirm, outside optional review details.
     const P = this.sim.financialPosition({ spend: R.cost, extraDaily: daily });
     const authorization = T.unit && this.sim.autoOpenEnabled() ? '<p class="note build-authorization">Confirm authorizes construction. Units open automatically when ready. Opening the property remains your decision.</p>' : '';
-    const commitment = `<div class="review-commitment">${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after ${this.tool==='demolish'?'removal':'build'}: <b>${money(P.cash)}</b><span class="spend-more"><br> Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br> Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br> Added costs: ${money(daily, true)}/day when operating.</span></p>` : ''}${authorization}</div>`;
+    const commitment = `<div class="review-commitment">${demandSummary}${!this.sim.s.creative && R.cost ? `<p class="note spending">Cash after ${this.tool==='demolish'?'removal':'build'}: <b>${money(P.cash)}</b><span class="spend-more"><br> Committed bills ${money(P.committed)} · reserve ${money(P.reserve)}<br> Available after bills &amp; reserve: <b class="${P.available < 0 ? 'neg' : ''}">${money(P.available)}</b><br> Added costs: ${money(daily, true)}/day when operating.</span></p>` : ''}${authorization}</div>`;
     const wasOpen = !!box.firstChild;
     const peek = isUnit && !!this.placementPeek;
     const peekState = R.status === 'invalid' ? 'Needs changes' : (R.warn?.length ? 'Review warning' : 'Preview only');
