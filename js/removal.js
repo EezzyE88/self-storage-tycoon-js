@@ -79,6 +79,7 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
   // Include hosted fixtures once, even if also collected through a parent footprint.
   for(const c of all)if(ids.has(c.mount?.host))add(c);
   const removed=all.filter(c=>ids.has(c.id));
+  if(o?.retrofitOrder)bad('Cancel this unit’s upgrade installation before demolition.');
   for(const c of removed){
     if(c.cstate==='construction'||c.keypad==='pending'||c.retrofitOrder)bad(`Finish or Cancel construction/installation for ${label(c)} first.`);
     if(c.type==='unit'&&occupied(c))bad(`Occupied or reserved — resolve the lease/reservation for ${label(c)} before removal.`);

@@ -3109,7 +3109,7 @@ export class UI {
   cashWindow(days) { return this.sim.cashWindow(days); }
   removalActions() {
     const o=typeof this.sel==='number'&&this.sim.s.objects[this.sel];
-    if(o&&o.type!=='gate'&&o.cstate!=='construction')return `<div class="row wrap removal-actions"><button class="btn danger" data-a="removeObject" data-v="${o.id}">Remove ${esc(o.type)}…</button>${o.type==='door'&&o.keypad?`<button class="btn" data-a="removeKeypad" data-v="${o.id}">Remove keypad…</button>`:''}${o.type==='shell'&&o.floors>1?`<button class="btn" data-a="removeFloor" data-v="${o.id}">Remove top Floor ${o.floors}…</button>`:''}</div>`;
+    if(o&&o.type!=='gate'&&o.cstate!=='construction')return `<div class="row wrap removal-actions"><button class="btn danger" data-a="removeObject" data-v="${o.id}">Remove ${esc(o.type)}…</button>${Object.values(this.sim.s.objects).filter(f=>f.mount?.host===o.id).map(f=>`<button class="btn" data-a="removeObject" data-v="${f.id}">Remove attached ${esc(f.type)} #${f.id}…</button>`).join('')}${o.type==='door'&&o.keypad?`<button class="btn" data-a="removeKeypad" data-v="${o.id}">Remove keypad…</button>`:''}${o.type==='shell'&&o.floors>1?`<button class="btn" data-a="removeFloor" data-v="${o.id}">Remove top Floor ${o.floors}…</button>`:''}</div>`;
     if(this.sel?.kind==='cart')return `<button class="btn danger" data-a="removeCart" data-v="${this.sel.id}">Dispose of cart…</button>`;
     return '';
   }

@@ -831,7 +831,7 @@ export class Sim {
       }
       case 'demolish': {
         const priorities={light:0,camera:0,unitLight:0,corral:1,door:2,unit:3,office:4,shell:5};
-        const candidate=atHere.sort((p,q)=>(priorities[p.type]??2)-(priorities[q.type]??2))[0];
+        const candidate=atHere.filter(o=>o.type!=='unitLight').sort((p,q)=>(priorities[p.type]??2)-(priorities[q.type]??2))[0];
         const shell=D.shellAt[i]&&s.objects[D.shellAt[i]];
         const target=a.removalTarget || (a.targetId!=null ? Number(a.targetId) : candidate?.id ?? shell?.id ?? {kind:'surface',x,y,f,layer:D.shellAt[i]?'hall':'ground'});
         const operation=this.placeableRemoval(target);

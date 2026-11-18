@@ -35,12 +35,12 @@ test('first tap opens existing refund confirmation; Keep building changes nothin
  assert.ok(html.includes('$'+f.order.cost.toLocaleString('en-US')));assert.equal(state(f),before);
  click(f,'modalClose');assert.equal(f.ui.$('modal').innerHTML,'');assert.equal(state(f),before);
 });
-test('confirmed full undo refunds once, preserves door and restores demolition eligibility',()=>{
+test('confirmed full undo refunds once, preserves completed door and required-access protection',()=>{
  const f=setup(),s=f.A,cash=s.s.cash,n=s.s.ledger.length;open(f);confirm(f);
  assert.equal(s.s.cash,cash+f.order.cost);assert.equal(s.s.ledger.length,n+1);
  assert.equal(s.s.objects[f.door.id],f.door);assert.equal(f.door.keypad,null);
  assert.ok(!s.s.orders.some(o=>o.id===f.order.id));assert.doesNotMatch(f.ui.inspector(),/Cancel keypad installation/);
- assert.equal(s.plan({tool:'demolish',a:f.door,b:f.door,f:f.door.f||0}).status,'valid');
+ const removal=s.plan({tool:'demolish',a:f.door,b:f.door,f:f.door.f||0});assert.equal(removal.status,'invalid');assert.match(removal.reasons.join(' '),/access/);assert.doesNotMatch(removal.reasons.join(' '),/unfinished|installation/i);
  const after=state(f);confirm(f);assert.equal(state(f),after,'repeat confirmed action cannot pay twice');assert.equal(s.s.speed,0);
 });
 test('after grace, UI uses exact engine partial refund and keeps completed host',()=>{
