@@ -143,7 +143,7 @@ const game = {
     this.rend.zoom = (sim.s.mode === 'tutorial' ? 1.05 : 0.95) * (window.innerWidth < 600 ? 0.8 : 1); this.rend.updateCamera();
     if (this.ui && this.ui.phone()) {
       // The delayed re-fit repeats the opening framing so the settled phone layout does not undo it.
-      const fit = () => { this.rend.fitProperty(this.ui.safeRect()); this.rend.fitOpening?.(this.ui.safeRect()); };
+      const fit = () => { if (!this.rend.fitOpening?.(this.ui.safeRect())) this.rend.fitProperty(this.ui.safeRect()); };
       fit(); setTimeout(fit, 60);
     }
     }

@@ -14,8 +14,8 @@ const COL = {
   unitWall: '#fbf3e6', unitWall2: '#eadcc6', roof: '#2f8a8f', roofTrim: '#267277', door: '#ff7a2f', doorInt: '#3c8586',
   shellWall: '#f1f6f2', shellRoof: '#3d6f9a', office: '#f7e2c2', officeTrim: '#1f5e66', glass: '#9fd6ee',
 };
-// Opening framing for the two settings that start on a nearly empty lot (cells beyond the parcel; z = building height kept in view).
-const OPENING_SETTING = { vertical: { side: 0, rear: 7, z: 4 }, climate: { side: 0, rear: 7, z: 3.5 } };
+// Opening framing for the two settings that start on a nearly empty lot: zoom factor on the footprint fit, and cells to look behind the office.
+const OPENING_SETTING = { vertical: { zoom: 0.32, back: 6 }, climate: { zoom: 0.32, back: 6 } };
 // Presentation only: derive the setting from existing scenario identity, including old saves.
 // No scenery is a simulation object, purchasable improvement or access route.
 const SCENERY = {
@@ -486,16 +486,24 @@ export class Renderer {
     b = bb(); this.pan((rect.left + rect.right) / 2 - (b.x0 + b.x1) / 2, (rect.top + rect.bottom) / 2 - (b.y0 + b.y1) / 2);
     this.tapZoom = { sim: this.sim, step: 0, base: this.zoom, rect: { ...rect } };
   }
-  // Opening view only: Go Vertical and Climate Boom start on a nearly empty lot, so the built-footprint fit
-  // closes in on the office and hides the setting. Frame the playable parcel plus its rear/side surroundings.
+  // Opening view only: Go Vertical and Climate Boom start on a nearly empty lot, where the footprint fit closes in
+  // on the lone office and hides the setting. Keep the office and entrance at the centre of the uncovered screen,
+  // pulled back far enough that the neighbouring setting shows; zoom buttons then close in on the property.
   // Saved cameras, the Fit button and the double-tap cycle keep the normal footprint framing.
   fitOpening(rect) {
-    const s = this.sim.s, id = s.scenario?.id;
-    if (!OPENING_SETTING[id]) return false;
-    const p = s.parcel, { side, rear, z } = OPENING_SETTING[id], points = [];
-    for (const x of [p.x0 - side, p.x1 + side]) for (const y of [p.y0 - rear, p.y1 + 1]) points.push([x, y, 0]);
-    for (const x of [p.x0 - side, p.x1 + side]) points.push([x, p.y0 - rear, z]);
-    const cycle = this.tapZoom; this.fitProperty(rect, points); this.tapZoom = cycle;
+    const s = this.sim.s, setting = OPENING_SETTING[s.scenario?.id];
+    if (!setting) return false;
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+    rect = rect || { top: 60, bottom: h - 80, left: 8, right: w - 8 };
+    this.fitProperty(rect); const cycle = this.tapZoom;
+    const built = Object.values(s.objects).filter(o => o.type === 'office' || o.type === 'gate');
+    if (!built.length) return false;
+    const x0 = Math.min(...built.map(o => o.x)), x1 = Math.max(...built.map(o => o.x + (o.w || 1)));
+    const y0 = Math.min(...built.map(o => o.y)), y1 = Math.max(...built.map(o => o.y + (o.h || 1)));
+    this.zoom = Math.max(0.3, Math.min(4.2, this.zoom * setting.zoom)); this.updateCamera();
+    const p = this.project((x0 + x1) / 2, (y0 + y1) / 2 - setting.back, 0);
+    this.pan((rect.left + rect.right) / 2 - p.x, (rect.top + rect.bottom) / 2 - p.y);
+    this.tapZoom = cycle;
     return true;
   }
   doubleTapZoom(cx, cy, rect) {

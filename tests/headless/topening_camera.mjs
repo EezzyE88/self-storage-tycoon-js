@@ -1,5 +1,5 @@
 // Opening camera for Go Vertical and Climate Boom: production attach/saveJSON/loadCode in a vm, real Renderer.
-// Presentation only: frames parcel + surrounding setting at a new phone start; saved cameras and player controls unchanged.
+// Presentation only: a new phone start centres the office and entrance with the neighbouring setting in view; saved cameras and player controls unchanged.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -33,25 +33,33 @@ const cam=r=>({x:r.center.x,z:r.center.z,zoom:r.zoom,rot:r.rot,az:r.azimuth,taz:
 const RECT={top:60,bottom:700,left:8,right:382};
 const inRect=(r,x,y,z=0)=>{const p=r.project(x,y,z);return p.x>=RECT.left-0.5&&p.x<=RECT.right+0.5&&p.y>=RECT.top-0.5&&p.y<=RECT.bottom+0.5;};
 const fresh=(id)=>{const h=harness();const s=id==='maple'?makeMaple(3):makeScenario(id);s.s.speed=0;h.g.company={props:[{name:id,sim:s}],active:0,feed:[]};h.g.metaName=()=>id;h.calls.length=0;h.g.attach(s,'sc:'+id);return {...h,s};};
-for(const id of ['vertical','climate']) await test(id+': opening frames the parcel and its setting; the 60 ms phone re-fit keeps it',async()=>{
+const office=s=>Object.values(s.s.objects).find(o=>o.type==='office'),gate=s=>Object.values(s.s.objects).find(o=>o.type==='gate');
+const sceneryOnScreen=r=>{let n=0;const m=new r.camera.matrixWorld.constructor();r.envG.traverse(o=>{if(!o.isInstancedMesh)return;for(let i=0;i<o.count;i++){o.getMatrixAt(i,m);const e=m.elements;const p=r.project(e[12],e[14],e[13]);if(p.x>=RECT.left&&p.x<=RECT.right&&p.y>=RECT.top&&p.y<=RECT.bottom)n++;}});return n;};
+for(const id of ['vertical','climate']) await test(id+': opening keeps office and entrance central with the setting in view; the 60 ms phone re-fit keeps it',async()=>{
   const {rend,timers,calls,s}=fresh(id);const now=cam(rend);
-  assert.deepEqual(calls.map(c=>c[0]),['lookAt','fitProperty','fitProperty','timeout'],'standard fit, then the opening fit, then the delayed re-fit');
-  const before=JSON.stringify(s.s);timers.forEach(([f])=>f());const after=cam(rend);for(const k of Object.keys(now))assert.ok(Math.abs(after[k]-now[k])<1e-9,'delayed re-fit lands on the same opening framing: '+k);
+  assert.deepEqual(calls.map(c=>c[0]),['lookAt','fitProperty','timeout'],'one footprint fit inside the opening fit, then the delayed re-fit');
+  const before=JSON.stringify(s.s);timers.forEach(([f])=>f());const after=cam(rend);
+  for(const k of Object.keys(now))assert.ok(Math.abs(after[k]-now[k])<1e-9,'delayed re-fit lands on the same opening framing: '+k);
   assert.equal(JSON.stringify(s.s),before,'framing never touches simulation state');assert.equal(s.s.speed,0,'still paused');
-  const p=s.s.parcel;for(const x of [p.x0,p.x1+1])for(const y of [p.y0,p.y1+1])assert.ok(inRect(rend,x,y),'parcel corner on screen');
-  for(const x of [p.x0,p.x1])assert.ok(inRect(rend,x,p.y0-7,3.5),'rear setting row on screen');
+  const o=office(s),g=gate(s);
+  for(const x of [o.x,o.x+o.w])for(const y of [o.y,o.y+o.h])assert.ok(inRect(rend,x,y),'office on screen');
+  assert.ok(inRect(rend,g.x+.5,g.y+.5),'entrance gate on screen');assert.ok(inRect(rend,g.x+.5,g.y+1.5),'street at the entrance on screen');
+  const a=rend.project(o.x,o.y),b=rend.project(o.x+o.w,o.y+o.h);assert.ok(Math.hypot(b.x-a.x,b.y-a.y)>=40,'office large enough to recognise and tap');
+  assert.ok(sceneryOnScreen(rend)>=8,'neighbouring setting visible: '+sceneryOnScreen(rend));
+  const p=s.s.parcel,c=rend.center;assert.ok(c.x>p.x0&&c.x<p.x1+1&&c.z>p.y0&&c.z<p.y1+1,'zoom pivot is on the playable lot');
+  const oc={x:o.x+o.w/2,z:o.y+o.h/2};assert.ok(Math.hypot(c.x-oc.x,c.z-oc.z)<Math.abs(c.z-(p.y0-7)),'zoom pivot nearer the office than the rear setting row');
+  rend.zoomBy(1.25);assert.ok(inRect(rend,o.x+o.w/2,o.y+o.h/2),'first zoom-in keeps the office on screen');
   const plain=new Renderer({clientWidth:390,clientHeight:844},s);plain.rot=rend.rot;plain.azimuth=rend.azimuth;plain.fitProperty(RECT);
-  assert.ok(rend.zoom<plain.zoom*0.8,'measurably wider than the office-only fit');
-  assert.equal(rend.tapZoom.base,plain.tapZoom.base,'double-tap cycle keeps the normal footprint base');assert.equal(rend.tapZoom.step,0);
+  assert.ok(now.zoom<plain.zoom*0.5,'wider than the office-only fit');
+  assert.ok(Math.abs(rend.tapZoom.base-plain.tapZoom.base)<1e-9,'double-tap cycle keeps the normal footprint base');assert.equal(rend.tapZoom.step,0);
 });
 await test('Comeback, Turnaround and Maple keep their existing opening framing',async()=>{
-  for(const id of ['comeback','turnaround','maple']){const {rend,calls,s}=fresh(id);assert.deepEqual(calls.map(c=>c[0]),['lookAt','fitProperty','timeout']);
-    const plain=new Renderer({clientWidth:390,clientHeight:844},s);plain.zoom=rend.zoom;plain.center.copy(rend.center);
+  for(const id of ['comeback','turnaround','maple']){const {rend,calls}=fresh(id);assert.deepEqual(calls.map(c=>c[0]),['lookAt','fitProperty','timeout']);
     assert.equal(rend.fitOpening(RECT),false);}
 });
-await test('Fit button and double-tap still use the footprint fit in the new settings',async()=>{
+await test('Fit button still uses the footprint fit in the new settings',async()=>{
   const {rend,s}=fresh('vertical');const plain=new Renderer({clientWidth:390,clientHeight:844},s);plain.fitProperty(RECT);
-  rend.fitProperty(RECT);assert.equal(rend.zoom,plain.zoom);
+  rend.fitProperty(RECT);assert.ok(Math.abs(rend.zoom-plain.zoom)<1e-9);
 });
 for(const id of ['vertical','climate']) await test(id+': a saved player camera restores exactly, with no opening fit or re-fit',async()=>{
   const {g,rend,calls}=fresh(id);rend.rotate(1);rend.rotate(1);rend.zoom=1.4;rend.center.set(14.5,0,11);rend.view='ext';
