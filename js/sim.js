@@ -831,7 +831,7 @@ export class Sim {
       }
       case 'demolish': {
         const priorities={light:0,camera:0,unitLight:0,corral:1,door:2,unit:3,office:4,shell:5};
-        const candidate=atHere.filter(o=>o.type!=='unitLight').sort((p,q)=>(priorities[p.type]??2)-(priorities[q.type]??2))[0];
+        const candidate=atHere.filter(o=>o&&o.type!=='unitLight').sort((p,q)=>(priorities[p.type]??2)-(priorities[q.type]??2))[0];
         const shell=D.shellAt[i]&&s.objects[D.shellAt[i]];
         const target=a.removalTarget || (a.targetId!=null ? Number(a.targetId) : candidate?.id ?? shell?.id ?? {kind:'surface',x,y,f,layer:D.shellAt[i]?'hall':'ground'});
         const operation=this.placeableRemoval(target);
@@ -966,7 +966,7 @@ export class Sim {
   act_build(a) {
     if (a.projectKey && (!matchesProject(a, a.projectKey) || !projectOffers(this).some(p => p.key === a.projectKey))) return { ok: false, msg: 'That project has changed. Review the yard again.' };
     const s = this.s, R = this.plan(a);
-    if (a.tool === 'demolish' && (a.targetId != null || a.removalTarget) && (typeof a.quoteStamp !== 'string' || R.operation?.stamp !== a.quoteStamp)) { this.emit('refuse'); return { ok: false, msg: 'Removal review changed. Review the exact asset, cost and consequences again.' }; }
+    if (a.tool === 'demolish' && (a.targetId != null || a.removalTarget || R.status !== 'invalid') && (typeof a.quoteStamp !== 'string' || R.operation?.stamp !== a.quoteStamp)) { this.emit('refuse'); return { ok: false, msg: 'Removal review changed. Review the exact asset, cost and consequences again.' }; }
     if (R.status === 'invalid') { this.emit('refuse'); return { ok: false, msg: R.reasons[0] }; }
     if(R.upgrades && (a.lighting&&a.lighting!=='none'||a.outsideCameras) && a.upgradeStamp!==R.upgradeStamp)return {ok:false,msg:'Fixture package changed. Review positions and cost before confirming.'};
     if (a.tool === 'demolish') {
