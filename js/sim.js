@@ -1,3 +1,4 @@
+import { applyRemovalState } from './removal.js';
 import { addUpgrades, attachmentCoverage, upgradeStamp, upgradePower, retrofitPlan, mountedOn, mountFor } from './unitupgrades.js';
 import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';
 import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';
@@ -141,7 +142,7 @@ export class Sim {
   inParcel(x, y) { const p = this.s.parcel; return x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1; }
   objs(type) { return (this.D && this.D.byType[type]) || []; }
   obj(id) { return this.s.objects[id]; }
-  placeableRemoval(targetId) { return analyzePlaceableRemoval(this, Number(targetId)); }
+  placeableRemoval(targetId) { return analyzePlaceableRemoval(this, targetId); }
   gateQueue(id = primaryGateId(this.s)) { return gateQueue(this.s, id); }
   gateServing(id = primaryGateId(this.s)) { return gateServing(this.s, id); }
   gateConnection(id = primaryGateId(this.s)) { return gateConnection(this.s, id); }
@@ -829,38 +830,19 @@ export class Sim {
         return R;
       }
       case 'demolish': {
-        const small = { light: 0, camera: 0, sign: 0, corral: 1, hvac: 1, amenity: 1, door: 2, unit: 5 };
-        const cand = atHere.filter((o) => o && o.type !== 'shell' && o.type !== 'gate' && o.type !== 'office' && o.type !== 'unitLight').sort((p, q) => (small[p.type] ?? 3) - (small[q.type] ?? 3));
-        let o = a.targetId != null ? s.objects[Number(a.targetId)] : cand[0];
-        if (a.targetId != null && !o) { R.operation = this.placeableRemoval(a.targetId); failItem('The selected asset changed or no longer exists. Review again.'); return R; }
-        if (!o && D.elevAt[i]) o = s.objects[D.elevAt[i]];
-        if (!o && D.stairAt[i]) o = s.objects[D.stairAt[i]];
-        if (!o) { const dd = this.objs('door').find((d) => d.x === x && d.y === y); if (dd) o = dd; }
-        if (!o) { failItem('Nothing removable here'); return R; }
-        R.target = o.id; R.label = 'Demolish ' + this.objName(o);
-        const operation = this.placeableRemoval(o.id);
-        if (operation.covered) {
-          R.operation = operation;
-          R.cost = operation.cost; R.count = 1; R.dur = 0;
-          if (operation.classification === 'blocked') { failItem(operation.prerequisites[0]); return R; }
-          R.missing.push(...operation.effects);
-          if (operation.classification === 'allowed with disclosed effects') R.warn = [...operation.effects];
-          R.status = 'valid';
-          return R;
-        }
-        if (o.cstate === 'construction' || o.keypad === 'pending') { failItem('Construction or installation is unfinished. Use Cancel construction for the applicable refund.'); return R; }
-        const attached=mountedOn(this,o.id);if(attached.length)R.warn=[`Removes ${attached.length} attached fixtures; neighboring shared lighting and security coverage may be lost.`];
-        if(o.retrofitOrder){failItem('Cancel this unit’s upgrade installation before demolition');return R;}
-        if (o.type === 'unit' && (o.lease || o.commercial === 'reserved')) { failItem('Occupied - the lease must end before demolition'); return R; }
-        if (o.type === 'elevator' && this.objs('unit').some((u) => u.f > 0 && u.cstate === 'operating' && D.shellAt[this.idx(u.x, u.y)] === D.shellAt[i])) { failItem('Upper-floor units depend on this elevator'); return R; }
-        if (s.agents.some((ag) => ag.unit === o.id)) { failItem('A customer is using this right now'); return R; }
-        R.cost = 60 + (o.type === 'unit' ? SIZES[o.size].sqft * 0.6 : 40); R.dur = 0; R.count = 1;
-        R.missing.push(o.type === 'unit' ? 'Capacity is lost; no salvage refund' : 'No salvage refund');
-        if (o.type !== 'unit') { const n = this.accessImpact(() => { delete s.objects[o.id]; return () => { s.objects[o.id] = o; }; }); if (n) R.warn = [`${n} open unit${n > 1 ? 's' : ''} will lose access and stop renting`]; }
-        R.status = 'valid';
+        const priorities={light:0,camera:0,unitLight:0,corral:1,door:2,unit:3,office:4,shell:5};
+        const candidate=atHere.sort((p,q)=>(priorities[p.type]??2)-(priorities[q.type]??2))[0];
+        const shell=D.shellAt[i]&&s.objects[D.shellAt[i]];
+        const target=a.removalTarget || (a.targetId!=null ? Number(a.targetId) : candidate?.id ?? shell?.id ?? {kind:'surface',x,y,f,layer:D.shellAt[i]?'hall':'ground'});
+        const operation=this.placeableRemoval(target);
+        R.operation=operation; R.target=operation.target?.id; R.label='Remove '+operation.name;
+        R.cost=operation.cost;R.count=1;R.dur=0;R.items=operation.items?.length?operation.items:R.items;
+        if(operation.classification==='blocked'){failItem(operation.prerequisites[0]);return R;}
+        R.missing.push(...operation.effects);R.warn=operation.effects.length>1?[...operation.effects]:[];
         return R;
       }
     }
+
     return R;
   }
   planUnits(a, R, bad, inc) {
@@ -984,7 +966,7 @@ export class Sim {
   act_build(a) {
     if (a.projectKey && (!matchesProject(a, a.projectKey) || !projectOffers(this).some(p => p.key === a.projectKey))) return { ok: false, msg: 'That project has changed. Review the yard again.' };
     const s = this.s, R = this.plan(a);
-    if (a.tool === 'demolish' && a.targetId != null && (typeof a.quoteStamp !== 'string' || R.operation?.stamp !== a.quoteStamp)) { this.emit('refuse'); return { ok: false, msg: 'Removal review changed. Review the exact asset, cost and consequences again.' }; }
+    if (a.tool === 'demolish' && (a.targetId != null || a.removalTarget) && (typeof a.quoteStamp !== 'string' || R.operation?.stamp !== a.quoteStamp)) { this.emit('refuse'); return { ok: false, msg: 'Removal review changed. Review the exact asset, cost and consequences again.' }; }
     if (R.status === 'invalid') { this.emit('refuse'); return { ok: false, msg: R.reasons[0] }; }
     if(R.upgrades && (a.lighting&&a.lighting!=='none'||a.outsideCameras) && a.upgradeStamp!==R.upgradeStamp)return {ok:false,msg:'Fixture package changed. Review positions and cost before confirming.'};
     if (a.tool === 'demolish') {
@@ -1028,18 +1010,20 @@ export class Sim {
     const nearLoad = DIRS.some(([dx, dy]) => this.s.ground[this.idx(o.x + dx, o.y + dy)] === G.LOADING);
     return (o.f > 0 ? `Floor ${o.f + 1} Corral` : nearLoad ? 'Main Loading Corral' : 'Corral') + (n > 1 ? ' ' + n : '');
   }
-  demolish(R) {
-    const s = this.s, o = s.objects[R.target];
-    this.money(-R.cost, 'capex', 'Demolition: ' + this.objName(o));
-    if (o.type === 'corral') for (const c of s.carts) if (c.corral === o.id && c.st === 'corral') { c.st = 'stranded'; c.corral = null; c.f = o.f; c.x = o.x; c.y = o.y; c.since = s.t; }
-    if (o.type === 'door' && o.keypad) { /* keypad removed with door */ }
-    const removed=new Set([o.id,...mountedOn(this,o.id).map(f=>f.id)]);
-    for(const q of [...s.orders])if(q.retrofit===o.id&&q.st==='construction')this.act_cancelOrder({id:q.id});
-    this.removeEquipment(removed);
-    delete s.objects[o.id];
-    this.markDirty(); this.emit('demolish', { x: o.x, y: o.y, f: o.f || 0 });
-    return { ok: true, msg: 'Demolished' };
+  act_remove(a) {
+    const q=this.placeableRemoval(a.target);
+    if(typeof a.stamp!=='string'||a.stamp!==q.stamp)return {ok:false,msg:'Removal review changed. Review the exact asset, cost and consequences again.'};
+    if(q.classification==='blocked')return {ok:false,msg:q.prerequisites[0]};
+    if(!this.unlimited()&&this.s.cash<q.cost)return {ok:false,msg:'Not enough cash for removal.'};
+    return this.commitRemoval(q);
   }
+  commitRemoval(q) {
+    if(q.cost)this.money(-q.cost,'capex','Demolition: '+q.name);
+    applyRemovalState(this.s,q.mutation);
+    this.markDirty();this.emit('demolish',{x:q.target?.x,y:q.target?.y,f:q.target?.f||0});
+    return {ok:true,msg:q.closeProperty?'Property closed; selected asset removed.':'Selected asset removed.',removed:q.mutation.ids};
+  }
+  demolish(R) { return this.commitRemoval(R.operation); }
   act_cancelOrder(a) {
     const s = this.s, ord = s.orders.find((o) => o.id === a.id);
     if (!ord || ord.st !== 'construction') return { ok: false, msg: 'Nothing to cancel' };

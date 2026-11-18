@@ -52,7 +52,7 @@ console.log('PASS stable deselection, stale-quote refusal, paused load/poll, com
  // Low capacity sheds attachments via existing light/camera priorities, not host unit power.
  s.s.powerBase=0;s.markDirty();s.ensure();assert.equal(light.unpowered,true);assert.equal(cam.unpowered,true);assert.equal(privateLight.unpowered,true);assert.ok(!u.unpowered);
  const copy=new Sim(JSON.parse(JSON.stringify(s.s)));copy.ensure();assert.equal(mountedOn(copy,u.id).length,3);assert.equal(copy.s.open,false);
- const dem=s.plan({tool:'demolish',a:{x:u.x,y:u.y},b:{x:u.x,y:u.y},f:0});assert.match(dem.warn.join(' '),/attached fixtures/);const task=s.ensureRepairTask(light);assert.ok(s.dispatch({type:'build',tool:'demolish',a:{x:u.x,y:u.y},b:{x:u.x,y:u.y},f:0}).ok);assert.equal(mountedOn(s,u.id).length,0);assert.ok(!s.s.tasks.some(t=>t.id===task.id));
+ const task=s.ensureRepairTask(light),args={tool:'demolish',targetId:u.id,a:{x:u.x,y:u.y},b:{x:u.x,y:u.y},f:0},dem=s.plan(args);assert.equal(dem.operation.dependencies.attachments.length,3);assert.ok(s.dispatch({type:'build',...args,quoteStamp:dem.operation.stamp}).ok);assert.equal(mountedOn(s,u.id).length,0);assert.ok(!s.s.tasks.some(t=>t.id===task.id));
 }
 console.log('PASS real construction, shared security, wall/corner masks, maintenance outcomes, load shedding and demolition cleanup');
 {
