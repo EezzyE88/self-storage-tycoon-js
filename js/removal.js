@@ -1,4 +1,4 @@
-// Universal removal candidate. F1-F5 are provisional candidate-only terms.
+// Universal removal. F1-F5 removal terms are owner-approved for release (2026-11-18).
 import { G, SIZES } from './data.js';
 import { unregisterGateAccess } from './gateaccess.js';
 const equipment = new Set(['gate','door','elevator','stairs','power','water','hvac','light','camera','unitLight','restroom','fountain','canopy','corral']);

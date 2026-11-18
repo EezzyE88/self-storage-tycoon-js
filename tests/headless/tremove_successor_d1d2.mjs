@@ -41,7 +41,7 @@ test('labels and descriptions are player-facing and truthful',()=>{
 test('blocked review leads with what must happen first; success feedback names the asset and is kept beside autosave',()=>{
  const f=fixture(0),{ui,A}=f;A.markDirty();A.ensure();f.g.rend.setPreview=()=>{};f.g.rend.view=0;ui.syncFloorUi=()=>{};ui.validView=v=>v;ui.select=function(v){this.sel=v;};
  const leased=A.objs('unit').find(u=>u.lease);click(f,'removeObject',String(leased.id));const html=ui.$('modal').innerHTML;
- assert.ok(html.indexOf('Can’t remove yet')>-1&&html.indexOf('Can’t remove yet')<html.indexOf('Would remove'),'blocker shown before consequences');assert.match(html,/removeConfirm" disabled/);click(f,'modalClose');
+ assert.ok(html.indexOf('Can’t remove yet')>-1&&html.indexOf('Can’t remove yet')<html.indexOf('Would remove'),'blocker shown before consequences');assert.match(html,/removeConfirm" disabled/);assert.doesNotMatch(html,/provisional|private candidate/i,'release review carries no candidate-only notice');click(f,'modalClose');
  let kept=null;ui.toast=(t,k,keep)=>{ui.lastToast=t;kept=keep;};const light=A.objs('light').find(l=>!l.mount);click(f,'removeObject',String(light.id));click(f,'removeConfirm');
  assert.ok(!A.s.objects[light.id]);assert.equal(ui.lastToast,`Light #${light.id} removed · $100.`);assert.equal(kept,true,'kept toast survives the Progress saved toast');assert.equal(A.s.speed,0);
 });
