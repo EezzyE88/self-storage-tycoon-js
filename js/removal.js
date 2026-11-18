@@ -94,6 +94,7 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
   if(pending.length)bad(`Finish or Cancel construction order #${pending[0].id} before removal.`);
   if(s.tasks.some(a=>refs.has(a.obj)&&(a.assigned||a.vendor||a.prog||a.workBooked)))bad('Finish or cancel assigned service work on this asset first.');
   if(s.agents.some(a=>uses(a,refs)||removed.some(c=>c.type==='elevator'&&a.elev===c.id)||floor&&a.f===floor.f&&inside(a,o)))bad('A customer or worker is using this asset or floor. Wait for the trip/work to finish.');
+  if(s.agents.some(a=>t.kind==='surface'&&floorOf(a)===(t.f||0)&&Math.floor(a.x)===t.x&&Math.floor(a.y)===t.y||removed.some(c=>['shell','office'].includes(c.type)&&inside(a,c))))bad('A person is on the selected surface or inside the structure. Wait for them to leave before removal.');
   if(s.visits.some(v=>uses(v,refs)))bad('A scheduled trip references this asset. Wait for it to finish.');
   if(removed.some(c=>c.type==='elevator'&&(c.riders?.length||c.q?.some(q=>q.length))))bad('Wait for elevator riders and queues to clear.');
   if(floor&&s.tasks.some(a=>a.f===floor.f&&inside(a,o)))bad('Resolve work on this floor before removal.');

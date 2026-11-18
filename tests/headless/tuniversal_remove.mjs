@@ -1,3 +1,4 @@
+import {fixture,click} from './transaction-fixture.mjs';
 import assert from 'node:assert/strict';
 import {makeSandbox,makeScenario} from '../../js/scenarios.js';
 import {makeMaple} from '../../js/maple.js';
@@ -76,6 +77,13 @@ test('equivalent freight elevator permits removal; absent/failed/unpowered alter
  function yard(){const s=fresh();build(s,args('gate',5,29));build(s,args('aisle',5,13,{x:9,y:28}));build(s,args('loading',5,13,{x:9,y:13}));build(s,args('walk',9,4,{x:9,y:12}));const b=shell(s);halls(s);build(s,args('doorWide',10,4));for(let f=0;f<2;f++)build(s,args('light',10,4,undefined,{f}));const first=build(s,args('elevator',11,5))[0],second=build(s,args('elevator',11,8))[0],u=build(s,args('iu5x5',11,4,undefined,{f:1,rotation:3}))[0];u.cstate='operating';u.commercial='ready';s.markDirty();s.ensure();assert.equal(u.blocked,false,u.missing.join(';'));return {s,b,u,first,second};}
  let a=yard();remove(a.s,a.first.id);assert.equal(a.s.s.objects[a.u.id].blocked,false);assert.ok(a.s.s.objects[a.second.id]);
  for(const change of [a=>{a.second.cond=.1;},a=>{a.s.s.powerBase=0;},a=>{delete a.s.s.objects[a.second.id];},a=>{a.first.riders=[{a:999,dest:1,slots:1}];}]){a=yard();change(a);a.s.markDirty();a.s.ensure();deny(a.s,a.first.id);}
+});
+test('production Remove review/Cancel/Confirm preserves manual Pause and refuses stale property',()=>{
+ const f=fixture(0),{ui,g,A}=f;g.rend.setPreview=()=>{};g.rend.setSelection=()=>{};ui.root={querySelectorAll:()=>[]};ui.syncFloorUi=()=>{};ui.select=()=>{};
+ const o=A.objs('light')[0],before=snap(A);click(f,'removeObject',String(o.id));assert.match(ui.$('modal').innerHTML,/Confirm removal/);assert.match(ui.$('modal').innerHTML,/Cancel/);click(f,'modalClose');assert.equal(snap(A),before);
+ click(f,'removeObject',String(o.id));click(f,'removeConfirm');assert.ok(!A.s.objects[o.id]);assert.equal(A.s.speed,0);assert.ok(f.saves>0);const after=snap(A);click(f,'removeConfirm');assert.equal(snap(A),after);
+ const other=A.objs('light')[0];click(f,'removeObject',String(other.id));g.sim=f.B;const b=snap(f.B);click(f,'removeConfirm');assert.equal(snap(f.B),b);assert.ok(A.s.objects[other.id]);
+ const s=fresh();build(s,args('walk',25,15));s.s.agents.push({id:999,kind:'staff',f:0,x:25.5,y:15.5,st:'idle'});deny(s,{kind:'surface',x:25,y:15,f:0,layer:'ground'},/person/);
 });
 test('all32 construction-tool entries covered without optional climate reversal or automatic reassignment',()=>{const expected=Object.keys(TOOLS).filter(k=>k!=='demolish');assert.deepEqual([...covered].sort(),expected.sort());});
 console.log(`${groups} universal removal groups passed; all 32 construction tools covered`);

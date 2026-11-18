@@ -1814,8 +1814,8 @@
           "@node",
           "tests/headless/tuniversal_remove.mjs"
         ],
-        "completion": "12 universal removal groups passed; all 32 construction tools covered",
-        "minimum_pass_lines": 12,
+        "completion": "13 universal removal groups passed; all 32 construction tools covered",
+        "minimum_pass_lines": 13,
         "timeout": 180,
         "scope": "universal exact removal, candidate-only F1-F5, all32 tools, dependencies, parent pricing, floors, freight alternatives, cart disposal, save/Pause and excluded placement workstream"
       }
