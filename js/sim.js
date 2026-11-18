@@ -1021,7 +1021,7 @@ export class Sim {
     if(q.cost)this.money(-q.cost,'capex','Demolition: '+q.name);
     applyRemovalState(this.s,q.mutation);
     this.markDirty();this.emit('demolish',{x:q.target?.x,y:q.target?.y,f:q.target?.f||0});
-    return {ok:true,msg:q.closeProperty?'Property closed; selected asset removed.':'Selected asset removed.',removed:q.mutation.ids};
+    return {ok:true,msg:q.closeProperty?`Property closed; ${q.name} removed.`:`${q.name} removed${q.cost?' · '+(Math.round(q.cost*100)/100).toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:q.cost%1?2:0}):''}.`,removed:q.mutation.ids};
   }
   demolish(R) { return this.commitRemoval(R.operation); }
   act_cancelOrder(a) {

@@ -1736,7 +1736,8 @@
         "minimum_pass_lines": 13,
         "timeout": 180,
         "scope": "universal exact removal, candidate-only F1-F5, all32 tools, dependencies, parent pricing, floors, freight alternatives, cart disposal, save/Pause and excluded placement workstream"
-      }
+      },
+      {"id":"tremove_successor_d1d2","command":["@node","tests/headless/tremove_successor_d1d2.mjs"],"completion":"ALL PASS: 4 Remove successor groups","minimum_pass_lines":4,"timeout":180,"evidence":"native Sim builds, production UI pickAt/removalActions/showRemoval/confirmRemoval through the transaction fixture","scope":"Remove successor: host-first map selection over mounted fixtures, reachable individual idle-cart disposal without reassignment, player-facing labels/descriptions, kept success feedback; native only, no rendered/Safari claim"}
     ],
     "historical": [
       {

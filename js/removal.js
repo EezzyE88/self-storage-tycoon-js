@@ -7,7 +7,13 @@ const key = v => JSON.stringify(sorted(v));
 const floorOf = o => o.f || 0;
 const inside = (o,b) => o.x>=b.x && o.y>=b.y && o.x<b.x+b.w && o.y<b.y+b.h;
 const occupied = o => o.lease || ['occupied','reserved'].includes(o.commercial);
-const label = o => o.type==='unit' ? `Unit ${o.num || o.name || o.id}` : `${o.type} #${o.id}`;
+// Player-facing asset names; ids stay only to tell same-type assets apart.
+const NAMES = {shell:'Building',office:'Office',gate:'Gate',door:'Door',elevator:'Elevator',stairs:'Stairwell',power:'Power supply',water:'Water supply',hvac:'HVAC unit',light:'Light',camera:'Camera',unitLight:'Interior light',restroom:'Restroom',fountain:'Water fountain',canopy:'Covered canopy',corral:'Cart corral'};
+export const assetTypeName = (o) => o?.type==='light'&&o.mount ? 'Wall light' : o?.type==='camera'&&o.mount ? 'Outside camera' : NAMES[o?.type] || 'Asset';
+export const assetLabel = o => o.type==='unit' ? `Unit ${o.num || o.name || o.id}` : `${assetTypeName(o)} #${o.id}`;
+const label = assetLabel;
+const SURFACE = {[G.ASPHALT]:'Drive aisle',[G.CONCRETE]:'Walkway',[G.LOADING]:'Loading zone',[G.PARKING]:'Parking'};
+export function idleCorralCarts(s, corralId){return s.carts.filter(c=>(c.corral===corralId||c.home===corralId)&&c.st==='corral'&&!s.agents.some(a=>a.cart===c.id)&&!s.tasks.some(a=>a.cart===c.id&&(a.assigned||a.vendor||a.prog||a.workBooked)));}
 const uses = (a,ids) => ['unit','obj','gate','gateId','elev','corral'].some(k=>ids.has(a[k]));
 function idleProperty(s) {
   return !Object.keys(s.leases).length && !Object.values(s.objects).some(o=>o.type==='unit'&&occupied(o)) &&
@@ -35,10 +41,10 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
   sim.ensure();
   const s=sim.s,t=removalTarget(sim,value),all=Object.values(s.objects),o=s.objects[t.id];
   const prerequisites=[],effects=[],ids=new Set(),cartIds=[],tiles=[],charges=[],items=[];
-  let name='',floor=null,keypad=null,closeProperty=false;
+  let name='',floor=null,keypad=null,closeProperty=false,surfaceTo=null;
   const bad=m=>{if(!prerequisites.includes(m))prerequisites.push(m);};
   const add=o=>{if(o&&!ids.has(o.id)){ids.add(o.id);}};
-  const structural=(b,f)=>charges.push({key:`structure:${b.id}:${f}`,label:`${b.type} #${b.id} F${f+1} structure (halls included)`,cost:60+b.w*b.h*25*.6});
+  const structural=(b,f)=>charges.push({key:`structure:${b.id}:${f}`,label:`${b.type==='shell'?'Building':'Office'} #${b.id} Floor ${f+1} structure${b.type==='shell'?' (halls included)':''}`,cost:60+b.w*b.h*25*.6});
   if(t.kind==='object'){
     if(!o)bad('The selected asset no longer exists. Select it again.');
     else if(o.type==='shell'){
@@ -63,7 +69,7 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
     const c=s.carts.find(c=>c.id===t.id);name=`Cart #${t.id}`;
     if(!c)bad('The selected cart no longer exists.');else {cartIds.push(c.id);if(!['corral','stranded','damaged'].includes(c.st)||s.agents.some(a=>a.cart===c.id)||s.tasks.some(a=>a.cart===c.id&&(a.assigned||a.vendor||a.prog||a.workBooked)))bad('Wait for this cart’s trip or assigned recovery work to finish.');charges.push({key:`cart:${c.id}`,label:name,cost:0});}
   }else if(t.kind==='surface'){
-    const {x,y}=t,f=t.f||0,i=sim.idx(x,y);name=`${t.layer==='hall'?'Hallway':'Surface'} (${x}, ${y}) F${f+1}`;
+    const {x,y}=t,f=t.f||0,i=sim.idx(x,y),layerName=t.layer==='hall'?'Hallway':(Number.isInteger(x)&&Number.isInteger(y)&&SURFACE[s.ground[i]])||'Ground';name=`${layerName} cell (${x}, ${y}) · Floor ${f+1}`;
     if(!Number.isInteger(x)||!Number.isInteger(y)||!Number.isInteger(f)||f<0||f>=s.hall.length||!sim.inParcel(x,y))bad('Select an editable cell inside this property.');
     else if(t.layer==='hall'){
       if(s.hall[f][i]!==1)bad('Select a completed hallway cell. Unfinished work uses Cancel construction.');
@@ -72,7 +78,7 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
     }else {
       const g=s.ground[i];if(f!==0||![G.ASPHALT,G.CONCRETE,G.LOADING,G.PARKING].includes(g))bad('Select player-editable paving or markings. Public street and sidewalk stay.');
       if(!sim.cellFree(i)||sim.D.at.get(i)?.length)bad('Remove the asset on this surface first.');
-      tiles.push({k:'ground',i,v:[G.LOADING,G.PARKING].includes(g)?G.ASPHALT:G.GRASS});
+      tiles.push({k:'ground',i,v:[G.LOADING,G.PARKING].includes(g)?G.ASPHALT:G.GRASS});surfaceTo=[G.LOADING,G.PARKING].includes(g)?'plain drive aisle':'grass';
     }
     items.push({x,y,f,ok:true});charges.push({key:`surface:${f}:${i}`,label:name,cost:5});
   }else bad('Select an exact asset or surface.');
@@ -83,10 +89,10 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
   for(const c of removed){
     if(c.cstate==='construction'||c.keypad==='pending'||c.retrofitOrder)bad(`Finish or Cancel construction/installation for ${label(c)} first.`);
     if(c.type==='unit'&&occupied(c))bad(`Occupied or reserved — resolve the lease/reservation for ${label(c)} before removal.`);
-    if(c.type==='corral'&&s.carts.some(a=>a.corral===c.id||a.home===c.id))bad(`Dispose of idle carts referencing Corral #${c.id} first; wait for in-use carts to return.`);
+    if(c.type==='corral'&&s.carts.some(a=>a.corral===c.id||a.home===c.id)){const n=s.carts.filter(a=>a.corral===c.id||a.home===c.id).length,idle=idleCorralCarts(s,c.id).length;bad(`${label(c)} still has ${n} cart${n===1?'':'s'}. ${idle?`Dispose of each idle cart from this corral’s panel first`:'Wait for its carts to return'}${idle<n&&idle?'; wait for in-use carts to return':''}. Carts are never moved automatically.`);}
     if(c.type==='unit')charges.push({key:`object:${c.id}`,label:label(c),cost:60+SIZES[c.size].sqft*.6});
     else if(equipment.has(c.type)&&!ids.has(c.mount?.host))charges.push({key:`object:${c.id}`,label:label(c),cost:100});
-    effects.push(c.type==='unit'?`Removes one vacant unit (${label(c)}) and its rental capacity; no salvage refund.`:c.mount?`Also removes attached ${c.type==='unitLight'?'interior light':c.type} #${c.id}; no salvage refund.`:`Removes ${label(c)}; no salvage refund.`);
+    effects.push(c.type==='unit'?(occupied(c)?`Would remove ${label(c)}, which is currently occupied or reserved, and its rental capacity.`:`Removes one vacant unit (${label(c)}) and its rental capacity; no salvage refund.`):c.mount&&c.id!==t.id?`Also removes attached ${assetTypeName(c).toLowerCase()} #${c.id}; no salvage refund.`:`Removes ${label(c)}${c.mount&&s.objects[c.mount.host]?` from ${label(s.objects[c.mount.host])}; the ${s.objects[c.mount.host].type==='unit'?'unit':'host'} stays`:''}; no salvage refund.`);
     for(let y=Math.floor(c.y);y<Math.ceil(c.y+(c.h||1));y++)for(let x=Math.floor(c.x);x<Math.ceil(c.x+(c.w||1));x++)items.push({x,y,f:floorOf(c),ok:true});
   }
   const refs=new Set([...ids,...(keypad?[keypad]:[])]);
@@ -121,7 +127,7 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
   }
   if(keypad)effects.push('Removes only the keypad; door remains. No salvage refund.');
   if(floor)effects.push(`Removes top Floor ${floor.f+1}; lower-floor shafts and paid reinforcement remain.`);
-  if(t.kind==='surface')effects.push(`Changes only the selected ${t.layer==='hall'?'hallway':'ground'} cell; no salvage refund.`);
+  if(t.kind==='surface')effects.push(t.layer==='hall'?'Removes only this hallway cell on this floor; no salvage refund.':`Changes only this cell${surfaceTo?` to ${surfaceTo}`:''}; no salvage refund.`);
   for(const tile of tiles)items.push({x:tile.i%s.W,y:Math.floor(tile.i/s.W),f:tile.f||0,ok:true});
   if(cartIds.length)effects.push('Disposes of this idle cart only; no salvage refund.');
   const unique=[...new Map(charges.map(c=>[c.key,c])).values()],cost=unique.reduce((n,c)=>n+c.cost,0);
