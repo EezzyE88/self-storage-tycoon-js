@@ -14,6 +14,8 @@ const COL = {
   unitWall: '#fbf3e6', unitWall2: '#eadcc6', roof: '#2f8a8f', roofTrim: '#267277', door: '#ff7a2f', doorInt: '#3c8586',
   shellWall: '#f1f6f2', shellRoof: '#3d6f9a', office: '#f7e2c2', officeTrim: '#1f5e66', glass: '#9fd6ee',
 };
+// Opening framing for the two settings that start on a nearly empty lot (cells beyond the parcel; z = building height kept in view).
+const OPENING_SETTING = { vertical: { side: 0, rear: 7, z: 4 }, climate: { side: 0, rear: 7, z: 3.5 } };
 // Presentation only: derive the setting from existing scenario identity, including old saves.
 // No scenery is a simulation object, purchasable improvement or access route.
 const SCENERY = {
@@ -463,12 +465,12 @@ export class Renderer {
     line.scale.set(b.w+.12,.12,b.h+.12); line.position.set(b.x+b.w/2,.16,b.y+b.h/2);
     line.renderOrder = 34; this.scene.add(line); this.projectMark = line; this.projectMarkUntil = performance.now()+6000;
   }
-  fitProperty(rect) { // frame the whole parcel inside the uncovered screen area
+  fitProperty(rect, framePoints = null) { // frame the whole parcel inside the uncovered screen area
     const s = this.sim.s, w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     rect = rect || { top: 60, bottom: h - 80, left: 8, right: w - 8 };
     // Project actual built footprints, avoiding the empty corners of an L-shaped estate.
-    const points = [];
-    for (const o of Object.values(s.objects)) {
+    const points = framePoints ? framePoints.slice() : [];
+    if (!framePoints) for (const o of Object.values(s.objects)) {
       if (o.x == null || o.y == null) continue;
       const height = Math.max(2.5, (o.floors || 1) * FLOOR_H + 0.5) + (o.f || 0) * FLOOR_H;
       for (const x of [o.x - 1, o.x + (o.w || 1) + 1])
@@ -483,6 +485,18 @@ export class Renderer {
     this.zoom = Math.max(0.25, Math.min(4.2, this.zoom * k)); this.updateCamera();
     b = bb(); this.pan((rect.left + rect.right) / 2 - (b.x0 + b.x1) / 2, (rect.top + rect.bottom) / 2 - (b.y0 + b.y1) / 2);
     this.tapZoom = { sim: this.sim, step: 0, base: this.zoom, rect: { ...rect } };
+  }
+  // Opening view only: Go Vertical and Climate Boom start on a nearly empty lot, so the built-footprint fit
+  // closes in on the office and hides the setting. Frame the playable parcel plus its rear/side surroundings.
+  // Saved cameras, the Fit button and the double-tap cycle keep the normal footprint framing.
+  fitOpening(rect) {
+    const s = this.sim.s, id = s.scenario?.id;
+    if (!OPENING_SETTING[id]) return false;
+    const p = s.parcel, { side, rear, z } = OPENING_SETTING[id], points = [];
+    for (const x of [p.x0 - side, p.x1 + side]) for (const y of [p.y0 - rear, p.y1 + 1]) points.push([x, y, 0]);
+    for (const x of [p.x0 - side, p.x1 + side]) points.push([x, p.y0 - rear, z]);
+    const cycle = this.tapZoom; this.fitProperty(rect, points); this.tapZoom = cycle;
+    return true;
   }
   doubleTapZoom(cx, cy, rect) {
     if (!this.tapZoom || this.tapZoom.sim !== this.sim) this.fitProperty(rect);
