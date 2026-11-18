@@ -14,6 +14,14 @@ const COL = {
   unitWall: '#fbf3e6', unitWall2: '#eadcc6', roof: '#2f8a8f', roofTrim: '#267277', door: '#ff7a2f', doorInt: '#3c8586',
   shellWall: '#f1f6f2', shellRoof: '#3d6f9a', office: '#f7e2c2', officeTrim: '#1f5e66', glass: '#9fd6ee',
 };
+// Presentation only: derive the setting from existing scenario identity, including old saves.
+// No scenery is a simulation object, purchasable improvement or access route.
+const SCENERY = {
+  comeback: { outer: '#b6a17e', grass: '#aeb57c', leaf: '#78805a', wall: '#b3a38c', roof: '#736958', trim: '#78604c' },
+  turnaround: { outer: '#82966c', grass: '#9db87b', leaf: '#52734b', wall: '#d3c3ad', roof: '#725e54', trim: '#82958d' },
+  vertical: { outer: '#858b8e', grass: '#9ba786', leaf: '#5c7564', wall: '#9a9da1', roof: '#555e67', trim: '#b5957e' },
+  climate: { outer: '#a1b0a1', grass: '#9fbe99', leaf: '#456e61', wall: '#e0e4df', roof: '#546c7c', trim: '#91b0b5' },
+};
 function tex(canvas, repeat = false) {
   const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; }
@@ -259,7 +267,14 @@ export class Renderer {
     this.ambient = new THREE.AmbientLight(0x6a7da8, 0.0); this.scene.add(this.ambient);
   }
   resizeWorld() { // a property of a different size was attached: rebuild the world-sized planes, textures and scenery
-    const s = this.sim.s; if (this.worldW === s.W && this.worldH === s.H) return;
+    const s = this.sim.s;
+    if (this.worldW === s.W && this.worldH === s.H) {
+      // Maple and Comeback share dimensions: a property switch still needs its own setting.
+      if (this.environmentKey !== this.sceneryKey()) {
+        this.clearGroup(this.envG); this.buildEnvironment(); this.lastGroundT = -1e9;
+      }
+      return;
+    }
     this.worldW = s.W; this.worldH = s.H;
     const redo = (mesh, cw, ch, y) => {
       const cv = mkCanvas(cw, ch), t = tex(cv); if (mesh.material.map) mesh.material.map.dispose(); mesh.material.map = t; mesh.material.needsUpdate = true;
@@ -271,8 +286,16 @@ export class Renderer {
     this.outer.position.set(s.W / 2, -0.02, s.H / 2);
     this.clearGroup(this.envG); this.buildEnvironment();
   }
+  sceneryKey() {
+    const s = this.sim.s, p = s.parcel;
+    return [s.W, s.H, p.x0, p.y0, p.x1, p.y1, Object.hasOwn(SCENERY, s.scenario?.id) ? s.scenario.id : 'default'].join(':');
+  }
   buildEnvironment() {
     const s = this.sim.s, p = s.parcel;
+    this.environmentKey = this.sceneryKey();
+    this.environment = Object.hasOwn(SCENERY, s.scenario?.id) ? SCENERY[s.scenario.id] : null;
+    this.outer.material.color.set(this.environment?.outer || '#86b85a');
+    if (this.environment) { this.buildScenarioEnvironment(s.scenario.id, this.environment); return; }
     // trees: deterministic scatter outside the parcel
     const spots = [];
     for (let k = 0; k < 260; k++) {
@@ -298,6 +321,110 @@ export class Renderer {
       const w = 5 + hash(k) * 4, h = 1.6 + hash(k + 3) * 1.8;
       b.scale.set(w, h, 4); b.position.set(3 + k * 9 + hash(k + 7) * 2, h / 2, p.y0 - 7); b.castShadow = b.receiveShadow = true; this.envG.add(b);
       const roof = new THREE.Mesh(this.geo.box, this.mat.roof); roof.scale.set(w + .16, .12, 4.16); roof.position.set(b.position.x, h + .06, b.position.z); roof.castShadow = true; this.envG.add(roof);
+    }
+  }
+  buildScenarioEnvironment(id, palette) {
+    const s = this.sim.s, p = s.parcel, batches = new Map();
+    const group = new THREE.Group(); group.name = 'scenery-' + id; this.envG.add(group);
+    // Batch repeated primitives by material. Decorative scenery adds no shadow-map passes.
+    // Keep the parcel, its boundary and the entire entrance/foreground free of new props.
+    const put = (shape, color, x, y, z, w, h, d) => {
+      if (x + w / 2 > p.x0 - 1.2 && x - w / 2 < p.x1 + 1.2 && z + d / 2 > p.y0 - 1.2 && z - d / 2 < p.y1 + 1.2) return;
+      if (z + d / 2 > p.y1 + .5) return;
+      const key = shape + color;
+      if (!batches.has(key)) batches.set(key, { shape, color, placements: [] });
+      batches.get(key).placements.push([x, y, z, w, h, d]);
+    };
+    const box = (color, x, y, z, w, h, d) => put('box', color, x, y, z, w, h, d);
+    const pad = (x, z, w, d, color = palette.trim) => box(color, x, -.005, z, w, .025, d);
+    const tree = (x, z, k = 1) => {
+      put('cyl', '#75634d', x, .65 * k, z, .16 * k, 1.3 * k, .16 * k);
+      put('sph', palette.leaf, x, 1.65 * k, z, 1.6 * k, 1.8 * k, 1.6 * k);
+    };
+    const building = (x, z, w, d, h, color = palette.wall) => {
+      box(color, x, h / 2, z, w, h, d);
+      box(palette.roof, x, h + .09, z, w + .2, .18, d + .2);
+    };
+    const rear = p.y0 - 7;
+    if (id === 'comeback') {
+      // Dry trade yard: low corrugated sheds, loading doors, stacked containers and scrub.
+      for (let k = 0; k < 3; k++) {
+        const x = 4 + k * 12;
+        pad(x, rear, 11, 9, '#b3a58d'); building(x, rear, 9, 5.5, 2.6);
+        for (let n = 0; n < 3; n++) {
+          box(palette.trim, x - 2.7 + n * 2.7, 1, rear + 2.78, 1.8, 2, .06);
+          for (let rib = 0; rib < 5; rib++) box(palette.roof, x - 4.2 + (n * 5 + rib) * .58, 1.4, rear + 2.82, .035, 2.4, .04);
+        }
+      }
+      for (const x of [p.x0 - 5, p.x1 + 5]) for (let k = 0; k < 3; k++) {
+        const z = p.y0 + 4 + k * 8;
+        box(k % 2 ? '#956b51' : '#687d78', x, .8, z, 3, 1.6, 5);
+        for (let rib = 0; rib < 8; rib++) box(palette.roof, x + 1.52, .8, z - 2.1 + rib * .6, .035, 1.5, .055);
+        put('sph', palette.leaf, x - 2, .28, z + 2.6, .8, .55, .8);
+      }
+      for (let k = 0; k < 8; k++) tree(-9 + k * 8, rear - 10, .65 + hash(k) * .3);
+    } else if (id === 'turnaround') {
+      // Established suburb: pitched-roof houses, brick shops, garden hedges and mature trees.
+      for (let k = 0; k < 5; k++) {
+        const x = 1 + k * 9;
+        pad(x, rear, 7.8, 9, '#8d9b75'); building(x, rear, 5.5, 4.5, 2, k % 2 ? '#bca99b' : palette.wall);
+        put('cone', palette.roof, x, 2.8, rear, 7, 1.6, 6.2);
+        box(palette.trim, x - 1.5, 1.2, rear + 2.28, 1, .8, .05);
+        box(palette.trim, x + 1.5, 1.2, rear + 2.28, 1, .8, .05);
+        box('#806c5d', x, .7, rear + 2.3, .7, 1.4, .06);
+        tree(x + 3.3, rear + 2.6, .95);
+      }
+      for (const x of [p.x0 - 5, p.x1 + 5]) for (let k = 0; k < 4; k++) {
+        const z = p.y0 + 3 + k * 7;
+        tree(x, z, 1.15 + hash(k + 12) * .2);
+        box(palette.leaf, x, .35, z + 2.6, 2.5, .7, 1);
+      }
+      building(p.x1 + 9, rear - 1, 6, 6, 2.5, '#98735e');
+    } else if (id === 'vertical') {
+      // Urban infill: layered masonry blocks, a taller rear skyline and narrow side streets.
+      for (let row = 0; row < 2; row++) for (let k = 0; k < 6; k++) {
+        const x = -3 + k * 8, z = rear - row * 12, h = row ? 7 + hash(k + 31) * 3 : 3.8 + hash(k) * 1.3;
+        const wall = k % 2 ? palette.trim : palette.wall;
+        pad(x, z, 7.8, 9, '#777e83'); building(x, z, 6.5, 6, h, wall);
+        for (let floor = 1; floor < h - .4; floor += 1.15) for (let col = 0; col < 3; col++) {
+          box(palette.roof, x - 2 + col * 2, floor, z + 3.03, .85, .6, .05);
+          box(palette.roof, x + 3.28, floor, z - 2 + col * 2, .05, .6, .85);
+        }
+        box(palette.roof, x + 1.3, h + .5, z, 1.7, .7, 1.5);
+      }
+      for (const x of [p.x0 - 5.5, p.x1 + 5.5]) for (let k = 0; k < 3; k++) {
+        const z = p.y0 + 3 + k * 8;
+        pad(x, z, 6.8, 7.5, '#777e83'); building(x, z, 4.2, 5, 2.8, palette.trim);
+        box(palette.roof, x, 1.3, z + 2.53, 2.8, 1.8, .05);
+      }
+      for (let k = 0; k < 4; k++) tree(p.x0 - 9, p.y0 + 2 + k * 8, .65);
+    } else if (id === 'climate') {
+      // Modern business park: broad glass-fronted offices, a records depot and ordered landscaping.
+      for (let k = 0; k < 3; k++) {
+        const x = 4 + k * 14;
+        pad(x, rear, 12.5, 10, '#c4cbc7'); building(x, rear, 10, 6, 3.4);
+        box(palette.trim, x, 1.85, rear + 3.04, 8.6, 2.5, .08);
+        box(palette.wall, x, 1.9, rear + 3.1, .18, 2.6, .12);
+        box(palette.roof, x, 2.9, rear + 3.6, 5, .15, 1.4);
+        for (const dx of [-3, 3]) box(palette.trim, x + dx, 3.8, rear - .4, 1.8, .6, 1.3);
+      }
+      for (const x of [p.x0 - 5, p.x1 + 5]) for (let k = 0; k < 4; k++) {
+        const z = p.y0 + 3 + k * 7;
+        pad(x, z, 3, 3, '#c4cbc7'); tree(x, z, .8);
+        box(palette.leaf, x, .3, z + 2.4, 2.4, .6, 1);
+      }
+      building(p.x1 + 11, rear - 2, 8, 8, 2.7, palette.wall);
+      for (let k = 0; k < 3; k++) box(palette.roof, p.x1 + 8.5 + k * 2.4, 1, rear + 2.04, 1.6, 2, .06);
+    }
+    const matrix = new THREE.Matrix4(), rotation = new THREE.Quaternion();
+    for (const { shape, color, placements } of batches.values()) {
+      const material = new THREE.MeshStandardMaterial({ color, roughness: .9 });
+      const mesh = new THREE.InstancedMesh(this.geo[shape], material, placements.length);
+      placements.forEach(([x, y, z, w, h, d], i) => {
+        matrix.compose(new THREE.Vector3(x, y, z), rotation, new THREE.Vector3(w, h, d)); mesh.setMatrixAt(i, matrix);
+      });
+      mesh.instanceMatrix.needsUpdate = true; mesh.receiveShadow = true; mesh.castShadow = false;
+      group.add(mesh);
     }
   }
   // graphics level: 2 = full, 1 = lighter (lower resolution + smaller shadows), 0 = lowest (DPR 1, no shadows)
@@ -415,7 +542,7 @@ export class Renderer {
       switch (gv) {
         case G.ASPHALT: base = COL.asphalt; break; case G.CONCRETE: base = COL.concrete; break; case G.STREET: base = COL.street; break;
         case G.LOADING: base = COL.loading; break; case G.PARKING: base = COL.parking; break; case G.SIDEWALK: base = COL.sidewalk; break;
-        default: base = COL.grass;
+        default: base = this.environment?.grass || COL.grass;
       }
       g.fillStyle = base; g.fillRect(px, py, C, C);
       if (gv === G.GRASS) {
