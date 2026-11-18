@@ -833,7 +833,10 @@ export class Sim {
         const priorities={light:0,camera:0,unitLight:0,corral:1,door:2,unit:3,office:4,shell:5};
         const candidate=atHere.filter(o=>o&&o.type!=='unitLight').sort((p,q)=>(priorities[p.type]??2)-(priorities[q.type]??2))[0];
         const shell=D.shellAt[i]&&s.objects[D.shellAt[i]];
-        const target=a.removalTarget || (a.targetId!=null ? Number(a.targetId) : candidate?.id ?? shell?.id ?? {kind:'surface',x,y,f,layer:D.shellAt[i]?'hall':'ground'});
+        // D3: viewing a numbered floor, a completed hallway cell with nothing on it is the exact target;
+        // the whole building stays reachable from the building panel (and from the exterior view).
+        const hallCell=a.floorView&&shell&&!candidate&&s.hall[f]?.[i]===1&&!D.elevAt[i]&&!D.stairAt[i];
+        const target=a.removalTarget || (a.targetId!=null ? Number(a.targetId) : candidate?.id ?? (hallCell ? {kind:'surface',x,y,f,layer:'hall'} : shell?.id) ?? {kind:'surface',x,y,f,layer:D.shellAt[i]?'hall':'ground'});
         const operation=this.placeableRemoval(target);
         R.operation=operation; R.target=operation.target?.id; R.label='Remove '+operation.name;
         R.cost=operation.cost;R.count=1;R.dur=0;R.items=operation.items?.length?operation.items:R.items;

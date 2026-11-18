@@ -1174,6 +1174,7 @@ export class UI {
     const a = { tool: this.tool, a: this.planArgs.a, b: T.shape === 'tap' ? this.planArgs.a : this.planArgs.b, axis:this.planArgs.axis, dir:this.planArgs.dir, rotation:this.buildRotation, f: this.toolFloor(), climate: this.climate, flip: this.flip, rush: this.canRush() && this.rush, targetId:this.planArgs.targetId };
     if (['doorStd', 'doorWide', 'doorAuto', 'elevator', 'office', 'gate', 'hvac', 'keypad', 'canopy', 'aisle', 'loading', 'parking', 'walk', 'shell1', 'shell2'].includes(this.tool) || T.cat === 'site') a.f = 0;
     if (this.tool.startsWith('du')) a.f = 0;
+    if (this.tool === 'demolish' && Number.isInteger(this.rend.view)) a.floorView = true;
     Object.assign(a,this.upgradeOptions||{});
     this.plan = this.sim.plan(a); a.upgradeStamp=this.plan.upgradeStamp;
     if (this.tool === 'demolish' && this.plan.operation) { a.targetId = this.plan.target; a.quoteStamp = this.plan.operation?.stamp; a.removalTarget = this.plan.operation?.descriptor; }
