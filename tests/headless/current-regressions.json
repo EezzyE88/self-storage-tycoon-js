@@ -1711,103 +1711,21 @@
         "timeout": 180,
         "evidence": "native production saveCode/prepareLoad in a vm with real scenarios and goalMet; no rendered or physical-device claim",
         "scope": "Scenario goal comparison rules survive save/reload; damaged saves repaired; non-scenario saves untouched"
-      },
-      {
-        "id": "tinvestment_checkin",
-        "command": [
-          "@node",
-          "tests/headless/tinvestment_checkin.mjs"
-        ],
-        "completion": "8 Investment Check-in focused checks passed",
-        "minimum_pass_lines": 8,
-        "timeout": 120,
-        "evidence": "native derived per-property construction group, lease totals, mixed product, demand windows, no state writes",
-        "scope": "IP-01 read-only presentation; no Safari claim"
-      },
-      {
-        "id": "tpricing_guidance",
-        "command": [
-          "@node",
-          "tests/headless/tpricing_guidance.mjs"
-        ],
-        "completion": "11 pricing guidance focused checks passed",
-        "minimum_pass_lines": 11,
-        "timeout": 120,
-        "evidence": "native reworded saved price advice, stored report immutability, per-size 30-day activity counts, no state/Pause/RNG writes",
-        "scope": "Display-only pricing guidance; no economy change; no rendered/Safari claim"
-      },
-      {
-        "id": "trn01_notice",
-        "command": [
-          "@node",
-          "tests/headless/trn01_notice.mjs"
-        ],
-        "completion": "17\\ RN\\-01\\ focused\\ checks\\ passed",
-        "minimum_pass_lines": 17,
-        "timeout": 120,
-        "evidence": "native Sim rent notice, billing, customer response, delinquency/expiry, forecast, save/Pause, account independence",
-        "scope": "RN-01A\u2013E isolated notice lifecycle; no rendered/browser/Safari or player acceptance claim"
-      },
-      {
-        "id": "trn01_save",
-        "command": [
-          "@node",
-          "tests/headless/trn01_save.mjs"
-        ],
-        "completion": "5\\ RN\\-01\\ production\\ save\\ checks\\ passed",
-        "minimum_pass_lines": 5,
-        "timeout": 120,
-        "evidence": "real game saveJSON, compressed and raw saveCode, prepareLoad/applyLoad with RN-01 notices, legacy optional fields, Pause and exact-once financial batch",
-        "scope": "production save migration and billing state for RN-01; native-only, no Safari or rendered device acceptance"
-      },
-      {
-        "id": "tmg01_moveout",
-        "command": [
-          "@node",
-          "tests/headless/tmg01_moveout.mjs"
-        ],
-        "completion": "11 MG-01 move-out focused checks passed",
-        "minimum_pass_lines": 11,
-        "timeout": 120,
-        "evidence": "native Sim make-ready jobs, Porter/Owner/vendor/delegation refusal, work report and Owner capacity, economy/RNG/Pause unchanged",
-        "scope": "MG-01 Move-Out Turnaround: genuine eligible jobs, one featured per five per property, exclusive Owner claim, leave/reload recovery, exactly-once completion; native only, no rendered/Safari claim"
-      },
-      {
-        "id": "tmg01_save",
-        "command": [
-          "@node",
-          "tests/headless/tmg01_save.mjs"
-        ],
-        "completion": "3 MG-01 production save checks passed",
-        "minimum_pass_lines": 3,
-        "timeout": 120,
-        "evidence": "real game saveJSON, raw and compressed saveCode, prepareLoad/applyLoad, two-property company, legacy save",
-        "scope": "production save handling for MG-01: in-progress claim released on load, single completion, per-property cadence; native only"
-      },
-      {
-        "id": "tcareer_opportunity",
-        "command": [
-          "@node",
-          "tests/headless/tcareer_opportunity.mjs"
-        ],
-        "completion": "10 Career Business Opportunities checks passed",
-        "minimum_pass_lines": 10,
-        "timeout": 120,
-        "evidence": "native Sim natural graduated Maple demand, real UI Growth card and Explore build, production saveJSON/saveCode/prepareLoad/applyLoad, buildFacility and switchProperty, 10-day state parity",
-        "scope": "Career Business Opportunities Rev 1: derived read-only standard drive-up offer, eligibility incl. Career-root-only acquisitions, tap-time recheck, Pause, property isolation, nothing saved; D2 negative-funds warning with unchanged Confirm checks; native only, no rendered/Safari claim"
-      },
-      {
-        "id": "tplacement_visibility",
-        "command": [
-          "@node",
-          "tests/headless/tplacement_visibility.mjs"
-        ],
-        "completion": "6 placement visibility checks passed",
-        "minimum_pass_lines": 6,
-        "timeout": 180,
-        "evidence": "native Sim natural Career/Comeback evidence, real UI recommendation previews and review render, CPU renderer camera math with stubbed panel measurements",
-        "scope": "Recommended-placement visibility: recommendation previews (Career opportunity, Comeback Yard opportunity, first gate, two-floor lesson) frame the suggestion and open a compact phone-portrait review; Details/Peek/Confirm kept; no rendered/Safari claim"
-      },
+      }
+    ,
+      {"id":"tinvestment_checkin","command":["@node","tests/headless/tinvestment_checkin.mjs"],"completion":"8 Investment Check-in focused checks passed","minimum_pass_lines":8,"timeout":120,"evidence":"native derived per-property construction group, lease totals, mixed product, demand windows, no state writes","scope":"IP-01 read-only presentation; no Safari claim"}
+    ,
+      {"id":"tpricing_guidance","command":["@node","tests/headless/tpricing_guidance.mjs"],"completion":"11 pricing guidance focused checks passed","minimum_pass_lines":11,"timeout":120,"evidence":"native reworded saved price advice, stored report immutability, per-size 30-day activity counts, no state/Pause/RNG writes","scope":"Display-only pricing guidance; no economy change; no rendered/Safari claim"}
+    ,
+      {"id":"trn01_notice","command":["@node","tests/headless/trn01_notice.mjs"],"completion":"17\\ RN\\-01\\ focused\\ checks\\ passed","minimum_pass_lines":17,"timeout":120,"evidence":"native Sim rent notice, billing, customer response, delinquency/expiry, forecast, save/Pause, account independence","scope":"RN-01A–E isolated notice lifecycle; no rendered/browser/Safari or player acceptance claim"}
+    ,
+      {"id":"trn01_save","command":["@node","tests/headless/trn01_save.mjs"],"completion":"5\\ RN\\-01\\ production\\ save\\ checks\\ passed","minimum_pass_lines":5,"timeout":120,"evidence":"real game saveJSON, compressed and raw saveCode, prepareLoad/applyLoad with RN-01 notices, legacy optional fields, Pause and exact-once financial batch","scope":"production save migration and billing state for RN-01; native-only, no Safari or rendered device acceptance"}
+    ,
+      {"id":"tmg01_moveout","command":["@node","tests/headless/tmg01_moveout.mjs"],"completion":"11 MG-01 move-out focused checks passed","minimum_pass_lines":11,"timeout":120,"evidence":"native Sim make-ready jobs, Porter/Owner/vendor/delegation refusal, work report and Owner capacity, economy/RNG/Pause unchanged","scope":"MG-01 Move-Out Turnaround: genuine eligible jobs, one featured per five per property, exclusive Owner claim, leave/reload recovery, exactly-once completion; native only, no rendered/Safari claim"}
+    ,
+      {"id":"tmg01_save","command":["@node","tests/headless/tmg01_save.mjs"],"completion":"3 MG-01 production save checks passed","minimum_pass_lines":3,"timeout":120,"evidence":"real game saveJSON, raw and compressed saveCode, prepareLoad/applyLoad, two-property company, legacy save","scope":"production save handling for MG-01: in-progress claim released on load, single completion, per-property cadence; native only"},
+      {"id":"tcareer_opportunity","command":["@node","tests/headless/tcareer_opportunity.mjs"],"completion":"10 Career Business Opportunities checks passed","minimum_pass_lines":10,"timeout":120,"evidence":"native Sim natural graduated Maple demand, real UI Growth card and Explore build, production saveJSON/saveCode/prepareLoad/applyLoad, buildFacility and switchProperty, 10-day state parity","scope":"Career Business Opportunities Rev 1: derived read-only standard drive-up offer, eligibility incl. Career-root-only acquisitions, tap-time recheck, Pause, property isolation, nothing saved; D2 negative-funds warning with unchanged Confirm checks; native only, no rendered/Safari claim"},
+      {"id":"tplacement_visibility","command":["@node","tests/headless/tplacement_visibility.mjs"],"completion":"6 placement visibility checks passed","minimum_pass_lines":6,"timeout":180,"evidence":"native Sim natural Career/Comeback evidence, real UI recommendation previews and review render, CPU renderer camera math with stubbed panel measurements","scope":"Recommended-placement visibility: recommendation previews (Career opportunity, Comeback Yard opportunity, first gate, two-floor lesson) frame the suggestion and open a compact phone-portrait review; Details/Peek/Confirm kept; no rendered/Safari claim"},
       {
         "id": "tuniversal_remove",
         "command": [
