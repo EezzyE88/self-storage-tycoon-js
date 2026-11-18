@@ -1725,7 +1725,20 @@
     ,
       {"id":"tmg01_save","command":["@node","tests/headless/tmg01_save.mjs"],"completion":"3 MG-01 production save checks passed","minimum_pass_lines":3,"timeout":120,"evidence":"real game saveJSON, raw and compressed saveCode, prepareLoad/applyLoad, two-property company, legacy save","scope":"production save handling for MG-01: in-progress claim released on load, single completion, per-property cadence; native only"},
       {"id":"tcareer_opportunity","command":["@node","tests/headless/tcareer_opportunity.mjs"],"completion":"10 Career Business Opportunities checks passed","minimum_pass_lines":10,"timeout":120,"evidence":"native Sim natural graduated Maple demand, real UI Growth card and Explore build, production saveJSON/saveCode/prepareLoad/applyLoad, buildFacility and switchProperty, 10-day state parity","scope":"Career Business Opportunities Rev 1: derived read-only standard drive-up offer, eligibility incl. Career-root-only acquisitions, tap-time recheck, Pause, property isolation, nothing saved; D2 negative-funds warning with unchanged Confirm checks; native only, no rendered/Safari claim"},
-      {"id":"tplacement_visibility","command":["@node","tests/headless/tplacement_visibility.mjs"],"completion":"6 placement visibility checks passed","minimum_pass_lines":6,"timeout":180,"evidence":"native Sim natural Career/Comeback evidence, real UI recommendation previews and review render, CPU renderer camera math with stubbed panel measurements","scope":"Recommended-placement visibility: recommendation previews (Career opportunity, Comeback Yard opportunity, first gate, two-floor lesson) frame the suggestion and open a compact phone-portrait review; Details/Peek/Confirm kept; no rendered/Safari claim"}
+      {"id":"tplacement_visibility","command":["@node","tests/headless/tplacement_visibility.mjs"],"completion":"6 placement visibility checks passed","minimum_pass_lines":6,"timeout":180,"evidence":"native Sim natural Career/Comeback evidence, real UI recommendation previews and review render, CPU renderer camera math with stubbed panel measurements","scope":"Recommended-placement visibility: recommendation previews (Career opportunity, Comeback Yard opportunity, first gate, two-floor lesson) frame the suggestion and open a compact phone-portrait review; Details/Peek/Confirm kept; no rendered/Safari claim"},
+      {
+        "id": "tuniversal_remove",
+        "command": [
+          "@node",
+          "tests/headless/tuniversal_remove.mjs"
+        ],
+        "completion": "13 universal removal groups passed; all 32 construction tools covered",
+        "minimum_pass_lines": 13,
+        "timeout": 180,
+        "scope": "universal exact removal, candidate-only F1-F5, all32 tools, dependencies, parent pricing, floors, freight alternatives, cart disposal, save/Pause and excluded placement workstream"
+      },
+      {"id":"tremove_successor_d1d2","command":["@node","tests/headless/tremove_successor_d1d2.mjs"],"completion":"ALL PASS: 4 Remove successor groups","minimum_pass_lines":4,"timeout":180,"evidence":"native Sim builds, production UI pickAt/removalActions/showRemoval/confirmRemoval through the transaction fixture","scope":"Remove successor: host-first map selection over mounted fixtures, reachable individual idle-cart disposal without reassignment, player-facing labels/descriptions, kept success feedback; native only, no rendered/Safari claim"},
+      {"id":"tremove_successor_d3","command":["@node","tests/headless/tremove_successor_d3.mjs"],"completion":"ALL PASS: 4 Remove successor D3 groups","minimum_pass_lines":4,"timeout":180,"evidence":"native Sim plan/remove on a 2-floor shell with hallways, production UI replan/removalActions through the transaction fixture","scope":"Remove successor D3: on a numbered floor view, Demolish targets an exact completed otherwise-empty hallway cell; required-access blocking on Floors 1 and 2; whole building stays removable from its panel and the exterior view; native only, no rendered/Safari claim"}
     ],
     "historical": [
       {

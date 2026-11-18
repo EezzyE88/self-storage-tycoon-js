@@ -26,7 +26,7 @@ test('representative reports are pure and classify unit, fixture, attachment and
   assert.equal(snap(f.sim),before);assert.equal(f.sim.s.rngS,rng);
   assert.equal(rows[0].classification,'allowed with disclosed effects');
   assert.equal(rows[1].classification,'allowed');
-  assert.equal(rows[2].classification,'blocked');assert.match(rows[2].prerequisites.join(' '),/hosted-attachment/);
+  assert.equal(rows[2].classification,'allowed');assert.equal(rows[2].cost,100);assert.equal(rows[2].target.id,f.attachment.id);
   assert.equal(rows[3].classification,'blocked');assert.match(rows[3].prerequisites.join(' '),/Last necessary access/);
 });
 

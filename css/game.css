@@ -1309,3 +1309,10 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .rent-review-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:10px; }
 #ui .rent-review-actions > .btn { width:100%; min-width:0; white-space:normal; line-height:1.3; overflow-wrap:normal; }
 #ui .rent-review-actions > .btn:only-child { grid-column:1/-1; }
+
+/* Exact removal review: scroll consequences while keeping both actions visible. */
+.modal.removal-review { display:flex; flex-direction:column; max-height:85svh; overflow:hidden; }
+.removal-review h2 { flex:none; margin:0 0 10px; }
+.removal-review .remove-body { overflow:auto; min-height:0; }
+.removal-review .remove-buttons { flex:none; padding-top:12px; }
+.removal-actions { padding:8px 0; }
