@@ -141,7 +141,11 @@ const game = {
     else {
     this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));
     this.rend.zoom = (sim.s.mode === 'tutorial' ? 1.05 : 0.95) * (window.innerWidth < 600 ? 0.8 : 1); this.rend.updateCamera();
-    if (this.ui && this.ui.phone()) { this.rend.fitProperty(this.ui.safeRect()); setTimeout(() => this.rend.fitProperty(this.ui.safeRect()), 60); }
+    if (this.ui && this.ui.phone()) {
+      // The delayed re-fit repeats the opening framing so the settled phone layout does not undo it.
+      const fit = () => { if (!this.rend.fitOpening?.(this.ui.safeRect())) this.rend.fitProperty(this.ui.safeRect()); };
+      fit(); setTimeout(fit, 60);
+    }
     }
     sim.events.length = 0; sim.poll(); this.drain();
   },
