@@ -1,9 +1,10 @@
 // Browser autosave (concept §13: save/resume is foundational). One main slot plus the previous save as a backup.
 // Used wherever browser storage exists (GitHub Pages, any normal host). In the sandboxed preview, storage is blocked
 // and the save server in cloud.js is used instead.
-const MAIN = 'sst.autosave.main', BAK = 'sst.autosave.backup', KEPT = 'sst.kept.previous'; // KEPT is never written by autosave
+import { SAVE_KEYS } from './savegeneration.js';
+const MAIN = SAVE_KEYS.main, BAK = SAVE_KEYS.backup, KEPT = SAVE_KEYS.kept; // KEPT is never written by autosave
 let store = null;
-try { const ls = window.localStorage; const k = 'sst.probe'; ls.setItem(k, '1'); ls.removeItem(k); store = ls; } catch (e) { store = null; }
+try { const ls = window.localStorage; const k = SAVE_KEYS.probe; ls.setItem(k, '1'); ls.removeItem(k); store = ls; } catch (e) { store = null; }
 const read = (k) => { try { const raw = store && store.getItem(k); if (!raw) return null; const d = JSON.parse(raw); return d && typeof d.code === 'string' && d.meta ? d : null; } catch (e) { return null; } };
 export const localsave = {
   ok: !!store, lastAt: 0, lastErr: '',

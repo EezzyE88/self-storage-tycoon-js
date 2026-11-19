@@ -1,4 +1,5 @@
-// Storage-only envelope. Game save codes and manual exports are unchanged.
+// Ordering is unchanged; FS-01 owns a separate database, including its control record.
+import { SAVE_KEYS } from './savegeneration.js';
 const zero = () => ({ epoch: 0, revision: 0, atMs: 0, cleared: false });
 const stampOK = s => s && ['epoch', 'revision', 'atMs'].every(k => Number.isSafeInteger(s[k]) && s[k] >= 0);
 export const checkpointRecord = r => r && typeof r.code === 'string' && r.meta && typeof r.meta === 'object';
@@ -28,7 +29,7 @@ export function indexedCheckpointStore(factory, timeoutMs = 8000) {
     const timer = setTimeout(() => finish(failure('Opening durable storage timed out')), timeoutMs);
     const finish = (error, db) => { if (done) { db?.close(); return; } done = true; clearTimeout(timer); error ? reject(error) : resolve(db); };
     try {
-      const req = factory.open('sst.autosave.durable', 1);
+      const req = factory.open(SAVE_KEYS.durable, 1);
       req.onupgradeneeded = () => { if (done) { req.transaction.abort(); return; } if (!req.result.objectStoreNames.contains('slots')) req.result.createObjectStore('slots'); };
       req.onerror = () => finish(req.error || failure('Durable storage could not open'));
       req.onblocked = () => finish(failure('Durable storage is blocked by another tab'));

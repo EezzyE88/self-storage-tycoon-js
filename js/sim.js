@@ -1,4 +1,5 @@
 import { applyRemovalState } from './removal.js';
+import { SAVE_GENERATION } from './savegeneration.js';
 import { addUpgrades, attachmentCoverage, upgradeStamp, upgradePower, retrofitPlan, mountedOn, mountFor } from './unitupgrades.js';
 import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';
 import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';
@@ -40,7 +41,7 @@ export const dayOf = (t) => Math.floor(t / MIN_PER_DAY) + 1;
 export function newState({ mode = 'tutorial', creative = false, seed = 1234, market = 'maple', W = 44, H = 34 } = {}) {
   const WH = W * H;
   const s = {
-    v: 1, mode, creative, seed, rngS: seed >>> 0, W, H,
+    v: 1, saveGeneration: SAVE_GENERATION, mode, creative, seed, rngS: seed >>> 0, W, H,
     parcel: { x0: 2, y0: 2, x1: W - 3, y1: H - 5 },
     t: 7 * 60, speed: 0,
     cash: mode === 'tutorial' ? 26000 : 60000,
@@ -81,6 +82,7 @@ function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payro
 
 // ---------------------------------------------------------------- Sim
 export class Sim {
+  static saveGeneration = SAVE_GENERATION;
   constructor(state) {
     this.s = state; this.events = []; this.D = null; this.dirty = true;
     ensureCustomerAccounts(state);

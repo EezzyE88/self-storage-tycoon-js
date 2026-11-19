@@ -21,6 +21,7 @@ import { complaintCopy, requestCopy } from './feedbackcopy.js';
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK, BILLING_CYCLE_DAYS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
+import { LEGACY_BUILD_URL } from './savegeneration.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup, verticalReviewGuide, financingReview } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
@@ -3050,7 +3051,7 @@ export class UI {
   showTitle() {
     this.title = true;
     if (this.g.saveStartup) { this.$('modal').innerHTML = '<div class="title"><h1>Self Storage Tycoon</h1><p role="status">Checking saved progress…</p></div>'; return; }
-    this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
+    this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p><b>FS-01 save boundary candidate.</b> Maple uses its unchanged baseline layout. Proposal 2 and retail are not implemented. Other starts are unqualified.</p>
       <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
       <button class="btn" data-a="sandboxSetup">Sandbox <small>Business or Free Build, on your terms</small></button>
@@ -3071,15 +3072,12 @@ export class UI {
   autosaveNote() {
     const D = this.g.durable;
     if (D?.status === 'pending') return 'Saving progress… Wait for saving to finish before leaving.';
-    if (D && (D.status === 'error' || D.status === 'unavailable')) return 'This browser could not confirm the latest save. A browser or server copy may still be available. Export a save code or file to keep your progress.';
+    if (D && (D.status === 'error' || D.status === 'unavailable')) return 'This browser could not confirm the latest save. Export a fresh-generation code or file before leaving. FS-01 never uses the legacy save server.';
     if (D?.status === 'saved') return 'Progress saved in this browser. Codes and files remain separate backups you can move between devices.';
     const L = this.g.localsave;
     if (L?.lastErr === 'storage full') return 'Latest autosave failed: browser storage is full. Export a save code or file now to keep your progress.';
     if (L && L.ok) return L.lastAt ? `Autosave is on in this browser (${this.ago(L.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave, and keeps the previous save as a backup.${L.lastErr ? ' Note: ' + L.lastErr + '.' : ''} Codes and files move a game between devices.` : 'Autosave is on in this browser. It saves each in-game day and when you leave, and keeps the previous save as a backup. Codes and files move a game between devices.';
-    const c = this.g.cloud;
-    if (c.ok === false) return 'Autosave is offline right now. Save with a code or a file to keep your progress.';
-    if (c.lastAt) return `Autosave is on (${this.ago(c.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave. Codes and files are backups you can move between devices.`;
-    return 'Autosave is on. It saves each in-game day and when you leave. Codes and files are backups you can move between devices.';
+    return 'Browser autosave is unavailable. Export a fresh-generation code or file before leaving. The legacy save server is disabled in FS-01.';
   }
   spendingHtml(spend, extraDaily = 0, label = 'after action') {
     const P = this.sim.financialPosition({ spend, extraDaily });
@@ -3377,16 +3375,24 @@ export class UI {
     return '<p class="note">Unit numbers start with their floor: 1xxx on F1, 2xxx on F2, through 5xxx on F5. New saves require a build with floor-based numbering. Keep your original export for older builds.</p>'+
       (rows.length?'<details><summary>Previous unit numbers</summary><p class="note">Numbers at conversion. Older financial and event history keeps its original text.</p><div class="list">'+rows.map(r=>`<div class="row"><span>Unit ${esc(String(r.old??'?'))}</span><span>→ Unit ${esc(String(r.num))}</span></div>`).join('')+'</div></details>':'');
   }
+  generationInfo() {
+    return `<p class="note fs01-generation">FS-01 fresh save generation. <a href="${LEGACY_BUILD_URL}" target="_blank" rel="noopener">Retained legacy Build 5ce4cfa</a> opens legacy saves. Keep the original file or code unchanged.</p>`;
+  }
   async showSave() {
     const code = await this.g.saveCode();
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Save code</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
-      <p class="note">${this.sim.s.hall.length>2?'Expanded saves require a build with multi-floor support. ':''}Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p>${this.numberingInfo()}<textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
+      <p class="note">${this.sim.s.hall.length>2?'Expanded saves require a build with multi-floor support. ':''}Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p>${this.generationInfo()}${this.numberingInfo()}<textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
   }
   // Import: validate fully first; only a valid save reaches the confirmation, and only confirmation touches slots.
   async importSave(text, source) {
     const prep = await this.g.prepareLoad(text);
     if (!prep.ok) {
       this.pendingImport = null;
+      if (prep.reason === 'save-generation') {
+        this.toast(prep.msg, 'bad');
+        // Keep pasted bytes and the current game/slots intact.
+        return false;
+      }
       this.toast(source === 'file' ? 'That file is not a valid save. Nothing was changed.' : 'That save code could not be read. Nothing was changed.', 'bad');
       const ta = this.root.querySelector('#loadTa'); if (ta && source === 'code') { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); }
       return false;
@@ -3453,7 +3459,7 @@ export class UI {
   }
   showLoad() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Load game</h2><button class="x" data-a="${this.title ? 'showTitle' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
-      <p class="note">Paste a save code, or open a .sst save file.</p><textarea id="loadTa" placeholder="Paste save code"></textarea>
+      ${this.generationInfo()}<p class="note">Paste a fresh-generation save code, or open its .sst file.</p><textarea id="loadTa" placeholder="Paste save code"></textarea>
       <div class="row" style="margin-top:8px"><button class="btn pri" data-a="loadCode">Load code</button><button class="btn" data-a="loadFile">Open file</button><input type="file" id="loadFile" hidden></div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitle"]'); if (x) x.onclick = () => this.showTitle();
   }

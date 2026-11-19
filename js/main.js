@@ -160,13 +160,15 @@ const game = {
   },
   saveJSON() {
     const C = this.company, view = this.ui && this.rend ? this.rend.view : null;
+    const states = C && C.props.length > 0 ? C.props.map(p => p.sim.s) : [this.sim.s];
+    if (states.some(s => s.saveGeneration !== Sim.saveGeneration)) throw new Error('FS-01 cannot export an unsupported save generation');
     // The selected floor/exterior view and the player camera ride beside (not inside) the simulation state.
     // Tour, follow, attract and photo cameras are not the player's: keep the last player-owned camera instead.
     const sc = this.showcase, transient = !!(sc && (sc.photo || sc.mode));
     if (view != null && this.rend.camState && !transient) this.lastCam = this.rend.camState();
     const cam = view != null ? this.lastCam || null : null;
     const own = (s) => view == null || s !== this.sim.s ? s : cam ? { ...s, uiView: view, uiCam: cam } : { ...s, uiView: view };
-    return C && C.props.length > 0 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));
+    return C && C.props.length > 0 ? JSON.stringify({ company: 1, saveGeneration: Sim.saveGeneration, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));
   },
   rawSaveCode(json) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); },
   async saveCode(json = this.saveJSON()) {
@@ -187,6 +189,8 @@ const game = {
     try {
       const st = sanitizeSave(JSON.parse(await this.decodeSave(code)));
       if (!st || typeof st !== 'object') return { ok: false, msg: 'Not a save' };
+      // Validate every property before ANY incoming constructor/migration or session replacement.
+      if (!sameSaveGeneration(st)) return { ok: false, reason: 'save-generation', msg: 'This save belongs to a different or unsupported generation. Keep it unchanged and open legacy saves in retained Build 5ce4cfa.' };
       let company, view, cam;
       if (st.company && Array.isArray(st.props) && st.props.length) {
         if (st.props.length > 12 || !st.props.every((p) => p && typeof p.name === 'string' && validState(p.s)) || !Number.isInteger(st.active ?? 0) || (st.active ?? 0) < 0 || (st.active ?? 0) >= st.props.length || (st.feed != null && !Array.isArray(st.feed))) return { ok: false, msg: 'Invalid portfolio save' };
@@ -213,7 +217,7 @@ const game = {
   async loadCode(code, resume = false) { const prep = await this.prepareLoad(code); return prep.ok ? this.applyLoad(prep, resume) : false; },
   saveMeta() {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
-    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name };
+    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name, saveGeneration: Sim.saveGeneration };
   },
   // Paused actions cannot wait for the running-time timer or an unload event.
   // Reuse the synchronous leaving path, including its stale-compression fence.
@@ -270,7 +274,7 @@ const game = {
   modeLabel,
   playing() { return this.sim !== this.demo && this.ui && !this.ui.title; },
   async saveFile() {
-    const code = await this.saveCode(); const fname = `storage-floor-numbering-v1-day${Math.floor(this.sim.s.t / 1440) + 1}.sst`;
+    const code = await this.saveCode(); const fname = `sst-fresh-1-day${Math.floor(this.sim.s.t / 1440) + 1}.sst`;
     try { // iPhone: the share sheet offers "Save to Files", which a download link does not do reliably
       const f = new File([code], fname, { type: 'text/plain' });
       if (navigator.canShare && navigator.share && navigator.canShare({ files: [f] }) && matchMedia('(pointer: coarse)').matches) { await navigator.share({ files: [f], title: 'Self Storage Tycoon save' }); return; }
@@ -348,6 +352,11 @@ function validCam(s) {
 }
 // Scenario goal comparison ('<' = "under"). Text sanitizing used to strip it to '', which turned Go Vertical's
 // "elevator wait under 10 min" into "at least 10 min" after a reload; '' only ever comes from that damage.
+function sameSaveGeneration(st) {
+  if (st.saveGeneration !== Sim.saveGeneration) return false;
+  if (!st.company) return true;
+  return Array.isArray(st.props) && st.props.length > 0 && st.props.every(p => p?.s?.saveGeneration === Sim.saveGeneration);
+}
 function goalCmp(v) { return v === '<' || v === '' ? '<' : undefined; }
 function sanitizeSave(v, depth = 0) {
   if (depth > 40) return null;
