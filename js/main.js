@@ -214,7 +214,11 @@ const game = {
     this.company = prep.company;
     this.attach(prep.company.props[prep.company.active].sim, 'load', { view: prep.view, cam: prep.cam }); this.ui.title = false; return true;
   },
-  async loadCode(code, resume = false) { const prep = await this.prepareLoad(code); return prep.ok ? this.applyLoad(prep, resume) : false; },
+  async loadCode(code, resume = false, isCurrent) {
+    const prep = await this.prepareLoad(code);
+    if (!prep.ok || (isCurrent && !await isCurrent())) return false;
+    return this.applyLoad(prep, resume);
+  },
   saveMeta() {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
     return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name, saveGeneration: Sim.saveGeneration };
@@ -516,20 +520,60 @@ game.startupReady = (async () => {
   const durablesave = game.durable = createDurableSave(undefined, game.exitJournal?.writer);
   durablesave.onChange = () => game.ui.renderSaveStatus?.();
   await durablesave.ready;
-  const L = localsave.get(), D = durablesave.snapshot;
-  const journal = recoverExitJournal(exitJournalRecords(D?.control), D?.control, L.main);
-  durablesave.observe([L.main, L.backup, journal]);
+  const initialSession = game.saveSeq;
+  const sameSession = () => game.ui.title && game.saveSeq === initialSession;
+  const titleVisible = () => !!game.ui.root.querySelector('#modal > .title');
+  const select = (snapshot, remote, clean = false) => {
+    const local = localsave.get(), control = snapshot?.control;
+    const journal = recoverExitJournal(exitJournalRecords(clean ? control : undefined), control, local.main);
+    const pick = (record, src) => checkpointRecord(record) && durablesave.allows(record, control)
+      ? { ...record, src } : null;
+    const records = [pick(snapshot?.main, 'durable'), pick(journal, 'browser'), pick(local.main, 'browser'),
+      pick(remote, 'server'), pick(snapshot?.backup, 'backup'), pick(local.backup, 'backup')];
+    return { records, local, journal };
+  };
+  const recover = selection => recoverCheckpoints(selection.records, code => game.prepareLoad(code));
+  const offer = (selection, recovered, check) => {
+    game.ui.contSave = recovered.main; game.ui.contBackup = recovered.backup;
+    game.ui.contRecovery = recovered.damaged ? 'The latest autosave could not be read, so an earlier valid save was used. ' : '';
+    game.ui.contLateCheck = check;
+    durablesave.observe([selection.local.main, selection.local.backup, selection.journal]);
+    durablesave.accept(recovered.main);
+  };
   let timer;
   const remote = await Promise.race([cloud.get(), new Promise(resolve => { timer = setTimeout(() => resolve(null), 2000); })]);
   clearTimeout(timer);
-  const pick = (record, src) => checkpointRecord(record) && durablesave.allows(record) ? { ...record, src } : null;
-  const candidates = [pick(D?.main, 'durable'), pick(journal, 'browser'), pick(L.main, 'browser'), pick(remote, 'server'), pick(D?.backup, 'backup'), pick(L.backup, 'backup')].filter(Boolean);
-  const recovered = await recoverCheckpoints(candidates, code => game.prepareLoad(code));
-  game.ui.contSave = recovered.main; game.ui.contBackup = recovered.backup;
-  game.ui.contRecovery = recovered.damaged ? 'The latest autosave could not be read, so an earlier valid save was used. ' : '';
-  durablesave.accept(recovered.main);
+  const initial = select(durablesave.snapshot, remote, true);
+  const recovered = await recover(initial);
+  if (sameSession()) offer(initial, recovered);
   game.saveStartup = false;
-  if (game.ui.title) game.ui.showTitle();
+  if (sameSession() && titleVisible()) game.ui.showTitle();
+
+  if (durablesave.ok) return;
+  game.lateStartupRecovery = (async () => {
+    // Startup already released the title. A late open may refresh it, but may
+    // not rebase the writer or replace any game the player has since started.
+    await durablesave.lateOpen;
+    if (!sameSession()) return;
+    const signature = (snapshot, selection) => JSON.stringify([snapshot.control, selection.records]);
+    try {
+      const snapshot = await durablesave.readRecovery();
+      const selection = select(snapshot, remote);
+      const late = await recover(selection);
+      const expected = signature(snapshot, selection);
+      const stillCurrent = async () => {
+        if (!sameSession()) return false;
+        try {
+          const fresh = await durablesave.readRecovery();
+          return sameSession() && expected === signature(fresh, select(fresh, remote));
+        } catch { return false; }
+      };
+      if (!await stillCurrent() || !sameSession()) return;
+      durablesave.adoptRecovery(snapshot);
+      offer(selection, late, async () => titleVisible() && await stillCurrent() && titleVisible());
+      if (titleVisible()) game.ui.showTitle();
+    } catch { /* Keep the title usable if the late database read fails. */ }
+  })();
 })();
 
 // ---------------------------------------------------------------- input

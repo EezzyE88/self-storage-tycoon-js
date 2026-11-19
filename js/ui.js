@@ -474,11 +474,13 @@ export class UI {
       case 'photo': this.closeModal(); this.g.showcase.enterPhoto(); break;
       case 'tour': this.closeModal(); this.g.showcase.startTour(); break; // a manual Pause stays paused through the tour
       case 'lens': this.g.showcase.setLens(!this.g.showcase.lensPref); this.showMenu(); break;
-      case 'continue': { const d = this.contSave; if (!d) break;
+      case 'continue': { const d = this.contSave, check = this.contLateCheck; if (!d) break;
         const told = (r, note) => { const m = r.meta || {}; this.closeModal(); this.sfx('confirm'); this.toast(`${note}Restored ${m.name || 'your game'}: Day ${+m.day || 1}${m.time ? ', ' + m.time : ''}, ${money(+m.cash || 0)} cash (${this.ago((r.at || 0) * 1000)}${r.src === 'server' ? ', from the save server' : ''}).`, note ? 'bad' : 'good'); };
-        this.g.loadCode(d.code, true).then(async (ok) => {
+        this.g.loadCode(d.code, true, check).then(async (ok) => {
           if (ok) { this.g.autosave?.(true); return told(d, this.contRecovery || (d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '')); }
-          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code, true)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
+          if (check && (!this.title || !this.root.querySelector('#modal > .title'))) return;
+          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code, true, check)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
+          if (check && (!this.title || !this.root.querySelector('#modal > .title'))) return;
           this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded, and no backup worked. Load a save code or file instead.', 'bad');
         }); break; }
       case 'loadCode': { const ta = this.root.querySelector('#loadTa'); this.importSave(ta ? ta.value : '', 'code'); break; }

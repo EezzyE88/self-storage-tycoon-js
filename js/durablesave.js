@@ -38,18 +38,29 @@ const failure = (message, code = 'storage') => Object.assign(new Error(message),
 // Strict commits are bounded. A timed-out transaction is aborted, not later reported saved.
 export function indexedCheckpointStore(factory, timeoutMs = 8000, allowRelaxed = false) {
   if (factory === undefined) { try { factory = globalThis.indexedDB; } catch { factory = null; } }
-  let dbPromise;
+  let dbPromise, notifyLateOpen;
+  const lateOpen = new Promise(resolve => { notifyLateOpen = resolve; });
   const open = () => dbPromise ||= new Promise((resolve, reject) => {
     if (!factory) return reject(failure('Durable storage unavailable', 'unsupported'));
-    let done = false;
-    const timer = setTimeout(() => finish(failure('Opening durable storage timed out')), timeoutMs);
+    let done = false, timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      finish(failure('Opening durable storage timed out'));
+    }, timeoutMs);
     const finish = (error, db) => { if (done) { db?.close(); return; } done = true; clearTimeout(timer); error ? reject(error) : resolve(db); };
     try {
       const req = factory.open(SAVE_KEYS.durable, 1);
       req.onupgradeneeded = () => { if (done) { req.transaction.abort(); return; } if (!req.result.objectStoreNames.contains('slots')) req.result.createObjectStore('slots'); };
       req.onerror = () => finish(req.error || failure('Durable storage could not open'));
       req.onblocked = () => finish(failure('Durable storage is blocked by another tab'));
-      req.onsuccess = () => { req.result.onversionchange = () => req.result.close(); finish(null, req.result); };
+      req.onsuccess = () => {
+        const db = req.result;
+        db.onversionchange = () => db.close();
+        if (timedOut) {
+          dbPromise = Promise.resolve(db);
+          notifyLateOpen();
+        } else finish(null, db);
+      };
     } catch (error) { finish(error); }
   });
   function transact(db, mode, run, active) {
@@ -76,6 +87,7 @@ export function indexedCheckpointStore(factory, timeoutMs = 8000, allowRelaxed =
     });
   }
   return {
+    lateOpen,
     async read() {
       return transact(await open(), 'readonly', (store, result) => {
         const values = {};
@@ -112,8 +124,8 @@ export function createDurableSave(storage, writer) {
     observe(records) { for (const r of records.filter(Boolean)) if (stampOK(r.checkpoint)) { epoch = Math.max(epoch, r.checkpoint.epoch); next = Math.max(next, r.checkpoint.revision); } },
     accept(record) { good = checkpointRecord(record) ? record : null; },
     ticket() { return { epoch, revision: ++next, atMs: Date.now(), token }; },
-    allows(record) {
-      const control = this.snapshot?.control; if (!control) return true;
+    allows(record, control = this.snapshot?.control) {
+      if (!control) return true;
       if (stampOK(record?.checkpoint)) return record.checkpoint.epoch >= control.epoch && (!control.cleared || checkpointOrder(record, { checkpoint: control }) > 0);
       return !control.cleared && (!control.epoch || (record?.at || 0) * 1000 > control.atMs);
     },
@@ -162,11 +174,20 @@ export function createDurableSave(storage, writer) {
     clear() { return this.replace(); },
     idle() { return tail; },
   };
-  D.ready = storage.read().then(snapshot => {
+  D.readRecovery = async () => {
+    const snapshot = await storage.read();
     const control = snapshot.control || zero();
     if (!stampOK(control)) throw failure('Durable save ordering record is damaged');
-    disk = control; epoch = control.epoch; next = control.revision;
-    D.snapshot = { control, main: snapshot.main, backup: snapshot.backup }; D.ok = true; D.status = 'idle'; D.emit(); return D.snapshot;
-  }).catch(error => { D.ok = false; D.status = 'unavailable'; D.lastErr = error.message || 'Durable storage unavailable'; D.emit(); return null; });
+    return { ...snapshot, control };
+  };
+  D.adoptRecovery = snapshot => {
+    disk = snapshot.control; epoch = disk.epoch; next = disk.revision;
+    D.snapshot = snapshot; D.ok = true; D.status = 'idle'; D.lastErr = ''; D.emit();
+    return snapshot;
+  };
+  D.lateOpen = storage.lateOpen;
+  D.ready = D.readRecovery().then(D.adoptRecovery).catch(error => {
+    D.ok = false; D.status = 'unavailable'; D.lastErr = error.message || 'Durable storage unavailable'; D.emit(); return null;
+  });
   return D;
 }
