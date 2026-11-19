@@ -1,3 +1,4 @@
+import { MAPLE_PUBLIC } from './mapleaccess.js';
 import { tutorialUnit } from './unitnumbering.js';
 import { careerEligibility } from './career.js';
 // Maple Street tutorial (GDD §5-7). Beats are real property needs with deterministic milestone checks.
@@ -33,16 +34,16 @@ const CONFIRM = '#abar [data-a="confirm"]', PLAY = '#speed [data-v="1"]', FAST =
 // Standard build sequence: open Build -> category -> tool -> place at the marker -> Confirm.
 // `placed` = the order exists (later steps become meaningful once it does).
 // `review` steps sit between the placement and Confirm: they need the placement review bar (e.g. its Climate toggle).
-function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f = 0, end = cell, axis, climate = false, placed, extra = [], review = [], after }) {
+function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f = 0, end = cell, axis, rotation, climate = false, placed, extra = [], review = [], after }) {
   const past = (sim, ui) => placed(sim) || toolIs(ui, tool);
   const steps = [
     { t: `Open <b>Build</b>`, d: 'Tap <b>Build</b> in the bottom bar.', sel: TAB('build'), done: (sim, ui) => tabIs(ui, 'build') || past(sim, ui) },
     { t: `Choose <b>${catName}</b>`, d: `In the Build panel, tap the <b>${catName}</b> category along the top. Swipe the category row sideways if you don't see it.`, sel: CAT(cat), done: (sim, ui) => catIs(ui, cat) || past(sim, ui) },
     { t: `Pick <b>${toolName}</b>`, d: `Tap the <b>${toolName}</b> card. The action bar opens at the bottom with the price.`, sel: TOOL(tool), done: past },
     ...extra,
-    { placement: {tool, a:cell, b:end, f, axis, climate}, t: place, d: placeD + ' Follow the highlighted footprint from Start here to End here, or tap Use suggested placement. The preview turns <b>green</b> when valid, <b>amber</b> if it will build but can\'t earn yet, <b>red</b> if it can\'t go there - the action bar says why.', cell, f, done: (sim, ui) => placed(sim) || planOk(ui, tool) },
-    ...review.map((st) => ({ placement: {tool, a:cell, b:end, f, axis, climate}, ...st })),
-    { placement: {tool, a:cell, b:end, f, axis, climate}, t: 'Tap <b>Confirm</b>', d: 'Check the cost and "cash after" line in the action bar, then tap <b>Confirm</b>. You can undo within 30 minutes for a full refund.', sel: CONFIRM, done: placed },
+    { placement: {tool, a:cell, b:end, f, axis, ...(rotation == null ? {} : {rotation}), climate}, t: place, d: placeD + ' Follow the highlighted footprint from Start here to End here, or tap Use suggested placement. The preview turns <b>green</b> when valid, <b>amber</b> if it will build but can\'t earn yet, <b>red</b> if it can\'t go there - the action bar says why.', cell, f, done: (sim, ui) => placed(sim) || planOk(ui, tool) },
+    ...review.map((st) => ({ placement: {tool, a:cell, b:end, f, axis, ...(rotation == null ? {} : {rotation}), climate}, ...st })),
+    { placement: {tool, a:cell, b:end, f, axis, ...(rotation == null ? {} : {rotation}), climate}, t: 'Tap <b>Confirm</b>', d: 'Check the cost and "cash after" line in the action bar, then tap <b>Confirm</b>. You can undo within 30 minutes for a full refund.', sel: CONFIRM, done: placed },
   ];
   // A later build group only counts as progressing once the previous group is placed.
   return after ? steps.map((st) => ({ ...st, done: (sim, ui) => placed(sim) || (after(sim) && st.done(sim, ui)) })) : steps;
@@ -216,6 +217,28 @@ function chapterBreak({ id, ...rest }) {
     check: (sim) => go(sim) && sim.releasedPending() === 0 };
 }
 
+function expansionSteps(placement) {
+  const placed = sim => ordered(sim, 'du10x10');
+  const steps = buildSteps({cat:'units', catName:'Units', tool:'du10x10', toolName:'Drive-Up 10x10', placed, ...placement});
+  // One added step between a green preview and Confirm: what the status colours and the "cash after" line mean.
+  // Phones hide step details while the build review is open, so the title carries the colours and the cash line.
+  const status = { placement: steps[steps.length - 1].placement, cell: steps[steps.length - 1].cell, f: 0, t: '<b>Green</b>: ready to build. <b>Amber</b>: can\'t earn yet. <b>Red</b>: can\'t go there. Check <b>cash after</b>', d: '<b>Green</b>: it can be built and can earn. <b>Amber</b>: it can be built but can\'t earn yet (for example, the doors don\'t reach an aisle). <b>Red</b>: it can\'t go there; the action bar says why. The action bar also shows the <b>cost</b> and your <b>cash after</b> construction, so you see what this row leaves in the bank. Tap <b>Got it</b> on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', compactReview: true, done: (sim) => placed(sim) || flag(sim, 'buildStatusAck') };
+  return [...steps.slice(0, -1), status, steps[steps.length - 1]];
+}
+const baselineExpansion = {
+  cell:{x:13,y:21}, end:{x:13,y:28}, axis:'y',
+  place:'<b>Drag</b> a row down the grass beside the main aisle',
+  placeD:'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.'
+};
+const publicExpansion = {
+  cell:{x:4,y:10}, end:{x:7,y:10}, rotation:0,
+  place:'Place <b>two north-facing Drive-Up 10x10 units</b> in the inner yard',
+  placeD:'Drag east along the highlighted grass row inside the yard. The two doors face the aisle to the north.'
+};
+const publicExpansionSteps = expansionSteps(publicExpansion).concat([
+  waitBuild('Let construction finish and the units open', sim => !!sim.s.milestones.first_expansion)
+]);
+
 export const BEATS = [
   // Act I "Take Over" (campaign Unit 4): beats 1-5, then the Act I chapter break.
   { id: 'welcome', act: 'I', chapter: 'Take Over', title: 'Welcome to Maple Street Storage',
@@ -278,15 +301,7 @@ export const BEATS = [
     body: 'Every unit is leased and prospects are still asking. Build a new row of drive-up units on the empty grass east of the main aisle.',
     why: 'Expansion is a <b>capital decision</b>: build when demand is proven, not before. Drive-up units are cheap and simple: they only need a <b>drive aisle</b> in front of their doors. Construction takes cash now and game time to finish. Eligible units open for rental automatically when construction finishes.',
     focus: () => ({ tool: 'du10x10', cell: { x: 13, y: 22 } }),
-    steps: (() => {
-      const placed = (sim) => ordered(sim, 'du10x10');
-      const steps = buildSteps({ cat: 'units', catName: 'Units', tool: 'du10x10', toolName: 'Drive-Up 10x10', cell: { x: 13, y: 21 }, end: { x: 13, y: 28 }, axis: 'y', placed,
-        place: '<b>Drag</b> a row down the grass beside the main aisle', placeD: 'Press on the grass touching the east edge of the main aisle, just below the cross aisle, and drag straight down about 8 cells. Doors must face the aisle - tap <b>Rotate</b> if they don\'t.' });
-      // One added step between a green preview and Confirm: what the status colours and the "cash after" line mean.
-      // Phones hide step details while the build review is open, so the title carries the colours and the cash line.
-      const status = { placement: steps[steps.length - 1].placement, cell: steps[steps.length - 1].cell, f: 0, t: '<b>Green</b>: ready to build. <b>Amber</b>: can\'t earn yet. <b>Red</b>: can\'t go there. Check <b>cash after</b>', d: '<b>Green</b>: it can be built and can earn. <b>Amber</b>: it can be built but can\'t earn yet (for example, the doors don\'t reach an aisle). <b>Red</b>: it can\'t go there; the action bar says why. The action bar also shows the <b>cost</b> and your <b>cash after</b> construction, so you see what this row leaves in the bank. Tap <b>Got it</b> on this card.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', compactReview: true, done: (sim) => placed(sim) || flag(sim, 'buildStatusAck') };
-      return [...steps.slice(0, -1), status, steps[steps.length - 1]];
-    })().concat([waitBuild('Let construction finish and the units open', (sim) => !!sim.s.milestones.first_expansion)]),
+    steps: expansionSteps(baselineExpansion).concat([waitBuild('Let construction finish and the units open', sim => !!sim.s.milestones.first_expansion)]),
     button: 'Got it', flag: 'buildStatusAck', buttonWhen: (sim, ui) => !flag(sim, 'buildStatusAck') && !ordered(sim, 'du10x10') && planOk(ui, 'du10x10'),
     check: (sim) => !!sim.s.milestones.first_expansion },
   { id: 'repair', act: 'II', chapter: 'Stabilize', title: 'A hallway light has failed',
@@ -657,7 +672,8 @@ export function tutorialText(sim, value, live = {}) { // `live`: per-card cache,
   }) : value;
 }
 export function curBeat(sim) {
-  const b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[tutBeatIndex(sim.s)] : null;
+  let b=sim.s.lesson ? lessonById(sim.s.lesson.id) : sim.s.tut.on ? BEATS[tutBeatIndex(sim.s)] : null;
+  if(b?.id==='expand' && sim.s.layout===MAPLE_PUBLIC) b={...b,body:'Every unit is leased and prospects are still asking. Build two north-facing drive-up units on the highlighted grass inside the yard.',focus:()=>({tool:'du10x10',cell:publicExpansion.cell}),steps:publicExpansionSteps};
   if(!b)return null;
   const live = {}, text = value => tutorialText(sim, value, live);
   return {...b,title:text(b.title),body:text(typeof b.body === 'function' ? b.body(sim) : b.body)+(b.progress ? b.progress(sim) : ''),steps:b.steps?.map(st=>({...st,t:text(st.t),d:text(st.d)}))};

@@ -2426,7 +2426,16 @@ export class Sim {
         if (x>=18 && x<24 && nx===x && Math.min(ny,y)===23 && Math.max(ny,y)===24 && (!gate || gate.open<1)) return false;
         const inJunction=(cx,cy)=>cx>=18 && cx<24 && cy>=14 && cy<18;
         if(!inJunction(x,y) && inJunction(nx,ny) &&
-           this.s.vehicles.some(v=>v!==veh && inJunction(Math.floor(v.x),Math.floor(v.y)))) return false;
+           this.s.vehicles.some(v=>v!==veh && v.parked==null && inJunction(Math.floor(v.x),Math.floor(v.y)))) return false;
+        // Loading bays are outside the moving crossing reservation, but a
+        // parked vehicle still occupies its own cell.
+        if ((nx!==x || ny!==y) && this.s.vehicles.some(v=>v!==veh && v.parked===n)) {
+          const ag=this.s.agents.find(a=>a.veh===veh.id);
+          const target=veh.path.at(-1), occupied=new Set(this.s.vehicles.filter(v=>v!==veh && v.parked!=null).map(v=>v.parked));
+          const path=this.bfs([this.idx(x,y)],i=>i===target,i=>this.vehNbr(i,ag?.publicVisit?publicDrive:ag?.gateId).filter(j=>!occupied.has(j)));
+          if (path) this.setVehPath(veh,path);
+          return false;
+        }
         if (ny===18 && y===17 && nx>=18 && nx<21 &&
             this.s.vehicles.some(v=>v!==veh && v.x>=18 && v.x<21 && v.y>=18 && v.y<30)) return false;
         if ((nx!==x || ny!==y) && nx===14 && ny>=14 && ny<18 &&
@@ -2773,7 +2782,7 @@ export class Sim {
     if (!u) return null;
     if (u.access === 'drive') {
       const fr = this.unitFront(u).map((c) => this.idx(c.x, c.y)).filter((i) => reach[i]);
-      return fr.find(free) ?? fr[0] ?? null;
+      return fr.find(free) ?? (s.layout===MAPLE_PUBLIC ? null : fr[0] ?? null);
     }
     const fc = this.unitFront(u).find((c) => s.hall[u.f || 0][this.idx(c.x, c.y)] === 1);
     if (!fc) return null;
@@ -2789,7 +2798,7 @@ export class Sim {
     if (pk != null) { ag.exp.walk += 10; return pk; }
     const any = park.find(free); if (any != null) { ag.exp.walk += 10; return any; }
     if (load.length) this.thought(ag, 'Loading bays are full.', 'bad', {location:{obj:u.id,building:D.shellAt[this.idx(u.x,u.y)]||null,x:load[0]%s.W,y:Math.floor(load[0]/s.W),f:0},loadingBays:load.length,overflowAvailable:false});
-    return load[0] ?? null;
+    return s.layout===MAPLE_PUBLIC ? null : load[0] ?? null;
   }
   nearestVehCell(i0, taken, reach = this.D.vehReach) {
     const p = this.bfs([i0], (n) => reach[n] && !taken.has(n) && VEH_GROUND.has(this.s.ground[n]), (n) => {

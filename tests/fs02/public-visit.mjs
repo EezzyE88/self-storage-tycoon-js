@@ -155,3 +155,33 @@ check('Failed gate never strands an unadmitted vehicle inside the yard',()=>{
   }
   assert.ok(reached);assert.ok(!sim.s.agents.includes(a));
 });
+check('Scheduled traffic progresses while arrivals, parked loading and departures overlap',()=>{
+  for (const seed of [undefined, 23, 29]) {
+    const sim=makePublicMaple(seed), s=sim.s, crossedIn=new Set(), crossedOut=new Set(), departed=new Set();
+    let overlap=false;
+    for(let tick=0;tick<16000;tick++){
+      const yard=s.agents.filter(a=>a.veh&&!a.publicVisit);
+      overlap ||= yard.some(a=>a.st==='leave') && yard.some(a=>sim.vehAt(a.veh).parked!=null)
+        && yard.some(a=>['arrive','gateq','drive'].includes(a.st));
+      const positions=yard.map(a=>[a,sim.vehAt(a.veh),Math.floor(sim.vehAt(a.veh).y)]);
+      sim.step();sim.events.length=0;
+      for(const [a,v,beforeY] of positions){
+        const x=Math.floor(v.x), y=Math.floor(v.y);
+        if(beforeY===24&&y===23){assert.ok(x>=21&&x<24);crossedIn.add(a.id);}
+        if(beforeY===23&&y===24){assert.ok(x>=18&&x<21);crossedOut.add(a.id);}
+        if(!s.agents.includes(a))departed.add(a.id);
+      }
+      const occupied=new Set();
+      for(const v of s.vehicles){
+        const x=Math.floor(v.x), y=Math.floor(v.y);
+        if(x<18||x>=24||y<14||y>=30)continue;
+        const cell=sim.idx(x,y);
+        assert.ok(!occupied.has(cell),'two vehicles in one gate or junction cell');
+        occupied.add(cell);
+      }
+    }
+    assert.ok(overlap);
+    assert.ok(crossedIn.size>=10 && crossedOut.size>=10 && departed.size>=10);
+    for(const id of crossedIn)assert.ok(crossedOut.has(id)||s.agents.some(a=>a.id===id&&s.t-a.t0<400),'admitted vehicle stranded in yard');
+  }
+});

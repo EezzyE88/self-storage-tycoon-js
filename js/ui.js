@@ -1424,6 +1424,7 @@ export class UI {
   recoPlanKey() { const a=this.plan?.args; return this.tool && a?.a && a?.b ? JSON.stringify([this.tool,a.a,a.b,a.f||0]) : null; }
   recoActive() { return !!this.recoKey && !this.buildPlacing && this.recoKey === this.recoPlanKey(); }
   planIsSuggestion() { const s=this.currentBlueprintPlan(), a=this.plan?.args; if(!s||!a?.a||!a?.b||s.tool!==this.tool||(s.f||0)!==(a.f||0)) return false;
+    if(Number.isInteger(s.rotation)&&a.rotation!==s.rotation)return false;
     const n=(p,q)=>[Math.min(p.x,q.x),Math.min(p.y,q.y),Math.max(p.x,q.x),Math.max(p.y,q.y)].join(); return n(s.a,s.b)===n(a.a,a.b); }
   syncControlLayout() {
     if (!this.root?.style || typeof innerWidth === 'undefined') return;
@@ -2459,6 +2460,7 @@ export class UI {
     // Act II keeps the player's camera: the floor changes only when the armed floor is wrong; no pan, zoom or framing.
     const keep=this.tutKeepsCamera();
     if(!keep||this.toolFloor()!==(a.f||0)) this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=!!a.climate;
+    if (Number.isInteger(a.rotation)) this.buildRotation=a.rotation;
     // Two-floor lesson on a phone: the review starts compact and the outline is refit once the panels settle.
     const up=!keep&&this.sim.s.lesson?.id==='up'; this.recoCompact=up;
     this.planArgs={a:{...a.a},b:{...a.b},axis:a.axis,dir:a.dir}; this.replan(); if(!keep) this.showBlueprintTarget(); if(up) this.frameRecommendation(true);
