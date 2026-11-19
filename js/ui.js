@@ -383,6 +383,7 @@ export class UI {
       case 'accountList': this.accountListAll = !this.accountListAll; this.renderSheet(true); break;
       case 'tutNext': { const b = curBeat(this.sim); if (b) this.do({ type: 'tutFlag', flag: b.flag || b.id }); this.renderTut(true); this.sim.poll(); this.sfx('confirm'); break; }
       case 'tutSkip': this.do({ type: 'tutSkip' }); this.renderTut(true); break;
+      case 'welcomePage': this.welcomePage = Math.max(0, +v || 0); this.renderTut(true); this.sfx('click'); break;
       case 'lessonStart': this.resumePopup('lessonOffer'); this.do({ type: 'lesson', op: 'start', id: v }); this.sim.poll(); this.tutMin = true; this.renderTut(true); this.renderSheet(true); this.sfx('confirm'); break;
       case 'rush': this.rush = !this.rush; this.replan(); this.sfx('click'); break;
       case 'requestMode': this.do({ type: 'policy', key: 'manualRequests', v: !this.sim.s.policies.manualRequests }); this.renderFeed(true); this.renderSheet(true); break;
@@ -2407,7 +2408,16 @@ export class UI {
     this.guideStep = step; this.guideKey = bk + ':' + cur + (step?.redirect || '');
     // Build-status lesson: the review drops its optional sections so the footprint, cost and cash after show together.
     this.root?.classList?.toggle('tut-review-compact', !!(step?.compactReview && showBtn));
-    if (!force && key === this.tutKey) return; this.tutKey = key;
+    const wl = !isLesson && b.intro && !s.tut.flags.welcome ? b.intro : null, wp = wl ? Math.min(this.welcomePage || 0, wl.length - 1) : 0;
+    if (!force && (key + ':' + (wl ? 'w' + wp : '')) === this.tutKey) return; this.tutKey = key + ':' + (wl ? 'w' + wp : '');
+    // Welcome card (Beat 1 on a new tutorial): one short page at a time, Back/Next, then the beat's own button.
+    if (wl) {
+      this.rend.setFocus(null); const pg = wl[wp], last = wp === wl.length - 1;
+      box.innerHTML = `<div class="tut welcome" data-qa="welcome-card"><div class="ch"><span>Welcome · ${wp + 1} of ${wl.length}</span></div>
+      <div class="tut-body"><h4>${pg.k}</h4><p class="wl-text">${pg.b}</p></div>
+      <div class="row tut-actions">${wp > 0 ? `<button class="skip" data-a="welcomePage" data-qa="welcome-back" data-v="${wp - 1}">Back</button>` : ''}${last ? `<button class="btn pri" data-a="tutNext">${b.button}</button>` : `<button class="btn pri" data-a="welcomePage" data-qa="welcome-next" data-v="${wp + 1}">Next</button>`}<button class="skip" data-a="tutSkip">Skip tutorial</button></div></div>`;
+      return;
+    }
     // map focus follows the current step
     const oid = step && step.obj ? step.obj(this.sim) : null;
     const bp=this.currentBlueprintPlan();
@@ -3051,7 +3061,7 @@ export class UI {
     this.title = true;
     if (this.g.saveStartup) { this.$('modal').innerHTML = '<div class="title"><h1>Self Storage Tycoon</h1><p role="status">Checking saved progress…</p></div>'; return; }
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
-      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
+      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · run your first storage property</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
       <button class="btn" data-a="sandboxSetup">Sandbox <small>Business or Free Build, on your terms</small></button>
       <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>

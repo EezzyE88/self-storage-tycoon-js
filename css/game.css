@@ -624,6 +624,8 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .tut.final:not(.scen):not(.offer) { max-height: min(64dvh, 520px); }
 .tut.final .intro { display: block; }
 .tut-body h4 { font-size: 13px; color: #b9b3a6; }
+.tut.welcome .tut-body h4 { font-size: 17px; color: inherit; margin: 2px 0 4px; }
+.tut.welcome .wl-text { margin: 0; line-height: 1.4; }
 .tut .step-help summary { font-size: 12px; color: #f5c542; min-height: 32px; display: flex; align-items: center; }
 .tut .tut-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; border-top: 1px solid #58616a; padding-top: 6px; }
 .tut .tut-actions .btn { min-height: 44px; padding: 6px 10px; font-size: 12px; }

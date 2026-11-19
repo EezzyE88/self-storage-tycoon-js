@@ -223,9 +223,16 @@ export const BEATS = [
     why: 'Customers visit the property, use carts and rent units. Follow the highlighted steps to get started.',
     steps: [
       { t: 'Look around the property', d: '<b>Drag</b> to pan (two fingers on a phone) and <b>pinch</b> to zoom. On the right-hand rail, <b>EXT</b> shows roofs and <b>F1</b> looks inside.', done: (sim, ui) => ui && ui.tutLooked },
-      { t: 'The clock (top left) is <b>paused</b>. Tap <b>Look around</b> when ready', d: 'Time stays paused until you start it. Clock controls, top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>. Tap the yellow button below when you\'re ready.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.welcome },
+      { t: 'The clock (top left) is <b>paused</b>. Tap <b>Start my first day</b> when ready', d: 'Time stays paused until you start it. Clock controls, top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>. Tap the yellow button below when you\'re ready.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.welcome },
     ],
-    button: 'Look around', check: (sim) => sim.s.tut.flags.welcome },
+    // Welcome card (Option B): three short pages shown before Beat 1's steps on a new tutorial. Presentation only: the
+    // page index lives in the UI, and the last page's button is the beat's ordinary tutNext (flag 'welcome').
+    intro: [
+      { k: 'Maple Street Storage is yours', b: 'You\'re the new owner of Maple Street Storage, a small self-storage property on Maple Street. It\'s 7:00 AM on Monday, Day 1. 22 of your 23 units are rented, and you have <b>$26,000</b> in the bank.' },
+      { k: 'Your goal', b: 'Keep Maple Street full and running well, then grow it. Rent is your income. An empty unit, a broken door or an unhappy customer costs you. Learn the basics here, then turn this property into a storage company.' },
+      { k: 'How it works', b: 'Time is <b>paused</b>. Nothing happens until you start the clock, top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>. <b>Drag</b> to look around and <b>pinch</b> to zoom. <b>EXT</b> shows roofs and <b>F1</b> looks inside. Tap anything to see what you can do. The tutorial has <b>five short chapters</b>, and you can stop after each one.' },
+    ],
+    button: 'Start my first day', check: (sim) => sim.s.tut.flags.welcome },
   { id: 'makeready', act: 'I', chapter: 'Take Over', title: 'Turn over Unit 107',
     body: 'Unit 107 just became vacant. Let\'s get it ready for the next tenant.',
     why: 'A <b>make-ready</b> cleans and checks a vacant unit so it can rent again. Vacant units earn nothing until they are rent-ready.',
