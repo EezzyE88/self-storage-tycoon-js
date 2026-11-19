@@ -13,8 +13,8 @@ import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { cloud } from './cloud.js';
-import { localsave, claimCheckpointWriter } from './localsave.js';
-import { createDurableSave, checkpointRecord, recoverCheckpoints } from './durablesave.js';
+import { localsave, claimCheckpointWriter, createExitJournal, exitJournalRecords } from './localsave.js';
+import { createDurableSave, checkpointRecord, recoverCheckpoints, recoverExitJournal } from './durablesave.js';
 import { savearchive } from './savearchive.js';
 import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
@@ -238,6 +238,17 @@ const game = {
     try {
       const code = hide ? this.rawSaveCode(json) : await this.saveCode(json);
       if (seq !== this.saveSeq || company !== this.company) return false;
+      if (this.exitJournal) {
+        const record = { code, meta, at: Math.floor(ticket.atMs / 1000), v: 1 };
+        if (hide && this.durable.ok) this.exitJournal.stage(record, ticket, this.durable.snapshot?.control);
+        const result = await this.durable.put(record, ticket);
+        if (result.conflict) {
+          this.saveWriterError = result.reason;
+          this.exitJournal.retire();
+          this.ui.renderSaveStatus?.();
+        } else if (result.ok && seq === this.saveSeq) this.exitJournal.retire();
+        return result.ok && !result.stale && seq === this.saveSeq;
+      }
       const local = localsave.put(code, meta, ticket);
       const committed = this.durable ? this.durable.put({ code, meta, at: Math.floor(ticket.atMs / 1000), v: 1 }, ticket) : Promise.resolve({ ok: false });
       if (hide) { if (cloud.ok !== false || !local) cloud.beacon(code, meta); return (await committed).ok || local; }
@@ -268,9 +279,9 @@ const game = {
   // What would become the "previous game" if the running (or last autosaved) game were replaced now.
   async outgoingRecord(fallback) {
     if (this.playing()) { const meta = this.saveMeta(), json = this.saveJSON(); return { code: await this.saveCode(json), meta, at: Math.floor(Date.now() / 1000) }; }
-    const L = localsave.get(); return L.main || fallback || null;
+    const L = localsave.get(); return (this.exitJournal ? fallback : L.main || fallback) || null;
   },
-  outgoingMeta(fallback) { if (this.playing()) return this.saveMeta(); const L = localsave.get(); const r = L.main || fallback; return r ? r.meta : null; },
+  outgoingMeta(fallback) { if (this.playing()) return this.saveMeta(); const L = localsave.get(); const r = this.exitJournal ? fallback : L.main || fallback; return r ? r.meta : null; },
   savearchive,
   modeLabel,
   playing() { return this.sim !== this.demo && this.ui && !this.ui.title; },
@@ -497,18 +508,22 @@ game.localsave = localsave; game.BUILD = BUILD;
 game.saveStartup = true; game.ui.showTitle();
 localsave.onClear = () => game.beginSaveSession();
 game.startupReady = (async () => {
-  game.saveWriterError = await claimCheckpointWriter();
+  const claim = await claimCheckpointWriter();
+  game.saveWriterError = claim || '';
+  if (claim === null) game.exitJournal = createExitJournal();
   localsave.canClear = () => !game.saveWriterError;
-  const durablesave = game.durable = createDurableSave();
+  localsave.clearShared = !game.exitJournal;
+  const durablesave = game.durable = createDurableSave(undefined, game.exitJournal?.writer);
   durablesave.onChange = () => game.ui.renderSaveStatus?.();
   await durablesave.ready;
   const L = localsave.get(), D = durablesave.snapshot;
-  durablesave.observe([L.main, L.backup]);
+  const journal = recoverExitJournal(exitJournalRecords(D?.control), D?.control, L.main);
+  durablesave.observe([L.main, L.backup, journal]);
   let timer;
   const remote = await Promise.race([cloud.get(), new Promise(resolve => { timer = setTimeout(() => resolve(null), 2000); })]);
   clearTimeout(timer);
   const pick = (record, src) => checkpointRecord(record) && durablesave.allows(record) ? { ...record, src } : null;
-  const candidates = [pick(D?.main, 'durable'), pick(L.main, 'browser'), pick(remote, 'server'), pick(D?.backup, 'backup'), pick(L.backup, 'backup')].filter(Boolean);
+  const candidates = [pick(D?.main, 'durable'), pick(journal, 'browser'), pick(L.main, 'browser'), pick(remote, 'server'), pick(D?.backup, 'backup'), pick(L.backup, 'backup')].filter(Boolean);
   const recovered = await recoverCheckpoints(candidates, code => game.prepareLoad(code));
   game.ui.contSave = recovered.main; game.ui.contBackup = recovered.backup;
   game.ui.contRecovery = recovered.damaged ? 'The latest autosave could not be read, so an earlier valid save was used. ' : '';

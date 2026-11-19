@@ -17,6 +17,22 @@ export async function recoverCheckpoints(records, validate) {
   }
   return { main: valid[0] || null, backup: valid[1] || null, damaged };
 }
+// An exit record is only a recovery candidate while its committed base is
+// current, or an earlier save from the same document has since committed.
+export function recoverExitJournal(records, control, shared) {
+  if (!stampOK(control)) return null;
+  const eligible = records.filter(r => {
+    if (!stampOK(r.base) || !stampOK(r.checkpoint) || typeof r.writer !== 'string') return false;
+    if (!Number.isSafeInteger(r.checkpoint.token) || r.checkpoint.token < 0) return false;
+    if (checkpointOrder(r, { checkpoint: control }) <= 0) return false;
+    if (shared && checkpointOrder(shared, { checkpoint: control }) > 0) return false;
+    const sameBase = r.base.epoch === control.epoch && r.base.revision === control.revision && r.base.atMs === control.atMs;
+    return sameBase || (r.writer === control.writer && r.checkpoint.epoch === control.epoch);
+  });
+  // Two divergent exits based on the same commit have no confirmed winner.
+  return new Set(eligible.map(r => r.writer)).size === 1
+    ? eligible.sort((a, b) => checkpointOrder(b, a))[0] : null;
+}
 const failure = (message, code = 'storage') => Object.assign(new Error(message), { code });
 
 // Strict commits are bounded. A timed-out transaction is aborted, not later reported saved.
@@ -78,7 +94,7 @@ export function indexedCheckpointStore(factory, timeoutMs = 8000) {
   };
 }
 
-export function createDurableSave(storage = indexedCheckpointStore()) {
+export function createDurableSave(storage = indexedCheckpointStore(), writer) {
   let tail = Promise.resolve(), token = 0, activeTx = null, good = null;
   let disk = zero(), epoch = 0, next = 0, latest = 0;
   const D = {
@@ -100,7 +116,7 @@ export function createDurableSave(storage = indexedCheckpointStore()) {
         if (captured !== token) return { ok: false, stale: true };
         if (!this.ok) return { ok: false, reason: this.lastErr || 'Durable storage unavailable' };
         try {
-          const control = { epoch: ticket.epoch, revision: ticket.revision, atMs: ticket.atMs, cleared: kind === 'replace' };
+          const control = { epoch: ticket.epoch, revision: ticket.revision, atMs: ticket.atMs, cleared: kind === 'replace', ...(writer ? { writer } : {}) };
           const previous = good?.checkpoint?.epoch === ticket.epoch ? good : null;
           const committed = await storage.commit({ kind, expected: { ...disk }, control, record, previous }, tx => { activeTx = tx; });
           disk = committed; this.snapshot = kind === 'replace' ? { control, main: null, backup: null } : { control, main: record, backup: previous || this.snapshot?.backup || null };
@@ -108,7 +124,7 @@ export function createDurableSave(storage = indexedCheckpointStore()) {
           return { ok: true, stale: captured !== token };
         } catch (error) {
           if (captured === token) { this.lastErr = error.message || 'Durable save failed'; if (error.code === 'unsupported') this.ok = false; }
-          return { ok: false, stale: captured !== token, reason: error.message };
+          return { ok: false, stale: captured !== token, reason: error.message, conflict: error.code === 'conflict' };
         }
       }).then(result => {
         if (captured === token && latest === ticket.revision) {
