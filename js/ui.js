@@ -3394,7 +3394,7 @@ export class UI {
         return false;
       }
       this.toast(source === 'file' ? 'That file is not a valid save. Nothing was changed.' : 'That save code could not be read. Nothing was changed.', 'bad');
-      const ta = this.root.querySelector('#loadTa'); if (ta && source === 'code') { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); }
+      const ta = this.root.querySelector('#loadTa'); if (ta && source === 'code') ta.classList.add('err');
       return false;
     }
     this.pendingImport = prep; this.showImportConfirm(prep); return true;
