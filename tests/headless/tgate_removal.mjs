@@ -77,7 +77,7 @@ await test('production fence geometry fills removed crossing and keeps surviving
 });
 await test('inspector exposes direct review; cancel, manual Pause, duplicate Confirm and property switch are safe',()=>{
  const f=fixture(),ui=Object.create(UI.prototype),modal={innerHTML:''};ui.g={sim:f.sim,rend:{view:'ext'}};ui.title=false;ui.sel=f.g2.id;ui.$=()=>modal;ui.toast=()=>{};ui.renderTut=()=>{};ui.select=()=>{};
- ui.root={querySelectorAll:()=>[]};ui.sheetTall=false;ui.taskActions=()=>'';assert.match(ui.inspector(),/dock-actions[\s\S]*data-a="gateRemove"/);
+ ui.root={querySelectorAll:()=>[]};ui.sheetTall=false;ui.taskActions=()=>'';{const h=ui.inspector();assert.match(h,/class="body"[\s\S]*data-more-actions="true"><summary>More…<\/summary>[\s\S]*data-a="gateRemove"/);assert.doesNotMatch(h.slice(0,h.indexOf('class="body"')),/gateRemove/);} // Phase 1 action order: direct review stays one More… tap away, after the body
  ui.showGateRemoval(f.g2.id);assert.match(modal.innerHTML,/Confirm removal/);assert.ok(ui.gateRemovalReview);const before=snap(f.sim);ui.closeModal();assert.equal(snap(f.sim),before);assert.equal(ui.gateRemovalReview,null);
  f.sim.s.speed=4;ui.showGateRemoval(f.g2.id);assert.equal(f.sim.s.speed,0);ui.notePause(0);ui.confirmGateRemoval();assert.equal(f.sim.s.speed,0);const done=snap(f.sim);ui.confirmGateRemoval();assert.equal(snap(f.sim),done);
  const n=fixture();ui.g.sim=n.sim;ui.showGateRemoval(n.g2.id);ui.g.sim=fixture().sim;const other=snap(ui.sim);ui.confirmGateRemoval();assert.equal(snap(ui.sim),other);

@@ -1316,3 +1316,17 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .removal-review .remove-body { overflow:auto; min-height:0; }
 .removal-review .remove-buttons { flex:none; padding-top:12px; }
 .removal-actions { padding:8px 0; }
+/* Object sheets: status first, fixed action order, removal last behind More… (Phase 1 action order). */
+#ui .sheet > .object-status { flex-shrink:0; padding:5px 10px; border-bottom:1px solid var(--line); }
+#ui .sheet > .more-actions { flex-shrink:0; border-top:1px solid var(--line); padding:0 10px; }
+#ui .sheet > .more-actions > summary { min-height:44px; display:flex; align-items:center; cursor:pointer; font-weight:600; color:var(--muted, inherit); }
+#ui .sheet > .more-actions .removal-actions { padding:0 0 8px; }
+/* Keep More… on screen: when the action rail is taller than the sheet allows, the rail scrolls instead of pushing More… out. */
+#ui .sheet:has(> .more-actions) > .dock-actions { flex-shrink:1; min-height:56px; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; }
+/* Compact object sheets give room to status, fixes and More… first; the information body shrinks (and scrolls) before the rail does. */
+#ui .sheet.compact:has(> .more-actions) > .body { flex-shrink:100; min-height:0; padding-top:0; padding-bottom:0; }
+/* An open More… with several removal choices scrolls inside the sheet rather than being clipped. */
+#ui .sheet > .more-actions { flex-shrink:1; min-height:45px; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; }
+/* Once opened, More… keeps its summary and first removal choice in view; the rail above gives up space first. */
+#ui .sheet > .more-actions[open] { flex-shrink:.05; min-height:100px; }
+#ui .sheet:has(> .more-actions[open]) { max-height:44dvh; }

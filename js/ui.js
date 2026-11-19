@@ -602,7 +602,7 @@ export class UI {
     if (this.sectionMenuKey && this.sectionMenuKey !== this.tab) this.sectionMenuKey = null;
     if (this.tool) { box.innerHTML = ''; this.resumePopup('panel'); return; }
     let html = '';
-    if (this.sel != null) { html = this.inspector(); if(html) html = html.replace('<div class="body">', this.removalActions()+'<div class="body">'); }
+    if (this.sel != null) html = this.inspector(); // removal now lives in the inspector's closing More… section
     else if (this.tab === 'build') html = this.buildSheet();
     else if (this.tab === 'feedback') html = this.feedbackSheet();
     else if (this.tab === 'operate') html = this.operateSheet();
@@ -611,7 +611,7 @@ export class UI {
     if (!html) { box.innerHTML = ''; this.resumePopup('panel'); return; }
     if(this.sheetTall) this.pauseForPopup('panel'); else this.resumePopup('panel');
     const key = this.sel != null ? 'sel:' + JSON.stringify(this.sel) : this.tab;
-    const sameSheet=this.sheetKey===key; const statusOpen=sameSheet && !!box.querySelector('.status-key')?.open; const sectionScroll=sameSheet ? (box.querySelector('.section-shortcuts')?.scrollLeft || 0) : 0;
+    const sameSheet=this.sheetKey===key; const statusOpen=sameSheet && !!box.querySelector('.status-key')?.open; const moreOpen=sameSheet && !!box.querySelector('[data-more-actions]')?.open; const sectionScroll=sameSheet ? (box.querySelector('.section-shortcuts')?.scrollLeft || 0) : 0;
     const body = box.querySelector('.body'); const st = body && this.sheetKey === key ? body.scrollTop : 0; this.sheetKey = key;
     const cats = box.querySelector('.cats'); const cs = cats ? cats.scrollLeft : 0;
     if (!force && this.sheetHtml === html) return;
@@ -619,7 +619,7 @@ export class UI {
     const wasOpen = !!box.firstChild; this.sheetHtml = html; box.innerHTML = html;
     if (box.querySelectorAll) for (const d of box.querySelectorAll('[data-yard-detail]')) d.open = yardDetails.includes(d.dataset.yardDetail);
     if (!wasOpen && box.firstChild) box.firstChild.classList.add('enter');
-    const statusKey=box.querySelector('.status-key'); if(statusKey) statusKey.open=statusOpen; const sections=box.querySelector('.section-shortcuts'); if(sections) sections.scrollLeft=sectionScroll;
+    const statusKey=box.querySelector('.status-key'); if(statusKey) statusKey.open=statusOpen; const more=box.querySelector('[data-more-actions]'); if(more) more.open=moreOpen; const sections=box.querySelector('.section-shortcuts'); if(sections) sections.scrollLeft=sectionScroll;
     const nb = box.querySelector('.body'); if (nb) nb.scrollTop = st;
     const nc = box.querySelector('.cats'); if (nc) { nc.scrollLeft = cs; const on = nc.querySelector('button.on'); if (on) { const r = on.getBoundingClientRect(), cr = nc.getBoundingClientRect(); if (r.left < cr.left || r.right > cr.right) nc.scrollLeft += r.left - cr.left - 14; } }
     const cv = box.querySelector('canvas.chart'); if (cv) this.drawChart(cv);
@@ -660,16 +660,24 @@ export class UI {
     // Keep completion and work assignment controls outside the collapsible information body.
     const actions = [];
     // The first-gate action remains reachable even while Growth details are collapsed.
-    if(title==='Growth')body=body.replace(/<button\b[^>]*data-a="previewFirstGate"[^>]*>[\s\S]*?<\/button>/g,button=>{actions.push(button);return '';});
+    if(title==='Growth')body=body.replace(/<button\b[^>]*data-a="previewFirstGate"[^>]*>[\s\S]*?<\/button>/g,button=>{actions.push([0,button]);return '';});
+    // Object sheets: one fixed action order. Everyday fixes first, then hand-offs (staff, vendor), then hire offers;
+    // removal (gate review, Remove…, dispose) always sits last, in a closed More… section after the body.
+    const more = [], objectSheet = this.sel != null && !['Build', 'Operate', 'Business', 'Growth', 'Customer feedback'].includes(title);
+    const bucket = { commission: 0, ownerMakeReady: 0, ownerTask: 0, ownerTaskFor: 0, ownerClean: 0, ownerRoom: 0, verticalReview: 0, delegateTask: 1, delegateTaskFor: 1, callVendor: 1, staffHelp: 2 };
     if (this.sel != null && !office) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
       const cmd = button.match(/data-cmd='([^']*)'/);
-      if (!cmd) { if (/data-a="(?:staffHelp|verticalReview|gateRemove)"/.test(button)) { actions.push(button); return ''; } return button; }
+      if (!cmd) { const a = button.match(/data-a="(staffHelp|verticalReview|gateRemove)"/); if (!a) return button; if (a[1] === 'gateRemove') more.push(button); else actions.push([bucket[a[1]], a[1] === 'staffHelp' ? button.replace('class="btn pri"', 'class="btn"') : button]); return ''; }
       let type; try { type = JSON.parse(cmd[1]).type; } catch { return button; }
       if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor'].includes(type)) return button; // construction cancel is kept apart from routine actions
-      actions.push(button); return '';
+      actions.push([bucket[type], button]); return '';
     });
-    const actionRail = actions.length ? `<div class="dock-actions" aria-label="Task actions">${actions.join('')}</div>` : '';
-    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}${office?' office-panel':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}${actionRail}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
+    const ordered = actions.map((a, i) => [a[0], i, a[1]]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((a) => a[2]); // stable within a group
+    const actionRail = ordered.length ? `<div class="dock-actions" aria-label="Task actions">${ordered.join('')}</div>` : '';
+    const removal = objectSheet ? more.join('') + this.removalActions().replace(/^<div class="row wrap removal-actions">([\s\S]*)<\/div>$/, '$1') : '';
+    const moreHtml = removal ? `<details class="more-actions" data-more-actions="true"><summary>More…</summary><div class="row wrap removal-actions">${removal}</div></details>` : '';
+    const status = objectSheet && !office ? `<div class="dock-summary object-status">${this.dockSummary(title,sub)}</div>` : '';
+    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}${office?' office-panel':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}${status}${actionRail}<div class="body">${status ? '' : `<div class="dock-summary">${this.dockSummary(title,sub)}</div>`}<div class="detail-content">${body}</div></div>${moreHtml}</div>`;
   }
 
   dockSummary(title,sub) {
