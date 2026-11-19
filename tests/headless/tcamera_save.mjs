@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {makeMaple} from '../../js/maple.js';
+import {makeMaple,makePublicMaple} from '../../js/maple.js';
+import {MAPLE_PUBLIC} from '../../js/mapleaccess.js';
 import {Sim,fmtTime} from '../../js/sim.js';
 import {MARKETS,ROLES,MIN_PER_DAY,FLOOR_H} from '../../js/data.js';
 import {modeLabel,sandboxName} from '../../js/scenarios.js';
@@ -13,7 +14,7 @@ const Renderer=await loadRenderer();
 
 function harness(){
   const main=readFileSync('js/main.js','utf8');const calls=[];const timers=[];
-  const context=vm.createContext({Sim,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},
+  const context=vm.createContext({Sim,MAPLE_PUBLIC,makePublicMaple,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'test'},
     localsave:{ok:false},savearchive:{},cloud:{ok:false},installTutorial(){},window:{innerWidth:390},setTimeout:(f,ms)=>{timers.push([f,ms]);calls.push(['timeout',ms]);},
     CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,console:{warn(){}}});
   vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initial world'))+main.slice(main.indexOf('function validState('),main.indexOf('function makeMapleSeedPrice'))+';globalThis.game=game;',context);
