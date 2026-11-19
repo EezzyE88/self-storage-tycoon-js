@@ -13,8 +13,8 @@ import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { cloud } from './cloud.js';
-import { localsave } from './localsave.js';
-import { durablesave, checkpointRecord, recoverCheckpoints } from './durablesave.js';
+import { localsave, claimCheckpointWriter } from './localsave.js';
+import { createDurableSave, checkpointRecord, recoverCheckpoints } from './durablesave.js';
 import { savearchive } from './savearchive.js';
 import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
@@ -33,10 +33,10 @@ const canvas = document.getElementById('view');
 const game = {
   sim: null, rend: null, ui: null, audio: new Audio(), showFps: false, acc: 0,
   company: null,
-  durable: typeof durablesave === 'undefined' ? null : durablesave,
+  durable: null,
   beginSaveSession(replace = true) {
     this.saveSeq = (this.saveSeq || 0) + 1; this.saving = false;
-    if (replace) return this.durable?.replace();
+    if (replace && !this.saveWriterError) return this.durable?.replace();
   },
   newGame(kind, opts) {
     this.beginSaveSession();
@@ -227,6 +227,7 @@ const game = {
   // autosave: during active play (including Pause); `hide` writes locally synchronously and uses a keepalive request
   async autosave(hide) {
     if (!this.ui || this.ui.title || (this.saving && !hide)) return false;
+    if (this.saveWriterError) { this.ui.renderSaveStatus?.(); return false; }
     const seq = this.saveSeq = (this.saveSeq || 0) + 1;
     const company = this.company, sim = this.sim;
     // Capture both before compression yields. Leaving must reach local storage synchronously.
@@ -494,9 +495,12 @@ window.addEventListener('pagehide', () => { game.ui.reserveWait?.interrupt('Page
 // Offer Continue only after checking durable and legacy records. No late server result may replace an active game.
 game.localsave = localsave; game.BUILD = BUILD;
 game.saveStartup = true; game.ui.showTitle();
-durablesave.onChange = () => game.ui.renderSaveStatus?.();
 localsave.onClear = () => game.beginSaveSession();
 game.startupReady = (async () => {
+  game.saveWriterError = await claimCheckpointWriter();
+  localsave.canClear = () => !game.saveWriterError;
+  const durablesave = game.durable = createDurableSave();
+  durablesave.onChange = () => game.ui.renderSaveStatus?.();
   await durablesave.ready;
   const L = localsave.get(), D = durablesave.snapshot;
   durablesave.observe([L.main, L.backup]);

@@ -3061,15 +3061,20 @@ export class UI {
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
   renderSaveStatus() {
     const D = this.g.durable; if (!D || !this.root) return;
-    const label = D.status === 'pending' ? 'Saving progress' : D.status === 'saved' ? 'Progress saved' : D.status === 'error' || D.status === 'unavailable' ? 'Save not confirmed' : 'Autosave ready';
+    const label = this.g.saveWriterError ? 'Save not confirmed' : D.status === 'pending' ? 'Saving progress' : D.status === 'saved' ? 'Progress saved' : D.status === 'error' || D.status === 'unavailable' ? 'Save not confirmed' : 'Autosave ready';
     const menu = this.root.querySelector('[data-a=menu]');
     if (menu) { menu.dataset.saveState = D.status; menu.setAttribute('aria-label', 'Menu · ' + label); menu.title = label; }
     const note = this.root.querySelector('#autosaveNote'); if (note) note.textContent = this.autosaveNote();
     if (!this.g.playing()) return;
+    if (this.g.saveWriterError) {
+      if (this.saveError !== this.g.saveWriterError) { this.saveError = this.g.saveWriterError; this.toast(this.autosaveNote(), 'bad'); }
+      return;
+    }
     if (D.status === 'saved' && D.latest === this.g.saveNotice && this.saveToastRevision !== D.latest) { this.saveToastRevision = D.latest; this.toast('Progress saved', 'good'); }
     if ((D.status === 'error' || D.status === 'unavailable') && this.saveError !== D.lastErr) { this.saveError = D.lastErr; this.toast('Save not confirmed. Keep a save file or code before leaving.', 'bad'); }
   }
   autosaveNote() {
+    if (this.g.saveWriterError) return this.g.saveWriterError + ' Export a save code or file to keep your progress.';
     const D = this.g.durable;
     if (D?.status === 'pending') return 'Saving progress… Wait for saving to finish before leaving.';
     if (D && (D.status === 'error' || D.status === 'unavailable')) return 'This browser could not confirm the latest save. Export a fresh-generation code or file before leaving. FS-01 never uses the legacy save server.';

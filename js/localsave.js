@@ -6,6 +6,20 @@ const MAIN = SAVE_KEYS.main, BAK = SAVE_KEYS.backup, KEPT = SAVE_KEYS.kept; // K
 let store = null;
 try { const ls = window.localStorage; const k = SAVE_KEYS.probe; ls.setItem(k, '1'); ls.removeItem(k); store = ls; } catch (e) { store = null; }
 const read = (k) => { try { const raw = store && store.getItem(k); if (!raw) return null; const d = JSON.parse(raw); return d && typeof d.code === 'string' && d.meta ? d : null; } catch (e) { return null; } };
+// Hold the origin's checkpoint writer lock for this document. Page-exit
+// saves can then write synchronously without an asynchronous lock request.
+export function claimCheckpointWriter() {
+  const unavailable = 'This browser could not coordinate autosaving across tabs.';
+  return new Promise(resolve => {
+    const locks = navigator.locks;
+    if (!locks) { resolve(unavailable); return; }
+    locks.request(SAVE_KEYS.durable, { ifAvailable: true }, lock => {
+      if (!lock) { resolve('Another tab owns autosaving. Close it and reload before saving here.'); return; }
+      resolve('');
+      return new Promise(() => {});
+    }).catch(() => resolve(unavailable));
+  });
+}
 export const localsave = {
   ok: !!store, lastAt: 0, lastErr: '',
   get() { return { main: read(MAIN), backup: read(BAK) }; },
@@ -25,5 +39,5 @@ export const localsave = {
     try { store.setItem(KEPT, JSON.stringify({ code: rec.code, meta: rec.meta || {}, at: rec.at || Math.floor(Date.now() / 1000), keptAt: Math.floor(Date.now() / 1000), v: 1 })); return true; } catch (e) { return false; }
   },
   onClear: null,
-  clear() { const barrier = this.onClear?.(); try { store && store.removeItem(MAIN); store && store.removeItem(BAK); } catch (e) { /* ignore */ } return barrier; },
+  clear() { if (this.canClear && !this.canClear()) return false; const barrier = this.onClear?.(); try { store && store.removeItem(MAIN); store && store.removeItem(BAK); } catch (e) { /* ignore */ } return barrier; },
 };

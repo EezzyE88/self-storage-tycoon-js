@@ -140,4 +140,3 @@ export function createDurableSave(storage = indexedCheckpointStore()) {
   }).catch(error => { D.ok = false; D.status = 'unavailable'; D.lastErr = error.message || 'Durable storage unavailable'; D.emit(); return null; });
   return D;
 }
-export const durablesave = createDurableSave();
