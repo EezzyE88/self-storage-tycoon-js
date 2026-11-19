@@ -315,6 +315,26 @@ export class Sim {
         for (let f = 0; f < shell.floors; f++) if (s.hall[f][i] === 1 || (D.elevAt[i] && this.obj(D.elevAt[i]).cstate === 'operating' && served(this,this.obj(D.elevAt[i])).includes(f)) || (D.stairAt[i] && this.obj(D.stairAt[i]).cstate === 'operating' && served(this,this.obj(D.stairAt[i])).includes(f))) D.walk[f][i] = 1;
       } else if (y <= p.y1 + 1 && PED_GROUND.has(s.ground[i]) && !D.solid[i]) D.walk[0][i] = 1;
     }
+    if (s.layout === MAPLE_PUBLIC) {
+      D.staffGate = this.objs('gate').find(g => recessed(s,g) && g.cstate === 'operating');
+      const office = this.objs('office').find(o => o.staffDoor && o.cstate === 'operating');
+      if (office) {
+        // Join the two real door landings through the office, one grid step at a time.
+        D.staffPassage = new Map();
+        let {x,y} = office.door;
+        const rear = office.staffDoor;
+        const link = (nx,ny) => {
+          const a = this.idx(x,y), b = this.idx(nx,ny);
+          for (const [from,to] of [[a,b],[b,a]]) {
+            if (!D.staffPassage.has(from)) D.staffPassage.set(from,[]);
+            D.staffPassage.get(from).push(to);
+          }
+          x=nx; y=ny;
+        };
+        while (x !== rear.x) link(x + Math.sign(rear.x-x),y);
+        while (y !== rear.y) link(x,y + Math.sign(rear.y-y));
+      }
+    }
     // lighting + camera coverage
     for (const L of this.objs('light')) {
       if (!this.works(L)) continue;
@@ -428,15 +448,19 @@ export class Sim {
     return out;
   }
   // pedestrian graph node = f*WH + i
-  pedNbr(n) {
+  pedNbr(n, actor = null) {
     const s = this.s, W = s.W, WH = W * s.H, D = this.D, out = [];
     const f = (n / WH) | 0, i = n % WH, x = i % W, y = (i / W) | 0;
+    const staff = f === 0 && s.layout === MAPLE_PUBLIC && actor?.kind === 'staff';
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy; if (!this.inb(nx, ny)) continue;
       const j = this.idx(nx, ny);
-      if (!D.walk[f][j]) continue;
+      if (staff && D.staffPassage?.get(i)?.includes(j) && (D.solid[j] || D.walk[0][j])) {
+        out.push(j); continue;
+      }
+      if (!D.walk[f][j] || (staff && D.solid[i] && D.staffPassage?.has(i))) continue;
       if (s.layout === MAPLE_PUBLIC && f===0) {
-        if (!pedestrianEdge(x,y,nx,ny)) continue;
+        if (!pedestrianEdge(x,y,nx,ny,staff ? !!D.staffGate : null)) continue;
       } else if (ny > s.parcel.y1 || y > s.parcel.y1) continue; // fence
       const sa = D.shellAt[i], sb = D.shellAt[j];
       if (sa !== sb) { if (f > 0) continue; if (!D.doorEdge.has(Math.min(i, j) + ',' + Math.max(i, j))) continue; }
@@ -465,7 +489,7 @@ export class Sim {
     let h = 0; while (h < q.length) { const n = q[h++]; const d = dist.get(n); for (const m of nbr(n)) if (!dist.has(m)) { dist.set(m, d + 1); q.push(m); } }
     return dist;
   }
-  pedPath(fromNode, toNode) { return this.bfs([fromNode], (n) => n === toNode, (n) => this.pedNbr(n)); }
+  pedPath(fromNode, toNode, actor = null) { return this.bfs([fromNode], (n) => n === toNode, (n) => this.pedNbr(n,actor)); }
   node(f, x, y) { return f * this.s.W * this.s.H + this.idx(x, y); }
   unnode(n) { const WH = this.s.W * this.s.H, f = (n / WH) | 0, i = n % WH; return { f, x: i % this.s.W, y: (i / this.s.W) | 0, i }; }
 
@@ -2477,6 +2501,9 @@ export class Sim {
         this.joinElevator(ag, el, f); return 'elevator';
       }
       const tx = (i % s.W) + 0.5, ty = ((i / s.W) | 0) + 0.5;
+      const staffGate = ag.kind === 'staff' && f === 0 && this.D.staffGate;
+      if (staffGate && Math.floor(tx) === staffGate.x+1 && Math.floor(ag.x) === staffGate.x+1 &&
+          (ag.y < staffGate.y+1) !== (ty < staffGate.y+1) && staffGate.open < 1) return 'moving';
       const dx = tx - ag.x, dy = ty - ag.y, d = Math.hypot(dx, dy);
       if (d <= rem) {
         // crossing a door edge?
@@ -2519,13 +2546,13 @@ export class Sim {
       const path=this.bfs([from],n=>n===to,n=>this.pedNbr(n).filter(allowed)) || this.pedPath(from,to);
       ag.path=path; ag.pi=0; return !!path;
     }
-    this.navCart = !!ag.cart; const p = Math.max(ag.f,f)>=2&&ag.f!==f ? (freightPath(this,from,to)||(!ag.cart?this.pedPath(from,to):null)) : this.pedPath(from, to); this.navCart = false;
+    this.navCart = !!ag.cart; const p = Math.max(ag.f,f)>=2&&ag.f!==f ? (freightPath(this,from,to,ag)||(!ag.cart?this.pedPath(from,to,ag):null)) : this.pedPath(from, to, ag); this.navCart = false;
     ag.path = p; ag.pi = 0; return !!p;
   }
   goToAny(ag, targets) { // targets: array of nodes
     const from = this.node(ag.f, Math.floor(ag.x), Math.floor(ag.y));
     const set = new Set(targets);
-    this.navCart = !!ag.cart; const p = this.bfs([from], (n) => set.has(n), (n) => this.pedNbr(n)); this.navCart = false;
+    this.navCart = !!ag.cart; const p = this.bfs([from], (n) => set.has(n), (n) => this.pedNbr(n,ag)); this.navCart = false;
     ag.path = p; ag.pi = 0; return p;
   }
   availabilityReport(size) {
@@ -2569,6 +2596,11 @@ export class Sim {
       // Each gate owns its own exit sensor and keypad-service opening state.
       const compound=recessed(s,gate);
       const near = compound ? s.agents.some(a=>{
+        if (a.kind === 'staff' && !a.hidden && a.f === 0 && a.path && a.pi < a.path.length) {
+          const next = this.unnode(a.path[a.pi]);
+          if (next.f === 0 && next.x === gate.x+1 && Math.floor(a.x) === next.x &&
+              Math.abs(a.y-(gate.y+1)) < 1 && Math.abs(next.y+.5-(gate.y+1)) < 1) return true;
+        }
         const v=this.vehAt(a.veh);
         return a.gateId===id && v && ['drive','leave'].includes(a.st) &&
           !v.reversing && v.x>=18 && v.x<24 && Math.abs(v.y-24)<2.5;
@@ -3023,7 +3055,7 @@ export class Sim {
     if(el.dispatchMode==='sweep-v1')for(const id of el.q.flat()){
       const a=agent(id);if(!a||!a.path||a.inElev||(this.works(el)&&s.t-a.elevT0<120))continue;
       const goal=this.unnode(a.path.at(-1)),from=this.node(a.f,Math.floor(a.x),Math.floor(a.y)),to=this.node(goal.f,goal.x,goal.y);
-      const path=freightPath(this,from,to);if(!path)continue;
+      const path=freightPath(this,from,to,a);if(!path)continue;
       const crossing=path.find((n,k)=>k>0&&this.unnode(n).f!==this.unnode(path[k-1]).f);
       if(crossing!=null&&this.D.elevAt[crossing%(s.W*s.H)]!==el.id){const t=a.elevT0;this.leaveElevator(a);a.st=a.prevSt;a.path=path;a.pi=0;a.elevQueuedAt=t;}
     }
@@ -3195,7 +3227,7 @@ export class Sim {
       const office=this.objs('office').find(o=>o.cstate==='operating');
       const origin=worker&&!worker.hidden?worker:office?{f:0,x:staffLanding(office,o).x,y:staffLanding(office,o).y}:worker;
       if(!origin)return null;
-      const reach=this.distField([this.node(origin.f||0,Math.floor(origin.x),Math.floor(origin.y))],n=>this.pedNbr(n));
+      const reach=this.distField([this.node(origin.f||0,Math.floor(origin.x),Math.floor(origin.y))],n=>this.pedNbr(n,worker));
       let best=null,score=Infinity;
       for(const n of reach.keys()){
         const c=this.unnode(n);if(!D.walk[c.f]?.[c.i])continue;

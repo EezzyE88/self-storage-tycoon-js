@@ -14,7 +14,22 @@ export function staffLanding(office, target) {
   return office?.staffDoor || office?.door;
 }
 
-export function pedestrianEdge(x,y,nx,ny) {
+// Staff may walk the frontage in either direction. Fence runs match the rendered
+// pocket. The last column of the recessed opening is the staff gate crossing.
+export function pedestrianEdge(x,y,nx,ny,staffGate = null) {
+  if (staffGate !== null) {
+    const right = Math.max(x,nx), front = Math.max(y,ny);
+    if (y === ny) {
+      if (right === 4 && y >= 20 && y < 30) return false;
+      if (right === 18 && y >= 20 && y < 24) return false;
+      if (right === 24 && y >= 24 && y < 30) return false;
+    } else {
+      if (front === 30) return x >= 4 && x < 24;
+      if (front === 20 && x >= 4 && x < 18) return false;
+      if (front === 24 && x >= 18 && x < 24) return staffGate && x === 23;
+    }
+    return true;
+  }
   if (pocket(x,y) !== pocket(nx,ny)) {
     return Math.max(y,ny) === 30 && Math.min(y,ny) === 29 && pocket(x,29) && pocket(nx,29);
   }
@@ -101,10 +116,19 @@ export function accessState(sim, plan, pending=true) {
     if((car.dest==null || bays.includes(car.dest)) && (!pocket(Math.floor(car.x),Math.floor(car.y)) || cars.has(carCell)) &&
         (a.hidden || fromDoor.has(sim.idx(Math.floor(a.x),Math.floor(a.y))))) assigned.add(a.id);
   }
+  // The rear yard connection above is independently required even when a worker
+  // can reach the public frontage through the office or the gate.
+  const walkableForStaff = i => walk(i) || sim.D.staffPassage?.has(i) && sim.D.solid[i] && !solid.has(i);
+  const fieldWorkers = s.agents.filter(a => a.kind === 'staff' && !a.hidden && a.f === 0);
+  const workerReach = fieldWorkers.length && flood(sim,[rear],walkableForStaff,(x,y,nx,ny)=>{
+    const i=sim.idx(x,y), j=sim.idx(nx,ny);
+    if (sim.D.staffPassage?.get(i)?.includes(j)) return true;
+    return walk(i) && walk(j) && pedestrianEdge(x,y,nx,ny,!!sim.D.staffGate);
+  });
   const workers=new Set();
-  for (const a of s.agents) if(a.kind==='staff' && !a.hidden && a.f===0) {
+  for (const a of fieldWorkers) {
     const i=sim.idx(Math.floor(a.x),Math.floor(a.y));
-    if(!sim.D.shellAt[i] && staff.has(i)) workers.add(a.id);
+    if(!sim.D.shellAt[i] && workerReach.has(i)) workers.add(a.id);
   }
   // A changed route can arrive at another working yard entrance.
   const yardDoors = sim.objs('door').filter(o=>o.cstate==='operating');
