@@ -1,3 +1,4 @@
+import { MAPLE_PUBLIC, recessed } from '../../js/mapleaccess.js';
 import assert from 'node:assert/strict';
 import {makeMaple} from '../../js/maple.js';
 import {makeSandbox,modeLabel,sandboxName} from '../../js/scenarios.js';
@@ -72,7 +73,7 @@ await test('new and legacy save roundtrips retain gates, removal, Pause and dete
 await test('production fence geometry fills removed crossing and keeps surviving gate gap',()=>{
  const source=readFileSync('js/render.js','utf8'),start=source.indexOf('  buildFence() {'),end=source.indexOf('  setView(',start),build=source.slice(start,end).replace('buildFence()', 'function buildFence()');
  function gaps(sim){const spans=[];class Mesh{constructor(geo){this.geo=geo;this.scale={set:(...v)=>this.size=v};this.position={set:(...v)=>this.pos=v};this.rotation={};}}
- const ctx=vm.createContext({THREE:{Mesh}});vm.runInContext(build,ctx);ctx.buildFence.call({sim,geo:{plane:'plane',box:'box'},mat:{},box(){},add(m){if(m.geo==='plane'&&m.pos[2]===sim.s.parcel.y1+1)spans.push([m.pos[0]-m.size[0]/2,m.pos[0]+m.size[0]/2]);}});return spans;}
+ const ctx=vm.createContext({THREE:{Mesh},MAPLE_PUBLIC,recessed});vm.runInContext(build,ctx);ctx.buildFence.call({sim,geo:{plane:'plane',box:'box'},mat:{},box(){},add(m){if(m.geo==='plane'&&m.pos[2]===sim.s.parcel.y1+1)spans.push([m.pos[0]-m.size[0]/2,m.pos[0]+m.size[0]/2]);}});return spans;}
  const f=fixture(),covers=(spans,x)=>spans.some(([lo,hi])=>x>lo&&x<hi);assert.equal(covers(gaps(f.sim),f.g2.x),false);assert.ok(confirm(f,quote(f)).ok);assert.equal(covers(gaps(f.sim),f.g2.x),true);assert.equal(covers(gaps(f.sim),f.g1.x),false);
 });
 await test('inspector exposes direct review; cancel, manual Pause, duplicate Confirm and property switch are safe',()=>{
