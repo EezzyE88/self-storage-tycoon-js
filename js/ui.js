@@ -501,7 +501,7 @@ export class UI {
   }
   onInput(e) {
     const el = e.target; if(el.dataset.verticalOption){const R=this.verticalReview;if(R)this.showVertical(R.shell,{...R,[el.dataset.verticalOption]:el.checked});return;} if (el.dataset.sectionPicker && el.value) { this.sheetTall = true; this.renderSheet(true); this.jumpSection(el.value); return; } if (el.dataset.vol) this.g.audio.setVol(el.dataset.vol, +el.value);
-    if (el.id === 'loadFile' && el.files[0]) { const f = el.files[0]; el.value = ''; f.text().then((t) => this.importSave(t, 'file'), () => this.toast('That file could not be read. Nothing was changed.', 'bad')); }
+    if (el.id === 'loadFile' && el.files[0]) { const f = el.files[0]; el.value = ''; f.text().then((t) => this.importSave(t, 'file'), () => this.showImportError('That file could not be read. Nothing was changed.', 'file')); }
   }
   do(action, feedback = false) {
     const r = this.sim.dispatch(action) || {};
@@ -3388,16 +3388,23 @@ export class UI {
     const prep = await this.g.prepareLoad(text);
     if (!prep.ok) {
       this.pendingImport = null;
-      if (prep.reason === 'save-generation') {
-        this.toast(prep.msg, 'bad');
-        // Keep pasted bytes and the current game/slots intact.
-        return false;
-      }
-      this.toast(source === 'file' ? 'That file is not a valid save. Nothing was changed.' : 'That save code could not be read. Nothing was changed.', 'bad');
-      const ta = this.root.querySelector('#loadTa'); if (ta && source === 'code') ta.classList.add('err');
+      const message = prep.reason === 'save-generation' ? prep.msg
+        : source === 'file' ? 'That file is not a valid save. Nothing was changed.'
+        : 'That save code could not be read. Nothing was changed.';
+      this.showImportError(message, source);
       return false;
     }
     this.pendingImport = prep; this.showImportConfirm(prep); return true;
+  }
+  showImportError(message, source) {
+    const error = this.root.querySelector('#loadError');
+    if (!error) { this.toast(message, 'bad'); return; }
+    error.textContent = message;
+    if (source === 'code') {
+      const input = this.root.querySelector('#loadTa');
+      input.classList.add('err');
+      input.setAttribute('aria-invalid', 'true');
+    }
   }
   metaLine(m) { return m ? `<b>${esc(m.name || 'Saved game')}</b> · Day ${+m.day || 1} · ${money(+m.cash || 0)}${+m.props > 1 ? ` · ${+m.props} properties` : ''}` : ''; }
   importPlan() { // exactly what the slots will hold if the import is confirmed
@@ -3459,7 +3466,7 @@ export class UI {
   }
   showLoad() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Load game</h2><button class="x" data-a="${this.title ? 'showTitle' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
-      ${this.generationInfo()}<p class="note">Paste a fresh-generation save code, or open its .sst file.</p><textarea id="loadTa" placeholder="Paste save code"></textarea>
+      ${this.generationInfo()}<p class="note">Paste a fresh-generation save code, or open its .sst file.</p><textarea id="loadTa" placeholder="Paste save code" aria-describedby="loadError"></textarea><p id="loadError" class="note bad" role="alert"></p>
       <div class="row" style="margin-top:8px"><button class="btn pri" data-a="loadCode">Load code</button><button class="btn" data-a="loadFile">Open file</button><input type="file" id="loadFile" hidden></div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitle"]'); if (x) x.onclick = () => this.showTitle();
   }

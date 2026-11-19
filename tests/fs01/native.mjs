@@ -75,9 +75,9 @@ await test('main backup kept archive and quarantine operate only on fresh namesp
  assert.ok(operations.every(([,k])=>!k.startsWith('sst.')||k.startsWith('sst.fresh1.')),'candidate adapters never even read legacy keys');
 });
 await test('unsupported UI import retains pasted bytes and never reaches confirmation or preservation',async()=>{
- const g=make(),ta={value:oldCompressed},before=g.saveJSON(),disk=JSON.stringify([...mem]);let confirmations=0;
- const ui=Object.create(UI.prototype);ui.g=g;ui.root={querySelector:()=>ta};ui.toast=()=>{};ui.showImportConfirm=()=>confirmations++;
- assert.equal(await ui.importSave(oldCompressed,'code'),false);assert.equal(ta.value,oldCompressed);assert.equal(confirmations,0);assert.equal(g.saveJSON(),before);assert.equal(JSON.stringify([...mem]),disk);intact();
+ const g=make(),ta={value:oldCompressed,classList:{add(){}},setAttribute(){}},error={},before=g.saveJSON(),disk=JSON.stringify([...mem]);let confirmations=0;
+ const ui=Object.create(UI.prototype);ui.g=g;ui.root={querySelector:(selector)=>selector==='#loadError'?error:ta};ui.showImportConfirm=()=>confirmations++;
+ assert.equal(await ui.importSave(oldCompressed,'code'),false);assert.equal(ta.value,oldCompressed);assert.match(error.textContent,/different or unsupported generation/);assert.equal(confirmations,0);assert.equal(g.saveJSON(),before);assert.equal(JSON.stringify([...mem]),disk);intact();
 });
 await test('unsupported in-memory state cannot be relabelled by exporting it',()=>{
  const g=make();g.sim=old.sim;g.company={props:[{name:'Legacy state',sim:old.sim}],active:0,feed:[]};assert.throws(()=>g.saveJSON(),/unsupported save generation/);intact();
