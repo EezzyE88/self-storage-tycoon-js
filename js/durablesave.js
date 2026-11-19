@@ -36,7 +36,7 @@ export function recoverExitJournal(records, control, shared) {
 const failure = (message, code = 'storage') => Object.assign(new Error(message), { code });
 
 // Strict commits are bounded. A timed-out transaction is aborted, not later reported saved.
-export function indexedCheckpointStore(factory, timeoutMs = 8000) {
+export function indexedCheckpointStore(factory, timeoutMs = 8000, allowRelaxed = false) {
   if (factory === undefined) { try { factory = globalThis.indexedDB; } catch { factory = null; } }
   let dbPromise;
   const open = () => dbPromise ||= new Promise((resolve, reject) => {
@@ -58,13 +58,20 @@ export function indexedCheckpointStore(factory, timeoutMs = 8000) {
       const finish = err => { if (done) return; done = true; clearTimeout(timer); active?.(null); err ? reject(err) : resolve(result); };
       const timer = setTimeout(() => { error = failure('Durable save timed out'); try { tx?.abort(); } catch {} finish(error); }, timeoutMs);
       try {
-        tx = mode === 'readwrite' ? db.transaction('slots', mode, { durability: 'strict' }) : db.transaction('slots', mode);
+        if (mode === 'readwrite') {
+          try { tx = db.transaction('slots', mode, { durability: 'strict' }); }
+          catch (err) {
+            if (!allowRelaxed || (err.name !== 'TypeError' && err.name !== 'NotSupportedError')) throw err;
+            tx = db.transaction('slots', mode);
+          }
+        } else tx = db.transaction('slots', mode);
         active?.(tx);
-        if (mode === 'readwrite' && tx.durability !== 'strict') throw failure('Strict save completion is unavailable', 'unsupported');
+        const strict = tx.durability === 'strict';
+        if (mode === 'readwrite' && !strict && !allowRelaxed) throw failure('Strict save completion is unavailable', 'unsupported');
         tx.oncomplete = () => finish();
         tx.onabort = () => finish(error || tx.error || failure('Durable transaction aborted'));
         tx.onerror = () => { error ||= tx.error; };
-        run(tx.objectStore('slots'), value => { result = value; }, err => { error = err; tx.abort(); });
+        run(tx.objectStore('slots'), value => { result = value; }, err => { error = err; tx.abort(); }, strict);
       } catch (err) { try { tx?.abort(); } catch {} finish(err); }
     });
   }
@@ -77,7 +84,7 @@ export function indexedCheckpointStore(factory, timeoutMs = 8000) {
       });
     },
     async commit(op, active) {
-      return transact(await open(), 'readwrite', (store, result, abort) => {
+      return transact(await open(), 'readwrite', (store, result, abort, strict) => {
         const req = store.get('control');
         req.onsuccess = () => {
           try {
@@ -86,7 +93,8 @@ export function indexedCheckpointStore(factory, timeoutMs = 8000) {
             return abort(failure('Saved progress changed in another tab. Reload before saving here.', 'conflict'));
           if (op.kind === 'replace') { store.delete('main'); store.delete('backup'); }
           else { if (op.previous) store.put(op.previous, 'backup'); store.put(op.record, 'main'); }
-          store.put(op.control, 'control'); result(op.control);
+          const control = strict ? op.control : { ...op.control, strict: false };
+          store.put(control, 'control'); result(control);
           } catch (error) { abort(error); }
         };
       }, active);
@@ -94,7 +102,8 @@ export function indexedCheckpointStore(factory, timeoutMs = 8000) {
   };
 }
 
-export function createDurableSave(storage = indexedCheckpointStore(), writer) {
+export function createDurableSave(storage, writer) {
+  storage ??= indexedCheckpointStore(undefined, undefined, !!writer);
   let tail = Promise.resolve(), token = 0, activeTx = null, good = null;
   let disk = zero(), epoch = 0, next = 0, latest = 0;
   const D = {
@@ -121,6 +130,11 @@ export function createDurableSave(storage = indexedCheckpointStore(), writer) {
           const committed = await storage.commit({ kind, expected: { ...disk }, control, record, previous }, tx => { activeTx = tx; });
           disk = committed; this.snapshot = kind === 'replace' ? { control, main: null, backup: null } : { control, main: record, backup: previous || this.snapshot?.backup || null };
           if (captured === token) good = kind === 'replace' ? null : record;
+          if (committed.strict === false) {
+            const reason = 'Strict save completion is unavailable. Export a save file or code to keep your progress.';
+            if (captured === token) this.lastErr = reason;
+            return { ok: false, stale: captured !== token, reason };
+          }
           return { ok: true, stale: captured !== token };
         } catch (error) {
           if (captured === token) { this.lastErr = error.message || 'Durable save failed'; if (error.code === 'unsupported') this.ok = false; }

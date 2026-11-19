@@ -48,7 +48,8 @@ export function exitJournalRecords(control) {
     for (const key of Object.keys(store || {})) {
       if (!key.startsWith(EXIT_PREFIX)) continue;
       const record = read(key);
-      if (record && control && checkpointOrder(record, { checkpoint: control }) <= 0) store.removeItem(key);
+      const order = record && control ? checkpointOrder(record, { checkpoint: control }) : null;
+      if (order < 0 || (order === 0 && control.strict !== false)) store.removeItem(key);
       else if (record) records.push(record);
     }
   } catch {}
