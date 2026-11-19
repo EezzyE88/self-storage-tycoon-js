@@ -1,3 +1,4 @@
+import { MAPLE_PUBLIC, publicDrive, accessState, lostMapleAccess } from './mapleaccess.js';
 // Universal removal. F1-F5 removal terms are owner-approved for release (2026-11-18).
 import { G, SIZES } from './data.js';
 import { unregisterGateAccess } from './gateaccess.js';
@@ -112,6 +113,9 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
   const q={ids:[...ids].sort((a,b)=>a-b),cartIds,tiles,floor,keypad,closeProperty};
   if(!prerequisites.length){
     const state=structuredClone(s);applyRemovalState(state,q);const after=new sim.constructor(state);
+    if (s.layout===MAPLE_PUBLIC && !closeProperty && after.objs('office').length) {
+      const reason=lostMapleAccess(accessState(sim),accessState(after)); if(reason) bad(reason);
+    }
     const lost=[];
     if(!closeProperty)for(const u of all.filter(c=>c.type==='unit'&&!ids.has(c.id))){
       const a=after.s.objects[u.id];if(!a)continue;
@@ -122,7 +126,7 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
     if(lost.length)bad(`Keep required access to ${lost.length} retained unit(s), including Unit ${lost[0]}. Connect an alternative route first.`);
     if(!closeProperty&&s.open&&after.openingIssues().some(m=>/office|gate|Main gate/i.test(m)&&!sim.openingIssues().includes(m)))bad('Keep required customer access to the office and entrance. Connect an alternative first.');
     for(const a of s.agents.filter(a=>a.path&&!uses(a,refs))){const path=a.path.slice(Math.max(0,(a.pi||0)-1));if(path.some((n,i)=>i&&sim.pedNbr(path[i-1]).includes(n)&&!after.pedNbr(path[i-1]).includes(n))){bad('A current customer or worker would lose their path. Wait or connect an alternative first.');break;}}
-    for(const v of s.vehicles){const a=s.agents.find(a=>a.veh===v.id),path=(v.path||[]).slice(Math.max(0,(v.pi||0)-1));if(path.some((n,i)=>i&&sim.vehNbr(path[i-1],a?.gateId).includes(n)&&!after.vehNbr(path[i-1],a?.gateId).includes(n))){bad('Wait for vehicles using this route to clear.');break;}}
+    for(const v of s.vehicles){const a=s.agents.find(a=>a.veh===v.id),path=(v.path||[]).slice(Math.max(0,(v.pi||0)-1));if(path.some((n,i)=>i&&sim.vehNbr(path[i-1],a?.publicVisit?publicDrive:a?.gateId).includes(n)&&!after.vehNbr(path[i-1],a?.publicVisit?publicDrive:a?.gateId).includes(n))){bad('Wait for vehicles using this route to clear.');break;}}
     if(t.kind==='object'&&o?.type==='gate'&&!closeProperty&&gateCheck){const g=gateCheck(sim,o);g.blockers.forEach(bad);effects.push(...g.effects);}
   }
   if(keypad)effects.push('Removes only the keypad; door remains. No salvage refund.');

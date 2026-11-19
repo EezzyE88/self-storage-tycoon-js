@@ -3,7 +3,8 @@ import { portfolioCareer } from './career.js';
 import { FINANCIAL_MINUTE } from './finance.js';
 import { Sim, fmtTime } from './sim.js';
 import { TICKS_PER_SEC_1X, TIERS } from './data.js';
-import { makeMaple, makeEmptyLot } from './maple.js';
+import { MAPLE_PUBLIC } from './mapleaccess.js';
+import { makeMaple, makePublicMaple, makeEmptyLot } from './maple.js';
 import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from './scenarios.js';
 export { modeLabel };
 import { MARKETS, MIN_PER_DAY, ROLES } from './data.js';
@@ -44,6 +45,7 @@ const game = {
     if (kind && kind.startsWith('sc:')) { sim = makeScenario(kind.slice(3)); name = SCENARIOS[kind.slice(3)].name; }
     else if (kind === 'custom') { sim = makeSandbox(opts); name = sandboxName(sim.s); }
     else if (kind === 'empty' || kind === 'creative') { sim = makeSandbox({ kind: kind === 'creative' ? 'free' : 'business' }); name = kind === 'creative' ? 'Free Build Lot' : 'Empty Lot'; sim.s.sb.name = name; } // quick starts (menu, tests)
+    else if (kind === 'maple-public') { sim = makePublicMaple(); name = 'Maple Street Storage'; }
     else if (kind === 'maple') { sim = makeMaple(); name = 'Maple Street Storage'; }
     else { sim = makeEmptyLot({ creative: kind === 'creative' }); name = kind === 'creative' ? 'Creative Lot' : 'Empty Lot'; }
     this.company = { props: [{ name, sim }], active: 0, feed: [] };
@@ -139,7 +141,8 @@ const game = {
     this.lastCam = opts.cam || null;
     if (opts.cam) this.rend.applyCamState(opts.cam); // a restored player camera replaces the default framing and the phone re-fit
     else {
-    this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));
+    if(sim.s.layout===MAPLE_PUBLIC) this.rend.lookAt(14,23);
+    else this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));
     this.rend.zoom = (sim.s.mode === 'tutorial' ? 1.05 : 0.95) * (window.innerWidth < 600 ? 0.8 : 1); this.rend.updateCamera();
     if (this.ui && this.ui.phone()) {
       // The delayed re-fit repeats the opening framing so the settled phone layout does not undo it.

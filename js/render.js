@@ -1,3 +1,4 @@
+import { MAPLE_PUBLIC, recessed, publicBay } from './mapleaccess.js';
 import { attachmentCoverage } from './unitupgrades.js';
 import { isComeback, targetInService, targetUnits } from './comeback.js';
 // Three.js presentation layer. Reads sim.s / sim.D; never mutates simulation state.
@@ -607,7 +608,7 @@ export class Renderer {
         g.save(); g.beginPath(); g.rect(px + 2, py + 2, C - 4, C - 4); g.clip(); g.strokeStyle = 'rgba(232,185,35,0.45)'; g.lineWidth = 2;
         for (let k = -C; state==='inaccessible' && k < C; k += 8) { g.beginPath(); g.moveTo(px + k, py + C); g.lineTo(px + k + C, py); g.stroke(); } g.restore();
       }
-      if (gv === G.PARKING) { g.fillStyle = COL.stripe; const vert = s.ground[i - 1] === G.PARKING || s.ground[i + 1] === G.PARKING; if (vert) g.fillRect(px, py + 2, 2, C - 4); else g.fillRect(px + 2, py, C - 4, 2); }
+      if (gv === G.PARKING && !(s.layout===MAPLE_PUBLIC && publicBay(x,y)>=0)) { g.fillStyle = COL.stripe; const vert = s.ground[i - 1] === G.PARKING || s.ground[i + 1] === G.PARKING; if (vert) g.fillRect(px, py + 2, 2, C - 4); else g.fillRect(px + 2, py, C - 4, 2); }
       if (gv === G.STREET && y === p.y1 + 2) { if (x % 2 === 0) { g.fillStyle = COL.yellow; g.fillRect(px + 4, py + C - 2, C - 8, 3); } }
     }
     // curb line where street meets sidewalk
@@ -621,6 +622,14 @@ export class Renderer {
     }
     this.drawDirt(g, 0);
     // property line
+    if(s.layout===MAPLE_PUBLIC) {
+      g.save(); g.strokeStyle='#f2eacd'; g.lineWidth=2;
+      for(let x=10;x<=16;x+=2){g.beginPath();g.moveTo(x*C,21*C);g.lineTo(x*C,25*C);g.stroke();}
+      g.fillStyle='#ede6cd'; g.textAlign='center'; g.font='bold '+(1.25*C)+'px sans-serif';
+      g.fillText('↓',19.5*C,27*C);g.fillText('↑',22.5*C,27*C);
+      for(let y=14;y<18;y+=.5)g.fillRect(14*C,y*C,C,.22*C);
+      g.restore();
+    }
     g.strokeStyle = 'rgba(255,255,255,0.35)'; g.setLineDash([6, 6]); g.lineWidth = 2; g.strokeRect(p.x0 * C, p.y0 * C, (p.x1 - p.x0 + 1) * C, (p.y1 - p.y0 + 1) * C); g.setLineDash([]);
     this.groundTex.needsUpdate = true;
     // Reused selected upper-floor plate
@@ -851,6 +860,9 @@ export class Renderer {
         if (inConst) { this.scaffold(o, cx, cz, o.w, o.h, 1.7, 0); break; }
         // Open-topped office retains its V62 frontage and entrance.
 
+        if(o.staffDoor) {
+          this.faceMesh(.92,1.22,this.mat.officeTrim,o.staffDoor.x+.5,.61,o.y-.03,[0,-1],0,{obj:o.id});
+        }
         const d = o.door.dir; const fx = cx + d[0] * (o.w / 2 - 0.04), fz = cz + d[1] * (o.h / 2 - 0.04);
         const len = d[0] ? o.h : o.w;
         this.box(d[0]?.16:len+.1,.30,d[0]?len+.1:.16,this.mat.officeTrim,fx+d[0]*.045,1.80,fz+d[1]*.045,0,{obj:o.id,officeFascia:true});
@@ -867,13 +879,14 @@ export class Renderer {
       case 'gate': {
         const y = o.y + 1; // fence line z
         if (inConst) { this.scaffold(o, o.x + 0.5, o.y + 0.9, 3, 0.3, 1.2, 0); break; }
-        for (const px of [o.x - 1, o.x + 2]) this.box(0.18, 1.5, 0.18, this.mat.darkMetal, px, 0.75, y, 0);
+        const compound = recessed(this.sim.s,o), left=compound ? 18 : o.x-1, right=o.x+2;
+        for (const px of [left,right]) this.box(0.18, 1.5, 0.18, this.mat.darkMetal, px, 0.75, y, 0);
         const panel = new THREE.Group();
         const frame = new THREE.Mesh(this.geo.box, this.mat.darkMetal); frame.scale.set(3, 0.08, 0.06); frame.position.y = 1.2; panel.add(frame);
         const frame2 = frame.clone(); frame2.position.y = 0.12; panel.add(frame2);
         for (let k = 0; k <= 12; k++) { const b = new THREE.Mesh(this.geo.box, this.mat.darkMetal); b.scale.set(0.035, 1.1, 0.035); b.position.set(-1.5 + k * 0.25, 0.66, 0); panel.add(b); }
-        panel.position.set(o.x + 0.5, 0, y); panel.traverse((c) => { c.castShadow = true; }); this.add(panel, 0, { obj: o.id });
-        this.anim.push({ k: 'gate', mesh: panel, o, x0: o.x + 0.5 });
+        panel.scale.x=(right-left)/3; panel.position.set((left+right)/2,0,y); panel.traverse((c) => { c.castShadow = true; }); this.add(panel, 0, { obj: o.id });
+        this.anim.push({ k: 'gate', mesh:panel,o,x0:(left+right)/2,travel:right-left-.2 });
         // keypad pedestal at the apron, driver side
         this.box(0.14, 0.9, 0.14, this.mat.darkMetal, o.x - 0.8, 0.45, y + 0.6, 0, { obj: o.id });
         const kp = this.box(0.26, 0.3, 0.12, this.mat.yellow, o.x - 0.8, 1.0, y + 0.6, 0, { obj: o.id });
@@ -1018,6 +1031,12 @@ export class Renderer {
       const gate = s.objects[id], connection = s.gateAccess?.connections?.[String(id)];
       return gate?.type === 'gate' && connection?.kind === 'front-street' && connection.boundary === 'front' ? [gate.x - 1, gate.x + 2] : null;
     }).filter(Boolean).sort((a, b) => a[0] - b[0]);
+    if(s.layout===MAPLE_PUBLIC) {
+      frontGaps.push([4,24]); frontGaps.sort((a,b)=>a[0]-b[0]);
+      run(4,30,4,20); run(this.sim.objs('office').some(o=>o.staffDoor) ? 8 : 4,20,18,20); run(18,20,18,24);
+      run(24,24,24,30);
+      if(!this.sim.objs('gate').some(g=>recessed(s,g))) run(18,24,24,24);
+    }
     let frontX = p.x0;
     for (const [gap0, gap1] of frontGaps) {
       const x0 = Math.max(p.x0, gap0), x1 = Math.min(p.x1 + 1, gap1);
@@ -1247,7 +1266,7 @@ export class Renderer {
         case 'rescueRoof': { A.mesh.material=this.comebackFinish(o,A.target)===this.mat.comebackWorn?this.mat.rescueRoofTurn:this.mat.roof;break; }
         case 'unitStatus': { A.mesh.material=this.statusMaterials[unitStatus(o)]; break; }
         case 'rollup': { A.mesh.material = this.doorFinish(o); const tgt = o.doorOpen ? 0.12 : 1; const cur = A.mesh.scale.y / (A.H * 0.74); const n = cur + (tgt - cur) * Math.min(1, dt * 5); A.mesh.scale.y = A.H * 0.74 * n; A.mesh.position.y = (o.f || 0) * FLOOR_H + A.H * 0.74 - A.H * 0.74 * n / 2; break; }
-        case 'gate': { A.mesh.position.x = A.x0 - (o.open || 0) * 2.8; break; }
+        case 'gate': { A.mesh.position.x = A.x0 - (o.open || 0) * A.travel; break; }
         case 'keypadLed': { A.mesh.material = o.cond < 0.2 ? this.mat.cartDmg : this.mat.yellow; break; }
         case 'door': { const open = o.openT != null && s.t - o.openT < 3; A.cur = (A.cur || 0) + ((open ? 1 : 0) - (A.cur || 0)) * Math.min(1, dt * 8); const side = o.dir[1] ? [1, 0] : [0, 1]; A.mesh.position.x = A.cx + o.dir[0] * 0.09 + side[0] * A.cur * A.w * 0.8; A.mesh.position.z = A.cz + o.dir[1] * 0.09 + side[1] * A.cur * A.w * 0.8; break; }
         case 'elev': { A.mesh.position.y = o.pos * FLOOR_H + 0.63; A.mesh.visible = !(this.view === 0 && o.pos > 0.5); A.mesh.material = !sim.works(o) ? this.mat.cartDmg : this.mat.elevCab; break; }

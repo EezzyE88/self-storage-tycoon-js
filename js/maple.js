@@ -1,3 +1,4 @@
+import { MAPLE_PUBLIC } from './mapleaccess.js';
 // Authored starting properties (GDD §5 Maple Street, §4 Empty Lot). Builds plain state directly.
 import { newState, Sim, productKey } from './sim.js';
 import { nameUnit } from './unitnumbering.js';
@@ -22,6 +23,27 @@ export function makeMaple(seed = 20260929, { mirror = false } = {}) {
   MX = mirror ? s.W : 0; if (mirror) s.mirror = true;
   try { return buildMaple(s, seed); } finally { MX = 0; }
 }
+export function makePublicMaple(seed = 20260929) {
+  const s = newState({ mode: 'tutorial', seed, market: 'maple' });
+  s.layout = MAPLE_PUBLIC;
+  return buildMaple(s,seed);
+}
+
+function publicFrontage(s,office,drive) {
+  const lot=s.parcel;
+  for(let y=lot.y0;y<=lot.y1+1;y++) for(let x=lot.x0;x<=lot.x1;x++) s.ground[y*s.W+x]=y===lot.y1+1?G.SIDEWALK:G.GRASS;
+  const rect=(x0,x1,d0,d1,g)=>paint(s,2+x0,30-d1,1+x1,29-d0,g);
+  rect(6,7,0,10,G.CONCRETE); rect(7,15,9,10,G.CONCRETE);
+  rect(7,15,1,5,G.ASPHALT); rect(10,14,-1,1,G.ASPHALT); rect(8,14,5,9,G.PARKING);
+  rect(16,22,-1,12,G.ASPHALT); rect(8,32,12,16,G.ASPHALT);
+  rect(8,12,12,24,G.ASPHALT); rect(2,12,20,24,G.ASPHALT);
+  rect(0,13,10,11,G.CONCRETE); rect(12,13,10,12,G.CONCRETE);
+  rect(22,23,6,12,G.CONCRETE); rect(12,25,16,17,G.CONCRETE); rect(18,22,15,16,G.LOADING);
+  Object.assign(office,{x:4,y:20,w:4,h:5,door:{x:8,y:21,dir:[1,0]},staffDoor:{x:5,y:19,dir:[0,-1]}});
+  Object.assign(Object.values(s.objects).find(o=>o.type==='gate'),{x:22,y:23,mapleCompound:true});
+  for(let i=0;i<3;i++) Object.assign(drive[i],{x:6+i*2,y:4,dir:[0,1]});
+  Object.assign(drive[8],{x:4,y:2,w:2,h:4,dir:[0,1]});
+}
 function buildMaple(s, seed) {
   let r = seed >>> 0; const rnd = () => { r = (r * 1664525 + 1013904223) >>> 0; return r / 4294967296; };
   const p = s.parcel; // x0=2 y0=2 x1=41 y1=29
@@ -40,7 +62,8 @@ function buildMaple(s, seed) {
   for (let k = 0; k < 6; k++) drive.push({ y: 4 + k * 2, size: '10x10', w: 2, h: 2, x: 8 });
   drive.push({ y: 16, size: '5x10', w: 2, h: 1, x: 8 }, { y: 17, size: '5x10', w: 2, h: 1, x: 8 });
   drive.push({ y: 18, size: '10x20', w: 4, h: 2, x: 6 });
-  for (const d of drive) put(s, { type: 'unit', access: 'drive', env: 'std', size: d.size, x: d.x, y: d.y, w: d.w, h: d.h, dir: [1, 0], commercial: 'none', lease: null });
+  if (s.layout===MAPLE_PUBLIC) publicFrontage(s,office,drive);
+  for (const d of drive) put(s, { type: 'unit', access: 'drive', env: 'std', size: d.size, x: d.x, y: d.y, w: d.w, h: d.h, dir: d.dir || [1, 0], commercial: 'none', lease: null });
   s.unitRoles.mapleTurnover=Object.values(s.objects).filter(o=>o.type==='unit')[6].id;
   // --- interior building
   const shell = put(s, { type: 'shell', x: 15, y: 4, w: 11, h: 9, floors: 1 });
