@@ -12,6 +12,7 @@ import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplac
 import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
+import { HOLD_DAYS } from './scenarioframe.js';
 import { analyzePlaceableRemoval } from './placeableops.js';
 import { normalizeGateAccess, registerGateAccess, unregisterGateAccess, primaryGateId, gateQueue, gateServing, enqueueGate, shiftGate, setGateServing, removeGateAgent, gateConnection, gateStatus } from './gateaccess.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
@@ -1544,6 +1545,7 @@ export class Sim {
     return { ok: false };
   }
   poll() { this.ensure(); if (this.onTick) this.onTick(this); if (this.dirty) this.rebuild(); checkComeback(this); reconcileProject(this); updateYardLoop(this); }
+  act_scenBriefed() { const sc = this.s.scenario; if (sc && sc.briefed === 0) sc.briefed = 1; return { ok: true }; } // R2.0: the start briefing was seen
   act_comebackAck() {
     const c = this.s.scenario;
     if (!isComeback(this.s) || c.status !== 'won') return { ok: false };
@@ -1707,7 +1709,10 @@ export class Sim {
     if (f && f.cashBelow != null && this.financialPosition().netLiquid < f.cashBelow) failing = true;
     sc.badDays = failing ? (sc.badDays || 0) + 1 : 0;
     const allMet = sc.goals.every((g) => this.goalMet(g));
-    if (allMet) { sc.status = 'won'; sc.endDay = day; this.emit('scenario_end', { won: true }); this.milestone('scenario_' + sc.id); return; }
+    // R2.0: goals must hold for HOLD_DAYS straight daily checks; a slip resets the count. On the deadline day,
+    // goals that are met win even if the hold is unfinished, so a genuine late success is not lost to waiting.
+    sc.hold = allMet ? (sc.hold || 0) + 1 : 0;
+    if (allMet && (sc.hold >= HOLD_DAYS || day === sc.deadline)) { sc.status = 'won'; sc.endDay = day; this.emit('scenario_end', { won: true }); this.milestone('scenario_' + sc.id); return; }
     if (f && f.cashDays && sc.badDays >= f.cashDays) { sc.status = 'lost'; sc.endDay = day; sc.why = `Net liquid position stayed below $${f.cashBelow.toLocaleString()} for ${f.cashDays} days`; this.emit('scenario_end', { won: false }); return; }
     if (failing && sc.badDays === 1) this.emit('cash_warn', { msg: `Scenario risk: net liquid position below $${f.cashBelow.toLocaleString()} - ${f.cashDays} days of this ends the run` });
   }

@@ -257,6 +257,18 @@ canvas.chart { width: 100%; height: 120px; display: block; background: #fff; bor
 .tut .fail { font-size: 12px; color: #b9b3a6; margin-top: 4px; }
 .tut .fail.on { color: #ff9b8a; }
 .tut.min .goals, .tut.min .fail { display: none; }
+/* R2.0 scenario briefing, hold and Coming up (compact limits measured at 375x667) */
+.tut.scen:not(.min):not(.comeback) .ch { position: sticky; top: -12px; z-index: 2; background: var(--ink); padding: 12px 0 2px; margin-top: -12px; }
+.tut .scen-brief { margin: 4px 0 6px; display: grid; gap: 3px; }
+.tut .scen-brief p { font-size: 13px; }
+.tut .scen-brief p:first-child { color: #fff; }
+.tut .scen-hold { font-size: 13px; color: #b9e3c6; margin: 0 0 4px; }
+.tut .scen-next { font-size: 13px; color: #d9d4c8; margin: 0 0 6px; line-height: 1.4; }
+.tut .scen-next b { display: block; color: var(--yellow); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.tut.comeback .scen-next b { display: inline; margin-right: 4px; }
+.tut .ch > span { min-width: 0; }
+.tut .ch .scen-status { display: block; font-size: 12.5px; font-weight: 400; color: #d9d4c8; text-transform: none; letter-spacing: 0; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tut.min .scen-brief, .tut.min .scen-hold, .tut.min .scen-next { display: none; }
 .scen-card { border: 1px solid var(--line, #d6cfc0); border-radius: 12px; padding: 12px; text-align: left; }
 .scen-card p { margin: 4px 0 6px; font-size: 13px; color: var(--muted); line-height: 1.4; }
 .scen-card ul { margin: 0 0 10px; padding-left: 18px; font-size: 13px; }
@@ -856,7 +868,8 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .tut { top:auto; }
 #ui .tut.scen.min { max-height:64px; overflow:hidden; }
 #ui .tut.scen.min .ch { min-height:44px; }
-#ui .tut.scen:not(.min) { max-height:68dvh; overflow-y:auto; }
+#ui .tut.scen:not(.min) { max-height:68dvh; overflow-y:auto; overscroll-behavior:contain; }
+#ui .tut.scen:not(.min):not(.comeback) { max-height:55dvh; } /* R2.0: measured 375x667 compact limit */
 #ui .tut.scen .ch button { min-width:44px; min-height:44px; }
 #ui.has-sheet .feed { display:flex; }
 #ui:has(.modal-bg) .feed { display:none; }

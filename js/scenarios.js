@@ -34,7 +34,7 @@ export const SCENARIOS = {
 
 function scenarioState(id) {
   const S = SCENARIOS[id];
-  return { id, name: S.name, goals: S.goals.map((g) => ({ ...g })), deadline: S.deadline, fail: { ...S.fail }, status: 'active', badDays: 0 };
+  return { id, name: S.name, goals: S.goals.map((g) => ({ ...g })), deadline: S.deadline, fail: { ...S.fail }, status: 'active', badDays: 0, hold: 0, briefed: 0 };
 }
 
 // build infrastructure instantly (setup only), then restore normal rules
@@ -132,7 +132,7 @@ export function makeComeback(seed = 4401) {
   ensureCustomerAccounts(s); // CR-01: same reconciliation as load, so the running and reloaded states match
   s.scenario = { id: 'comeback', name: SCENARIOS.comeback.name, v: 1, goals: COMEBACK_GOALS.map(g => ({ ...g })),
     targets: targets.map(u => ({ id:u.id, ids:[u.id], num:u.num, x:u.x,y:u.y,w:u.w,h:u.h,f:u.f||0, access:u.access, env:u.env, dir:[...u.dir] })),
-    deadline: null, fail: null, status: 'active', ownerDone: [], staffDone: [], earned: [false,false,false], acknowledged: false };
+    deadline: null, fail: null, status: 'active', ownerDone: [], staffDone: [], earned: [false,false,false], acknowledged: false, briefed: 0 };
   freshBooks(s); s.ledger = []; s.lastCommit = null;
   sim.markDirty(); sim.rebuild(); return sim;
 }

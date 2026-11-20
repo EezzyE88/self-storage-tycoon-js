@@ -35,6 +35,7 @@ import { moveOutCheck } from './moveout.js';
 import { assetTypeName, idleCorralCarts } from './removal.js';
 import { playMoveOut } from './moveoutplay.js';
 import { layoutCaptions, edgePoint, CAPTION_PRIORITY as CP } from './captions.js';
+import { needsBriefing, briefing, comingUp, dayLabel, holdLine } from './scenarioframe.js';
 // Results of savearchive.keep(): older callers and test doubles may still return a plain boolean.
 const stored = (r) => r === true || !!(r && r.ok);
 // Put the optional pointer caption outside every interface surface. The ring is
@@ -278,7 +279,7 @@ export class UI {
     // Paused graduation: time stays paused until the player taps Finish tutorial, then chooses a speed.
     if (v > 0 && this.pauseBeat()) { this.tutMin = false; this.renderTut(true); return; }
     if (v > 0 && this.popupBlocks?.size && [...this.popupBlocks].every((k) => k === 'tutorial' || k === 'scenario')) {
-      this.tutMin = true; this.scMin = true; this.resumePopup('tutorial'); this.resumePopup('scenario'); this.renderTut(true);
+      this.tutMin = true; this.scMin = true; this.briefSeen(); this.resumePopup('tutorial'); this.resumePopup('scenario'); this.renderTut(true);
     }
     this.notePause(v);
     if (!(this.popupBlocks?.size && v > 0)) this.do({ type: 'speed', v });
@@ -427,7 +428,7 @@ export class UI {
       case 'acquisitionConfirm': this.confirmAcquisitionReview(); break;
       case 'transfer': this.showTransferReview(+el.dataset.from, +el.dataset.to, +v); break;
       case 'transferConfirm': this.confirmTransferReview(v); break;
-      case 'comebackClose': if (this.sim.s.scenario?.status === 'won') this.do({ type: 'comebackAck' }); this.scMin = true; this.renderTut(true); break;
+      case 'comebackClose': if (this.sim.s.scenario?.status === 'won') this.do({ type: 'comebackAck' }); this.scMin = true; this.briefSeen(); this.renderTut(true); break;
       case 'comebackWork': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('operate'); this.jumpSection('Work queue'); break;
       case 'comebackReadiness': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Growth Readiness'); break;
       case 'comebackCareer': this.scMin = true; this.renderTut(true); this.select(null); this.setTab('growth'); this.jumpSection('Operator career'); break;
@@ -466,7 +467,7 @@ export class UI {
         if (u) { this.scMin = true; this.renderTut(true); this.setTab(null); this.setView(u.f || 0); this.rend.lookAt(u.x + u.w/2, u.y + u.h/2); this.select(u.id); }
         break;
       }
-      case 'scenMin': this.scMin = !this.scMin; this.renderTut(true); break;
+      case 'scenMin': this.scMin = !this.scMin; if (this.scMin) this.briefSeen(); this.renderTut(true); break;
       case 'saveCode': this.showSave(); break;
       case 'saveFile': this.toast('This save uses floor-based unit numbers. Keep your original export for older builds.');this.g.saveFile(); break;
       case 'loadOpen': this.showLoad(); break;
@@ -2704,25 +2705,43 @@ export class UI {
   fmtGoal(g, v) { return g.fmt === 'pct' ? pct(v) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
   renderScenario(force) {
     const sim = this.sim, s = sim.s, sc = s.scenario, box = this.$('tut');
+    this.openBriefing(sc);
     if (isComeback(s)) { this.renderComeback(force); return; }
     if(this.scMin==null) this.scMin=true;
+    if (this.scMin) this.briefSeen();
     if(this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
-    const prog = scenarioProgress(sim);
-    const key = JSON.stringify([sc.status, this.scMin, sim.day, prog.map((g) => [g.met, this.fmtGoal(g, g.cur)]), sc.badDays]);
+    const prog = scenarioProgress(sim), brief = needsBriefing(s) ? briefing(sim) : null, next = brief ? [] : this.scenarioNext(), hold = holdLine(sc);
+    const key = JSON.stringify([sc.status, this.scMin, sim.day, prog.map((g) => [g.met, this.fmtGoal(g, g.cur)]), sc.badDays, hold, brief, next]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
     const left = sc.deadline - sim.day + 1;
+    // Collapsed: one status line inside the header row, so the card keeps its 64px collapsed height.
+    const status = this.scMin && sc.status === 'active' ? hold || (next[0] ? `Next: ${dayLabel(sim, next[0].day)} · ${next[0].text}` : '') : '';
     const again = this.scShown === sc.id + sc.status; this.scShown = sc.id + sc.status;
-    box.innerHTML = `<div class="tut scen ${this.scMin ? 'min' : ''} ${again && box.firstChild ? 'noanim' : ''}"><div class="ch"><span>Scenario · ${esc(sc.name)}</span><button class="mini" data-a="scenMin">${this.scMin ? 'Show' : 'Hide'}</button></div>
+    box.innerHTML = `<div class="tut scen ${this.scMin ? 'min' : ''} ${again && box.firstChild ? 'noanim' : ''}"><div class="ch"><span>Scenario · ${esc(sc.name)}${status ? `<small class="scen-status">${esc(status)}</small>` : ''}</span><button class="mini" data-a="scenMin">${this.scMin ? 'Show' : 'Hide'}</button></div>
       <h4>${sc.status === 'won' ? 'Scenario complete' : sc.status === 'lost' ? 'Scenario failed' : `Day ${sim.day} of ${sc.deadline} · ${left} left`}</h4>
+      ${brief ? `<div class="scen-brief">${brief.map((l) => `<p>${esc(l)}</p>`).join('')}</div>` : ''}
       <ul class="goals">${prog.map((g) => `<li class="${g.met ? 'met' : ''}"><span class="ck">${g.met ? '&#10003;' : ''}</span><span>${esc(g.label)}</span><b>${this.fmtGoal(g, g.cur)}</b></li>`).join('')}</ul>
-      <p class="fail ${sc.badDays ? 'on' : ''}">Fail: net liquid position (cash minus committed bills and credit line) below ${money(sc.fail.cashBelow)} for ${sc.fail.cashDays} days${sc.badDays ? ` · ${sc.badDays} so far` : ''}, or the deadline passes. Reserve is advisory.</p>
+      ${hold ? `<div class="scen-hold">${esc(hold)} · a slip restarts the count</div>` : ''}
+      ${next.length ? `<div class="scen-next"><b>Coming up</b>${next.map((x) => `<div>${esc(dayLabel(sim, x.day))} · ${esc(x.text)}</div>`).join('')}</div>` : ''}
+      <p class="fail ${sc.badDays ? 'on' : ''}">Lose if net liquid (cash minus committed bills and credit line) stays under ${money(sc.fail.cashBelow)} for ${sc.fail.cashDays} days${sc.badDays ? ` · ${sc.badDays} so far` : ''}, or at the deadline.</p>
       ${sc.status !== 'active' ? `<p>${sc.status === 'won' ? `Finished on day ${sc.endDay}. Keep playing this property as a sandbox if you like.` : esc(sc.why || '')}</p><div class="row"><button class="btn pri" data-a="scenarios">Scenarios</button></div>` : ''}</div>`;
+  }
+  // R2.0: a new run opens its goal card once with the starting briefing; closing it in any way marks it seen.
+  openBriefing(sc) { if (sc && needsBriefing(this.sim.s) && this.briefFor !== sc) { this.briefFor = sc; this.scMin = false; } }
+  briefSeen() { if (needsBriefing(this.sim.s)) this.do({ type: 'scenBriefed' }); }
+  // Coming up: computed at most once per game hour (it reads the scheduled outlook).
+  scenarioNext(max = 2) {
+    const sim = this.sim, k = sim.s.scenario?.id + ':' + Math.floor(sim.s.t / 60) + ':' + max;
+    if (this.nextKey !== k) { this.nextKey = k; this.nextCache = comingUp(sim, max); }
+    return this.nextCache;
   }
   renderComeback(force = false) {
     if (this.pointerBusy && !force) return;
     const box = this.$('tut'), previous = box.querySelector?.('.comeback'), detailOpen = !!previous?.querySelector('.comeback-details')?.open, scroll = previous?.scrollTop || 0;
     const sim = this.sim, s = sim.s, c = s.scenario, p = comebackProgress(sim);
     if (c.status === 'won' && !c.acknowledged) this.scMin = false;
+    if (this.scMin) this.briefSeen();
+    const brief = needsBriefing(s) ? briefing(sim) : null, soon = brief || c.status !== 'active' ? [] : this.scenarioNext(1);
     if (this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
     const owner = s.staff.find(st => st.role === 'owner'), left = owner ? sim.workRemaining(owner) : 0;
     const porter = s.staff.find(st => st.role === 'porter'), pay = ROLES.porter.wage;
@@ -2732,13 +2751,14 @@ export class UI {
     const retained=this.reserveWait?.review(sim);
     const waitText=waiting?`Waiting for ${waiting.size} · ${money(Math.max(0,-waiting.quote.position.available),true)} reserve shortfall`:retained?`Waiting paused · ${retained.a.size}. ${retained.blocked?retained.reason:retained.ready?'Reserve is covered. Preview when ready.':`${money(Math.max(0,-retained.quote.position.available),true)} reserve shortfall. Resume when ready.`}`:this.reserveNotice;
     const nextText=waitText || (loop&&!loop.changed?`${loop.occupied}/${loop.total} occupied · ${loop.reserved} reserved`:readyNow?`${readyNow} ready spaces · keep rents or review pricing`:'Review demand before your next investment');
-    const key = JSON.stringify([c.status, c.acknowledged, s.rescueOperation, nextText, this.scMin, p, left, !!porter, sim.financialPosition(), s.tasks.map(t=>[t.obj,t.assigned,t.queued])]);
+    const key = JSON.stringify([c.status, c.acknowledged, s.rescueOperation, nextText, this.scMin, p, left, !!porter, sim.financialPosition(), s.tasks.map(t=>[t.obj,t.assigned,t.queued]), brief, soon]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
     const won = c.status === 'won', unavailable = c.status === 'unavailable';
     const detail = unavailable ? `<p>${esc(c.notice)}</p>` : `
       <h4>${won ? 'You brought the yard back.' : esc(next?.label || 'Keep improving the yard')}</h4>
-      <p>${won ? 'Yard rescued. Keep it working and lease ready vacancies. Review demand and cash before investing.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>
+      ${brief ? `<div class="scen-brief">${brief.map((l) => `<p>${esc(l)}</p>`).join('')}<p>No deadline. Goals complete as you restore the spaces.</p></div>` : `<p>${won ? 'Yard rescued. Keep it working and lease ready vacancies. Review demand and cash before investing.' : 'Use your work hours, or pay a Porter to share the workload. No deadline. You can change your approach anytime.'}</p>`}
       <div class="comeback-current">${p.restored}/6 spaces usable now · ${p.ready} vacant ready · ${p.occupied} occupied${p.reserved ? ` · ${p.reserved} reserved` : ''}</div>
+      ${soon.length ? `<div class="scen-next">${soon.map((x) => `<div><b>Coming up</b> ${esc(dayLabel(sim, x.day))} · ${esc(x.text)}</div>`).join('')}</div>` : ''}
       <div class="row wrap"><button class="btn" data-a="comebackWork">${won ? 'Review operations' : 'Review work'}</button>${won?`<button class="btn pri${!c.acknowledged ? ' decision-prompt' : ''}" data-a="rescueLeasing">Review leasing</button>`:''}${won && c.acknowledged ? '<button class="btn" data-a="yardExplore">Explore a row extension</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : won?'':'<button class="btn" data-a="comebackHire">Review Porter hire</button>'}</div>
       <details class="comeback-details" ${detailOpen?'open':''}><summary>${won && c.acknowledged ? 'Rescue history' : 'Goals and recovery choices'}</summary>
         <ul class="goals">${p.goals.map(g => `<li class="${g.met?'met':''}"><span class="ck">${g.met?'&#10003;':''}</span><span>${esc(g.label)}</span><b>${g.k==='comebackWing'?`${p.restored}/6`:g.met?'Done':'Pending'}</b></li>`).join('')}</ul>
