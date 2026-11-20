@@ -2,12 +2,30 @@
 // the real main.js keydown handler, real localsave/savearchive modules over a localStorage that can fail writes,
 // real construction ticks for ordered vs built hallways and for the freight handover, and real cash accounting.
 import assert from 'node:assert/strict';
+import {SAVE_KEYS} from '../../js/savegeneration.js';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
 // Browser storage with injectable write failures (installed before the save modules load).
-const mem=new Map();let failWrite=null;
-globalThis.window={localStorage:{getItem:k=>mem.has(k)?mem.get(k):null,setItem:(k,v)=>{if(k==='sst.probe'||k==='sst.probe.archive'){mem.set(k,String(v));return;}if(failWrite&&failWrite(k))throw new DOMException('QuotaExceededError','QuotaExceededError');mem.set(k,String(v));},removeItem:k=>mem.delete(k)}};
+const mem = new Map();
+let failedKey = null;
+let lastRejectedKey = null;
+function failWritesTo(key) {
+  failedKey = key;
+  lastRejectedKey = null;
+}
+const isProbe = key => key === SAVE_KEYS.probe || key === SAVE_KEYS.archiveProbe;
+globalThis.window = {localStorage: {
+  getItem: key => mem.get(key) ?? null,
+  setItem(key, value) {
+    if (key === failedKey) {
+      lastRejectedKey = key;
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    }
+    mem.set(key, String(value));
+  },
+  removeItem: key => mem.delete(key)
+}};
 const {localsave}=await import('../../js/localsave.js');
 const {savearchive,ARCHIVE_MAX}=await import('../../js/savearchive.js');
 const {UI}=await import('../../js/ui.js');
@@ -102,23 +120,25 @@ function harness(){const ctx=vm.createContext({Sim,Audio:class{},fmtTime,modeLab
 async function codeFor(g,name,cash){const sim=makeMaple(7);sim.s.cash=cash;const keep=[g.sim,g.company];g.sim=sim;g.company={props:[{name,sim}],active:0,feed:[]};const code=await g.saveCode();[g.sim,g.company]=keep;return {code,meta:{name,day:1,cash}};}
 function session(g,name,cash){const sim=makeMaple(9);sim.s.cash=cash;g.sim=sim;g.company={props:[{name,sim}],active:0,feed:[]};}
 function uiFor(g){const ui=Object.create(UI.prototype);ui.g=g;ui.toasts=[];ui.toast=t=>ui.toasts.push(t);ui.closeModal=()=>{};ui.sfx=()=>{};ui.contSave=null;return ui;}
-const snap=()=>JSON.stringify([...mem].filter(([k])=>!/probe/.test(k)).sort());
+const snap=()=>JSON.stringify([...mem].filter(([k])=>!isProbe(k)).sort());
 await test('#7 Restore previous game stores the outgoing game first; a failed store loads nothing and changes nothing',async()=>{
-  mem.clear();failWrite=null;const g=harness();const prev=await codeFor(g,'Maple Previous',1111);localsave.keep({...prev,at:1});session(g,'Running Lot',2222);const running=g.sim;
-  failWrite=k=>k==='sst.kept.previous';const before=snap();const ui=uiFor(g);assert.equal(await ui.restoreKept(),false);
+  mem.clear();failWritesTo(null);const g=harness();const prev=await codeFor(g,'Maple Previous',1111);localsave.keep({...prev,at:1});session(g,'Running Lot',2222);const running=g.sim;
+  failWritesTo(SAVE_KEYS.kept);const before=snap();const ui=uiFor(g);assert.equal(await ui.restoreKept(),false);
+  assert.equal(lastRejectedKey, SAVE_KEYS.kept);
   assert.equal(snap(),before,'slots unchanged byte-for-byte');assert.equal(g.sim,running,'running game not replaced');assert.match(ui.toasts.at(-1),/could not be stored safely, so the previous game was not restored\. Nothing was changed\./);assert.doesNotMatch(ui.toasts.join(' '),/now the previous game/);
-  failWrite=null;assert.equal(await ui.restoreKept(),true);assert.equal(g.sim.s.cash,1111);assert.equal(localsave.getKept().meta.name,'Running Lot');assert.match(ui.toasts.at(-1),/The game you left is now the previous game/);});
+  failWritesTo(null);assert.equal(await ui.restoreKept(),true);assert.equal(g.sim.s.cash,1111);assert.equal(localsave.getKept().meta.name,'Running Lot');assert.match(ui.toasts.at(-1),/The game you left is now the previous game/);});
 await test('#7 Archive restore under storage failure keeps every archived game, even with a full archive',async()=>{
-  mem.clear();failWrite=null;const g=harness();for(let i=0;i<ARCHIVE_MAX;i++)assert.ok(savearchive.push({...(await codeFor(g,'Archived '+i,100+i)),at:i}));localsave.keep({...(await codeFor(g,'Kept Older',555)),at:9});session(g,'Running Lot',2222);const running=g.sim;
+  mem.clear();failWritesTo(null);const g=harness();for(let i=0;i<ARCHIVE_MAX;i++)assert.ok(savearchive.push({...(await codeFor(g,'Archived '+i,100+i)),at:i}));localsave.keep({...(await codeFor(g,'Kept Older',555)),at:9});session(g,'Running Lot',2222);const running=g.sim;
   assert.equal(savearchive.list().length,ARCHIVE_MAX);const before=snap(),names=savearchive.list().map(r=>r.meta.name);
-  for(const fail of [k=>k==='sst.kept.previous',k=>k==='sst.kept.archive']){failWrite=fail;const ui=uiFor(g);assert.equal(await ui.restoreArchived(2),false);
+  for(const key of [SAVE_KEYS.kept,SAVE_KEYS.archive]){failWritesTo(key);const ui=uiFor(g);assert.equal(await ui.restoreArchived(2),false);
+    assert.equal(lastRejectedKey, key);
     assert.equal(snap(),before,'archive and kept slot restored byte-for-byte');assert.deepEqual(savearchive.list().map(r=>r.meta.name),names,'no archived game dropped');assert.equal(g.sim,running);assert.match(ui.toasts.at(-1),/nothing was restored\. Nothing was changed\./);}
-  failWrite=null;const ui=uiFor(g);const target=savearchive.list()[2].meta.name;assert.equal(await ui.restoreArchived(2),true);assert.equal(g.sim.s.cash,102);
+  failWritesTo(null);const ui=uiFor(g);const target=savearchive.list()[2].meta.name;assert.equal(await ui.restoreArchived(2),true);assert.equal(g.sim.s.cash,102);
   const after=savearchive.list().map(r=>r.meta.name);assert.equal(after.length,ARCHIVE_MAX,'still full: one restored out, displaced previous game in');assert.ok(!after.includes(target));assert.ok(after.includes('Kept Older'));assert.equal(localsave.getKept().meta.name,'Running Lot');});
 await test('#7 keeping the outgoing game is atomic: a failed write leaves no half-moved previous game',async()=>{
-  mem.clear();failWrite=null;const g=harness();localsave.keep({...(await codeFor(g,'Kept Older',555)),at:1});session(g,'Running Lot',2222);const before=snap();
-  failWrite=k=>k==='sst.kept.previous';{const r=await g.keepCurrent(null);assert.equal(r.ok,false);assert.equal(r.verified&&r.unchanged,true,'failure verified as no change');}assert.equal(snap(),before,'archive not left holding a duplicate');assert.equal(savearchive.list().length,0);
-  failWrite=null;assert.equal((await g.keepCurrent(null)).ok,true);assert.equal(savearchive.list()[0].meta.name,'Kept Older');assert.equal(localsave.getKept().meta.name,'Running Lot');});
+  mem.clear();failWritesTo(null);const g=harness();localsave.keep({...(await codeFor(g,'Kept Older',555)),at:1});session(g,'Running Lot',2222);const before=snap();
+  failWritesTo(SAVE_KEYS.kept);{const r=await g.keepCurrent(null);assert.equal(r.ok,false);assert.equal(lastRejectedKey,SAVE_KEYS.kept);assert.equal(r.verified&&r.unchanged,true,'failure verified as no change');}assert.equal(snap(),before,'archive not left holding a duplicate');assert.equal(savearchive.list().length,0);
+  failWritesTo(null);assert.equal((await g.keepCurrent(null)).ok,true);assert.equal(savearchive.list()[0].meta.name,'Kept Older');assert.equal(localsave.getKept().meta.name,'Running Lot');});
 
 // ---------- #8 handover presentation (real F3 service test) vs genuine disconnection
 await test('#8 held upper units show "Handover test" everywhere, not a fault; genuine disconnections still warn',()=>{

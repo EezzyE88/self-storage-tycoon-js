@@ -6,11 +6,12 @@
 // changed" appears only when storage is byte-identical, extra copies are reported exactly, and nothing is trimmed
 // unless that drop was disclosed beforehand.
 import assert from 'node:assert/strict';
+import {SAVE_KEYS} from '../../js/savegeneration.js';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
 const mem=new Map();let writes=0,failAt=0,persistent=false,readFail=null;
-const probe=k=>/probe/.test(k);
+const probe = key => key === SAVE_KEYS.probe || key === SAVE_KEYS.archiveProbe;
 const hit=()=>{writes++;if(failAt&&(persistent?writes>=failAt:writes===failAt))throw new DOMException('QuotaExceededError','QuotaExceededError');};
 globalThis.window={localStorage:{
   getItem:k=>{if(readFail&&readFail(k))throw new DOMException('SecurityError','SecurityError');return mem.has(k)?mem.get(k):null;},
@@ -44,14 +45,14 @@ function session(g){const sim=makeMaple(9);sim.s.cash=2222;g.sim=sim;g.company={
 const ARCH=[];for(let i=1;i<=6;i++)ARCH.push(await codeFor('Archive '+i,100+i));const PREV=await codeFor('Previous',555);
 // Seed storage: `size` archived games (newest first), the kept previous game, and an autosave of the running game.
 function seed(size){assert.equal(pendingAutosaves.size,0,'no autosave crosses fixture reset');mem.clear();failAt=0;persistent=false;readFail=null;
-  mem.set('sst.kept.archive',JSON.stringify(ARCH.slice(0,size).reverse().map(r=>({...r,archivedAt:1}))));mem.set('sst.kept.previous',JSON.stringify({...PREV,keptAt:1,v:1}));
-  const g=harness();session(g);mem.set('sst.autosave.main',JSON.stringify({code:'RUNNING-AUTOSAVE',meta:{name:'Running Lot',cash:2222},at:1,v:1}));return g;}
+  mem.set(SAVE_KEYS.archive,JSON.stringify(ARCH.slice(0,size).reverse().map(r=>({...r,archivedAt:1}))));mem.set(SAVE_KEYS.kept,JSON.stringify({...PREV,keptAt:1,v:1}));
+  const g=harness();session(g);mem.set(SAVE_KEYS.main,JSON.stringify({code:g.rawSaveCode(g.saveJSON()),meta:g.saveMeta(),at:1,v:1}));return g;}
 const same=(a,b,msg)=>assert.ok(a===b,msg); // compare raw bytes without dumping save codes
 const snap=()=>JSON.stringify([...mem].filter(([k])=>!probe(k)).sort());
 // Every game anywhere in storage (archive, kept slot, autosave main and backup), read raw. Games are identified by
 // their unique cash (archive 101-106, previous 555, running 2222): a loaded company may be renamed, its cash is not.
 function storedIds(){const ids=[];const j=k=>{try{return JSON.parse(mem.get(k)||'null');}catch(e){return null;}};
-  for(const r of j('sst.kept.archive')||[])ids.push(+r.meta.cash);for(const k of ['sst.kept.previous','sst.autosave.main','sst.autosave.backup']){const r=j(k);if(r&&r.meta)ids.push(+r.meta.cash);}return ids;}
+  for(const r of j(SAVE_KEYS.archive)||[])ids.push(+r.meta.cash);for(const k of [SAVE_KEYS.kept,SAVE_KEYS.main,SAVE_KEYS.backup]){const r=j(k);if(r&&r.meta)ids.push(+r.meta.cash);}return ids;}
 const cashOf=name=>[...ARCH,PREV].find(r=>r.meta.name===name).meta.cash;
 // Every original game must remain recoverable: stored somewhere, or still the game in memory.
 function recoverable(g,size,running,label,disclosed=[]){const have=new Set(storedIds());const want=[...ARCH.slice(0,size).map(r=>r.meta.name),'Previous'].filter(w=>!disclosed.includes(w));
@@ -114,17 +115,17 @@ await test('a full archive keeps every game through a persistent failure at each
   assert.deepEqual(savearchive.list().map(r=>r.meta.name),['Running Lot','Previous','Archive 5','Archive 4','Archive 3']);});
 
 await test('read failures are explicit: nothing is written and the message says the games could not be read',async()=>{
-  for(const key of ['sst.kept.archive','sst.kept.previous']){const g=seed(3),ui=uiFor(g),running=g.sim,before=snap();readFail=k=>k===key;writes=0;
+  for(const key of [SAVE_KEYS.archive,SAVE_KEYS.kept]){const g=seed(3),ui=uiFor(g),running=g.sim,before=snap();readFail=k=>k===key;writes=0;
     const r=await g.keepCurrent(null);assert.equal(r.ok,false);assert.equal(r.reason,'read');assert.equal(writes,0);readFail=null;same(snap(),before,'storage byte-identical');assert.match(__fail(r),/could not be read, so nothing was loaded\. Nothing was written\./);
     readFail=k=>k===key;assert.equal(await ui.restoreArchived(0),false,'archive restore');readFail=null;assert.equal(g.sim,running);same(snap(),before,'storage byte-identical');}
   // Reads that fail only after a failed write: no claim of "Nothing was changed".
-  const g=seed(3);let wrote=false;failAt=1;persistent=true;const orig=window.localStorage.setItem;window.localStorage.setItem=(k,v)=>{wrote=true;return orig(k,v);};readFail=k=>wrote&&k==='sst.kept.archive';
+  const g=seed(3);let wrote=false;failAt=1;persistent=true;const orig=window.localStorage.setItem;window.localStorage.setItem=(k,v)=>{wrote=true;return orig(k,v);};readFail=k=>wrote&&k===SAVE_KEYS.archive;
   const r=await g.keepCurrent(null);window.localStorage.setItem=orig;readFail=null;failAt=0;assert.equal(r.ok,false);assert.equal(r.verified,false);assert.match(__fail(r),/could not be checked afterwards/);assert.doesNotMatch(__fail(r),/Nothing was changed/);recoverable(g,3,g.sim,'unverifiable');});
 
 await test('an unreadable archive or kept slot is copied aside before anything overwrites it',async()=>{
-  let g=seed(3);mem.set('sst.kept.archive','{not json');let r=await g.keepCurrent(null);assert.equal(r.ok,true);assert.equal(mem.get('sst.kept.archive.unreadable'),'{not json');assert.deepEqual(savearchive.list().map(r=>r.meta.name),['Previous']);
-  g=seed(3);mem.set('sst.kept.previous','garbage');r=await g.keepCurrent(null);assert.equal(r.ok,true);assert.equal(mem.get('sst.kept.previous.unreadable'),'garbage');assert.equal(localsave.getKept().meta.name,'Running Lot');
-  g=seed(3);mem.set('sst.kept.archive','{not json');const before=snap();writes=0;failAt=1;persistent=true;r=await g.keepCurrent(null);failAt=0;assert.equal(r.ok,false);same(snap(),before,'quarantine failed: nothing overwritten');});
+  let g=seed(3);mem.set(SAVE_KEYS.archive,'{not json');let r=await g.keepCurrent(null);assert.equal(r.ok,true);assert.equal(mem.get(SAVE_KEYS.archive + '.unreadable'),'{not json');assert.deepEqual(savearchive.list().map(r=>r.meta.name),['Previous']);
+  g=seed(3);mem.set(SAVE_KEYS.kept,'garbage');r=await g.keepCurrent(null);assert.equal(r.ok,true);assert.equal(mem.get(SAVE_KEYS.kept + '.unreadable'),'garbage');assert.equal(localsave.getKept().meta.name,'Running Lot');
+  g=seed(3);mem.set(SAVE_KEYS.archive,'{not json');const before=snap();writes=0;failAt=1;persistent=true;r=await g.keepCurrent(null);failAt=0;assert.equal(r.ok,false);same(snap(),before,'quarantine failed: nothing overwritten');});
 
 await test('a restore keeps the restored game listed until it has been saved, then removes only that copy',async()=>{
   // Autosave fails (writes 3+ fail persistently after kept slot + archive copy succeed): the restored game stays listed.
@@ -149,11 +150,11 @@ await test("reviewer's sequence: 5 archived, restore index 2, the third and ever
   assert.equal(h.sim.s.cash,2222);assert.match(u.toasts.at(-1),/nothing was restored\. No saved game was lost\. Older saved games now also holds an extra copy of Previous\./);recoverable(h,ARCHIVE_MAX,h.sim,'reviewer @2');});
 
 await test('unchanged archive report covers archive/previous slots, not unrelated autosave writes',async()=>{
- const g=seed(3),before=snap();const archiveBefore=mem.get('sst.kept.archive'),keptBefore=mem.get('sst.kept.previous');
+ const g=seed(3),before=snap();const archiveBefore=mem.get(SAVE_KEYS.archive),keptBefore=mem.get(SAVE_KEYS.kept);
  writes=0;failAt=1;persistent=false;const r=await g.keepCurrent(null);failAt=0;
- assert.equal(r.unchanged,true);assert.equal(mem.get('sst.kept.archive'),archiveBefore);assert.equal(mem.get('sst.kept.previous'),keptBefore);
+ assert.equal(r.unchanged,true);assert.equal(mem.get(SAVE_KEYS.archive),archiveBefore);assert.equal(mem.get(SAVE_KEYS.kept),keptBefore);
  assert.equal(await g.autosave(),true);await settleTasks();assert.notEqual(snap(),before,'independent autosave changes broader storage');
- assert.equal(mem.get('sst.kept.archive'),archiveBefore);assert.equal(mem.get('sst.kept.previous'),keptBefore);
+ assert.equal(mem.get(SAVE_KEYS.archive),archiveBefore);assert.equal(mem.get(SAVE_KEYS.kept),keptBefore);
 });
 if(productionAutosave) await test('production autosave rejects stale sessions and older saves superseded by pagehide',async()=>{
  let g=seed(3),before=snap(),release;const encode=g.saveCode.bind(g);
@@ -161,6 +162,6 @@ if(productionAutosave) await test('production autosave rejects stale sessions an
  const stale=g.autosave();assert.equal(g.saving,true);session(g);release();assert.equal(await stale,false);await settleTasks();same(snap(),before,'old session writes nothing');
  g=seed(3);const encode2=g.saveCode.bind(g);g.saveCode=async(json)=>{await new Promise(r=>{release=r;});return encode2(json);};
  const older=g.autosave();g.sim.s.cash=3333;assert.equal(await g.autosave(true),true);release();assert.equal(await older,false);await settleTasks();
- assert.equal(JSON.parse(mem.get('sst.autosave.main')).meta.cash,3333,'new pagehide snapshot survives delayed older save');
+ assert.equal(JSON.parse(mem.get(SAVE_KEYS.main)).meta.cash,3333,'new pagehide snapshot survives delayed older save');
 });
 console.log(n+' save-recovery checks passed; autosave='+ (productionAutosave?'production':'original double') +'; delay='+delayMs+'ms');
