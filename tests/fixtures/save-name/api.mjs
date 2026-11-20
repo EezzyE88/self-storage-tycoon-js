@@ -1,4 +1,6 @@
 // Execute production save/session methods; renderer attachment is explicitly stubbed by callers.
+import {installTutorial} from '../../../js/tutorial.js';
+import {MAPLE_PUBLIC} from '../../../js/mapleaccess.js';
 import {Sim,fmtTime} from '../../../js/sim.js';
 import {makeMaple,makeEmptyLot} from '../../../js/maple.js';
 import {makeSandbox,makeScenario,SCENARIOS,modeLabel,sandboxName} from '../../../js/scenarios.js';

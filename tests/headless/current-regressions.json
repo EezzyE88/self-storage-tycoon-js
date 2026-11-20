@@ -955,7 +955,7 @@
           "tests/headless/tunitnumbering_vertical_legacy.mjs",
           "@export:9700d9d4475555e1a4907d1702cb8d81d31ded55"
         ],
-        "completion": "PASS\\ migrate\\ native\\ parent\\ expansion\\ phase\\ 4\\ then\\ complete\\ without\\ recharging\\ or\\ changing\\ existing\\ IDs/leases",
+        "completion": "PASS\\ reload\\ current\\ expansion\\ phase\\ 4\\ then\\ complete\\ without\\ recharging\\ or\\ changing\\ existing\\ IDs/leases",
         "minimum_pass_lines": 5,
         "timeout": 180,
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"

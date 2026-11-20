@@ -2,19 +2,19 @@
   "purpose": "Announced-change guard for save and money files. A pull request that intentionally changes one of these files must update its sha256 here in the same pull request, so the change is visible in review. This replaces the old per-file historical inverse chains for these files; behavior tests still run separately.",
   "files": {
     "js/localsave.js": {
-      "sha256": "d22f865dcde082975544e467753333ffec07549f64a35df446eb7151503ceeba",
+      "sha256": "6f792e0ed4c246d4f26c6b51d8933d3464627f376ff82e52c6d019d7981b79df",
       "protects": "browser save slots (Continue, kept copy)"
     },
     "js/durablesave.js": {
-      "sha256": "721a2de2a039266f43e176188500449fdf37b8373e3533ad83acaafc14b71434",
+      "sha256": "e0647ee5266c46a85b39b4f28dfc537e5127ffcde657939b0aebd20120d37c0b",
       "protects": "durable save checkpoints"
     },
     "js/savearchive.js": {
-      "sha256": "2e2c5ffa4051d076d0cb4d97831d72984f3003317a79a2f8688e135b4df81347",
+      "sha256": "77b2de6a846c80efb032d437f5ccab7a1ca8f581e280b1b15de05cf22784a0fd",
       "protects": "save archive and restore"
     },
     "js/cloud.js": {
-      "sha256": "cc784d86fb0d2a7165700f33a6cc2c309f5ae2bc9be079001707ca86b96676e7",
+      "sha256": "bc3601894d48635b21f659d94db9e87e636dc43f08b72e9aaed3dd5d4346c5fd",
       "protects": "cloud save fallback"
     },
     "js/finance.js": {

@@ -6,7 +6,8 @@ import vm from 'node:vm';
 import {Sim} from '../../js/sim.js';
 import {makeSandbox} from '../../js/scenarios.js';
 import {UI} from '../../js/ui.js';
-import {ReserveWait,sandboxReserveQuote} from '../../js/reservewait.js';
+import {saveAPI} from '../fixtures/save-name/api.mjs';
+import {sandboxReserveQuote} from '../../js/reservewait.js';
 const source=fs.readFileSync('js/main.js','utf8');
 const batch=source.slice(source.indexOf('const BG_EVENTS ='),source.indexOf('let last = performance.now()'));
 const args={tool:'du5x10',a:{x:10,y:3},b:{x:10,y:3},rotation:2,f:0,climate:false,flip:false,rush:false};
@@ -100,11 +101,36 @@ function fixture(){
  console.log('PASS Rush quote matches actual purchase charge; orientation is part of retained investment identity');
 }
 {
- const f=fixture();f.start();const saveMethod=source.slice(source.indexOf('  saveJSON() {'),source.indexOf('  rawSaveCode('));
- const serializer=vm.runInNewContext('({'+saveMethod+'})');Object.assign(serializer,f.game);serializer.rend=f.game.rend;
- const parsed=JSON.parse(serializer.saveJSON()),expected=JSON.parse(JSON.stringify(f.sim.s));delete parsed.uiView;assert.deepEqual(parsed,expected);
- const loaded=new Sim(parsed);loaded.s.speed=0;const controller=new ReserveWait();assert.equal(controller.active,null);assert.equal(controller.pending,null);
- assert.equal(loaded.s.cash,f.sim.s.cash);assert.equal(loaded.s.t,f.sim.s.t);assert.deepEqual(loaded.s.sb,f.sim.s.sb);
+ const f = fixture();
+ const wait = f.start();
+ const game = saveAPI(source);
+ game.sim = f.sim;
+ game.company = {active:0, feed:[], props:[{name:'Reserve check', sim:f.sim}]};
+ game.ui = f.ui;
+ game.rend = f.game.rend;
+ f.ui.g = game;
+ // Use production attach and UI session reset. Stub only display and input surfaces.
+ globalThis.window = {innerWidth:900};
+ f.ui.phone = () => false;
+ f.ui.setTab = f.ui.setMeta = f.ui.renderActionBar = f.ui.renderTut = f.ui.renderFeed = () => {};
+ game.rend.setSim = game.rend.updateCamera = () => {};
+ const before = JSON.parse(JSON.stringify(f.sim.s));
+ const code = await game.saveCode();
+ const state = JSON.parse(await game.decodeSave(code)).props[0].s;
+ assert.equal(state.uiView, 'ext');
+ delete state.uiView;
+ assert.deepEqual(state, before);
+ assert.ok(wait.active);
+ assert.ok(await game.loadCode(code, true));
+ assert.notEqual(game.sim, f.sim);
+ assert.equal(game.metaName(), 'Reserve check');
+ assert.equal(game.sim.s.speed, 0);
+ assert.equal(game.ui.reserveWait, wait);
+ assert.equal(wait.active, null);
+ assert.equal(wait.pending, null);
+ assert.equal(game.ui.reserveResult, null);
+ for (const field of ['cash','t','rngS','sb','orders']) assert.deepEqual(game.sim.s[field], before[field], field);
+ delete globalThis.window;
  console.log('PASS production save serializer stores ordinary Sandbox state only; fresh session has no armed wait');
 }
 let lifecycleFailures=0;
