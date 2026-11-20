@@ -55,7 +55,7 @@ groups++;
 assert.equal(BUILD.exact,false);assert.equal(BUILD.name,UNVERIFIED_NAME);assert.ok(Object.isFrozen(BUILD));pass('node file:// import is dev-unverified and frozen');
 const src=readFileSync('js/version.js','utf8');assert.doesNotMatch(src,/v62-career-camera-clearance|name:\s*'[^']*-20\d{6}'/);pass('no hardcoded candidate label');
 const main=readFileSync('js/main.js','utf8');
-assert.match(main,/import \{ BUILD \} from '\.\/version\.js';/);assert.match(main,/build: BUILD\.name \};/);assert.match(main,/game\.BUILD = BUILD;/);pass('main.js consumers unchanged');
+assert.match(main,/import \{ BUILD \} from '\.\/version\.js';/);assert.match(main,/game\.BUILD = BUILD;/);pass('main.js consumers unchanged');
 const ui=readFileSync('js/ui.js','utf8');
 assert.ok(ui.includes("Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div>"));assert.ok(ui.includes("Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')} · ${esc(this.g.BUILD ? this.g.BUILD.date : '')}."));pass('ui.js title and menu consumers unchanged');
 const {Sim,fmtTime}=await import('../../js/sim.js');const {makeMaple}=await import('../../js/maple.js');
@@ -65,7 +65,7 @@ function metaWith(build){const ctx=vm.createContext({Sim,Audio:class{},fmtTime,m
   const g=ctx.game,sim=makeMaple(5);g.sim=sim;g.company={props:[{name:'Maple Street Storage',sim}],active:0,feed:[]};return JSON.parse(JSON.stringify(g.saveMeta()));}
 const before=metaWith({name:'v62-career-camera-clearance-20261023',date:'2026-10-23'});
 for(const b of [parseSourceIdentity(`https://rawcdn.githack.com/EezzyE88/self-storage-tycoon-js/${SHA}${MOD}`),BUILD]){const after=metaWith(b);
-  assert.deepEqual(Object.keys(after),Object.keys(before));assert.equal(typeof after.build,'string');assert.equal(after.build,b.name);
+  assert.deepEqual(Object.keys(after),Object.keys(before));assert.equal(typeof after.build,'string');assert.equal(after.build,b.name);assert.equal(after.saveGeneration,Sim.saveGeneration);
   assert.deepEqual({...after,build:before.build},before);assert.ok(!('sha' in after)&&!('exact' in after));pass(`saveMeta identical except build: ${before.build} -> ${after.build}`);}
 groups++;
 console.log(`${groups} build identity groups passed`);

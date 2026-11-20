@@ -6,12 +6,13 @@
 // game being restored keeps its stored copy until the restored game has been autosaved. A failed write can therefore
 // leave at most an extra copy, never a missing game. Extra copies survive reloads; only a step whose drop was
 // disclosed beforehand trims the list. After a failure, storage is re-read and the report says what it now holds.
-const KEY = 'sst.kept.archive';
+import { SAVE_KEYS } from './savegeneration.js';
+const KEY = SAVE_KEYS.archive;
 export const ARCHIVE_MAX = 5;
 let store = null;
-try { const ls = window.localStorage; const k = 'sst.probe.archive'; ls.setItem(k, '1'); ls.removeItem(k); store = ls; } catch (e) { store = null; }
+try { const ls = window.localStorage; const k = SAVE_KEYS.archiveProbe; ls.setItem(k, '1'); ls.removeItem(k); store = ls; } catch (e) { store = null; }
 const valid = (r) => r && typeof r.code === 'string' && r.meta && typeof r.meta === 'object';
-const KEPT = 'sst.kept.previous'; // localsave.js's kept slot (that module is unchanged; the key is shared)
+const KEPT = SAVE_KEYS.kept; // shared with this generation's localsave adapter
 const UNREADABLE = '.unreadable'; // an unparseable slot's bytes are copied here before anything overwrites them
 // Raw slot bytes; ok:false when storage cannot be read at all (distinct from an empty slot).
 function snapshot() {

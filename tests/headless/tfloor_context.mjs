@@ -91,11 +91,25 @@ assert.ok(r.contextG.children.length <= 5,'mixed fixture uses at most ten instan
 // Simulation includes intentional maintenance, upgrades and entrance-route changes through d84fb59.
 // Reconstruct the approved automatic-opening successor from that exact baseline so unrelated simulation drift still fails.
 import {execFileSync} from 'node:child_process';
-for(const file of ['js/unitnumbering.js','js/openhouse.js'])assert.equal(readFileSync(file,'utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:'+file],{encoding:'utf8'}));
+assert.equal(readFileSync('js/unitnumbering.js','utf8'),execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:js/unitnumbering.js'],{encoding:'utf8'}));
+// Declared office fit-out: only OpenHousePresentation.office() differs from the baseline; every byte before and after it is pinned.
+{const cut=t=>{const a=t.indexOf('  office(o) {'),b=t.indexOf('  update() {');assert.ok(a>0&&b>a,'office() and update() markers exist');return [t.slice(0,a),t.slice(b)];};
+const [basePre,basePost]=cut(execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:js/openhouse.js'],{encoding:'utf8'})),[pre,post]=cut(readFileSync('js/openhouse.js','utf8'));
+const wallDispatch = `      if (o.staffDoor && nx === o.staffDoor.dir[0] && nz === o.staffDoor.dir[1]) {
+        this.staffDoorWall(o, H, material, nx, nz, x, z, w, d);
+        continue;
+      }
+`;
+assert.ok(pre.includes(wallDispatch));assert.equal(pre.replace(wallDispatch,''),basePre);assert.equal(post,basePost);}
 let expectedVertical=execFileSync('git',['show','1339648652cf61bfce23a96a60cbb54a7006c32a:js/vertical.js'],{encoding:'utf8'});
 const oldVertical="warning:!fitout?'Structure only; fit-out and commissioning are still required.': 'Copies the existing interior layout and product mix. Commission units after construction; rentals are not guaranteed.'";
 const newVertical="warning:!fitout?'Structure only; fit-out and readiness requirements are still required.': 'Copies the existing interior layout and product mix. Eligible units open automatically after construction; rentals are not guaranteed.'";
-assert.ok(expectedVertical.includes(oldVertical),'declared vertical.js baseline hunk exists');expectedVertical=expectedVertical.replace(oldVertical,newVertical);assert.equal(readFileSync('js/vertical.js','utf8'),expectedVertical);
+assert.ok(expectedVertical.includes(oldVertical),'declared vertical.js baseline hunk exists');expectedVertical=expectedVertical.replace(oldVertical,newVertical);
+// Preserve the original vertical source check at the parent of the staff-routing change.
+const verticalAt = sha => execFileSync('git', ['show', sha + ':js/vertical.js'], {encoding:'utf8'});
+const routingCommit = '17eb2a3b292820d67dc6688595b259aaf33a1253';
+assert.equal(verticalAt(routingCommit + '^'), expectedVertical);
+assert.equal(readFileSync('js/vertical.js','utf8'), verticalAt(routingCommit));
 // The exact d84fb59 simulation reconstruction moved to tfloor_context_sim_d84fb59.mjs (historical profile):
 // that commit is not in the repository. Behavior replacing it, on current production simulation:
 // eligible units open automatically in every mode, and the readiness text says "operating", not "commissioned".

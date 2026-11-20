@@ -1,13 +1,7 @@
-// Autosave to the save server (one slot per browser). The hosting proxy identifies the browser with
-// an X-Visitor-Id header; browser storage is unavailable in the sandboxed preview, so saves live server-side.
-const RAW = '__PORT_8000__';
-// The save server exists only in the sandboxed preview (placeholder rewritten) or when the game itself runs on this machine.
-// On public hosts such as GitHub Pages it is switched off: no failed requests, no local-network permission prompts.
-const LOCAL_HOST = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-const BASE = !RAW.startsWith('__') ? RAW : LOCAL_HOST ? 'http://localhost:8000' : null;
-const q = new URLSearchParams(location.search);
-const CID = (q.get('cid') || ('t' + Math.random().toString(36).slice(2) + Date.now().toString(36))).replace(/[^A-Za-z0-9._:-]/g, '').slice(0, 64);
-const H = { 'X-Client-Id': CID };
+// FS-01 never uses the legacy per-visitor slot, including on localhost or after browser failure.
+// Guards remain on every operation. No URL/header/metadata can enable this adapter.
+const BASE = null;
+const H = {};
 
 export const cloud = {
   ok: BASE ? null : false, // null = unknown, true = reachable, false = offline or not used on this host

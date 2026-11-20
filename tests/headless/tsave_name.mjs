@@ -27,15 +27,17 @@ await test('production file export creates a loadable named save with unchanged 
  try{await g.saveFile();assert.ok(clicked);const p=await g.prepareLoad(await blob.text());assert.ok(p.ok);assert.equal(p.company.props[0].name,'Exported Company');assert.deepEqual(copy(p.company.props[0].sim.s),before);assert.deepEqual(copy(sim.s),before);}
  finally{URL.createObjectURL=prior;delete globalThis.document;}
 });
-await test('legacy bare saves remain loadable and can be resaved in existing portfolio format',async()=>{
+await test('current-generation bare state from the earlier serializer reloads and re-exports as a portfolio',async()=>{
  const old=execFileSync('git',['show','4ffb204de7fe61e1f7691b8426bb072a875ca134:js/main.js'],{encoding:'utf8'}),g=make(old);const sim=makeMaple(11);sim.s.speed=0;g.sim=sim;g.company={props:[{name:'Maple Street Storage',sim}],active:0,feed:[]};
  const raw=g.saveJSON();assert.equal(JSON.parse(raw).company,undefined);
  for(const code of [g.rawSaveCode(raw),await g.saveCode(raw)]){const fresh=make();assert.ok(await fresh.loadCode(code));assert.equal(fresh.metaName(),'Maple Street Storage');assert.deepEqual(copy(fresh.sim.s),copy(sim.s));assert.equal(JSON.parse(fresh.saveJSON()).company,1);}
 });
-await test('multi-property serialization remains byte-identical and full states reload with active index and feed',async()=>{
+await test('multi-property serialization adds only the generation marker and full states reload with active index and feed',async()=>{
  const g=make(),a=makeMaple(7),b=makeMaple(99);a.s.speed=b.s.speed=0;g.sim=b;g.company={props:[{name:'First',sim:a},{name:'Second',sim:b}],active:1,feed:[{msg:'Portfolio'}]};
  const old=make(execFileSync('git',['show','4ffb204de7fe61e1f7691b8426bb072a875ca134:js/main.js'],{encoding:'utf8'}));Object.assign(old,{sim:g.sim,company:g.company,rend:g.rend});
- assert.equal(g.saveJSON(),old.saveJSON());
+ const {saveGeneration, ...portfolio} = JSON.parse(g.saveJSON());
+ assert.equal(saveGeneration, Sim.saveGeneration);
+ assert.equal(JSON.stringify(portfolio), old.saveJSON());
  const p=await g.prepareLoad(await g.saveCode());assert.ok(p.ok);assert.equal(p.company.active,1);assert.deepEqual(copy(p.company.feed),copy(g.company.feed));for(let i=0;i<2;i++)assert.deepEqual(copy(p.company.props[i].sim.s),copy(g.company.props[i].sim.s));
 });
 await test('running-save load retains established pause-on-load and does not advance cash clock or RNG',async()=>{
@@ -43,8 +45,8 @@ await test('running-save load retains established pause-on-load and does not adv
 });
 await test('no-company fallback, malformed portfolio refusal and existing name sanitization remain',async()=>{
  const g=make();g.sim=makeMaple(7);assert.equal(JSON.parse(g.saveJSON()).company,undefined);
- const state=copy(g.sim.s);assert.equal((await g.prepareLoad(JSON.stringify({company:1,props:[{name:3,s:state}]}))).ok,false);
- const p=await g.prepareLoad(JSON.stringify({company:1,active:0,feed:[],props:[{name:'<script>Unsafe</script>',s:state}]}));assert.ok(p.ok);assert.equal(p.company.props[0].name,'scriptUnsafe/script');
+ const state=copy(g.sim.s);assert.equal((await g.prepareLoad(JSON.stringify({company:1,saveGeneration:Sim.saveGeneration,props:[{name:3,s:state}]}))).ok,false);
+ const p=await g.prepareLoad(JSON.stringify({company:1,saveGeneration:Sim.saveGeneration,active:0,feed:[],props:[{name:'<script>Unsafe</script>',s:state}]}));assert.ok(p.ok);assert.equal(p.company.props[0].name,'scriptUnsafe/script');
 });
 await test('exact whole-file parent restoration rejects undeclared source drift',()=>{
  const old=execFileSync('git',['show','4ffb204de7fe61e1f7691b8426bb072a875ca134:js/main.js'],{encoding:'utf8'});

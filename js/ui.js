@@ -1,4 +1,5 @@
 import { officePanelState } from './officepanel.js';
+import { suppliesSummary } from './supplies.js';
 import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';
 import { demandEvidenceText, paybackText, paybackEvidenceNote } from './economics.js';
 import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
@@ -21,6 +22,7 @@ import { complaintCopy, requestCopy } from './feedbackcopy.js';
 // HTML UI: HUD, modes, build palette + PLACE→PREVIEW→CONFIRM, inspector, feed, tutorial, overlays, save/load.
 import { TOOLS, CATEGORIES, ROLES, SIZES, MARKETS, CART_COST, OFFICE_HOURS, TIERS, FLOOR_H, WORK, BILLING_CYCLE_DAYS } from './data.js';
 import { fmtTime, dayOf, productKey } from './sim.js';
+import { LEGACY_BUILD_URL } from './savegeneration.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup, verticalReviewGuide, financingReview } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
@@ -473,11 +475,13 @@ export class UI {
       case 'photo': this.closeModal(); this.g.showcase.enterPhoto(); break;
       case 'tour': this.closeModal(); this.g.showcase.startTour(); break; // a manual Pause stays paused through the tour
       case 'lens': this.g.showcase.setLens(!this.g.showcase.lensPref); this.showMenu(); break;
-      case 'continue': { const d = this.contSave; if (!d) break;
+      case 'continue': { const d = this.contSave, check = this.contLateCheck; if (!d) break;
         const told = (r, note) => { const m = r.meta || {}; this.closeModal(); this.sfx('confirm'); this.toast(`${note}Restored ${m.name || 'your game'}: Day ${+m.day || 1}${m.time ? ', ' + m.time : ''}, ${money(+m.cash || 0)} cash (${this.ago((r.at || 0) * 1000)}${r.src === 'server' ? ', from the save server' : ''}).`, note ? 'bad' : 'good'); };
-        this.g.loadCode(d.code, true).then(async (ok) => {
+        this.g.loadCode(d.code, true, check).then(async (ok) => {
           if (ok) { this.g.autosave?.(true); return told(d, this.contRecovery || (d.src === 'backup' ? 'The latest autosave was missing, so the backup was used. ' : '')); }
-          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code, true)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
+          if (check && (!this.title || !this.root.querySelector('#modal > .title'))) return;
+          const b = this.contBackup; if (b && b !== d && await this.g.loadCode(b.code, true, check)) return told(b, 'The latest autosave was damaged, so the previous one was used. ');
+          if (check && (!this.title || !this.root.querySelector('#modal > .title'))) return;
           this.contSave = null; this.showTitle(); this.toast('That autosave could not be loaded, and no backup worked. Load a save code or file instead.', 'bad');
         }); break; }
       case 'loadCode': { const ta = this.root.querySelector('#loadTa'); this.importSave(ta ? ta.value : '', 'code'); break; }
@@ -500,7 +504,7 @@ export class UI {
   }
   onInput(e) {
     const el = e.target; if(el.dataset.verticalOption){const R=this.verticalReview;if(R)this.showVertical(R.shell,{...R,[el.dataset.verticalOption]:el.checked});return;} if (el.dataset.sectionPicker && el.value) { this.sheetTall = true; this.renderSheet(true); this.jumpSection(el.value); return; } if (el.dataset.vol) this.g.audio.setVol(el.dataset.vol, +el.value);
-    if (el.id === 'loadFile' && el.files[0]) { const f = el.files[0]; el.value = ''; f.text().then((t) => this.importSave(t, 'file'), () => this.toast('That file could not be read. Nothing was changed.', 'bad')); }
+    if (el.id === 'loadFile' && el.files[0]) { const f = el.files[0]; el.value = ''; f.text().then((t) => this.importSave(t, 'file'), () => this.showImportError('That file could not be read. Nothing was changed.', 'file')); }
   }
   do(action, feedback = false) {
     const r = this.sim.dispatch(action) || {};
@@ -1421,6 +1425,7 @@ export class UI {
   recoPlanKey() { const a=this.plan?.args; return this.tool && a?.a && a?.b ? JSON.stringify([this.tool,a.a,a.b,a.f||0]) : null; }
   recoActive() { return !!this.recoKey && !this.buildPlacing && this.recoKey === this.recoPlanKey(); }
   planIsSuggestion() { const s=this.currentBlueprintPlan(), a=this.plan?.args; if(!s||!a?.a||!a?.b||s.tool!==this.tool||(s.f||0)!==(a.f||0)) return false;
+    if(Number.isInteger(s.rotation)&&a.rotation!==s.rotation)return false;
     const n=(p,q)=>[Math.min(p.x,q.x),Math.min(p.y,q.y),Math.max(p.x,q.x),Math.max(p.y,q.y)].join(); return n(s.a,s.b)===n(a.a,a.b); }
   syncControlLayout() {
     if (!this.root?.style || typeof innerWidth === 'undefined') return;
@@ -1472,7 +1477,7 @@ export class UI {
     return `<p class="note"><b>${esc(message)}</b>${clerk ? ' Clerk coverage is 8 AM–6 PM.' : ' A Clerk covers 8 AM–6 PM for ' + money(ROLES.clerk.wage) + '/day.'}</p>` + (clerk ? '' : '<button class="btn sm" data-a="staffHelp" data-v="clerk">Review office coverage</button>');
   }
   officePanelHtml() {
-    const sim = this.sim, s = sim.s, p = officePanelState(sim);
+    const sim = this.sim, s = sim.s, p = officePanelState(sim), sup = suppliesSummary(sim);
     p.decisions = p.decisions.filter((c) => !sim.reviewHeld(c)); // held owner reviews wait for the lesson/tutorial to end
     const jump = (label, tab, section) => `<button class="btn sm" data-a="officeSection" data-v="${tab}" data-section="${section}">${label}</button>`;
     const first = p.decisions[0];
@@ -1491,6 +1496,7 @@ export class UI {
     const authorityAlert = p.manager ? '<p class="office-authority-alert"><b>Manager authority active:</b> automatic asking-rent changes, vendor/cart spending and lien notices. Manual request review does not stop these.</p>' : '';
     return `${authorityAlert}<div class="office-rows">
       <section class="office-row" aria-label="Counter coverage"><b>Counter · ${esc(p.counter)}</b><small>8 AM–6 PM · ${p.waiting} waiting · ${p.serving} being served</small><button class="btn sm" data-a="staffHelp" data-v="clerk">Review coverage</button></section>
+      <section class="office-row" aria-label="Moving supplies"><b>Supplies · ${sup.blocked ? 'Starts after the tutorial' : sup.on ? 'On' : 'Off'}</b><small>${sup.terms ? `Basket ${money(sup.terms.price, sup.terms.price % 1 !== 0)} · cost ${money(sup.terms.cost, sup.terms.cost % 1 !== 0)} · every second lease signed at the counter` : 'Not sold at this market'}</small><small>${sup.sold} sold in 30 days · ${money(sup.margin, sup.margin % 1 !== 0)} margin</small><button class="toggle ${sup.on ? 'on' : ''}" data-a="policy" data-v="supplies" aria-label="Toggle moving supplies sales"></button></section>
       <section class="office-row" aria-label="Owner capacity"><b>Owner · ${p.remaining}h of ${p.capacity}h available today</b><small>Office charged ${p.officeCharged}h · Property charged/reserved ${p.propertyCharged}h</small><small>${esc(ownerDoing)} · ${p.ownerQueued} queued · ${p.completedJobs} property jobs recorded complete today</small><div class="row wrap">${jump('Work queue', 'operate', 'Work queue')}<button class="btn sm" data-a="policy" data-v="ownerChores" aria-pressed="${!!s.policies.ownerChores}">Owner chores: ${s.policies.ownerChores ? 'On' : 'Off'}</button></div></section>
       <section class="office-row" aria-label="Owner decisions"><b>Your decisions · ${p.decisions.length}</b><small class="office-preview">${esc(pending)}</small><button class="btn sm" data-a="requests" ${p.decisions.length ? '' : 'disabled'}>Review decisions</button></section>
       <section class="office-row" aria-label="Delegated work"><b>Delegated · ${p.delegatedRequests.length} requests · ${p.delegatedJobs.length} property jobs</b><small>Requests: ${p.delegatedRequests.length - requestWait} handling · ${requestWait} waiting for hours/staff. Jobs: ${p.delegatedJobs.length - queued - vendor - blocked} active · ${queued} queued · ${vendor} vendor booked${blocked ? ` · ${blocked} access blocked` : ''}.</small>${blocker ? `<small>${esc(blocker.label)}: ${esc(this.jobWait(blocker, workerLeft))}</small>` : ''}<div class="row wrap"><button class="btn sm" data-a="requests" data-v="settings">Requests &amp; responses</button>${jump('Work queue', 'operate', 'Work queue')}</div></section>
@@ -2456,6 +2462,7 @@ export class UI {
     // Act II keeps the player's camera: the floor changes only when the armed floor is wrong; no pan, zoom or framing.
     const keep=this.tutKeepsCamera();
     if(!keep||this.toolFloor()!==(a.f||0)) this.setView(a.f); this.pickTool(a.tool); this.flip=!!a.flip; this.climate=!!a.climate;
+    if (Number.isInteger(a.rotation)) this.buildRotation=a.rotation;
     // Two-floor lesson on a phone: the review starts compact and the outline is refit once the panels settle.
     const up=!keep&&this.sim.s.lesson?.id==='up'; this.recoCompact=up;
     this.planArgs={a:{...a.a},b:{...a.b},axis:a.axis,dir:a.dir}; this.replan(); if(!keep) this.showBlueprintTarget(); if(up) this.frameRecommendation(true);
@@ -3051,7 +3058,7 @@ export class UI {
     this.title = true;
     if (this.g.saveStartup) { this.$('modal').innerHTML = '<div class="title"><h1>Self Storage Tycoon</h1><p role="status">Checking saved progress…</p></div>'; return; }
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
-      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple">Maple Street <small>Tutorial · take over a small facility</small></button>
+      <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple-public">Maple Street <small>Tutorial · take over a small facility</small></button>
       <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
       <button class="btn" data-a="sandboxSetup">Sandbox <small>Business or Free Build, on your terms</small></button>
       <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>
@@ -3060,26 +3067,28 @@ export class UI {
   ago(ms) { const d = Math.max(0, (Date.now() - ms) / 1000); return d < 60 ? 'saved just now' : d < 3600 ? `saved ${Math.round(d / 60)} min ago` : d < 86400 ? `saved ${Math.round(d / 3600)} h ago` : `saved ${Math.round(d / 86400)} d ago`; }
   renderSaveStatus() {
     const D = this.g.durable; if (!D || !this.root) return;
-    const label = D.status === 'pending' ? 'Saving progress' : D.status === 'saved' ? 'Progress saved' : D.status === 'error' || D.status === 'unavailable' ? 'Save not confirmed' : 'Autosave ready';
+    const label = this.g.saveWriterError ? 'Save not confirmed' : D.status === 'pending' ? 'Saving progress' : D.status === 'saved' ? 'Progress saved' : D.status === 'error' || D.status === 'unavailable' ? 'Save not confirmed' : 'Autosave ready';
     const menu = this.root.querySelector('[data-a=menu]');
     if (menu) { menu.dataset.saveState = D.status; menu.setAttribute('aria-label', 'Menu · ' + label); menu.title = label; }
     const note = this.root.querySelector('#autosaveNote'); if (note) note.textContent = this.autosaveNote();
     if (!this.g.playing()) return;
+    if (this.g.saveWriterError) {
+      if (this.saveError !== this.g.saveWriterError) { this.saveError = this.g.saveWriterError; this.toast(this.autosaveNote(), 'bad'); }
+      return;
+    }
     if (D.status === 'saved' && D.latest === this.g.saveNotice && this.saveToastRevision !== D.latest) { this.saveToastRevision = D.latest; this.toast('Progress saved', 'good'); }
     if ((D.status === 'error' || D.status === 'unavailable') && this.saveError !== D.lastErr) { this.saveError = D.lastErr; this.toast('Save not confirmed. Keep a save file or code before leaving.', 'bad'); }
   }
   autosaveNote() {
+    if (this.g.saveWriterError) return this.g.saveWriterError + ' Export a save code or file to keep your progress.';
     const D = this.g.durable;
     if (D?.status === 'pending') return 'Saving progress… Wait for saving to finish before leaving.';
-    if (D && (D.status === 'error' || D.status === 'unavailable')) return 'This browser could not confirm the latest save. A browser or server copy may still be available. Export a save code or file to keep your progress.';
+    if (D && (D.status === 'error' || D.status === 'unavailable')) return 'This browser could not confirm the latest save. Export a fresh-generation code or file before leaving. FS-01 never uses the legacy save server.';
     if (D?.status === 'saved') return 'Progress saved in this browser. Codes and files remain separate backups you can move between devices.';
     const L = this.g.localsave;
     if (L?.lastErr === 'storage full') return 'Latest autosave failed: browser storage is full. Export a save code or file now to keep your progress.';
     if (L && L.ok) return L.lastAt ? `Autosave is on in this browser (${this.ago(L.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave, and keeps the previous save as a backup.${L.lastErr ? ' Note: ' + L.lastErr + '.' : ''} Codes and files move a game between devices.` : 'Autosave is on in this browser. It saves each in-game day and when you leave, and keeps the previous save as a backup. Codes and files move a game between devices.';
-    const c = this.g.cloud;
-    if (c.ok === false) return 'Autosave is offline right now. Save with a code or a file to keep your progress.';
-    if (c.lastAt) return `Autosave is on (${this.ago(c.lastAt).replace('saved ', 'last saved ')}). It saves each in-game day and when you leave. Codes and files are backups you can move between devices.`;
-    return 'Autosave is on. It saves each in-game day and when you leave. Codes and files are backups you can move between devices.';
+    return 'Browser autosave is unavailable. Export a fresh-generation code or file before leaving. The legacy save server is disabled in FS-01.';
   }
   spendingHtml(spend, extraDaily = 0, label = 'after action') {
     const P = this.sim.financialPosition({ spend, extraDaily });
@@ -3350,7 +3359,7 @@ export class UI {
       </details><details class="settings"><summary>Graphics</summary><h3>Graphics</h3><div class="row wrap"><button class="btn sm" data-a="gfx">Quality: ${this.g.autoQ ? 'Auto (' : ''}${['Low', 'Medium', 'High'][this.g.rend.quality]}${this.g.autoQ ? ')' : ''}</button><button class="btn sm" data-a="battery">Battery saver ${this.g.battery ? 'on' : 'off'}</button><button class="btn sm" data-a="lens">Miniature lens ${this.g.showcase && this.g.showcase.lensPref ? 'on' : 'off'}</button></div>
       </details><details class="settings"><summary>Showcase</summary><h3>Showcase</h3><div class="menu-list"><button class="btn" data-a="photo">Photo mode <small>Light, looks, lens and a shutter (P)</small></button><button class="btn" data-a="tour">Cinematic tour <small>The camera wanders your property. Tap to stop.</small></button></div>
       <p class="note">Tip: tap any customer, car or staff member to follow them and read their story.</p>
-      </details><details class="settings"><summary>Start a new game</summary><h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="sandboxSetup">Sandbox</button></div>
+      </details><details class="settings"><summary>Start a new game</summary><h3>New game</h3><div class="menu-list"><button class="btn" data-a="new" data-v="maple-public">Maple Street tutorial</button><button class="btn" data-a="scenarios">Scenarios</button><button class="btn" data-a="sandboxSetup">Sandbox</button></div>
       </details><details class="settings"><summary>Controls</summary><h3>Controls</h3><p class="note">Drag to pan; double-tap, pinch or scroll to zoom; rotate with the side buttons (Q/E). Double-tap still zooms while a build tool is armed. On touch, press and hold then drag to place a build; a quick drag pans. Two fingers pan/zoom. Space pauses, 1-3 set speed, Esc cancels.</p>
       </details><p class="note" id="autosaveNote">${this.autosaveNote()}</p>
       <p class="note build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')} · ${esc(this.g.BUILD ? this.g.BUILD.date : '')}. Mention this when you send feedback.</p></div></div>`;
@@ -3377,21 +3386,36 @@ export class UI {
     return '<p class="note">Unit numbers start with their floor: 1xxx on F1, 2xxx on F2, through 5xxx on F5. New saves require a build with floor-based numbering. Keep your original export for older builds.</p>'+
       (rows.length?'<details><summary>Previous unit numbers</summary><p class="note">Numbers at conversion. Older financial and event history keeps its original text.</p><div class="list">'+rows.map(r=>`<div class="row"><span>Unit ${esc(String(r.old??'?'))}</span><span>→ Unit ${esc(String(r.num))}</span></div>`).join('')+'</div></details>':'');
   }
+  generationInfo() {
+    return `<p class="note fs01-generation">FS-01 fresh save generation. <a href="${LEGACY_BUILD_URL}" target="_blank" rel="noopener">Retained legacy Build 5ce4cfa</a> opens legacy saves. Keep the original file or code unchanged.</p>`;
+  }
   async showSave() {
     const code = await this.g.saveCode();
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Save code</h2><button class="x" data-a="modalClose" aria-label="Close">${I.x}</button></div>
-      <p class="note">${this.sim.s.hall.length>2?'Expanded saves require a build with multi-floor support. ':''}Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p>${this.numberingInfo()}<textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
+      <p class="note">${this.sim.s.hall.length>2?'Expanded saves require a build with multi-floor support. ':''}Copy this code somewhere safe. Paste it into Load to resume exactly here (Day ${dayOf(this.sim.s.t)}, ${fmtTime(this.sim.s.t)}).</p>${this.generationInfo()}${this.numberingInfo()}<textarea id="saveTa" readonly>${code}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" data-a="copy">Copy</button><button class="btn" data-a="saveFile">Download file</button></div></div></div>`;
   }
   // Import: validate fully first; only a valid save reaches the confirmation, and only confirmation touches slots.
   async importSave(text, source) {
     const prep = await this.g.prepareLoad(text);
     if (!prep.ok) {
       this.pendingImport = null;
-      this.toast(source === 'file' ? 'That file is not a valid save. Nothing was changed.' : 'That save code could not be read. Nothing was changed.', 'bad');
-      const ta = this.root.querySelector('#loadTa'); if (ta && source === 'code') { ta.value = ''; ta.placeholder = 'That save code could not be read. Paste the full code, starting with SST1.'; ta.classList.add('err'); }
+      const message = prep.reason === 'save-generation' ? prep.msg
+        : source === 'file' ? 'That file is not a valid save. Nothing was changed.'
+        : 'That save code could not be read. Nothing was changed.';
+      this.showImportError(message, source);
       return false;
     }
     this.pendingImport = prep; this.showImportConfirm(prep); return true;
+  }
+  showImportError(message, source) {
+    const error = this.root.querySelector('#loadError');
+    if (!error) { this.toast(message, 'bad'); return; }
+    error.textContent = message;
+    if (source === 'code') {
+      const input = this.root.querySelector('#loadTa');
+      input.classList.add('err');
+      input.setAttribute('aria-invalid', 'true');
+    }
   }
   metaLine(m) { return m ? `<b>${esc(m.name || 'Saved game')}</b> · Day ${+m.day || 1} · ${money(+m.cash || 0)}${+m.props > 1 ? ` · ${+m.props} properties` : ''}` : ''; }
   importPlan() { // exactly what the slots will hold if the import is confirmed
@@ -3453,7 +3477,7 @@ export class UI {
   }
   showLoad() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Load game</h2><button class="x" data-a="${this.title ? 'showTitle' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
-      <p class="note">Paste a save code, or open a .sst save file.</p><textarea id="loadTa" placeholder="Paste save code"></textarea>
+      ${this.generationInfo()}<p class="note">Paste a fresh-generation save code, or open its .sst file.</p><textarea id="loadTa" placeholder="Paste save code" aria-describedby="loadError"></textarea><p id="loadError" class="note bad" role="alert"></p>
       <div class="row" style="margin-top:8px"><button class="btn pri" data-a="loadCode">Load code</button><button class="btn" data-a="loadFile">Open file</button><input type="file" id="loadFile" hidden></div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitle"]'); if (x) x.onclick = () => this.showTitle();
   }

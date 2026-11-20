@@ -57,7 +57,7 @@ await test('Comeback target IDs, footprint mappings, earned progress and missing
  for(const key of ['earned','ownerDone','staffDone','status','acknowledged'])assert.deepEqual(s.scenario[key],before[key]);
 });
 await test('production SST0/SST1 loads migrate every portfolio property once and leave input exports untouched',async()=>{
- const s=legacy(),json=JSON.stringify(s),portfolio=JSON.stringify({company:1,active:1,feed:[],props:[{name:'A',s},{name:'B',s:clone(s)}]});
+ const s=legacy(),json=JSON.stringify(s),portfolio=JSON.stringify({company:1,saveGeneration:Sim.saveGeneration,active:1,feed:[],props:[{name:'A',s},{name:'B',s:clone(s)}]});
  for(const text of [json,portfolio])for(const code of [g.rawSaveCode(text),await g.saveCode(text)]){
    const result=await g.prepareLoad(code);assert.ok(result.ok,result.msg);for(const p of result.company.props){check(p.sim.s);assert.equal(p.sim.s.speed,0);assert.equal(p.sim.s.cash,s.cash);}
    if(result.company.props.length===2)assert.equal(result.company.active,1);
@@ -68,7 +68,7 @@ await test('production SST0/SST1 loads migrate every portfolio property once and
 await test('bad numbering rejects the entire load before replacing the current company',async()=>{
  g.company={sentinel:true};const before=g.company;
  for(const corrupt of [s=>s.unitNumbering.version=99,s=>s.unitNumbering.next[0]=1001,s=>{s.objects[4].num=s.objects[3].num;},s=>s.objects[3].num=2001]){
-   const s=clone(makeMaple().s);corrupt(s);const r=await g.prepareLoad(JSON.stringify({company:1,active:0,props:[{name:'Good',s:legacy()},{name:'Bad',s}]}));assert.equal(r.ok,false);assert.equal(g.company,before);
+   const s=clone(makeMaple().s);corrupt(s);const r=await g.prepareLoad(JSON.stringify({company:1,saveGeneration:Sim.saveGeneration,active:0,props:[{name:'Good',s:legacy()},{name:'Bad',s}]}));assert.equal(r.ok,false);assert.notEqual(r.reason,'save-generation');assert.equal(g.company,before);
  }
 });
 await test('split keeps first child number, allocates second, and refuses exhaustion before money or IDs change',()=>{

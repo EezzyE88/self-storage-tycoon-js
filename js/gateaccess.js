@@ -1,3 +1,4 @@
+import { recessed } from './mapleaccess.js';
 // Stage 2A: saved single-gate identity/connection and traffic ownership foundation.
 // This module intentionally does not select alternate gates or enable multi-gate play.
 const asId = (v) => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null; };
@@ -6,6 +7,7 @@ const gateObjects = (s) => Object.values(s.objects || {}).filter((o) => o && o.t
 const activeAgentIds = (s) => new Set((s.agents || []).map((a) => a.id));
 
 function connectionFor(s, gate, previous) {
+  if (recessed(s,gate)) return { gateId:gate.id, kind:'maple-yard', boundary:'yard', x:gate.x, y:gate.y, outside:{x:gate.x,y:gate.y+1} };
   if (previous && previous.kind === 'front-street') return { ...previous, gateId: gate.id, x: gate.x, y: gate.y };
   const front = gate.y === s.parcel?.y1;
   return {
@@ -52,7 +54,7 @@ export function normalizeGateAccess(s) {
   }
 
   for (const ag of s.agents || []) {
-    if (ag.kind !== 'cust' || !ag.veh || primary == null) continue;
+    if (ag.publicVisit || ag.kind !== 'cust' || !ag.veh || primary == null) continue;
     const current = asId(ag.gateId);
     if (current == null) ag.gateId = primary;
     else if (!ids.includes(current)) { issue(issues, 'stale-trip-gate', { agentId: ag.id, gateId: current }); ag.gateId = primary; }

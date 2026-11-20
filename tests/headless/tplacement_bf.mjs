@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {Sim,newState} from '../../js/sim.js';
 import {UI} from '../../js/ui.js';
 import {TOOLS,SIZES,G} from '../../js/data.js';
-import {makeMaple} from '../../js/maple.js';
+import {makeMaple,makePublicMaple} from '../../js/maple.js';
+import {accessState} from '../../js/mapleaccess.js';
 import {BEATS} from '../../js/tutorial.js';
 
 let checks=0;
@@ -45,6 +46,54 @@ for(const tool of Object.keys(TOOLS).filter(k=>TOOLS[k].unit))for(let rotation=0
   assert.equal(JSON.stringify(sim.s),before,'previews never buy, advance time or alter saved state');
 });
 
+for (const [layout,make,spot] of [
+  ['Baseline Maple',makeMaple,{x:20,y:14}],
+  ['Public Maple',makePublicMaple,{x:19,y:13}],
+]) test(layout+' refuses the 14-unit cutoff and accepts the adjacent aisle-facing unit',()=>{
+  const sim=make(), {u,boxes}=uiFor(sim,'du5x5');
+  const publicOffice=make===makePublicMaple;
+  const open=sim.objs('unit').filter(unit=>unit.cstate==='operating' && !unit.blocked);
+  assert.equal(open.length,23);
+  const before=JSON.stringify(sim.s), cash=sim.s.cash;
+  const blocked={a:{x:20,y:13},b:{x:20,y:13},rotation:0};
+  arm(u,blocked);
+  const reason='Choose another spot. Building here would block customer access to 14 existing units.' +
+    (publicOffice ? ' Keep a secured staff route from the rear office door into the yard.' : '');
+  assert.equal(u.plan.status,'invalid');
+  assert.ok(boxes.abar.innerHTML.includes(reason));
+  assert.match(boxes.abar.innerHTML,/data-a="confirm" disabled/);
+  assert.deepEqual(sim.dispatch({type:'build',tool:'du5x5',f:0,...blocked}),{ok:false,msg:reason});
+  assert.equal(JSON.stringify(sim.s),before,'refusal preserves the entire save, including cash, orders and numbers');
+
+  arm(u,{a:spot,b:spot,rotation:2});
+  assert.equal(u.plan.status,'valid');
+  assert.equal(u.plan.cost,420);
+  assert.doesNotMatch(boxes.abar.innerHTML,/data-a="confirm" disabled/);
+  assert.equal(JSON.stringify(sim.s),before,'moving the preview is free');
+  const count=sim.s.orders.length;
+  click(u,'confirm');
+  assert.equal(sim.s.orders.length,count+1);
+  assert.equal(sim.s.cash,cash-420);
+  const order=sim.s.orders.at(-1);
+  assert.equal(order.objs.length,1);
+  sim.completeOrder(order);
+  sim.ensure();
+  assert.equal(order.st,'done');
+  assert.equal(sim.obj(order.objs[0]).cstate,'ready');
+  assert.deepEqual(sim.obj(order.objs[0]).missing,[]);
+  assert.ok(open.every(unit=>!unit.blocked));
+  const restored=new Sim(JSON.parse(JSON.stringify(sim.s)));
+  assert.ok(open.every(unit=>!restored.obj(unit.id).blocked));
+  assert.equal(restored.s.cash,cash-420);
+  assert.equal(restored.s.speed,0);
+  if (publicOffice) {
+    for (const game of [sim,restored]) {
+      const {pedestrian,parking,staff}=accessState(game);
+      assert.deepEqual({pedestrian,parking,staff},{pedestrian:true,parking:true,staff:true});
+      assert.equal(game.s.speed,0);
+    }
+  }
+});
 test('four UI rotations preserve a reverse drag, count, touch anchor, quotation and manual Pause',()=>{
   const sim=fresh(),{u}=uiFor(sim);arm(u,{a:{x:20,y:20},b:{x:15,y:20},rotation:0});
   const before=JSON.stringify(sim.s),a={...u.planArgs.a},count=u.plan.count,cost=u.plan.cost,first=structuredClone(u.plan.units);

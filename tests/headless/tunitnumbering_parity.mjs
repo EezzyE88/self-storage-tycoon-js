@@ -49,6 +49,9 @@ function expectedLegacyGateMigration(raw){
  e.customerAccounts={};e.cr01={lastOfferDay:-100000,pending:null};
  for(const tn of Object.values(e.tenants)){assert.equal(tn.accountId,undefined);const id='customer-'+tn.id;tn.accountId=id;
   e.customerAccounts[id]={id,name:tn.name,since:tn.since??e.t,leaseIds:Object.values(e.leases).filter(L=>L.tenant===tn.id).map(L=>L.id),events:[]};}
+ // Office Step 2 additive migration: supplies toggle on, a fresh basket counter, nothing retroactive (cash and ledger untouched).
+ assert.equal(e.supplies,undefined);assert.equal(e.policies.supplies,undefined);
+ e.policies.supplies=true;e.supplies={v:1,n:0,sold:0,revenue:0,cost:0,log:[]};
  return e;
 }
 function migrate(raw,label,days){

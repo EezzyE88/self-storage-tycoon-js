@@ -47,6 +47,10 @@ export class OpenHousePresentation {
       if (nx === dir[0] && nz === dir[1]) continue;
       const x = cx + nx * (o.w / 2 - t / 2), z = cz + nz * (o.h / 2 - t / 2);
       const w = nx ? t : o.w - .06, d = nz ? t : o.h - .06;
+      if (o.staffDoor && nx === o.staffDoor.dir[0] && nz === o.staffDoor.dir[1]) {
+        this.staffDoorWall(o, H, material, nx, nz, x, z, w, d);
+        continue;
+      }
       this.part(o, 'ohWall', x, H / 2, z, w, H, d, { nx, nz, wall: true, material });
       this.part(o, 'ohTrim', x, H + .025, z, w + .025, .05, d + .025, { nx, nz, cap: true, H });
     }
@@ -68,10 +72,76 @@ export class OpenHousePresentation {
   }
   office(o) {
     this.room(o, 1.7, 'office');
-    const cx=o.x+o.w/2,cz=o.y+o.h/2,d=o.door.dir;
-    this.part(o,'ohCounter',cx,.45,cz,d[0]?.3:Math.min(1.2,o.w*.6),.7,d[0]?Math.min(1.2,o.h*.6):.3);
-    this.part(o,'ohScreen',cx,.92,cz,d[0]?.08:.32,.25,d[0]?.32:.08);
-    this.part(o,'ohSofa',cx-d[0]*.5,.275,cz-d[1]*.5,.32,.35,.32);
+    // Leasing, service and moving-supply fit-out. Decoration only: it sells
+    // nothing, holds no stock and changes no route, cost, queue or save.
+    // Door-relative frame: u = depth inward from the door wall, v = lateral.
+    const cx=o.x+o.w/2,cz=o.y+o.h/2,f=o.door.dir,sd=[-f[1],f[0]];
+    const D=f[0]?o.w:o.h,L=f[0]?o.h:o.w,hl=L/2,i=.1;
+    const box=(kind,u0,u1,v0,v1,y0,h)=>{
+      const u=(u0+u1)/2,v=(v0+v1)/2,du=u1-u0,dv=v1-v0;
+      this.part(o,kind,cx+f[0]*(D/2-u)+sd[0]*v,y0+h/2,cz+f[1]*(D/2-u)+sd[1]*v,
+        Math.abs(f[0])*du+Math.abs(sd[0])*dv,h,Math.abs(f[1])*du+Math.abs(sd[1])*dv);
+    };
+    const vd=(o.door.x+.5-cx)*sd[0]+(o.door.y+.5-cz)*sd[1],da=vd-.5,db=vd+.5;
+    const ws=hl-db>=da+hl?1:-1,shop=-ws,other=ws>0?da+hl:hl-db;
+    const lat=(side,a,b)=>side>0?[hl-b,hl-a]:[-hl+a,-hl+b]; // a..b measured in from that side wall
+    const B=.1; // floor slab top
+    const cf=D-1.5,cb=D-1.05; // counter front/back depth
+    // Back of house along the rear wall: stock rack, staff desk, key cabinet.
+    box('stair',D-i-.05,D-i,...lat(shop,i,1.2),B,1.3);
+    for(const y of [B+.03,B+.48,B+.93]){box('darkMetal',D-.5,D-i-.05,...lat(shop,i,1.2),y-.03,.03);box('ohCrate',D-.46,D-.2,...lat(shop,.18,1.12),y,.32);}
+    box('ohCounter',D-.62,D-.18,...[-.55,.55].map(x=>x+(-shop)*.15),B,.42);
+    box('ohScreen',D-.4,D-.33,...[-.2,.2].map(x=>x+(-shop)*.15),B+.42,.22);
+    box('ohCounter',D-.48,D-i,...lat(ws,i,.8),B,1.0);
+    // Service and checkout counter facing the door, with a staff gate at the shop end.
+    // On public Maple the staff passage follows the public door's full tile
+    // across the office, then turns toward the staff exit. Keep the trim clear too.
+    const counterInset = o.staffDoor ? hl - shop * vd + .55 : 1;
+    const [c0,c1]=lat(shop,counterInset,L-.12);
+    box('ohCounter',cf,cb,c0,c1,B,.62); box('officeTrim',cf-.03,cb+.03,c0-.03,c1+.03,B+.62,.06);
+    const sv=Math.min(c1-.35,Math.max(c0+.35,vd));
+    box('ohScreen',cf+.15,cf+.22,sv-.2,sv+.2,B+.68,.24);
+    box('ohTape',cf-.05,cf,...lat(ws,.25,.6),B+.25,.3); // lock peg bar on the customer face
+    // Supply wall: rack with three shelves of cartons on the shop-side wall.
+    const s0=1.05;
+    let s1=cf-.15;
+    if (o.staffDoor) {
+      const rearDepth = D/2 - ((o.staffDoor.x+.5-cx)*f[0] + (o.staffDoor.y+.5-cz)*f[1]);
+      s1 = Math.min(s1, rearDepth - .55);
+    }
+    if(s1-s0>=.5){
+      box('stair',s0,s1,...lat(shop,i,i+.05),B,1.35);
+      const n=Math.max(1,Math.floor((s1-s0)/.45));
+      for(const [k,y] of [B+.03,B+.48,B+.93].entries()){
+        box('darkMetal',s0,s1,...lat(shop,i+.05,.52),y-.03,.03);
+        for(let j=0;j<n;j++){const a=s0+.04+j*(s1-s0)/n,b=a+(s1-s0)/n-.08;box((j+k)%2?'ohTape':'ohCrate',a,b,...lat(shop,.17,.5),y,.32);}
+      }
+    }
+    // Pack-and-protect endcap on the opposite wall, behind the waiting bench.
+    const e0=1.75,e1=cf-.15;
+    if(e1-e0>=.5){box('stair',e0,e1,...lat(ws,i,.5),B,.5);for(let j=0;j<2;j++){const a=e0+.05+j*(e1-e0)/2;box('ohCrate',a,a+(e1-e0)/2-.1,...lat(ws,.15,.45),B+.5,.24);}}
+    // Waiting: two-seat bench against the side wall, with a leaflet stand.
+    box('ohSofa',.2,1.6,...lat(ws,i,.42),B,.25); box('ohSofa',.2,1.6,...lat(ws,i,.2),B+.25,.3);
+    box('ohTape',1.1,1.3,...lat(ws,.55,.72),B,.45);
+    // Window carton pyramid in the front corner, clear of the door landing.
+    const pv=other>=.9?lat(-ws,i,.85):[ws>0?db+.1:da-.85,ws>0?db+.85:da-.1];
+    const pc=(pv[0]+pv[1])/2;
+    for(const [k,r,y,h] of [[0,.37,B,.32],[1,.27,B+.32,.26],[2,.16,B+.58,.22]])
+      box(k===2?'ohTape':'ohCrate',.475-r,.475+r,pc-r,pc+r,y,h);
+  }
+  staffDoorWall(o, H, material, nx, nz, x, z, w, d) {
+    const center = nx ? z : x;
+    const length = nx ? d : w;
+    const door = nx ? o.staffDoor.y : o.staffDoor.x;
+    for (const [start, end] of [[center-length/2, door], [door+1, center+length/2]]) {
+      const span = end - start;
+      if (span <= 0) continue;
+      const mid = (start + end) / 2;
+      const px = nx ? x : mid, pz = nx ? mid : z;
+      const width = nx ? w : span, depth = nx ? span : d;
+      this.part(o, 'ohWall', px, H/2, pz, width, H, depth, { nx, nz, wall:true, material });
+      this.part(o, 'ohTrim', px, H+.025, pz, width+.025, .05, depth+.025, { nx, nz, cap:true, H });
+    }
   }
   update() {
     const r=this.r, dx=r.camera.position.x-r.center.x, dz=r.camera.position.z-r.center.z;

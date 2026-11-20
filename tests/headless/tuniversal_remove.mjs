@@ -63,9 +63,8 @@ test('occupied/reserved, unfinished work, active tasks/users and stale property 
  for(const mutate of [(s,u)=>s.s.cash--,(s,u)=>u.cond=.1,(s,u)=>{const id=s.id();s.s.objects[id]={id,type:'unitLight',x:u.x,y:u.y,cstate:'operating',mount:{host:u.id}};}]){const s=fresh(),u=build(s,args('du5x5',25,15))[0],q=s.placeableRemoval(u.id);mutate(s,u);const before=snap(s);assert.equal(s.dispatch({type:'remove',target:u.id,stamp:q.stamp}).ok,false);assert.equal(snap(s),before);}
  const s=fresh(),u=build(s,args('du5x5',25,15))[0],q=s.placeableRemoval(u.id),other=new Sim(structuredClone(s.s));assert.equal(other.dispatch({type:'remove',target:u.id,stamp:q.stamp}).ok,false);
 });
-test('Maple entrance/ground loss is blocked while original new-build placement defect stays separate',()=>{
+test('Maple entrance and ground removal protect customer access',()=>{
  let s=makeMaple();deny(s,s.objs('door')[0].id,/access/);deny(s,{kind:'surface',x:20,y:13,f:0,layer:'ground'},/access/);
- const p=s.plan(args('du5x5',20,13,undefined,{rotation:0}));assert.notEqual(p.status,'invalid');assert.ok(!p.warn?.some(w=>/retained|cut off/.test(w)),'placement workstream remains unchanged');
 });
 test('empty-site close-and-remove preserves expenses/debt and normal reopen rules',()=>{
  const s=fresh(),o=build(s,args('office',28,10,undefined,{rotation:0}))[0];s.s.open=true;const loan=JSON.stringify(s.s.loan),staff=JSON.stringify(s.s.staff);const q=remove(s,o.id);assert.equal(q.mutation.closeProperty,true);assert.equal(s.s.open,false);assert.equal(JSON.stringify(s.s.loan),loan);assert.equal(JSON.stringify(s.s.staff),staff);assert.equal(s.dispatch({type:'open'}).ok,false);

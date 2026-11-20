@@ -3,7 +3,8 @@ import { portfolioCareer } from './career.js';
 import { FINANCIAL_MINUTE } from './finance.js';
 import { Sim, fmtTime } from './sim.js';
 import { TICKS_PER_SEC_1X, TIERS } from './data.js';
-import { makeMaple, makeEmptyLot } from './maple.js';
+import { MAPLE_PUBLIC } from './mapleaccess.js';
+import { makeMaple, makePublicMaple, makeEmptyLot } from './maple.js';
 import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from './scenarios.js';
 export { modeLabel };
 import { MARKETS, MIN_PER_DAY, ROLES } from './data.js';
@@ -13,8 +14,8 @@ import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
 import { cloud } from './cloud.js';
-import { localsave } from './localsave.js';
-import { durablesave, checkpointRecord, recoverCheckpoints } from './durablesave.js';
+import { localsave, claimCheckpointWriter, createExitJournal, exitJournalRecords } from './localsave.js';
+import { createDurableSave, checkpointRecord, recoverCheckpoints, recoverExitJournal } from './durablesave.js';
 import { savearchive } from './savearchive.js';
 import { BUILD } from './version.js';
 import { installShowcase } from './showcase.js';
@@ -33,10 +34,10 @@ const canvas = document.getElementById('view');
 const game = {
   sim: null, rend: null, ui: null, audio: new Audio(), showFps: false, acc: 0,
   company: null,
-  durable: typeof durablesave === 'undefined' ? null : durablesave,
+  durable: null,
   beginSaveSession(replace = true) {
     this.saveSeq = (this.saveSeq || 0) + 1; this.saving = false;
-    if (replace) return this.durable?.replace();
+    if (replace && !this.saveWriterError) return this.durable?.replace();
   },
   newGame(kind, opts) {
     this.beginSaveSession();
@@ -44,6 +45,7 @@ const game = {
     if (kind && kind.startsWith('sc:')) { sim = makeScenario(kind.slice(3)); name = SCENARIOS[kind.slice(3)].name; }
     else if (kind === 'custom') { sim = makeSandbox(opts); name = sandboxName(sim.s); }
     else if (kind === 'empty' || kind === 'creative') { sim = makeSandbox({ kind: kind === 'creative' ? 'free' : 'business' }); name = kind === 'creative' ? 'Free Build Lot' : 'Empty Lot'; sim.s.sb.name = name; } // quick starts (menu, tests)
+    else if (kind === 'maple-public') { sim = makePublicMaple(); name = 'Maple Street Storage'; }
     else if (kind === 'maple') { sim = makeMaple(); name = 'Maple Street Storage'; }
     else { sim = makeEmptyLot({ creative: kind === 'creative' }); name = kind === 'creative' ? 'Creative Lot' : 'Empty Lot'; }
     this.company = { props: [{ name, sim }], active: 0, feed: [] };
@@ -139,7 +141,8 @@ const game = {
     this.lastCam = opts.cam || null;
     if (opts.cam) this.rend.applyCamState(opts.cam); // a restored player camera replaces the default framing and the phone re-fit
     else {
-    this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));
+    if(sim.s.layout===MAPLE_PUBLIC) this.rend.lookAt(14,23);
+    else this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));
     this.rend.zoom = (sim.s.mode === 'tutorial' ? 1.05 : 0.95) * (window.innerWidth < 600 ? 0.8 : 1); this.rend.updateCamera();
     if (this.ui && this.ui.phone()) {
       // The delayed re-fit repeats the opening framing so the settled phone layout does not undo it.
@@ -160,13 +163,15 @@ const game = {
   },
   saveJSON() {
     const C = this.company, view = this.ui && this.rend ? this.rend.view : null;
+    const states = C && C.props.length > 0 ? C.props.map(p => p.sim.s) : [this.sim.s];
+    if (states.some(s => s.saveGeneration !== Sim.saveGeneration)) throw new Error('FS-01 cannot export an unsupported save generation');
     // The selected floor/exterior view and the player camera ride beside (not inside) the simulation state.
     // Tour, follow, attract and photo cameras are not the player's: keep the last player-owned camera instead.
     const sc = this.showcase, transient = !!(sc && (sc.photo || sc.mode));
     if (view != null && this.rend.camState && !transient) this.lastCam = this.rend.camState();
     const cam = view != null ? this.lastCam || null : null;
     const own = (s) => view == null || s !== this.sim.s ? s : cam ? { ...s, uiView: view, uiCam: cam } : { ...s, uiView: view };
-    return C && C.props.length > 0 ? JSON.stringify({ company: 1, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));
+    return C && C.props.length > 0 ? JSON.stringify({ company: 1, saveGeneration: Sim.saveGeneration, active: C.active, feed: C.feed, props: C.props.map((p) => ({ name: p.name, s: own(p.sim.s) })) }) : JSON.stringify(own(this.sim.s));
   },
   rawSaveCode(json) { return 'SST0.' + btoa(unescape(encodeURIComponent(json))); },
   async saveCode(json = this.saveJSON()) {
@@ -187,6 +192,8 @@ const game = {
     try {
       const st = sanitizeSave(JSON.parse(await this.decodeSave(code)));
       if (!st || typeof st !== 'object') return { ok: false, msg: 'Not a save' };
+      // Validate every property before ANY incoming constructor/migration or session replacement.
+      if (!sameSaveGeneration(st)) return { ok: false, reason: 'save-generation', msg: 'This save belongs to a different or unsupported generation. Keep it unchanged and open legacy saves in retained Build 5ce4cfa.' };
       let company, view, cam;
       if (st.company && Array.isArray(st.props) && st.props.length) {
         if (st.props.length > 12 || !st.props.every((p) => p && typeof p.name === 'string' && validState(p.s)) || !Number.isInteger(st.active ?? 0) || (st.active ?? 0) < 0 || (st.active ?? 0) >= st.props.length || (st.feed != null && !Array.isArray(st.feed))) return { ok: false, msg: 'Invalid portfolio save' };
@@ -210,10 +217,14 @@ const game = {
     this.company = prep.company;
     this.attach(prep.company.props[prep.company.active].sim, 'load', { view: prep.view, cam: prep.cam }); this.ui.title = false; return true;
   },
-  async loadCode(code, resume = false) { const prep = await this.prepareLoad(code); return prep.ok ? this.applyLoad(prep, resume) : false; },
+  async loadCode(code, resume = false, isCurrent) {
+    const prep = await this.prepareLoad(code);
+    if (!prep.ok || (isCurrent && !await isCurrent())) return false;
+    return this.applyLoad(prep, resume);
+  },
   saveMeta() {
     const C = this.company, s = this.sim.s, p = C && C.props[C.active];
-    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name };
+    return { name: p ? p.name : 'Property', mode: modeLabel(s), day: this.sim.day, time: fmtTime(s.t), cash: Math.round(s.cash), props: C ? C.props.length : 1, build: BUILD.name, saveGeneration: Sim.saveGeneration };
   },
   // Paused actions cannot wait for the running-time timer or an unload event.
   // Reuse the synchronous leaving path, including its stale-compression fence.
@@ -223,6 +234,7 @@ const game = {
   // autosave: during active play (including Pause); `hide` writes locally synchronously and uses a keepalive request
   async autosave(hide) {
     if (!this.ui || this.ui.title || (this.saving && !hide)) return false;
+    if (this.saveWriterError) { this.ui.renderSaveStatus?.(); return false; }
     const seq = this.saveSeq = (this.saveSeq || 0) + 1;
     const company = this.company, sim = this.sim;
     // Capture both before compression yields. Leaving must reach local storage synchronously.
@@ -233,6 +245,17 @@ const game = {
     try {
       const code = hide ? this.rawSaveCode(json) : await this.saveCode(json);
       if (seq !== this.saveSeq || company !== this.company) return false;
+      if (this.exitJournal) {
+        const record = { code, meta, at: Math.floor(ticket.atMs / 1000), v: 1 };
+        if (hide && this.durable.ok) this.exitJournal.stage(record, ticket, this.durable.snapshot?.control);
+        const result = await this.durable.put(record, ticket);
+        if (result.conflict) {
+          this.saveWriterError = result.reason;
+          this.exitJournal.retire();
+          this.ui.renderSaveStatus?.();
+        } else if (result.ok && seq === this.saveSeq) this.exitJournal.retire();
+        return result.ok && !result.stale && seq === this.saveSeq;
+      }
       const local = localsave.put(code, meta, ticket);
       const committed = this.durable ? this.durable.put({ code, meta, at: Math.floor(ticket.atMs / 1000), v: 1 }, ticket) : Promise.resolve({ ok: false });
       if (hide) { if (cloud.ok !== false || !local) cloud.beacon(code, meta); return (await committed).ok || local; }
@@ -263,14 +286,14 @@ const game = {
   // What would become the "previous game" if the running (or last autosaved) game were replaced now.
   async outgoingRecord(fallback) {
     if (this.playing()) { const meta = this.saveMeta(), json = this.saveJSON(); return { code: await this.saveCode(json), meta, at: Math.floor(Date.now() / 1000) }; }
-    const L = localsave.get(); return L.main || fallback || null;
+    const L = localsave.get(); return (this.exitJournal ? fallback : L.main || fallback) || null;
   },
-  outgoingMeta(fallback) { if (this.playing()) return this.saveMeta(); const L = localsave.get(); const r = L.main || fallback; return r ? r.meta : null; },
+  outgoingMeta(fallback) { if (this.playing()) return this.saveMeta(); const L = localsave.get(); const r = this.exitJournal ? fallback : L.main || fallback; return r ? r.meta : null; },
   savearchive,
   modeLabel,
   playing() { return this.sim !== this.demo && this.ui && !this.ui.title; },
   async saveFile() {
-    const code = await this.saveCode(); const fname = `storage-floor-numbering-v1-day${Math.floor(this.sim.s.t / 1440) + 1}.sst`;
+    const code = await this.saveCode(); const fname = `sst-fresh-1-day${Math.floor(this.sim.s.t / 1440) + 1}.sst`;
     try { // iPhone: the share sheet offers "Save to Files", which a download link does not do reliably
       const f = new File([code], fname, { type: 'text/plain' });
       if (navigator.canShare && navigator.share && navigator.canShare({ files: [f] }) && matchMedia('(pointer: coarse)').matches) { await navigator.share({ files: [f], title: 'Self Storage Tycoon save' }); return; }
@@ -348,6 +371,11 @@ function validCam(s) {
 }
 // Scenario goal comparison ('<' = "under"). Text sanitizing used to strip it to '', which turned Go Vertical's
 // "elevator wait under 10 min" into "at least 10 min" after a reload; '' only ever comes from that damage.
+function sameSaveGeneration(st) {
+  if (st.saveGeneration !== Sim.saveGeneration) return false;
+  if (!st.company) return true;
+  return Array.isArray(st.props) && st.props.length > 0 && st.props.every(p => p?.s?.saveGeneration === Sim.saveGeneration);
+}
 function goalCmp(v) { return v === '<' || v === '' ? '<' : undefined; }
 function sanitizeSave(v, depth = 0) {
   if (depth > 40) return null;
@@ -485,23 +513,70 @@ window.addEventListener('pagehide', () => { game.ui.reserveWait?.interrupt('Page
 // Offer Continue only after checking durable and legacy records. No late server result may replace an active game.
 game.localsave = localsave; game.BUILD = BUILD;
 game.saveStartup = true; game.ui.showTitle();
-durablesave.onChange = () => game.ui.renderSaveStatus?.();
 localsave.onClear = () => game.beginSaveSession();
 game.startupReady = (async () => {
+  const claim = await claimCheckpointWriter();
+  game.saveWriterError = claim || '';
+  if (claim === null) game.exitJournal = createExitJournal();
+  localsave.canClear = () => !game.saveWriterError;
+  localsave.clearShared = !game.exitJournal;
+  const durablesave = game.durable = createDurableSave(undefined, game.exitJournal?.writer);
+  durablesave.onChange = () => game.ui.renderSaveStatus?.();
   await durablesave.ready;
-  const L = localsave.get(), D = durablesave.snapshot;
-  durablesave.observe([L.main, L.backup]);
+  const initialSession = game.saveSeq;
+  const sameSession = () => game.ui.title && game.saveSeq === initialSession;
+  const titleVisible = () => !!game.ui.root.querySelector('#modal > .title');
+  const select = (snapshot, remote, clean = false) => {
+    const local = localsave.get(), control = snapshot?.control;
+    const journal = recoverExitJournal(exitJournalRecords(clean ? control : undefined), control, local.main);
+    const pick = (record, src) => checkpointRecord(record) && durablesave.allows(record, control)
+      ? { ...record, src } : null;
+    const records = [pick(snapshot?.main, 'durable'), pick(journal, 'browser'), pick(local.main, 'browser'),
+      pick(remote, 'server'), pick(snapshot?.backup, 'backup'), pick(local.backup, 'backup')];
+    return { records, local, journal };
+  };
+  const recover = selection => recoverCheckpoints(selection.records, code => game.prepareLoad(code));
+  const offer = (selection, recovered, check) => {
+    game.ui.contSave = recovered.main; game.ui.contBackup = recovered.backup;
+    game.ui.contRecovery = recovered.damaged ? 'The latest autosave could not be read, so an earlier valid save was used. ' : '';
+    game.ui.contLateCheck = check;
+    durablesave.observe([selection.local.main, selection.local.backup, selection.journal]);
+    durablesave.accept(recovered.main);
+  };
   let timer;
   const remote = await Promise.race([cloud.get(), new Promise(resolve => { timer = setTimeout(() => resolve(null), 2000); })]);
   clearTimeout(timer);
-  const pick = (record, src) => checkpointRecord(record) && durablesave.allows(record) ? { ...record, src } : null;
-  const candidates = [pick(D?.main, 'durable'), pick(L.main, 'browser'), pick(remote, 'server'), pick(D?.backup, 'backup'), pick(L.backup, 'backup')].filter(Boolean);
-  const recovered = await recoverCheckpoints(candidates, code => game.prepareLoad(code));
-  game.ui.contSave = recovered.main; game.ui.contBackup = recovered.backup;
-  game.ui.contRecovery = recovered.damaged ? 'The latest autosave could not be read, so an earlier valid save was used. ' : '';
-  durablesave.accept(recovered.main);
+  const initial = select(durablesave.snapshot, remote, true);
+  const recovered = await recover(initial);
+  if (sameSession()) offer(initial, recovered);
   game.saveStartup = false;
-  if (game.ui.title) game.ui.showTitle();
+  if (sameSession() && titleVisible()) game.ui.showTitle();
+
+  if (durablesave.ok) return;
+  game.lateStartupRecovery = (async () => {
+    // Startup already released the title. A late open may refresh it, but may
+    // not rebase the writer or replace any game the player has since started.
+    await durablesave.lateOpen;
+    if (!sameSession()) return;
+    const signature = (snapshot, selection) => JSON.stringify([snapshot.control, selection.records]);
+    try {
+      const snapshot = await durablesave.readRecovery();
+      const selection = select(snapshot, remote);
+      const late = await recover(selection);
+      const expected = signature(snapshot, selection);
+      const stillCurrent = async () => {
+        if (!sameSession()) return false;
+        try {
+          const fresh = await durablesave.readRecovery();
+          return sameSession() && expected === signature(fresh, select(fresh, remote));
+        } catch { return false; }
+      };
+      if (!await stillCurrent() || !sameSession()) return;
+      durablesave.adoptRecovery(snapshot);
+      offer(selection, late, async () => titleVisible() && await stillCurrent() && titleVisible());
+      if (titleVisible()) game.ui.showTitle();
+    } catch { /* Keep the title usable if the late database read fails. */ }
+  })();
 })();
 
 // ---------------------------------------------------------------- input

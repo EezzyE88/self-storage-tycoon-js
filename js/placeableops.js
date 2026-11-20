@@ -1,3 +1,4 @@
+import { recessed, publicDrive } from './mapleaccess.js';
 import { analyzeRemoval } from './removal.js';
 import { gateQueue, gateServing, unregisterGateAccess } from './gateaccess.js';
 
@@ -19,7 +20,7 @@ function gateRemovalAccess(sim, gate) {
   const after = new sim.constructor(state);
   const alternatives = (state.gateAccess?.gateIds || []).filter(id => {
     const g = state.objects[id], c = after.gateConnection(id), p = state.parcel;
-    return after.gateStatus(id) === 'operating' && c?.kind === 'front-street' && c.boundary === 'front' && g.y === p.y1 && g.x-1 >= p.x0 && g.x+1 <= p.x1 && !!after.vehicleReachForGate(id)[after.idx(g.x,g.y)];
+    return after.gateStatus(id) === 'operating' && after.connectedGate(g,c) && (recessed(state,g) || g.y === p.y1) && g.x-1 >= p.x0 && g.x+1 <= p.x1 && !!after.vehicleReachForGate(id)[after.idx(g.x,g.y)];
   });
   const customers = s.agents.filter(a => a.kind === 'cust');
   const obligations = s.open || Object.keys(s.leases).length > 0 || customers.length > 0 || s.visits.length > 0 || s.orders.some(order => order.st === 'construction') || Object.values(s.objects).some(o => o.type === 'unit' && (o.lease || ['occupied','reserved'].includes(o.commercial)));
@@ -44,7 +45,7 @@ function gateRemovalAccess(sim, gate) {
   }
   // Retain paths, not just destinations: another gate’s traffic must not lose a crossing.
   for (const v of s.vehicles) {
-    const agent = s.agents.find(a => a.veh === v.id), gid = agent?.gateId ?? null;
+    const agent = s.agents.find(a => a.veh === v.id), gid = agent?.publicVisit ? publicDrive : agent?.gateId ?? null;
     const path = (v.path || []).slice(Math.max(0,(v.pi || 0)-1));
     const near = v.moving && Math.abs(v.x-(gate.x+.5)) < 2.2 && Math.abs(v.y-(gate.y+1)) < 1.8;
     if (near || path.some((n,i) => i && !after.vehNbr(path[i-1],gid).includes(n))) {

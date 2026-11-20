@@ -1,4 +1,6 @@
+import { MAPLE_PUBLIC, accessState, lostMapleAccess, publicDrive, publicBay, pocket, pedestrianEdge, vehicleEdge, recessed, staffLanding } from './mapleaccess.js';
 import { applyRemovalState } from './removal.js';
+import { SAVE_GENERATION } from './savegeneration.js';
 import { addUpgrades, attachmentCoverage, upgradeStamp, upgradePower, retrofitPlan, mountedOn, mountFor } from './unitupgrades.js';
 import { freshNumbering, normalizeNumbering, numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';
 import { normalizeRescueOperation, chooseRescuePricing, recordRescueLease } from './rescueoperations.js';
@@ -24,6 +26,7 @@ import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, ou
 import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';
 import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
 import { ensureCustomerAccounts, customerHistory, returningAccount } from './customeraccounts.js';
+import { normalizeSupplies, sellAtCounter } from './supplies.js';
 import { recoverMoveOut, noteMoveOutJob, moveOutClaimed, startMoveOut, leaveMoveOut, finishMoveOut } from './moveout.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -40,7 +43,7 @@ export const dayOf = (t) => Math.floor(t / MIN_PER_DAY) + 1;
 export function newState({ mode = 'tutorial', creative = false, seed = 1234, market = 'maple', W = 44, H = 34 } = {}) {
   const WH = W * H;
   const s = {
-    v: 1, mode, creative, seed, rngS: seed >>> 0, W, H,
+    v: 1, saveGeneration: SAVE_GENERATION, mode, creative, seed, rngS: seed >>> 0, W, H,
     parcel: { x0: 2, y0: 2, x1: W - 3, y1: H - 5 },
     t: 7 * 60, speed: 0,
     cash: mode === 'tutorial' ? 26000 : 60000,
@@ -55,7 +58,8 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, debt: [], auction: null, mgrLog: [],
     thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [], ad: null, adHistory: [] },
     milestones: {}, tut: { on: mode === 'tutorial', beat: 0, flags: {}, done: false },
-    open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true },
+    open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true, supplies: true },
+    supplies: { v: 1, n: 0, sold: 0, revenue: 0, cost: 0, log: [] },
     weather: 'fair', nextId: 1, structV: 1, unitNumbering: freshNumbering(), unitRoles: {},
     lastCommit: null,
   };
@@ -80,7 +84,13 @@ const M_open_comps = (sim) => sim.openComps().length > 0;
 function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, marketing: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }
 
 // ---------------------------------------------------------------- Sim
+function hasExteriorFootprint(o) {
+  return o.type === 'shell' || o.type === 'office' || o.type === 'hvac' ||
+    o.type === 'power' || o.type === 'water' || (o.type === 'unit' && o.access === 'drive');
+}
+
 export class Sim {
+  static saveGeneration = SAVE_GENERATION;
   constructor(state) {
     this.s = state; this.events = []; this.D = null; this.dirty = true;
     ensureCustomerAccounts(state);
@@ -92,6 +102,7 @@ export class Sim {
     state.mgrLog ||= []; state.debt ||= []; if (state.auction === undefined) state.auction = null;
     const P = state.policies; if (P.lateFee == null) P.lateFee = 20; if (P.autoNotice == null) P.autoNotice = false; if (!P.resolution) P.resolution = 'auction'; if (P.retention == null) P.retention = true; if (P.overlock == null) P.overlock = true;
     for (const L of Object.values(state.leases || {})) { if (L.fees == null) L.fees = 0; }
+    normalizeSupplies(state); // older saves: sales on from the next counter lease; nothing retroactive
     // saves from before Round 11 (no market state) used the 12-part tutorial; move them to the matching part of the 8-part one
     if (!state.mkt && state.tut && state.tut.on && !state.tut.done && state.tut.beat > 4) {
       state.tut.beat = [0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 7][Math.min(11, state.tut.beat)] ?? 7; state.tut.entered = false; state.tut.migrated = 11;
@@ -147,11 +158,15 @@ export class Sim {
   gateServing(id = primaryGateId(this.s)) { return gateServing(this.s, id); }
   gateConnection(id = primaryGateId(this.s)) { return gateConnection(this.s, id); }
   gateStatus(id = primaryGateId(this.s)) { return gateStatus(this.s, id); }
+  connectedGate(g,c) {
+    return recessed(this.s,g) ? c?.kind==='maple-yard' : c?.kind==='front-street' && c.boundary==='front';
+  }
+  gateApproach(g) { return this.idx(g.x, recessed(this.s,g) ? g.y+1 : this.s.parcel.y1+1); }
   routeGateIds() {
     const s = this.s, ids = s.gateAccess?.gateIds || [];
     const connected = ids.filter((id) => {
       const g = s.objects[id], c = gateConnection(s, id);
-      return !!g && g.type === 'gate' && g.cstate === 'operating' && c?.kind === 'front-street' && c.boundary === 'front';
+      return !!g && g.type === 'gate' && g.cstate === 'operating' && this.connectedGate(g,c);
     });
     const healthy = connected.filter((id) => gateStatus(s, id) === 'operating');
     if (healthy.length) return healthy;
@@ -178,6 +193,7 @@ export class Sim {
       return false;
     }
     if (visit.kind === 'prospect') {
+      if (s.layout === MAPLE_PUBLIC) return !!accessState(this).parking;
       const office = this.objs('office')[0]; if (!office) return false;
       const d = this.distField([this.idx(office.door.x, office.door.y)], (n) => this.pedNbr(n));
       for (let i = 0; i < s.ground.length; i++) if (reach[i] && d.has(i) && (s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT)) return true;
@@ -186,9 +202,9 @@ export class Sim {
     return true;
   }
   selectGateForTrip(start, visit = null) {
-    const p = this.s.parcel, ids = this.routeGateIds(), rows = [];
+    const ids = this.routeGateIds(), rows = [];
     for (const id of ids) {
-      const g = this.s.objects[id], approach = this.idx(g.x, p.y1 + 1), inside = this.idx(g.x, p.y1);
+      const g = this.s.objects[id], approach = this.gateApproach(g), inside = this.idx(g.x, g.y);
       const path = this.bfs([start], (n) => n === approach, (n) => this.vehNbr(n, id));
       if (!path || !this.vehicleReachForGate(id)[inside] || (ids.length > 1 && !this.gateCanServeVisit(id, visit))) continue;
       rows.push({ id, n: path.length });
@@ -197,13 +213,13 @@ export class Sim {
     return rows[0]?.id ?? null;
   }
   queuedGateAlternate(ag, veh) {
-    const s = this.s, p = s.parcel, start = this.idx(Math.floor(veh.x), Math.floor(veh.y)), rows = [];
+    const s = this.s, start = this.idx(Math.floor(veh.x), Math.floor(veh.y)), rows = [];
     const visit = { kind: ag.vt, tenant: ag.tenant, unit: ag.unit, size: ag.size, climate: ag.climate, keen: ag.keen, ad: ag.ad };
     for (const id of s.gateAccess?.gateIds || []) {
       if (id === ag.gateId || gateStatus(s, id) !== 'operating') continue;
       const g = s.objects[id], c = gateConnection(s, id);
-      if (!g || g.type !== 'gate' || g.cstate !== 'operating' || c?.kind !== 'front-street' || c.boundary !== 'front') continue;
-      const approach = this.idx(g.x, p.y1 + 1), inside = this.idx(g.x, p.y1);
+      if (!g || g.type !== 'gate' || g.cstate !== 'operating' || !this.connectedGate(g,c)) continue;
+      const approach = this.gateApproach(g), inside = this.idx(g.x, g.y);
       const path = this.bfs([start], (n) => n === approach, (n) => this.vehNbr(n, id));
       if (!path || !this.vehicleReachForGate(id)[inside] || !this.gateCanServeVisit(id, visit)) continue;
       rows.push({ id, path, n: path.length });
@@ -257,7 +273,7 @@ export class Sim {
   }
 
   // ============================================================ DERIVED CACHES
-  rebuild() {
+  rebuild(previewSolids = []) {
     const s = this.s, W = s.W, H = s.H, WH = W * H, layers = Type => Array.from({length:floorCount(s)},()=>new Type(WH));
     const D = {
       byType: {}, shellAt: new Int32Array(WH), solid: new Uint8Array(WH), unitAt: layers(Int32Array),
@@ -277,14 +293,14 @@ export class Sim {
         for (let y = o.y; y < o.y + o.h; y++) for (let x = o.x; x < o.x + o.w; x++) {
           const i = this.idx(x, y); addAt(i);
           if (o.type === 'unit') D.unitAt[f][i] = o.id;
-          if (o.type !== 'unit' || o.access === 'drive') D.solid[i] = 1;
+          if (hasExteriorFootprint(o)) D.solid[i] = 1;
         }
       } else if (o.type === 'restroom') {
         const i = this.idx(o.x, o.y); addAt(i); D.roomAt[f][i] = o.id;
       } else if (o.type === 'canopy') {
         for (let y = o.y; y < o.y + o.h; y++) for (let x = o.x; x < o.x + o.w; x++) addAt(this.idx(x, y));
       } else if (o.type === 'gate') {
-        for (let x = o.x - 1; x <= o.x + 1; x++) addAt(this.idx(x, o.y));
+        for (let x = recessed(s,o) ? 18 : o.x-1; x <= o.x+1; x++) addAt(this.idx(x, o.y));
       } else addAt(this.idx(o.x, o.y));
     }
     for (const o of this.objs('stairs')) { D.stairAt[this.idx(o.x, o.y)] = o.id; for (const f of served(this,o)) { const k = f * WH + this.idx(o.x, o.y); if (!D.at.has(k)) D.at.set(k, []); if (!D.at.get(k).includes(o.id)) D.at.get(k).push(o.id); } }
@@ -297,6 +313,7 @@ export class Sim {
     }
     // pending ground from active orders (for validation + display)
     for (const ord of s.orders) if (ord.st === 'construction') for (const tl of ord.tiles) if (tl.k === 'ground') D.pendingGround.set(tl.i, tl.v);
+    for (const i of previewSolids) D.solid[i] = 1;
     // walkability
     const p = s.parcel;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -306,6 +323,26 @@ export class Sim {
         if (shell.cstate !== 'operating') continue;
         for (let f = 0; f < shell.floors; f++) if (s.hall[f][i] === 1 || (D.elevAt[i] && this.obj(D.elevAt[i]).cstate === 'operating' && served(this,this.obj(D.elevAt[i])).includes(f)) || (D.stairAt[i] && this.obj(D.stairAt[i]).cstate === 'operating' && served(this,this.obj(D.stairAt[i])).includes(f))) D.walk[f][i] = 1;
       } else if (y <= p.y1 + 1 && PED_GROUND.has(s.ground[i]) && !D.solid[i]) D.walk[0][i] = 1;
+    }
+    if (s.layout === MAPLE_PUBLIC) {
+      D.staffGate = this.objs('gate').find(g => recessed(s,g) && g.cstate === 'operating');
+      const office = this.objs('office').find(o => o.staffDoor && o.cstate === 'operating');
+      if (office) {
+        // Join the two real door landings through the office, one grid step at a time.
+        D.staffPassage = new Map();
+        let {x,y} = office.door;
+        const rear = office.staffDoor;
+        const link = (nx,ny) => {
+          const a = this.idx(x,y), b = this.idx(nx,ny);
+          for (const [from,to] of [[a,b],[b,a]]) {
+            if (!D.staffPassage.has(from)) D.staffPassage.set(from,[]);
+            D.staffPassage.get(from).push(to);
+          }
+          x=nx; y=ny;
+        };
+        while (x !== rear.x) link(x + Math.sign(rear.x-x),y);
+        while (y !== rear.y) link(x,y + Math.sign(rear.y-y));
+      }
     }
     // lighting + camera coverage
     for (const L of this.objs('light')) {
@@ -384,19 +421,29 @@ export class Sim {
     const k = tool === 'doorAuto' ? 'doorAuto' : tool === 'keypad' ? 'keypad' : POWER.load[tool] != null ? tool : null;
     return k ? POWER.load[k] * count : 0;
   }
-  accessImpact(apply) { // how many open units would lose customer access if `apply` happened (preview only)
+  accessImpact({ ground = [], solids = [] }) { // count currently open units cut off by the proposed layout
     this.ensure();
     const units = this.objs('unit');
     const snap = units.map((u) => [u, u.cstate, u.missing, u.blocked, u.conv, u.dist, u.accessHold]);
     const before = new Set(units.filter((u) => u.cstate === 'operating' && !u.blocked).map((u) => u.id));
+    if (!before.size) return 0;
     const evLen = this.events.length;
+    const oldGround = ground.map(t => [t.i, this.s.ground[t.i]]);
     this.previewing = true;
-    const restore = apply(); this.rebuild();
-    const lost = this.objs('unit').filter((u) => before.has(u.id) && u.blocked);
-    restore(); this.rebuild(); this.previewing = false;
-    for (const [u, c, m, b, cv, d, hd] of snap) { u.cstate = c; u.missing = m; u.blocked = b; u.conv = cv; u.dist = d; if (hd == null) delete u.accessHold; else u.accessHold = hd; }
-    this.events.length = evLen;
-    return lost.length;
+    try {
+      for (const t of ground) this.s.ground[t.i] = t.v;
+      this.rebuild(solids);
+      return units.filter(u => before.has(u.id) && u.blocked).length;
+    } finally {
+      for (const [i, value] of oldGround) this.s.ground[i] = value;
+      this.rebuild();
+      this.previewing = false;
+      for (const [u, c, m, b, cv, d, hd] of snap) {
+        u.cstate = c; u.missing = m; u.blocked = b; u.conv = cv; u.dist = d;
+        if (hd == null) delete u.accessHold; else u.accessHold = hd;
+      }
+      this.events.length = evLen;
+    }
   }
   markDirty() { this.dirty = true; this.s.structV++; }
   ensure() { if (this.dirty) this.rebuild(); }
@@ -408,7 +455,9 @@ export class Sim {
       const nx = x + dx, ny = y + dy; if (!this.inb(nx, ny)) continue;
       const j = this.idx(nx, ny);
       if (!VEH_GROUND.has(s.ground[j]) || D.solid[j]) continue;
-      if ((y === p.y1 && ny === p.y1 + 1) || (y === p.y1 + 1 && ny === p.y1)) {
+      if (s.layout === MAPLE_PUBLIC) {
+        if (!vehicleEdge(this,x,y,nx,ny,gateId)) continue;
+      } else if ((y === p.y1 && ny === p.y1 + 1) || (y === p.y1 + 1 && ny === p.y1)) {
         const ids = gateId == null ? this.routeGateIds() : [gateId];
         if (!ids.some((id) => { const g = s.objects[id]; return g && Math.abs(nx - g.x) <= 1; })) continue;
       }
@@ -418,14 +467,20 @@ export class Sim {
     return out;
   }
   // pedestrian graph node = f*WH + i
-  pedNbr(n) {
+  pedNbr(n, actor = null) {
     const s = this.s, W = s.W, WH = W * s.H, D = this.D, out = [];
     const f = (n / WH) | 0, i = n % WH, x = i % W, y = (i / W) | 0;
+    const staff = f === 0 && s.layout === MAPLE_PUBLIC && actor?.kind === 'staff';
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy; if (!this.inb(nx, ny)) continue;
       const j = this.idx(nx, ny);
-      if (!D.walk[f][j]) continue;
-      if (ny > s.parcel.y1 || y > s.parcel.y1) continue; // fence
+      if (staff && D.staffPassage?.get(i)?.includes(j) && (D.solid[j] || D.walk[0][j])) {
+        out.push(j); continue;
+      }
+      if (!D.walk[f][j] || (staff && D.solid[i] && D.staffPassage?.has(i))) continue;
+      if (s.layout === MAPLE_PUBLIC && f===0) {
+        if (!pedestrianEdge(x,y,nx,ny,staff ? !!D.staffGate : null)) continue;
+      } else if (ny > s.parcel.y1 || y > s.parcel.y1) continue; // fence
       const sa = D.shellAt[i], sb = D.shellAt[j];
       if (sa !== sb) { if (f > 0) continue; if (!D.doorEdge.has(Math.min(i, j) + ',' + Math.max(i, j))) continue; }
       out.push(f * WH + j);
@@ -453,7 +508,7 @@ export class Sim {
     let h = 0; while (h < q.length) { const n = q[h++]; const d = dist.get(n); for (const m of nbr(n)) if (!dist.has(m)) { dist.set(m, d + 1); q.push(m); } }
     return dist;
   }
-  pedPath(fromNode, toNode) { return this.bfs([fromNode], (n) => n === toNode, (n) => this.pedNbr(n)); }
+  pedPath(fromNode, toNode, actor = null) { return this.bfs([fromNode], (n) => n === toNode, (n) => this.pedNbr(n,actor)); }
   node(f, x, y) { return f * this.s.W * this.s.H + this.idx(x, y); }
   unnode(n) { const WH = this.s.W * this.s.H, f = (n / WH) | 0, i = n % WH; return { f, x: i % this.s.W, y: (i / this.s.W) | 0, i }; }
 
@@ -478,7 +533,7 @@ export class Sim {
     D.dAccess = dAccess;
     // an office whose door faces grass swings its entrance to a side customers can actually reach
     for (const of of this.previewing ? [] : this.objs('office')) {
-      if (of.cstate !== 'operating' || !of.door) continue;
+      if (of.staffDoor || of.cstate !== 'operating' || !of.door) continue;
       const di = this.idx(of.door.x, of.door.y); if (D.vehReach[di] || dAccess.has(di)) continue;
       let best = null;
       for (const d of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
@@ -565,9 +620,34 @@ export class Sim {
     const at = D.at.get(f * this.s.W * this.s.H + i) || [];
     return !at.some((id) => { const t = this.s.objects[id].type; return t === 'hvac' || t === 'office' || t === 'unit'; });
   }
-  plan(a) { // wraps planCore with utility-capacity consequences (GDD §22, §63.5)
+  plan(a) { // Validate the whole footprint before quoting utility capacity.
     const R = a.tool==='unitRetrofit' ? retrofitPlan(this,a) : this.planCore(a);
-    if (!R || R.status === 'invalid' || !this.D.power) return R;
+    if (!R || R.status === 'invalid') return R;
+    const solids = [];
+    for (const object of R.creates || []) {
+      if (!hasExteriorFootprint(object)) continue;
+      for (let y = object.y; y < object.y + object.h; y++) {
+        for (let x = object.x; x < object.x + object.w; x++) {
+          const i = this.idx(x, y);
+          if (this.D.walk[0][i] || this.D.vehReach[i]) solids.push(i);
+        }
+      }
+    }
+    const accessReasons = [];
+    const lost = solids.length && this.accessImpact({ solids });
+    if (lost) accessReasons.push(`Choose another spot. Building here would block customer access to ${lost} existing unit${lost === 1 ? '' : 's'}.`);
+    if (this.s.layout === MAPLE_PUBLIC && a.tool !== 'demolish' && (R.tiles?.length || R.creates?.length)) {
+      const reason = lostMapleAccess(accessState(this), accessState(this,R)) ||
+        (this.D.pendingGround.size && lostMapleAccess(accessState(this,null,false),accessState(this,R,false)));
+      if (reason) accessReasons.push(reason);
+    }
+    if (accessReasons.length) {
+      R.status = 'invalid';
+      // The build bar and a refused purchase both display the first reason.
+      R.reasons.push(accessReasons.join(' '));
+      return R;
+    }
+    if (!this.D.power) return R;
     const P = this.D.power, n = R.count || 1;
     if (a.tool === 'power') { R.power = { cap: P.cap + TOOLS.power.kw, demand: P.demand }; return R; }
     let add = this.powerAdd(a.tool === 'units' ? '' : a.tool, n) + upgradePower(R);
@@ -613,7 +693,7 @@ export class Sim {
         if (!touches) inc(this.objs('gate').length ? 'Not connected to an existing drive aisle' : 'Not connected yet - add an Entrance Gate where this aisle meets the street');
       }
       if (R.status !== 'invalid' && R.tiles.length && (a.tool === 'walk' || a.tool === 'loading' || a.tool === 'parking')) {
-        const n = this.accessImpact(() => { const old = R.tiles.map((t) => [t.i, s.ground[t.i]]); for (const t of R.tiles) s.ground[t.i] = t.v; return () => { for (const [i, g] of old) s.ground[i] = g; }; });
+        const n = this.accessImpact({ ground: R.tiles });
         if (n) R.warn = [`${n} open unit${n > 1 ? 's' : ''} will lose access and stop renting`];
       }
       if (a.tool === 'loading' && R.status !== 'invalid') {
@@ -703,12 +783,20 @@ export class Sim {
         }
         if (!door) { const d = facing || [1,0]; door = { x: d[0] ? (d[0]>0?ox+w:ox-1) : ox+Math.floor(w/2), y: d[1] ? (d[1]>0?oy+h:oy-1) : oy+Math.floor(h/2), dir:d }; inc('Office door needs a paved walkway or parking in front'); }
         R.cost = T.cost; R.dur = 1440; R.count = 1;
-        R.creates.push({ type: 'office', x: ox, y: oy, w, h, f: 0, door });
+        const office={ type:'office', x:ox, y:oy, w, h, f:0, door };
+        if (s.layout===MAPLE_PUBLIC && ox===4 && oy===20 && w===4 && h===5) {
+          office.door={x:8,y:21,dir:[1,0]};
+          office.staffDoor={x:5,y:19,dir:[0,-1]};
+        }
+        R.creates.push(office);
         return R;
       }
       case 'gate': {
         const p = s.parcel;
         if (y !== p.y1) { failItem('Gates go on the front fence line (street frontage)'); return R; }
+        if (s.layout === MAPLE_PUBLIC && x+1 >= 4 && x-1 < 24) {
+          failItem('A yard gate needs secured street frontage outside the public office and gate approaches.'); return R;
+        }
         if (this.objs('gate').length >= 2) failItem('This property already has two entrance gates');
         if (x - 1 < p.x0 || x + 1 > p.x1) failItem('Too close to the property corner');
         R.items = [-1, 0, 1].map((k) => ({ x: x + k, y, f: 0, ok: R.status !== 'invalid' }));
@@ -1138,7 +1226,11 @@ export class Sim {
     if (!D.gate) out.push('Main gate is not connected to the street');
     const office = this.objs('office')[0];
     if (!office || office.cstate !== 'operating') out.push('No operating office');
-    else { const di = this.idx(office.door.x, office.door.y); if (!D.vehReach[di] && !(D.dAccess && D.dAccess.has(di))) out.push('Office door has no customer route - pave a walkway or parking in front of it'); }
+    else if (s.layout===MAPLE_PUBLIC) {
+      const access=accessState(this,null,false);
+      if(!access.staff) out.push('Office needs a secured staff passage into the yard.');
+      if(!access.pedestrian || !access.parking) out.push('Office needs a public walk and driveable public parking.');
+    } else { const di = this.idx(office.door.x, office.door.y); if (!D.vehReach[di] && !(D.dAccess && D.dAccess.has(di))) out.push('Office door has no customer route - pave a walkway or parking in front of it'); }
     if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No operating rent-ready units');
     return out;
   }
@@ -2339,7 +2431,8 @@ export class Sim {
     }
     const mod = this.mod;
     if (mod < ACCESS_HOURS[0] * 60 || mod > ACCESS_HOURS[1] * 60 - 30) { this.schedule(v, this.randomAccessTime(this.day + 1)); return; }
-    if (!this.routeGateIds().length) { this.schedule(v, s.t + 240); return; }
+    const publicVisit=s.layout===MAPLE_PUBLIC && v.kind==='prospect';
+    if (!publicVisit && !this.routeGateIds().length) { this.schedule(v, s.t + 240); return; }
     if (v.unit && !s.objects[v.unit]) return;
     if (s.agents.filter((a) => a.kind === 'cust').length > 60) {
       // Crowd cap. Routine access visits now happen off-screen instead of queueing: at 500+ tenants the queue used to grow
@@ -2351,16 +2444,28 @@ export class Sim {
     const vtype = v.kind === 'movein' || v.kind === 'moveout' ? this.pick(['van', 'box', 'box', 'pickup', 'suv']) : this.pick(['sedan', 'sedan', 'suv', 'suv', 'pickup', 'van']);
     const fromEast = this.rnd() < 0.5; const p = s.parcel;
     const sx = fromEast ? s.W - 1 : 0, sy = fromEast ? p.y1 + 2 : p.y1 + 3;
-    const gateId = this.selectGateForTrip(this.idx(sx, sy), v);
-    if (gateId == null) { this.schedule(v, s.t + 240); return; }
+    const gateId = publicVisit ? null : this.selectGateForTrip(this.idx(sx, sy), v);
+    let publicDest;
+    if (publicVisit) {
+      const taken=new Set(s.vehicles.filter(car=>car.dest!=null).map(car=>publicBay(car.dest%s.W, Math.floor(car.dest/s.W))));
+      publicDest=(accessState(this,null,false).bays || []).find(i=>!taken.has(publicBay(i%s.W,Math.floor(i/s.W))));
+      if (publicDest==null) { this.schedule(v,s.t+5); return; }
+    }
+    if (recessed(s,s.objects[gateId]) && s.agents.some(a=>a.gateId===gateId && (['arrive','gateq','gateroute'].includes(a.st) || this.vehAt(a.veh)?.reversing))) {
+      this.schedule(v,s.t+5); return;
+    }
+    if (!publicVisit && gateId == null) { this.schedule(v, s.t + 240); return; }
     const veh = { id: this.id(), type: vtype, x: sx + 0.5, y: sy + 0.5, hx: fromEast ? -1 : 1, hy: 0, path: null, pi: 0, color: this.pick(['#c8ccd0', '#2e3a4a', '#8a2f2f', '#f2f2ee', '#3d5a3f', '#6b7a8f', '#a8834e', '#1e1f22']), parked: null };
     const needCart = u && u.access === 'interior' ? (v.kind === 'movein' || v.kind === 'moveout' ? true : v.kind === 'bigaccess' ? this.rnd() < 0.8 : this.rnd() < 0.25) : false;
     const ag = { id: this.id(), kind: 'cust', vt: v.kind, tenant: v.tenant, unit: v.unit, size: v.size, climate: v.climate, keen: v.keen, ad: v.ad || null, veh: veh.id, gateId, st: 'arrive', hidden: true, f: 0, x: veh.x, y: veh.y, path: null, pi: 0, wait: 0, needCart, cart: null, carry: false,
       exp: { gate: 0, cart: 0, elev: 0, office: 0, walk: 0, dirt: 0, dirtN: 0, dark: false, noCart: false, door: 0 }, t0: s.t, look: Math.floor(this.rnd() * 1e6) };
     s.vehicles.push(veh); s.agents.push(ag);
-    const gx = s.objects[gateId]?.x ?? this.D.gate.x;
-    const goal = this.idx(gx, p.y1 + 1);
-    const path = this.bfs([this.idx(sx, sy)], (n) => n === goal, (n) => this.vehNbr(n, gateId));
+    if(publicVisit){ ag.publicVisit=true; ag.st='drive'; veh.dest=publicDest; veh.moving=true; }
+    const goal = publicVisit ? publicDest : this.gateApproach(s.objects[gateId]);
+    const path = this.bfs([this.idx(sx, sy)], n=>n===goal, n=>this.vehNbr(n,publicVisit ? publicDrive : gateId));
+    if (!path && s.layout===MAPLE_PUBLIC) {
+      s.vehicles.pop(); s.agents.pop(); this.schedule(v,s.t+5); return;
+    }
     this.setVehPath(veh, path);
     this.emit('arrive', { ag: ag.id });
   }
@@ -2370,7 +2475,35 @@ export class Sim {
     if (!veh.path || veh.pi >= veh.path.length) return true;
     let rem = speed;
     while (rem > 0 && veh.pi < veh.path.length) {
+      if(this.s.layout===MAPLE_PUBLIC && !veh.reversing && veh.routeVersion!==this.s.structV) {
+        const ag=this.s.agents.find(a=>a.veh===veh.id);
+        const target=veh.path.at(-1), start=this.idx(Math.floor(veh.x),Math.floor(veh.y));
+        const path=this.bfs([start],n=>n===target,n=>this.vehNbr(n,ag?.publicVisit?publicDrive:ag?.gateId));
+        if(!path) return false;
+        this.setVehPath(veh,path); veh.routeVersion=this.s.structV;
+      }
       const n = veh.path[veh.pi]; const tx = (n % this.s.W) + 0.5, ty = ((n / this.s.W) | 0) + 0.5;
+      if (this.s.layout===MAPLE_PUBLIC && !veh.reversing) {
+        const x=Math.floor(veh.x), y=Math.floor(veh.y), nx=Math.floor(tx), ny=Math.floor(ty);
+        const gate=this.objs('gate').find(g=>recessed(this.s,g));
+        if (x>=18 && x<24 && nx===x && Math.min(ny,y)===23 && Math.max(ny,y)===24 && (!gate || gate.open<1)) return false;
+        const inJunction=(cx,cy)=>cx>=18 && cx<24 && cy>=14 && cy<18;
+        if(!inJunction(x,y) && inJunction(nx,ny) &&
+           this.s.vehicles.some(v=>v!==veh && v.parked==null && inJunction(Math.floor(v.x),Math.floor(v.y)))) return false;
+        // Loading bays are outside the moving crossing reservation, but a
+        // parked vehicle still occupies its own cell.
+        if ((nx!==x || ny!==y) && this.s.vehicles.some(v=>v!==veh && v.parked===n)) {
+          const ag=this.s.agents.find(a=>a.veh===veh.id);
+          const target=veh.path.at(-1), occupied=new Set(this.s.vehicles.filter(v=>v!==veh && v.parked!=null).map(v=>v.parked));
+          const path=this.bfs([this.idx(x,y)],i=>i===target,i=>this.vehNbr(i,ag?.publicVisit?publicDrive:ag?.gateId).filter(j=>!occupied.has(j)));
+          if (path) this.setVehPath(veh,path);
+          return false;
+        }
+        if (ny===18 && y===17 && nx>=18 && nx<21 &&
+            this.s.vehicles.some(v=>v!==veh && v.x>=18 && v.x<21 && v.y>=18 && v.y<30)) return false;
+        if ((nx!==x || ny!==y) && nx===14 && ny>=14 && ny<18 &&
+            this.s.agents.some(a=>!a.hidden && a.f===0 && Math.floor(a.x)===14 && Math.floor(a.y)===ny)) return false;
+      }
       const dx = tx - veh.x, dy = ty - veh.y, d = Math.hypot(dx, dy);
       if (d <= rem) { veh.x = tx; veh.y = ty; rem -= d; veh.pi++; if (d > 0.01) { veh.hx = dx / d; veh.hy = dy / d; } }
       else { veh.x += dx / d * rem; veh.y += dy / d * rem; veh.hx = dx / d; veh.hy = dy / d; rem = 0; }
@@ -2380,6 +2513,11 @@ export class Sim {
   // pedestrian movement along node path; handles door waits + elevator hand-off
   moveAgent(ag, speed) {
     if (!ag.path || ag.pi >= ag.path.length) return 'done';
+    if(this.s.layout===MAPLE_PUBLIC && (ag.publicVisit || ag.kind==='staff') && ag.routeVersion!==this.s.structV) {
+      const target=this.unnode(ag.path.at(-1));
+      if(!this.goTo(ag,target.f,target.x,target.y)){ ag.path=[this.node(target.f,target.x,target.y)]; return 'moving'; }
+      ag.routeVersion=this.s.structV;
+    }
     if (ag.doorWait > 0) { ag.doorWait--; ag.exp.door++; return 'moving'; }
     const s = this.s, WH = s.W * s.H;
     let rem = speed;
@@ -2402,6 +2540,9 @@ export class Sim {
         this.joinElevator(ag, el, f); return 'elevator';
       }
       const tx = (i % s.W) + 0.5, ty = ((i / s.W) | 0) + 0.5;
+      const staffGate = ag.kind === 'staff' && f === 0 && this.D.staffGate;
+      if (staffGate && Math.floor(tx) === staffGate.x+1 && Math.floor(ag.x) === staffGate.x+1 &&
+          (ag.y < staffGate.y+1) !== (ty < staffGate.y+1) && staffGate.open < 1) return 'moving';
       const dx = tx - ag.x, dy = ty - ag.y, d = Math.hypot(dx, dy);
       if (d <= rem) {
         // crossing a door edge?
@@ -2439,13 +2580,18 @@ export class Sim {
   goTo(ag, f, x, y) {
     const from = this.node(ag.f, Math.floor(ag.x), Math.floor(ag.y));
     const to = this.node(f, x, y);
-    this.navCart = !!ag.cart; const p = Math.max(ag.f,f)>=2&&ag.f!==f ? (freightPath(this,from,to)||(!ag.cart?this.pedPath(from,to):null)) : this.pedPath(from, to); this.navCart = false;
+    if(ag.publicVisit){
+      const allowed=n=>n===from || n===to || this.s.ground[n]===G.CONCRETE || this.s.ground[n]===G.SIDEWALK;
+      const path=this.bfs([from],n=>n===to,n=>this.pedNbr(n).filter(allowed)) || this.pedPath(from,to);
+      ag.path=path; ag.pi=0; return !!path;
+    }
+    this.navCart = !!ag.cart; const p = Math.max(ag.f,f)>=2&&ag.f!==f ? (freightPath(this,from,to,ag)||(!ag.cart?this.pedPath(from,to,ag):null)) : this.pedPath(from, to, ag); this.navCart = false;
     ag.path = p; ag.pi = 0; return !!p;
   }
   goToAny(ag, targets) { // targets: array of nodes
     const from = this.node(ag.f, Math.floor(ag.x), Math.floor(ag.y));
     const set = new Set(targets);
-    this.navCart = !!ag.cart; const p = this.bfs([from], (n) => set.has(n), (n) => this.pedNbr(n)); this.navCart = false;
+    this.navCart = !!ag.cart; const p = this.bfs([from], (n) => set.has(n), (n) => this.pedNbr(n,ag)); this.navCart = false;
     ag.path = p; ag.pi = 0; return p;
   }
   availabilityReport(size) {
@@ -2487,8 +2633,18 @@ export class Sim {
       const gate = s.objects[id]; if (!gate || gate.type !== 'gate') continue;
       const serving = gateServing(s, gate.id);
       // Each gate owns its own exit sensor and keypad-service opening state.
-      const near = s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);
-      const target = near || serving ? 1 : 0;
+      const compound=recessed(s,gate);
+      const near = compound ? s.agents.some(a=>{
+        if (a.kind === 'staff' && !a.hidden && a.f === 0 && a.path && a.pi < a.path.length) {
+          const next = this.unnode(a.path[a.pi]);
+          if (next.f === 0 && next.x === gate.x+1 && Math.floor(a.x) === next.x &&
+              Math.abs(a.y-(gate.y+1)) < 1 && Math.abs(next.y+.5-(gate.y+1)) < 1) return true;
+        }
+        const v=this.vehAt(a.veh);
+        return a.gateId===id && v && ['drive','leave'].includes(a.st) &&
+          !v.reversing && v.x>=18 && v.x<24 && Math.abs(v.y-24)<2.5;
+      }) : s.vehicles.some((v) => Math.abs(v.x - (gate.x + 0.5)) < 2.2 && Math.abs(v.y - (gate.y + 1)) < 1.8 && v.moving);
+      const target = near || (!compound && serving) ? 1 : 0;
       if (target && gate.open < 1) { if (gate.open === 0) this.emit('gate', { x: gate.x, y: gate.y }); gate.open = Math.min(1, gate.open + 0.25); }
       else if (!target && gate.open > 0) gate.open = Math.max(0, gate.open - 0.2);
     }
@@ -2540,6 +2696,7 @@ export class Sim {
               this.depart(ag); break;
             }
           }
+          if(recessed(s,gate) && s.vehicles.some(v=>v!==veh && v.x>=21 && v.x<24 && v.y>=17 && v.y<24)) break;
           shiftGate(s, gate.id); setGateServing(s, gate.id, null); this.wear(gate, 0.0012);
           this.emit('keypad_ok', { x: gate.x, y: gate.y });
           const dest = this.chooseDest(ag, veh);
@@ -2583,6 +2740,7 @@ export class Sim {
             ag.hidden = false;
             s.convos = s.convos.filter((c) => c.key !== 'size' + ag.id);
             const L = this.decideLease({ size: ag.size, climate: ag.climate, keen: ag.keen, ad: ag.ad || null }, ag);
+            if (L) sellAtCounter(this, L);
             if (L) { this.thought(ag, `Signed for a ${ag.size}. Moving in soon.`, 'good'); if (ag.cramped || ag.sizeQ) { const tn = s.tenants[L.tenant]; if (tn) { tn.sat = 0.64; tn.cramped = true; } } }
             this.goToVehicle(ag);
           }
@@ -2664,6 +2822,7 @@ export class Sim {
         }
         break;
       }
+      case 'waitForExit': { if(s.t%5===0) this.depart(ag); break; }
       case 'leave': {
         veh.moving = true;
         if (this.moveVeh(veh, VS)) {
@@ -2695,7 +2854,7 @@ export class Sim {
     if (!u) return null;
     if (u.access === 'drive') {
       const fr = this.unitFront(u).map((c) => this.idx(c.x, c.y)).filter((i) => reach[i]);
-      return fr.find(free) ?? fr[0] ?? null;
+      return fr.find(free) ?? (s.layout===MAPLE_PUBLIC ? null : fr[0] ?? null);
     }
     const fc = this.unitFront(u).find((c) => s.hall[u.f || 0][this.idx(c.x, c.y)] === 1);
     if (!fc) return null;
@@ -2711,7 +2870,7 @@ export class Sim {
     if (pk != null) { ag.exp.walk += 10; return pk; }
     const any = park.find(free); if (any != null) { ag.exp.walk += 10; return any; }
     if (load.length) this.thought(ag, 'Loading bays are full.', 'bad', {location:{obj:u.id,building:D.shellAt[this.idx(u.x,u.y)]||null,x:load[0]%s.W,y:Math.floor(load[0]/s.W),f:0},loadingBays:load.length,overflowAvailable:false});
-    return load[0] ?? null;
+    return s.layout===MAPLE_PUBLIC ? null : load[0] ?? null;
   }
   nearestVehCell(i0, taken, reach = this.D.vehReach) {
     const p = this.bfs([i0], (n) => reach[n] && !taken.has(n) && VEH_GROUND.has(this.s.ground[n]), (n) => {
@@ -2814,7 +2973,7 @@ export class Sim {
     ag.rr = rr.id; ag.st = 'toRest'; return true;
   }
   goToVehicle(ag) {
-    if (ag.rrWant && !ag.cart && this.restroomTrip(ag)) return;
+    if (!ag.publicVisit && ag.rrWant && !ag.cart && this.restroomTrip(ag)) return;
     const veh = this.vehAt(ag.veh);
     if (!veh) { this.depart(ag); return; }
     if (!this.goTo(ag, 0, Math.floor(veh.x), Math.floor(veh.y))) { if (ag.cart) this.dropCart(ag); this.depart(ag); return; }
@@ -2826,10 +2985,21 @@ export class Sim {
     ag.hidden = true; ag.st = 'leave'; this.leaveElevator(ag);
     removeGateAgent(s, ag.gateId, ag.id);
     if (!veh) { s.agents = s.agents.filter((x) => x !== ag); return; }
+    if (recessed(s,s.objects[ag.gateId]) && veh.parked!=null) {
+      // Waiting for the exit lane happens at the trip destination, off the main aisle.
+      const busy=s.vehicles.some(v=>v!==veh && v.mapleExit && v.y<30);
+      if(busy){ ag.st='waitForExit'; veh.moving=false; return; }
+      veh.mapleExit=true;
+    }
     veh.parked = null; veh.dest = null; veh.moving = true;
     const p = s.parcel, toEast = this.rnd() < 0.5;
     const goal = this.idx(toEast ? s.W - 1 : 0, toEast ? p.y1 + 3 : p.y1 + 2);
-    const path = this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], (n) => n === goal, (n) => this.vehNbr(n, ag.gateId));
+    if (recessed(s,s.objects[ag.gateId]) && ag.failed && veh.y>=24 && veh.x>=21 && veh.x<24 && veh.path?.length) {
+      // A denied arrival backs out along its actual approach before another is admitted.
+      veh.reversing=true; this.setVehPath(veh,veh.path.slice(0,Math.max(1,veh.pi)).reverse()); return;
+    }
+    const path = this.bfs([this.idx(Math.floor(veh.x), Math.floor(veh.y))], n=>n===goal, n=>this.vehNbr(n,ag.publicVisit ? publicDrive : ag.gateId));
+    if (!path && s.layout===MAPLE_PUBLIC) { ag.st='waitForExit'; veh.moving=false; veh.path=null; return; }
     this.setVehPath(veh, path || [goal]);
   }
   recordExperience(ag) {
@@ -2925,7 +3095,7 @@ export class Sim {
     if(el.dispatchMode==='sweep-v1')for(const id of el.q.flat()){
       const a=agent(id);if(!a||!a.path||a.inElev||(this.works(el)&&s.t-a.elevT0<120))continue;
       const goal=this.unnode(a.path.at(-1)),from=this.node(a.f,Math.floor(a.x),Math.floor(a.y)),to=this.node(goal.f,goal.x,goal.y);
-      const path=freightPath(this,from,to);if(!path)continue;
+      const path=freightPath(this,from,to,a);if(!path)continue;
       const crossing=path.find((n,k)=>k>0&&this.unnode(n).f!==this.unnode(path[k-1]).f);
       if(crossing!=null&&this.D.elevAt[crossing%(s.W*s.H)]!==el.id){const t=a.elevT0;this.leaveElevator(a);a.st=a.prevSt;a.path=path;a.pi=0;a.elevQueuedAt=t;}
     }
@@ -3016,7 +3186,7 @@ export class Sim {
   }
   spawnStaffAgent(st) {
     const s = this.s, office = this.objs('office')[0];
-    const ag = { id: this.id(), kind: 'staff', sid: st.id, role: st.role, st: 'office', hidden: true, f: 0, x: office ? office.door.x + 0.5 : 5, y: office ? office.door.y + 0.5 : 5, task: null, queue: [], path: null, pi: 0, exp: { walk: 0, dirt: 0, dirtN: 0, door: 0, elev: 0 }, look: st.id * 7919 };
+    const ag = { id: this.id(), kind: 'staff', sid: st.id, role: st.role, st: 'office', hidden: true, f: 0, x: office ? staffLanding(office).x + 0.5 : 5, y: office ? staffLanding(office).y + 0.5 : 5, task: null, queue: [], path: null, pi: 0, exp: { walk: 0, dirt: 0, dirtN: 0, door: 0, elev: 0 }, look: st.id * 7919 };
     s.agents.push(ag); return ag;
   }
   staffOf(ag) { return this.s.staff.find((x) => x.id === ag.sid); }
@@ -3095,9 +3265,9 @@ export class Sim {
       // Light placement must not create permanently unserviceable equipment.
       // Work at the nearest reachable service point; other assets keep local access rules.
       const office=this.objs('office').find(o=>o.cstate==='operating');
-      const origin=worker&&!worker.hidden?worker:office?{f:0,x:office.door.x,y:office.door.y}:worker;
+      const origin=worker&&!worker.hidden?worker:office?{f:0,x:staffLanding(office,o).x,y:staffLanding(office,o).y}:worker;
       if(!origin)return null;
-      const reach=this.distField([this.node(origin.f||0,Math.floor(origin.x),Math.floor(origin.y))],n=>this.pedNbr(n));
+      const reach=this.distField([this.node(origin.f||0,Math.floor(origin.x),Math.floor(origin.y))],n=>this.pedNbr(n,worker));
       let best=null,score=Infinity;
       for(const n of reach.keys()){
         const c=this.unnode(n);if(!D.walk[c.f]?.[c.i])continue;
@@ -3106,7 +3276,7 @@ export class Sim {
       }
       return best;
     }
-    if (o.type === 'gate') return walkNear(0, o.x, o.y);
+    if (o.type === 'gate') return recessed(s,o) ? walkNear(0,24,o.y) : walkNear(0,o.x,o.y);
     if (o.type === 'hvac') { for (const [dx, dy] of DIRS) { const r = walkNear(0, o.x + dx, o.y + dy); if (r) return r; } return null; }
     if (o.type === 'elevator') return walkNear(0, o.x, o.y);
     if (o.type === 'door') return walkNear(0, o.x, o.y);
@@ -3116,7 +3286,10 @@ export class Sim {
     const st = this.staffOf(ag);
     if (!this.reserveTaskWork(st, t)) return false;
     const c = this.taskCell(t, ag);
-    if (ag.hidden) { const office = this.objs('office')[0]; if (office) { ag.f = 0; ag.x = office.door.x + 0.5; ag.y = office.door.y + 0.5; } }
+    if (ag.hidden) {
+      const landing=staffLanding(this.objs('office')[0],c);
+      if (landing) { ag.f=0; ag.x=landing.x+.5; ag.y=landing.y+.5; }
+    }
     if (!c || !this.goTo(ag, c.f, c.x, c.y)) { this.refundTaskWork(st, t); t.unreachable = this.s.t; t.assigned = null; t.queued = false; ag.task = null; this.emit('refuse'); return false; }
     ag.task = t.id; t.assigned = ag.sid; ag.st = 'walk'; ag.hidden = false;
     this.emit('task_start', { task: t.id });
@@ -3162,8 +3335,11 @@ export class Sim {
     const row = this.staffForTask(t); if (!row) return null;
     const { st, ag } = row;
     const probe = { ...ag };
-    if (probe.hidden) { const office = this.objs('office')[0]; if (office) { probe.f = 0; probe.x = office.door.x + .5; probe.y = office.door.y + .5; } }
     const cell=this.taskCell(t,probe);
+    if (probe.hidden) {
+      const landing=staffLanding(this.objs('office')[0],cell);
+      if (landing) { probe.f=0; probe.x=landing.x+.5; probe.y=landing.y+.5; }
+    }
     if (!cell || !this.goTo(probe, cell.f, cell.x, cell.y)) { t.unreachable = this.s.t; return null; }
     if (ag.task || (ag.queue && ag.queue.length)) {
       if (!this.reserveTaskWork(st, t)) return null;
@@ -3218,7 +3394,11 @@ export class Sim {
         }
         if (ag.role !== 'owner' && ag.role !== 'clerk' && s.t % 5 === 0 && this.onShift() && this.pickTask(ag)) break;
         if (ag.role === 'owner' && s.t % 10 === 0 && this.ownerMayAutoWork() && this.pickTask(ag, true)) break;
-        if (ag.st === 'idle') { const office = this.objs('office')[0]; if (office && this.goTo(ag, 0, office.door.x, office.door.y)) ag.st = 'home'; else ag.st = 'office'; }
+        if (ag.st === 'idle') {
+          const landing=staffLanding(this.objs('office')[0],ag);
+          if (landing && this.goTo(ag,0,landing.x,landing.y)) ag.st='home';
+          else if (s.layout!==MAPLE_PUBLIC) ag.st='office';
+        }
         break;
       }
       case 'walk': {

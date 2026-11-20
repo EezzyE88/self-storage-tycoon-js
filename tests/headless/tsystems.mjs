@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {SAVE_KEYS} from '../../js/savegeneration.js';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {Sim,fmtTime} from '../../js/sim.js';
@@ -31,7 +32,28 @@ await test('shared skin materials survive instance disposal',()=>{const code=rea
 await test('dependency cache matches original scan across mutations and save restore',()=>{const sim=makeMaple();let seed=99;const rand=()=>{seed=(1664525*seed+1013904223)>>>0;return seed;};sim.s.orders=Array.from({length:150},(_,i)=>({id:i+1,st:i%5?'construction':'done',tiles:Array.from({length:9},()=>({k:rand()%3?'ground':'hall',i:rand()%80}))}));const check=s=>{for(const o of s.s.orders){if(o.st!=='construction')continue;const expected=s.s.orders.find(p=>p.st==='construction'&&p.id<o.id&&s.groundOrdersOverlap(p,o));assert.equal(s.groundPredecessor(o)?.id,expected?.id);}};sim.markDirty();check(sim);sim.s.orders.reverse();sim.markDirty();check(sim);sim.s.orders[1].st='done';sim.markDirty();check(sim);sim.s.orders.splice(2,5);sim.markDirty();check(sim);const restored=new Sim(JSON.parse(JSON.stringify(sim.s)));check(restored);const start=performance.now();for(let i=0;i<30000;i++)sim.groundPredecessor(sim.s.orders[100]);const cached=performance.now()-start;const t=performance.now();for(let i=0;i<30000;i++){const o=sim.s.orders[100];sim.s.orders.find(p=>p.st==='construction'&&p.id<o.id&&sim.groundOrdersOverlap(p,o));}console.log(`Dependency benchmark: cached ${cached.toFixed(1)}ms, original ${(performance.now()-t).toFixed(1)}ms / 30000 queries`);});
 await test('door-first vertical lesson returns to missing connected aisle and recovers',()=>{const s=makeMaple();s.s.creative=true;s.s.tut={on:false,done:true,flags:{}};s.s.lesson={id:'up',idMark:s.s.nextId,built:[],flags:{},entered:true};let l=verticalLayout(s);assert.ok(s.dispatch({type:'build',...l.plans.shell2}).ok);l=verticalLayout(s);for(const k of ['hall','doorWide'])assert.ok(s.dispatch({type:'build',...l.plans[k]}).ok);assert.equal(verticalDone(s,'aisle'),false);assert.equal(stepState(s,{}).cur,0);l=verticalLayout(s);assert.ok(l.plans);assert.ok(s.dispatch({type:'build',...l.plans.aisle}).ok);assert.equal(verticalDone(s,'aisle'),true);});
 await test('storage-full message explicitly advises saving a code or file',()=>{const u=Object.create(UI.prototype);u.g={localsave:{ok:true,lastErr:'storage full'}};assert.match(u.autosaveNote(),/Latest autosave failed.*Export/);});
-await test('corrupt main does not replace a valid backup',async()=>{const data=new Map([['sst.autosave.main','{broken'],['sst.autosave.backup',JSON.stringify({code:'good',meta:{}})]]);globalThis.window={localStorage:{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)}};const {localsave}=await import('../../js/localsave.js');assert.equal(localsave.put('new',{}),true);assert.equal(localsave.get().backup.code,'good');});
+await test('corrupt main does not replace a valid backup',async()=>{
+  session();
+  const backupCash = g.sim.s.cash;
+  const backupBytes = JSON.stringify({code: await g.saveCode(), meta: g.saveMeta()});
+  const data = new Map([[SAVE_KEYS.main, '{broken'], [SAVE_KEYS.backup, backupBytes]]);
+  globalThis.window = {localStorage: {
+    getItem: key => data.get(key) ?? null,
+    setItem: (key, value) => data.set(key, value),
+    removeItem: key => data.delete(key)
+  }};
+  const {localsave} = await import('../../js/localsave.js');
+  assert.equal(localsave.get().main, null);
+  g.sim.s.cash += 500;
+  const newCode = await g.saveCode();
+  assert.equal(localsave.put(newCode, g.saveMeta()), true);
+  assert.equal(localsave.get().main.code, newCode);
+  assert.equal(data.get(SAVE_KEYS.backup), backupBytes);
+  assert.equal(await g.loadCode(localsave.get().backup.code, true), true);
+  assert.equal(g.sim.s.cash, backupCash);
+  assert.equal(g.company.props[g.company.active].name, 'Original');
+  assert.equal(g.sim.s.speed, 0);
+});
 await test('removed corral releases returned cart into recoverable stranded state',()=>{const s=makeMaple();const c={id:999,st:'inuse',cond:1};s.s.carts.push(c);const ag={st:'retCart',cart:c.id,corral:998,f:0,x:8,y:8,exp:{}};s.moveAgent=()=> 'done';s.goToVehicle=a=>a.st='back';s.updateCustomer(ag);assert.equal(c.st,'stranded');assert.equal(ag.cart,null);assert.equal(ag.st,'back');});
 await test('blocked corral outbound and return paths both escape their waiting states',()=>{for(const state of ['toCorral','retCart']){const s=makeMaple();const c={id:999,st:'inuse',cond:1};s.s.carts.push(c);const ag={st:state,cart:state==='retCart'?c.id:null,f:0,x:8,y:8,exp:{}};s.moveAgent=()=> 'blocked';s.goToVehicle=a=>a.st='back';s.updateCustomer(ag);assert.equal(ag.st,'back');if(state==='retCart')assert.equal(c.st,'stranded');}});
 await test('cached construction dependencies preserve complete simulation state',()=>{const a=makeMaple();a.s.creative=false;a.s.cash=100000;for(const action of [{tool:'aisle',f:0,a:{x:29,y:15},b:{x:37,y:17}},{tool:'loading',f:0,a:{x:32,y:15},b:{x:34,y:15}}])assert.ok(a.dispatch({type:'build',...action}).ok);const b=new Sim(JSON.parse(JSON.stringify(a.s)));b.groundPredecessor=function(o){if(!o.tiles.some(t=>t.k==='ground'))return null;return this.s.orders.find(p=>p.st==='construction'&&p.id<o.id&&this.groundOrdersOverlap(p,o));};for(let i=0;i<1440*7;i++){a.step();b.step();a.events.length=0;b.events.length=0;}assert.deepEqual(a.s,b.s);});
