@@ -1230,6 +1230,21 @@
         "scope": "Campaign Unit 7c: Act IV Beat 15 (D3 Option 2, P1 inspection-only): live route quote, including asking-rent cache invalidation with money, debt, RNG, construction, Pause and save state preserved; position, credit line, term-loan quote on a copy, 30-day schedule and demand evidence; review required before the decision; read-only review with no Confirm/draw/loan/build control and no profitability claim; Continue without borrowing completes with money, debt and leases unchanged; tutorial loan lock holds; no tutorial dispatch; Act IV chapter break pauses and releases held reviews before graduation; manual Pause; save/reload; old-save mapping; no-route honesty"
       },
       {
+        "id": "tact4_light",
+        "command": [
+          "@node",
+          "tests/headless/tact4_light.mjs"
+        ],
+        "completion": "ALL PASS: 12 Act IV light-reach checks",
+        "minimum_pass_lines": 12,
+        "timeout": 900,
+        "required_files": [
+          "tests/headless/fixtures/act3_break_trace_20260929.json"
+        ],
+        "evidence": "native current behavior: the ordinary Day 18 Act III break replayed into Beat 13, real Go Vertical, hallway and light builds, sim tutorial ticks with stubbed UI states, save/reload",
+        "scope": "Act IV Beat 13 F2 light reach (375 soft-lock fix): the light step counts only the simulation's computed light level (D.lit >= 0.5) at hallway cell 17,5, or at any F2 hallway cell when the player drew another hallway; missed, broken, worn and unpowered lights keep the step open with a coach line; a covering light still being installed shows a wait card; a second working light continues to a valid suggested unit and a working upstairs unit; an off-target light that lights the cell counts; the coached route is unchanged; reload keeps the step"
+      },
+      {
         "id": "tup_route_quote",
         "command": [
           "@node",

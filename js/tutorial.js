@@ -108,6 +108,25 @@ const upperFloorDone = (sim) => !verticalOrder(sim) && sim.objs('shell').some((o
 const verticalStarted = (sim) => !!verticalOrder(sim) || upperFloorDone(sim) || upstairsUnits(sim).length > 0;
 const hallF2 = (sim) => { const h = sim.s.hall && sim.s.hall[1]; if (!h) return 'missing'; let ordered = false; for (const v of h) { if (v === 1) return 'built'; if (v) ordered = true; } return ordered ? 'ordered' : 'missing'; };
 const lightF2 = (sim) => sim.objs('light').some((l) => (l.f || 0) >= 1);
+// The F2 hallway cell the coached Interior 5x10 (18,5) opens onto. The light step counts only when the simulation's own
+// lighting map lights it (D.lit >= 0.5, the threshold unit readiness uses: only finished, powered, unbroken lights count).
+// If the player drew the hallway elsewhere, any lit F2 hallway cell counts. Read-only: derived caches, never rebuilt here.
+const UP_FRONT = { x: 17, y: 5 };
+const upHallTargets = (sim) => {
+  const h = sim.s.hall && sim.s.hall[1]; if (!h) return [];
+  const i = sim.idx(UP_FRONT.x, UP_FRONT.y); if (h[i]) return [i];
+  const out = []; for (let k = 0; k < h.length; k++) if (h[k] === 1) out.push(k); return out;
+};
+const hallLitF2 = (sim) => { const lit = sim.D && sim.D.lit && sim.D.lit[1]; return !!lit && upHallTargets(sim).some((i) => lit[i] >= 0.5); };
+// A light still being installed that will reach a target cell once it works: the light step counts it, and the unit
+// steps show a wait card (the finished light tool is put away at Confirm because the next raw step is the Units row).
+const lightPendingF2 = (sim) => {
+  const D = sim.D, r = TOOLS.light.radius, W = sim.s.W;
+  return upHallTargets(sim).some((i) => { const x = i % W, y = Math.floor(i / W);
+    return sim.objs('light').some((l) => (l.f || 0) === 1 && !l.mount && l.cstate !== 'operating' && (!D || D.shellAt[sim.idx(l.x, l.y)] === D.shellAt[i]) && Math.hypot(l.x - x, l.y - y) <= r); });
+};
+const lightWait = (placed) => (sim) => placed(sim) || !lightPendingF2(sim) ? null : { state: 'ordered', t: 'Let the new F2 light finish', d: 'The light is still being installed, and a hallway only counts as lit once its light works. Tap <b>4x</b> to run time; this step continues by itself.' };
+const lightReachLine = (sim) => lightF2(sim) && !hallLitF2(sim) && !lightPendingF2(sim) ? ' <b>The hallway next to the elevator is still dark</b> (a light there is too far away, broken or without power), so a unit there could not open. Place a working light on the new hallway, or tap <b>Use suggested placement</b>.' : '';
 const usd = (v) => '$' + Math.round(v).toLocaleString('en-US');
 // The structure-only quote for the next floor of the interior building, or null once that floor exists or cannot be quoted.
 const verticalQuote = (sim) => { const sh = interiorShell(sim); if (!sh || (sh.floors || 1) >= 2 || verticalStarted(sim)) return null; const q = sim.verticalPlan(sh.id, { fitout: false }); return q && q.ok ? q : null; };
@@ -439,11 +458,11 @@ export const BEATS = [
         place: 'Tap <b>F2</b>, then drag a short hallway from the elevator', placeD: 'Tap <b>F2</b> on the right rail. Start on the floor just below the new elevator and drag two cells down. Upstairs units open onto a hallway.' })
         .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> (F2 hallway)' } : st),
       ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'light', toolName: 'Light', cell: { x: 17, y: 6 }, f: 1, after: (sim) => hallF2(sim) !== 'missing',
-        placed: (sim) => lightF2(sim) || upstairsReady(sim), place: 'Tap the new <b>F2</b> hallway to light it', placeD: 'On <b>F2</b>, tap the new hallway. Customers will not use a dark corridor.' })
-        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (Light)' } : st).map((st) => ({ ...st, prereq: hallWait((sim) => lightF2(sim) || upstairsReady(sim)) })),
-      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'iu5x10', toolName: 'Interior 5x10', cell: { x: 18, y: 5 }, f: 1, axis: 'y', after: lightF2,
+        placed: (sim) => hallLitF2(sim) || lightPendingF2(sim) || upstairsReady(sim), place: 'Tap the new <b>F2</b> hallway to light it', placeD: 'On <b>F2</b>, tap the new hallway. Customers will not use a dark corridor.{lightReach}' })
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (Light)' } : st).map((st) => ({ ...st, prereq: hallWait((sim) => hallLitF2(sim) || lightPendingF2(sim) || upstairsReady(sim)) })),
+      ...buildSteps({ cat: 'units', catName: 'Units', tool: 'iu5x10', toolName: 'Interior 5x10', cell: { x: 18, y: 5 }, f: 1, axis: 'y', after: hallLitF2,
         placed: (sim) => upstairsUnits(sim).length > 0, place: 'Place one <b>Interior 5x10</b> facing the F2 hallway', placeD: 'On <b>F2</b>, tap the floor just right of the new hallway. The unit door must face the hallway.' })
-        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (unit)' } : st).map((st) => ({ ...st, prereq: hallWait((sim) => upstairsUnits(sim).length > 0) })),
+        .map((st, i) => i === 0 ? { ...st, t: 'Open <b>Build</b> again (unit)' } : st).map((st) => ({ ...st, prereq: (sim) => hallWait((x) => upstairsUnits(x).length > 0)(sim) || lightWait((x) => hallLitF2(x) || upstairsUnits(x).length > 0)(sim) })),
       waitBuild('Let the upstairs unit open', upstairsReady),
     ],
     check: upstairsReady },
@@ -666,7 +685,7 @@ export function beatHeader(i) {
 
 // Current step index: one past the last completed step (so completing a later step implies earlier ones).
 export function tutorialText(sim, value, live = {}) { // `live`: per-card cache, so one card reads each live figure once
-  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/\{verticalMoney\}/g, () => (live.vm ??= verticalMoneyTag(sim))).replace(/\{act4Account\}/g, () => (live.a4 ??= act4Line(sim))).replace(/\{finMoney\}/g, () => (live.fin ??= finLine(sim))).replace(/Unit (107|203)\b/g, (_, n) => {
+  return typeof value === 'string' ? value.replace(/\{occupancy\}/g, () => occLine(sim)).replace(/\{repairHours\}/g, () => repairHours(sim)).replace(/\{feedbackSat\}/g, () => feedbackSat(sim)).replace(/\{climateDemand\}/g, () => climateDemandLine(sim)).replace(/\{verticalMoney\}/g, () => (live.vm ??= verticalMoneyTag(sim))).replace(/\{act4Account\}/g, () => (live.a4 ??= act4Line(sim))).replace(/\{finMoney\}/g, () => (live.fin ??= finLine(sim))).replace(/\{lightReach\}/g, () => (live.lr ??= lightReachLine(sim))).replace(/Unit (107|203)\b/g, (_, n) => {
     const u = unitByRole(sim, n === '107' ? 'mapleTurnover' : 'mapleInteriorMoveout');
     return u ? `Unit ${u.num}` : 'the tutorial unit';
   }) : value;
