@@ -3,7 +3,7 @@
 import { MARKETS } from './data.js';
 import { cents } from './finance.js';
 
-export const SUPPLIES = Object.freeze({ priceShare: 0.4, costShare: 0.5, every: 2 });
+export const SUPPLIES = Object.freeze({ priceShare: 0.4, costShare: 0.5, every: 2, logDays: 30 });
 
 export function normalizeSupplies(state) {
   state.policies ||= {};
@@ -40,11 +40,11 @@ export function sellAtCounter(sim, lease) {
   sim.money(-terms.cost, 'anc', `Supplies cost - ${name}`);
   S.sold += 1; S.revenue = cents(S.revenue + terms.price); S.cost = cents(S.cost + terms.cost);
   S.log.push({ day: sim.day, lease: lease.id, price: terms.price, cost: terms.cost });
-  if (S.log.length > 60) S.log.splice(0, S.log.length - 60);
+  const keepFrom = sim.day - SUPPLIES.logDays + 1; if (S.log[0] && S.log[0].day < keepFrom) S.log = S.log.filter(x => x.day >= keepFrom); // keep the whole rolling window, however many sales
   return terms;
 }
 
-export function suppliesSummary(sim, days = 30) {
+export function suppliesSummary(sim, days = SUPPLIES.logDays) {
   const s = sim.s, S = s.supplies || { log: [] }, from = sim.day - days + 1;
   const recent = (S.log || []).filter(x => x.day >= from);
   return { on: !!s.policies?.supplies, blocked: suppliesBlocked(s), terms: basketTerms(s),

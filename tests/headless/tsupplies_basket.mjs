@@ -8,7 +8,7 @@ import { makeMaple } from '../../js/maple.js';
 import { makeSandbox, makeScenario } from '../../js/scenarios.js';
 import { Sim } from '../../js/sim.js';
 import { MARKETS } from '../../js/data.js';
-import { SUPPLIES, basketTerms, suppliesActive, suppliesSummary } from '../../js/supplies.js';
+import { SUPPLIES, basketTerms, sellAtCounter, suppliesActive, suppliesSummary } from '../../js/supplies.js';
 import { beatIndex, curBeat, tutorialTick } from '../../js/tutorial.js';
 import { ensureCustomerAccounts } from '../../js/customeraccounts.js';
 import { UI } from '../../js/ui.js';
@@ -163,6 +163,34 @@ test('Office row: On, Off and tutorial states; toggle flips only the policy; man
   // A sale happens only inside sim.step(); main.js does not step while speed is 0. Paused UI work never sells.
   const S0 = JSON.stringify(s.supplies); for (let i = 0; i < 50; i++) { row(); click({ a: 'policy', v: 'supplies' }); }
   assert.equal(JSON.stringify(s.supplies), S0); assert.equal(s.cash, cash); assert.equal(s.t, t);
+});
+
+test('Office 30-day count and margin stay exact above 60 sales: 61 sales, the oldest ages out, save and reload', () => {
+  const sim = career(61), s = sim.s, ready = sim.objs('unit').find((u) => u.num != null);
+  const lease = (k) => ({ id: 900000 + k, unit: ready.id }); let k = 0;
+  const sellOne = () => { assert.equal(sellAtCounter(sim, lease(k++)), null); assert.deepEqual(sellAtCounter(sim, lease(k++)), { price: 30, cost: 15 }); };
+  const cash0 = s.cash, D = sim.day;
+  sellOne(); // the oldest sale, on day D
+  s.t += 1440; for (let i = 0; i < 60; i++) sellOne(); // 60 more on day D+1
+  assert.equal(sim.day, D + 1); assert.equal(s.supplies.sold, 61); assert.equal(s.supplies.log.length, 61);
+  assert.deepEqual([suppliesSummary(sim).sold, suppliesSummary(sim).margin], [61, 915]);
+  assert.equal(Math.round((s.cash - cash0) * 100) / 100, 915); assert.equal(supplyRows(s).length, 122);
+  const row = () => { const ui = Object.create(UI.prototype); ui.g = { sim: X, rend: { view: 'ext', setSelection() {} }, audio: { unlock() {} } }; ui.title = false; ui.root = { querySelectorAll: () => [] };
+    return (ui.officePanelHtml().match(/(\d+) sold in 30 days · \$([\d,]+) margin/) || []).slice(1).join('|'); };
+  let X = sim; assert.equal(row(), '61|915');
+  // save and reload: the full window survives, nothing is booked again
+  const saved = JSON.stringify(s), R = new Sim(JSON.parse(saved));
+  assert.equal(R.s.supplies.log.length, 61); assert.equal(R.s.cash, s.cash); assert.equal(supplyRows(R.s).length, 122);
+  X = R; assert.equal(row(), '61|915');
+  // day D+29 is the last day of the oldest sale's window; on day D+30 it ages out
+  R.s.t += 28 * 1440; assert.equal(R.day, D + 29); X = R; assert.equal(row(), '61|915');
+  R.s.t += 1440; assert.equal(R.day, D + 30); assert.deepEqual([suppliesSummary(R).sold, suppliesSummary(R).margin], [60, 900]); assert.equal(row(), '60|900');
+  // the next sale prunes only entries outside the window; lifetime totals are untouched
+  const sim2 = R; const sell2 = () => { sellAtCounter(sim2, lease(k++)); sellAtCounter(sim2, lease(k++)); }; sell2();
+  assert.equal(R.s.supplies.log.length, 61); assert.ok(R.s.supplies.log.every((x) => x.day >= D + 1));
+  assert.deepEqual([R.s.supplies.sold, R.s.supplies.revenue, R.s.supplies.cost], [62, 1860, 930]); assert.deepEqual([suppliesSummary(R).sold, suppliesSummary(R).margin], [61, 915]);
+  // the rest of day D+1 ages out on day D+31
+  R.s.t += 1440; assert.deepEqual([suppliesSummary(R).sold, suppliesSummary(R).margin], [1, 15]);
 });
 
 console.log('LIMIT: headless simulation only; Office row checked as HTML here, rendered separately; Safari and physical iPhone not tested.');
