@@ -860,16 +860,23 @@ export class Renderer {
         if (inConst) { this.scaffold(o, cx, cz, o.w, o.h, 1.7, 0); break; }
         // Open-topped office retains its V62 frontage and entrance.
 
-        if(o.staffDoor) {
-          this.faceMesh(.92,1.22,this.mat.officeTrim,o.staffDoor.x+.5,.61,o.y-.03,[0,-1],0,{obj:o.id});
-        }
         const d = o.door.dir; const fx = cx + d[0] * (o.w / 2 - 0.04), fz = cz + d[1] * (o.h / 2 - 0.04);
         const len = d[0] ? o.h : o.w;
         this.box(d[0]?.16:len+.1,.30,d[0]?len+.1:.16,this.mat.officeTrim,fx+d[0]*.045,1.80,fz+d[1]*.045,0,{obj:o.id,officeFascia:true});
 
         const dxw = o.door.x + 0.5 - d[0] * 0.5, dzw = o.door.y + 0.5 - d[1] * 0.5;
-        this.faceMesh(0.6, 1.1, this.mat.officeTrim, dxw + d[0] * 0.03, 0.55, dzw + d[1] * 0.03, d, 0);
-        this.faceMesh(0.45, 0.9, this.mat.glass, dxw + d[0] * 0.04, 0.5, dzw + d[1] * 0.04, d, 0);
+        if (o.staffDoor) {
+          // An overhead frame marks each entrance without drawing a closed
+          // panel across the shopper or staff path. Both thresholds are one tile.
+          for (const door of [o.door, o.staffDoor]) {
+            const [nx, nz] = door.dir;
+            this.faceMesh(1.08, .12, this.mat.officeTrim,
+              door.x+.5-nx*.47, 1.40, door.y+.5-nz*.47, door.dir, 0, {obj:o.id});
+          }
+        } else {
+          this.faceMesh(0.6, 1.1, this.mat.officeTrim, dxw + d[0] * 0.03, 0.55, dzw + d[1] * 0.03, d, 0);
+          this.faceMesh(0.45, 0.9, this.mat.glass, dxw + d[0] * 0.04, 0.5, dzw + d[1] * 0.04, d, 0);
+        }
         this.box(d[0] ? .85 : 1.8, .10, d[0] ? 1.8 : .85, this.mat.officeTrim, dxw + d[0] * .4, 1.4, dzw + d[1] * .4, 0,{obj:o.id});
         for(const side of [-1,1])this.box(.06,1.35,.06,this.mat.metal,dxw+d[0]*.7-d[1]*side*.78,.675,dzw+d[1]*.7+d[0]*side*.78,0,{obj:o.id});
         for(const side of [-1,1])this.box(.06,.40,.06,this.mat.darkMetal,fx+d[0]*.13-d[1]*side*len*.32,1.62,fz+d[1]*.13+d[0]*side*len*.32,0,{obj:o.id});

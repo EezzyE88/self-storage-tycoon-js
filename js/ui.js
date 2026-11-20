@@ -1,4 +1,5 @@
 import { officePanelState } from './officepanel.js';
+import { suppliesSummary } from './supplies.js';
 import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';
 import { demandEvidenceText, paybackText, paybackEvidenceNote } from './economics.js';
 import { rescuePricing, rescueVacancies, rescueResults } from './rescueoperations.js';
@@ -1476,7 +1477,7 @@ export class UI {
     return `<p class="note"><b>${esc(message)}</b>${clerk ? ' Clerk coverage is 8 AM–6 PM.' : ' A Clerk covers 8 AM–6 PM for ' + money(ROLES.clerk.wage) + '/day.'}</p>` + (clerk ? '' : '<button class="btn sm" data-a="staffHelp" data-v="clerk">Review office coverage</button>');
   }
   officePanelHtml() {
-    const sim = this.sim, s = sim.s, p = officePanelState(sim);
+    const sim = this.sim, s = sim.s, p = officePanelState(sim), sup = suppliesSummary(sim);
     p.decisions = p.decisions.filter((c) => !sim.reviewHeld(c)); // held owner reviews wait for the lesson/tutorial to end
     const jump = (label, tab, section) => `<button class="btn sm" data-a="officeSection" data-v="${tab}" data-section="${section}">${label}</button>`;
     const first = p.decisions[0];
@@ -1495,6 +1496,7 @@ export class UI {
     const authorityAlert = p.manager ? '<p class="office-authority-alert"><b>Manager authority active:</b> automatic asking-rent changes, vendor/cart spending and lien notices. Manual request review does not stop these.</p>' : '';
     return `${authorityAlert}<div class="office-rows">
       <section class="office-row" aria-label="Counter coverage"><b>Counter · ${esc(p.counter)}</b><small>8 AM–6 PM · ${p.waiting} waiting · ${p.serving} being served</small><button class="btn sm" data-a="staffHelp" data-v="clerk">Review coverage</button></section>
+      <section class="office-row" aria-label="Moving supplies"><b>Supplies · ${sup.blocked ? 'Starts after the tutorial' : sup.on ? 'On' : 'Off'}</b><small>${sup.terms ? `Basket ${money(sup.terms.price, sup.terms.price % 1 !== 0)} · cost ${money(sup.terms.cost, sup.terms.cost % 1 !== 0)} · every second lease signed at the counter` : 'Not sold at this market'}</small><small>${sup.sold} sold in 30 days · ${money(sup.margin, sup.margin % 1 !== 0)} margin</small><button class="toggle ${sup.on ? 'on' : ''}" data-a="policy" data-v="supplies" aria-label="Toggle moving supplies sales"></button></section>
       <section class="office-row" aria-label="Owner capacity"><b>Owner · ${p.remaining}h of ${p.capacity}h available today</b><small>Office charged ${p.officeCharged}h · Property charged/reserved ${p.propertyCharged}h</small><small>${esc(ownerDoing)} · ${p.ownerQueued} queued · ${p.completedJobs} property jobs recorded complete today</small><div class="row wrap">${jump('Work queue', 'operate', 'Work queue')}<button class="btn sm" data-a="policy" data-v="ownerChores" aria-pressed="${!!s.policies.ownerChores}">Owner chores: ${s.policies.ownerChores ? 'On' : 'Off'}</button></div></section>
       <section class="office-row" aria-label="Owner decisions"><b>Your decisions · ${p.decisions.length}</b><small class="office-preview">${esc(pending)}</small><button class="btn sm" data-a="requests" ${p.decisions.length ? '' : 'disabled'}>Review decisions</button></section>
       <section class="office-row" aria-label="Delegated work"><b>Delegated · ${p.delegatedRequests.length} requests · ${p.delegatedJobs.length} property jobs</b><small>Requests: ${p.delegatedRequests.length - requestWait} handling · ${requestWait} waiting for hours/staff. Jobs: ${p.delegatedJobs.length - queued - vendor - blocked} active · ${queued} queued · ${vendor} vendor booked${blocked ? ` · ${blocked} access blocked` : ''}.</small>${blocker ? `<small>${esc(blocker.label)}: ${esc(this.jobWait(blocker, workerLeft))}</small>` : ''}<div class="row wrap"><button class="btn sm" data-a="requests" data-v="settings">Requests &amp; responses</button>${jump('Work queue', 'operate', 'Work queue')}</div></section>

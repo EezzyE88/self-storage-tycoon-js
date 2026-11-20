@@ -26,6 +26,7 @@ import { financeState, FINANCIAL_MINUTE, cents, committed, position, reserve, ou
 import { operations, diagnostics, staffingEvidence, investment, growthReadiness, planDailyCost } from './economics.js';
 import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
 import { ensureCustomerAccounts, customerHistory, returningAccount } from './customeraccounts.js';
+import { normalizeSupplies, sellAtCounter } from './supplies.js';
 import { recoverMoveOut, noteMoveOutJob, moveOutClaimed, startMoveOut, leaveMoveOut, finishMoveOut } from './moveout.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -57,7 +58,8 @@ export function newState({ mode = 'tutorial', creative = false, seed = 1234, mar
     powerBase: POWER.base[market] ?? 30, loan: { bal: 0, warnT: -1e9 }, debt: [], auction: null, mgrLog: [],
     thoughts: [], convos: [], lost: {}, lostToday: {}, mkt: { comp: [], nextComp: null, reviews: [], lostLog: [], reports: [], ad: null, adHistory: [] },
     milestones: {}, tut: { on: mode === 'tutorial', beat: 0, flags: {}, done: false },
-    open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true },
+    open: mode === 'tutorial', policies: { preventive: false, porterCarts: true, ownerChores: true, lateFee: 20, autoNotice: false, resolution: 'auction', retention: true, overlock: true, supplies: true },
+    supplies: { v: 1, n: 0, sold: 0, revenue: 0, cost: 0, log: [] },
     weather: 'fair', nextId: 1, structV: 1, unitNumbering: freshNumbering(), unitRoles: {},
     lastCommit: null,
   };
@@ -95,6 +97,7 @@ export class Sim {
     state.mgrLog ||= []; state.debt ||= []; if (state.auction === undefined) state.auction = null;
     const P = state.policies; if (P.lateFee == null) P.lateFee = 20; if (P.autoNotice == null) P.autoNotice = false; if (!P.resolution) P.resolution = 'auction'; if (P.retention == null) P.retention = true; if (P.overlock == null) P.overlock = true;
     for (const L of Object.values(state.leases || {})) { if (L.fees == null) L.fees = 0; }
+    normalizeSupplies(state); // older saves: sales on from the next counter lease; nothing retroactive
     // saves from before Round 11 (no market state) used the 12-part tutorial; move them to the matching part of the 8-part one
     if (!state.mkt && state.tut && state.tut.on && !state.tut.done && state.tut.beat > 4) {
       state.tut.beat = [0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 7][Math.min(11, state.tut.beat)] ?? 7; state.tut.entered = false; state.tut.migrated = 11;
@@ -2701,6 +2704,7 @@ export class Sim {
             ag.hidden = false;
             s.convos = s.convos.filter((c) => c.key !== 'size' + ag.id);
             const L = this.decideLease({ size: ag.size, climate: ag.climate, keen: ag.keen, ad: ag.ad || null }, ag);
+            if (L) sellAtCounter(this, L);
             if (L) { this.thought(ag, `Signed for a ${ag.size}. Moving in soon.`, 'good'); if (ag.cramped || ag.sizeQ) { const tn = s.tenants[L.tenant]; if (tn) { tn.sat = 0.64; tn.cramped = true; } } }
             this.goToVehicle(ag);
           }

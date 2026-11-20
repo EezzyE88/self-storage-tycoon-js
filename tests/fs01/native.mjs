@@ -28,8 +28,12 @@ const old=make(legacy,legacyMain),oldState=copy(old.sim.s),oldJSON=old.saveJSON(
 const sentinels={'sst.autosave.main':JSON.stringify({code:oldRaw,meta:old.saveMeta()}),'sst.autosave.backup':'legacy-backup-bytes','sst.kept.previous':'legacy-kept-bytes','sst.kept.archive':'legacy-archive-bytes','sst.kept.archive.unreadable':'legacy-quarantine','sst.probe':'legacy-probe-sentinel','sst.probe.archive':'legacy-probe-archive-sentinel'};
 for(const [k,v] of Object.entries(sentinels))mem.set(k,v);operations.length=0;
 const intact=()=>{for(const [k,v] of Object.entries(sentinels))assert.equal(mem.get(k),v,k);};
-await test('fresh Maple differs from exact legacy factory only by generation identity',()=>{
- const g=make(),s=copy(g.sim.s);assert.equal(s.saveGeneration,SAVE_GENERATION);delete s.saveGeneration;assert.deepEqual(s,oldState);
+await test('fresh Maple adds only generation identity and empty supply sales to the exact legacy factory',()=>{
+ const g=make(),s=copy(g.sim.s);assert.equal(s.saveGeneration,SAVE_GENERATION);delete s.saveGeneration;
+ const expected=copy(oldState);
+ expected.policies.supplies=true;
+ expected.supplies={v:1,n:0,sold:0,revenue:0,cost:0,log:[]};
+ assert.deepEqual(s,expected);
  assert.equal(g.sim.s.cash,26000);assert.equal(Object.values(g.sim.s.leases).length,22);assert.equal(Object.values(g.sim.s.objects).filter(o=>o.type==='unit').length,23);
 });
 await test('real legacy bare/company raw/compressed saves reject before any incoming rebuild',async()=>{

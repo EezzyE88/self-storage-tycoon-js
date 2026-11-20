@@ -97,14 +97,15 @@ test('property delegation excludes unassigned and Owner work and includes staff/
   assert.equal(JSON.stringify(sim.s), before);
 });
 
-test('Office inspector retains four actionable rows, escapes request text, and discloses current authority without purchases', () => {
+test('Office inspector retains four actionable rows plus the supplies row, escapes request text, and discloses current authority without purchases', () => {
   const { sim, ui } = fixture(); hire(sim, 'manager');
   sim.s.policies.manualRequests = true;
   sim.convo({ key: 'unsafe', who: '<img>', text: '<script>bad()</script>', sev: 'critical', actions: [{ label: 'Dismiss' }] });
   ui.sel = sim.objs('office')[0].id;
   const before = JSON.stringify(sim.s), html = ui.inspector();
   assert.match(html, /sheet compact office-panel/);
-  assert.equal((html.match(/class="office-row"/g) || []).length, 4);
+  assert.equal((html.match(/class="office-row"/g) || []).length, 5); // Office Step 2 added the Moving supplies row
+  assert.equal((html.match(/class="office-row" aria-label="Moving supplies"/g) || []).length, 1);
   assert.match(html, /&lt;script&gt;/); assert.ok(!html.includes('<script>'));
   for (const text of ['Manager authority active', 'does not serve the counter', '$250 simple / $650 complex', '$180 carts', 'approximately +3%', 'acceptance changes that tenant', 'does not turn off Manager', 'sends them anyway', '$80 haul-away', '$120 for clean-out']) assert.ok(html.includes(text), text);
   assert.match(html, /property jobs recorded complete today/);
