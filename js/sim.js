@@ -84,6 +84,11 @@ const M_open_comps = (sim) => sim.openComps().length > 0;
 function blankDay(day) { return { day, rent: 0, anc: 0, other: 0, opex: 0, payroll: 0, service: 0, marketing: 0, capex: 0, debt: 0, interest: 0, fin: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; }
 
 // ---------------------------------------------------------------- Sim
+function hasExteriorFootprint(o) {
+  return o.type === 'shell' || o.type === 'office' || o.type === 'hvac' ||
+    o.type === 'power' || o.type === 'water' || (o.type === 'unit' && o.access === 'drive');
+}
+
 export class Sim {
   static saveGeneration = SAVE_GENERATION;
   constructor(state) {
@@ -268,7 +273,7 @@ export class Sim {
   }
 
   // ============================================================ DERIVED CACHES
-  rebuild() {
+  rebuild(previewSolids = []) {
     const s = this.s, W = s.W, H = s.H, WH = W * H, layers = Type => Array.from({length:floorCount(s)},()=>new Type(WH));
     const D = {
       byType: {}, shellAt: new Int32Array(WH), solid: new Uint8Array(WH), unitAt: layers(Int32Array),
@@ -288,7 +293,7 @@ export class Sim {
         for (let y = o.y; y < o.y + o.h; y++) for (let x = o.x; x < o.x + o.w; x++) {
           const i = this.idx(x, y); addAt(i);
           if (o.type === 'unit') D.unitAt[f][i] = o.id;
-          if (o.type !== 'unit' || o.access === 'drive') D.solid[i] = 1;
+          if (hasExteriorFootprint(o)) D.solid[i] = 1;
         }
       } else if (o.type === 'restroom') {
         const i = this.idx(o.x, o.y); addAt(i); D.roomAt[f][i] = o.id;
@@ -308,6 +313,7 @@ export class Sim {
     }
     // pending ground from active orders (for validation + display)
     for (const ord of s.orders) if (ord.st === 'construction') for (const tl of ord.tiles) if (tl.k === 'ground') D.pendingGround.set(tl.i, tl.v);
+    for (const i of previewSolids) D.solid[i] = 1;
     // walkability
     const p = s.parcel;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -415,19 +421,29 @@ export class Sim {
     const k = tool === 'doorAuto' ? 'doorAuto' : tool === 'keypad' ? 'keypad' : POWER.load[tool] != null ? tool : null;
     return k ? POWER.load[k] * count : 0;
   }
-  accessImpact(apply) { // how many open units would lose customer access if `apply` happened (preview only)
+  accessImpact({ ground = [], solids = [] }) { // count currently open units cut off by the proposed layout
     this.ensure();
     const units = this.objs('unit');
     const snap = units.map((u) => [u, u.cstate, u.missing, u.blocked, u.conv, u.dist, u.accessHold]);
     const before = new Set(units.filter((u) => u.cstate === 'operating' && !u.blocked).map((u) => u.id));
+    if (!before.size) return 0;
     const evLen = this.events.length;
+    const oldGround = ground.map(t => [t.i, this.s.ground[t.i]]);
     this.previewing = true;
-    const restore = apply(); this.rebuild();
-    const lost = this.objs('unit').filter((u) => before.has(u.id) && u.blocked);
-    restore(); this.rebuild(); this.previewing = false;
-    for (const [u, c, m, b, cv, d, hd] of snap) { u.cstate = c; u.missing = m; u.blocked = b; u.conv = cv; u.dist = d; if (hd == null) delete u.accessHold; else u.accessHold = hd; }
-    this.events.length = evLen;
-    return lost.length;
+    try {
+      for (const t of ground) this.s.ground[t.i] = t.v;
+      this.rebuild(solids);
+      return units.filter(u => before.has(u.id) && u.blocked).length;
+    } finally {
+      for (const [i, value] of oldGround) this.s.ground[i] = value;
+      this.rebuild();
+      this.previewing = false;
+      for (const [u, c, m, b, cv, d, hd] of snap) {
+        u.cstate = c; u.missing = m; u.blocked = b; u.conv = cv; u.dist = d;
+        if (hd == null) delete u.accessHold; else u.accessHold = hd;
+      }
+      this.events.length = evLen;
+    }
   }
   markDirty() { this.dirty = true; this.s.structV++; }
   ensure() { if (this.dirty) this.rebuild(); }
@@ -604,14 +620,34 @@ export class Sim {
     const at = D.at.get(f * this.s.W * this.s.H + i) || [];
     return !at.some((id) => { const t = this.s.objects[id].type; return t === 'hvac' || t === 'office' || t === 'unit'; });
   }
-  plan(a) { // wraps planCore with utility-capacity consequences (GDD §22, §63.5)
+  plan(a) { // Validate the whole footprint before quoting utility capacity.
     const R = a.tool==='unitRetrofit' ? retrofitPlan(this,a) : this.planCore(a);
-    if (!R || R.status === 'invalid' || !this.D.power) return R;
+    if (!R || R.status === 'invalid') return R;
+    const solids = [];
+    for (const object of R.creates || []) {
+      if (!hasExteriorFootprint(object)) continue;
+      for (let y = object.y; y < object.y + object.h; y++) {
+        for (let x = object.x; x < object.x + object.w; x++) {
+          const i = this.idx(x, y);
+          if (this.D.walk[0][i] || this.D.vehReach[i]) solids.push(i);
+        }
+      }
+    }
+    const accessReasons = [];
+    const lost = solids.length && this.accessImpact({ solids });
+    if (lost) accessReasons.push(`Choose another spot. Building here would block customer access to ${lost} existing unit${lost === 1 ? '' : 's'}.`);
     if (this.s.layout === MAPLE_PUBLIC && a.tool !== 'demolish' && (R.tiles?.length || R.creates?.length)) {
       const reason = lostMapleAccess(accessState(this), accessState(this,R)) ||
         (this.D.pendingGround.size && lostMapleAccess(accessState(this,null,false),accessState(this,R,false)));
-      if (reason) { R.status='invalid'; R.reasons.push(reason); return R; }
+      if (reason) accessReasons.push(reason);
     }
+    if (accessReasons.length) {
+      R.status = 'invalid';
+      // The build bar and a refused purchase both display the first reason.
+      R.reasons.push(accessReasons.join(' '));
+      return R;
+    }
+    if (!this.D.power) return R;
     const P = this.D.power, n = R.count || 1;
     if (a.tool === 'power') { R.power = { cap: P.cap + TOOLS.power.kw, demand: P.demand }; return R; }
     let add = this.powerAdd(a.tool === 'units' ? '' : a.tool, n) + upgradePower(R);
@@ -657,7 +693,7 @@ export class Sim {
         if (!touches) inc(this.objs('gate').length ? 'Not connected to an existing drive aisle' : 'Not connected yet - add an Entrance Gate where this aisle meets the street');
       }
       if (R.status !== 'invalid' && R.tiles.length && (a.tool === 'walk' || a.tool === 'loading' || a.tool === 'parking')) {
-        const n = this.accessImpact(() => { const old = R.tiles.map((t) => [t.i, s.ground[t.i]]); for (const t of R.tiles) s.ground[t.i] = t.v; return () => { for (const [i, g] of old) s.ground[i] = g; }; });
+        const n = this.accessImpact({ ground: R.tiles });
         if (n) R.warn = [`${n} open unit${n > 1 ? 's' : ''} will lose access and stop renting`];
       }
       if (a.tool === 'loading' && R.status !== 'invalid') {

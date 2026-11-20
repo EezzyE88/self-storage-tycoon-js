@@ -1373,8 +1373,8 @@
           "@node",
           "tests/headless/tplacement_bf.mjs"
         ],
-        "completion": "73 B/F placement groups passed; no browser or physical-device claim",
-        "minimum_pass_lines": 73,
+        "completion": "75 B/F placement groups passed; no browser or physical-device claim",
+        "minimum_pass_lines": 75,
         "timeout": 180,
         "evidence": "real planning and UI handlers; disposable native fixtures only; rendered phone layouts and physical Safari not established"
       },
