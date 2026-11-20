@@ -1245,6 +1245,18 @@
         "scope": "Act IV Beat 13 F2 light reach (375 soft-lock fix): the light step counts only the simulation's computed light level (D.lit >= 0.5) at hallway cell 17,5, or at any F2 hallway cell when the player drew another hallway; missed, broken, worn and unpowered lights keep the step open with a coach line; a covering light still being installed shows a wait card; a second working light continues to a valid suggested unit and a working upstairs unit; an off-target light that lights the cell counts; the coached route is unchanged; reload keeps the step"
       },
       {
+        "id": "tsuggest_order",
+        "command": [
+          "@node",
+          "tests/headless/tsuggest_order.mjs"
+        ],
+        "completion": "ALL PASS: 5 suggested-placement order checks",
+        "minimum_pass_lines": 5,
+        "timeout": 600,
+        "evidence": "native current behavior: real planning and production renderActionBar markup on disposable Maple fixtures, real Act I coach plan and click handlers",
+        "scope": "375 Use suggested placement visibility: in green, amber and red placement reviews (including Nearest buildable spot and several blockers) the coach's button renders directly after the main status line, before optional guidance and above the cash lines; conditions, markup, suggest-match and behavior unchanged; free play has no button; no game-state change"
+      },
+      {
         "id": "tup_route_quote",
         "command": [
           "@node",
