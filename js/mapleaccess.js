@@ -1,71 +1,18 @@
-// Coordinates in Maple's simulation grid, y increasing toward the street.
+// Shared public-office access rules. Geometry comes from the property's frontage
+// descriptor (js/frontage.js); the Maple-bound helpers below keep their old names.
 import { G, PED_GROUND, VEH_GROUND } from './data.js';
+import { MAPLE_PUBLIC, MAPLE_FRONTAGE, publicDrive, frontageOf } from './frontage.js';
 
-export const MAPLE_PUBLIC = 'maple-public-office-v1';
-export const publicDrive = 'public-office-drive';
-export const recessed = (s, g) => s.layout === MAPLE_PUBLIC && g?.mapleCompound === true;
-export const pocket = (x,y) => x >= 4 && x < 18 && y >= 20 && y < 30;
-const lanes = (x,y) => x >= 18 && x < 24 && y >= 18 && y < 30;
-const approach = (x,y) => lanes(x,y) && y >= 24;
-const publicThroat = x => x >= 12 && x < 16;
-export const publicBay = (x,y) => x >= 10 && x < 16 && y >= 21 && y < 25 ? Math.floor((x-10)/2) : -1;
-export function staffLanding(office, target) {
-  if (target && pocket(Math.floor(target.x), Math.floor(target.y))) return office?.door;
+export { MAPLE_PUBLIC, publicDrive };
+export const recessed = (s, g) => g?.mapleCompound === true && !!frontageOf(s.layout)?.recessed(g);
+export const pocket = (x,y) => MAPLE_FRONTAGE.pocket(x,y);
+export const publicBay = (x,y) => MAPLE_FRONTAGE.bay(x,y);
+export function staffLanding(office, target, K = null) {
+  if (K && target && K.pocket(Math.floor(target.x), Math.floor(target.y))) return office?.door;
   return office?.staffDoor || office?.door;
 }
-
-// Staff may walk the frontage in either direction. Fence runs match the rendered
-// pocket. The last column of the recessed opening is the staff gate crossing.
-export function pedestrianEdge(x,y,nx,ny,staffGate = null) {
-  if (staffGate !== null) {
-    const right = Math.max(x,nx), front = Math.max(y,ny);
-    if (y === ny) {
-      if (right === 4 && y >= 20 && y < 30) return false;
-      if (right === 18 && y >= 20 && y < 24) return false;
-      if (right === 24 && y >= 24 && y < 30) return false;
-    } else {
-      if (front === 30) return x >= 4 && x < 24;
-      if (front === 20 && x >= 4 && x < 18) return false;
-      if (front === 24 && x >= 18 && x < 24) return staffGate && x === 23;
-    }
-    return true;
-  }
-  if (pocket(x,y) !== pocket(nx,ny)) {
-    return Math.max(y,ny) === 30 && Math.min(y,ny) === 29 && pocket(x,29) && pocket(nx,29);
-  }
-  if (y >= 30 || ny >= 30) return y === 30 && ny === 30;
-  return !lanes(x,y) && !lanes(nx,ny);
-}
-
-export function vehicleEdge(sim,x,y,nx,ny,id) {
-  const s = sim.s;
-  if (y >= 30 && ny >= 30) return true;
-  if (id === publicDrive) {
-    if (Math.max(y,ny) === 30) return publicThroat(x) && x === nx;
-    if (!pocket(x,y) || !pocket(nx,ny)) return false;
-    const a=publicBay(x,y), b=publicBay(nx,ny);
-    return a<0 || b<0 || a===b;
-  }
-  if (pocket(x,y) || pocket(nx,ny)) return false;
-  const ids = id == null ? sim.routeGateIds() : [id];
-  if (Math.max(y,ny) === 30) {
-    return ids.some(k => {
-      const g = s.objects[k];
-      if (recessed(s,g)) return ny < y ? x >= 21 && x < 24 : x >= 18 && x < 21;
-      return g?.y === 29 && Math.abs(nx-g.x)<=1 && !approach(nx,29);
-    });
-  }
-  if (approach(x,y) !== approach(nx,ny)) {
-    return x===nx && Math.min(y,ny)===23 && ids.some(k=>recessed(s,s.objects[k])) &&
-      (ny < y ? x >= 21 && x < 24 : x >= 18 && x < 21);
-  }
-  if (lanes(x,y) && lanes(nx,ny)) {
-    if ((x<21)!==(nx<21)) return false;
-    if (y!==ny) return x<21 ? ny>y : ny<y;
-  }
-  if (lanes(x,y)!==lanes(nx,ny)) return ny===17 || y===17;
-  return true;
-}
+export const pedestrianEdge = (x,y,nx,ny,staffGate = null) => MAPLE_FRONTAGE.pedestrianEdge(x,y,nx,ny,staffGate);
+export const vehicleEdge = (sim,x,y,nx,ny,id) => MAPLE_FRONTAGE.vehicleEdge(sim,x,y,nx,ny,id);
 
 function flood(sim, starts, valid, edge) {
   const seen = new Set(), queue=[];
@@ -84,7 +31,8 @@ function flood(sim, starts, valid, edge) {
 // Read-only projection. Pending losses count now; unfinished alternative pavement
 // cannot justify blocking a route which is still needed during construction.
 export function accessState(sim, plan, pending=true) {
-  const s=sim.s, office=sim.objs('office')[0];
+  const s=sim.s, office=sim.objs('office')[0], K=sim.frontage() || MAPLE_FRONTAGE, P=K.desc.pocket;
+  const pocket=K.pocket, publicBay=K.bay, pedestrianEdge=K.pedestrianEdge, vehicleEdge=K.vehicleEdge;
   if(!office?.staffDoor) return {};
   const ground=new Map(), solid=new Set();
   for(const t of plan?.tiles || []) if(t.k==='ground') ground.set(t.i,t.v);
@@ -98,16 +46,16 @@ export function accessState(sim, plan, pending=true) {
   const door=sim.idx(office.door.x,office.door.y), rear=sim.idx(office.staffDoor.x,office.staffDoor.y);
   const fromDoor=flood(sim,[door],walk,(x,y,nx,ny)=>pocket(nx,ny) && pocket(x,y));
   const entrance=[], sidewalk=[];
-  for(let x=4;x<18;x++){
-    sidewalk.push(sim.idx(x,29));
-    if(publicThroat(x) && drive(sim.idx(x,30))) entrance.push(sim.idx(x,29));
+  for(let x=P.x0;x<=P.x1;x++){
+    sidewalk.push(sim.idx(x,P.y1));
+    if(K.throat(x) && drive(sim.idx(x,K.streetY))) entrance.push(sim.idx(x,P.y1));
   }
   const cars=flood(sim,entrance,drive,(x,y,nx,ny)=>pocket(nx,ny) && vehicleEdge(sim,x,y,nx,ny,publicDrive));
   const bays=[];
   for(const i of cars) if(fromDoor.has(i) && publicBay(i%s.W,Math.floor(i/s.W))>=0 &&
     (ground.get(i)??s.ground[i])===G.PARKING && (!pending || (sim.D.pendingGround.get(i)??G.PARKING)===G.PARKING)) bays.push(i);
   bays.sort((a,b)=>Math.floor(a/s.W)-Math.floor(b/s.W) || a%s.W-b%s.W);
-  const staff=flood(sim,[rear],walk,(x,y,nx,ny)=>ny<30 && !pocket(nx,ny) && pedestrianEdge(x,y,nx,ny));
+  const staff=flood(sim,[rear],walk,(x,y,nx,ny)=>ny<K.streetY && !pocket(nx,ny) && pedestrianEdge(x,y,nx,ny));
   const assigned = new Set();
   for (const a of s.agents) if(a.publicVisit) {
     const car=sim.vehAt(a.veh);
@@ -134,7 +82,7 @@ export function accessState(sim, plan, pending=true) {
   const yardDoors = sim.objs('door').filter(o=>o.cstate==='operating');
   const yardReachable = yardDoors.length
     ? yardDoors.some(o=>staff.has(sim.idx(o.x+o.dir[0],o.y+o.dir[1])))
-    : [...staff].some(i=>Math.floor(i/s.W)<18);
+    : [...staff].some(i=>Math.floor(i/s.W)<K.desc.yardEdgeY);
   return {assigned,workers,pedestrian:sidewalk.some(i=>fromDoor.has(i)),parking:bays.length>0,staff:yardReachable,bays};
 }
 export function lostMapleAccess(before,after) {

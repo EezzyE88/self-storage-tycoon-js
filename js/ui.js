@@ -3402,7 +3402,7 @@ export class UI {
     const prep = await this.g.prepareLoad(text);
     if (!prep.ok) {
       this.pendingImport = null;
-      const message = prep.reason === 'save-generation' ? prep.msg
+      const message = prep.reason === 'save-generation' || prep.reason === 'unknown-layout' ? prep.msg
         : source === 'file' ? 'That file is not a valid save. Nothing was changed.'
         : 'That save code could not be read. Nothing was changed.';
       this.showImportError(message, source);

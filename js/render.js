@@ -1,4 +1,4 @@
-import { MAPLE_PUBLIC, recessed, publicBay } from './mapleaccess.js';
+import { recessed } from './mapleaccess.js';
 import { attachmentCoverage } from './unitupgrades.js';
 import { isComeback, targetInService, targetUnits } from './comeback.js';
 // Three.js presentation layer. Reads sim.s / sim.D; never mutates simulation state.
@@ -557,7 +557,7 @@ export class Renderer {
   // ================================================================ GROUND TEXTURES
   drawGround() {
     const sim = this.sim, s = sim.s, D = sim.D, g = this.groundCanvas.getContext('2d'), W = s.W, H = s.H, C = CELL;
-    const p = s.parcel; const bays=new Map(loadingStatus(sim).map(b=>[b.i,b.state]));
+    const p = s.parcel, K = sim.frontage(); const bays=new Map(loadingStatus(sim).map(b=>[b.i,b.state]));
     const offices=sim.objs('office').filter(o=>o.cstate!=='construction');
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const i = y * W + x, gv = s.ground[i], px = x * C, py = y * C, h = hash(i * 17 + 3);
@@ -608,7 +608,7 @@ export class Renderer {
         g.save(); g.beginPath(); g.rect(px + 2, py + 2, C - 4, C - 4); g.clip(); g.strokeStyle = 'rgba(232,185,35,0.45)'; g.lineWidth = 2;
         for (let k = -C; state==='inaccessible' && k < C; k += 8) { g.beginPath(); g.moveTo(px + k, py + C); g.lineTo(px + k + C, py); g.stroke(); } g.restore();
       }
-      if (gv === G.PARKING && !(s.layout===MAPLE_PUBLIC && publicBay(x,y)>=0)) { g.fillStyle = COL.stripe; const vert = s.ground[i - 1] === G.PARKING || s.ground[i + 1] === G.PARKING; if (vert) g.fillRect(px, py + 2, 2, C - 4); else g.fillRect(px + 2, py, C - 4, 2); }
+      if (gv === G.PARKING && !(K && K.bay(x,y)>=0)) { g.fillStyle = COL.stripe; const vert = s.ground[i - 1] === G.PARKING || s.ground[i + 1] === G.PARKING; if (vert) g.fillRect(px, py + 2, 2, C - 4); else g.fillRect(px + 2, py, C - 4, 2); }
       if (gv === G.STREET && y === p.y1 + 2) { if (x % 2 === 0) { g.fillStyle = COL.yellow; g.fillRect(px + 4, py + C - 2, C - 8, 3); } }
     }
     // curb line where street meets sidewalk
@@ -622,12 +622,15 @@ export class Renderer {
     }
     this.drawDirt(g, 0);
     // property line
-    if(s.layout===MAPLE_PUBLIC) {
+    if(K) {
+      // Public frontage markings from the layout descriptor: bay lines, lane arrows, crosswalks.
+      const F=K.desc, Gt=F.gate, lines=new Map();
+      for(const b of F.bays) for(const x of [b.x0,b.x1+1]) lines.set(x,[Math.min(lines.get(x)?.[0]??b.y0,b.y0),Math.max(lines.get(x)?.[1]??b.y1+1,b.y1+1)]);
       g.save(); g.strokeStyle='#f2eacd'; g.lineWidth=2;
-      for(let x=10;x<=16;x+=2){g.beginPath();g.moveTo(x*C,21*C);g.lineTo(x*C,25*C);g.stroke();}
+      for(const [x,[y0,y1]] of [...lines].sort((a,b)=>a[0]-b[0])){g.beginPath();g.moveTo(x*C,y0*C);g.lineTo(x*C,y1*C);g.stroke();}
       g.fillStyle='#ede6cd'; g.textAlign='center'; g.font='bold '+(1.25*C)+'px sans-serif';
-      g.fillText('↓',19.5*C,27*C);g.fillText('↑',22.5*C,27*C);
-      for(let y=14;y<18;y+=.5)g.fillRect(14*C,y*C,C,.22*C);
+      if(Gt.lanes){const ay=(Gt.approachY+K.streetY)/2;g.fillText('↓',(Gt.outbound.x0+Gt.outbound.x1+1)/2*C,ay*C);g.fillText('↑',(Gt.inbound.x0+Gt.inbound.x1+1)/2*C,ay*C);}
+      for(const c of F.crosswalks) for(let y=c.y0;y<c.y1+1;y+=.5)g.fillRect(c.x*C,y*C,C,.22*C);
       g.restore();
     }
     g.strokeStyle = 'rgba(255,255,255,0.35)'; g.setLineDash([6, 6]); g.lineWidth = 2; g.strokeRect(p.x0 * C, p.y0 * C, (p.x1 - p.x0 + 1) * C, (p.y1 - p.y0 + 1) * C); g.setLineDash([]);
@@ -886,7 +889,7 @@ export class Renderer {
       case 'gate': {
         const y = o.y + 1; // fence line z
         if (inConst) { this.scaffold(o, o.x + 0.5, o.y + 0.9, 3, 0.3, 1.2, 0); break; }
-        const compound = recessed(this.sim.s,o), left=compound ? 18 : o.x-1, right=o.x+2;
+        const compound = recessed(this.sim.s,o), left=compound ? this.sim.frontage().desc.gate.lanes.x0 : o.x-1, right=o.x+2;
         for (const px of [left,right]) this.box(0.18, 1.5, 0.18, this.mat.darkMetal, px, 0.75, y, 0);
         const panel = new THREE.Group();
         const frame = new THREE.Mesh(this.geo.box, this.mat.darkMetal); frame.scale.set(3, 0.08, 0.06); frame.position.y = 1.2; panel.add(frame);
@@ -1038,11 +1041,13 @@ export class Renderer {
       const gate = s.objects[id], connection = s.gateAccess?.connections?.[String(id)];
       return gate?.type === 'gate' && connection?.kind === 'front-street' && connection.boundary === 'front' ? [gate.x - 1, gate.x + 2] : null;
     }).filter(Boolean).sort((a, b) => a[0] - b[0]);
-    if(s.layout===MAPLE_PUBLIC) {
-      frontGaps.push([4,24]); frontGaps.sort((a,b)=>a[0]-b[0]);
-      run(4,30,4,20); run(this.sim.objs('office').some(o=>o.staffDoor) ? 8 : 4,20,18,20); run(18,20,18,24);
-      run(24,24,24,30);
-      if(!this.sim.objs('gate').some(g=>recessed(s,g))) run(18,24,24,24);
+    const F = this.sim.frontage()?.desc;
+    if(F) {
+      // Public frontage fence: the same runs the staff routing uses.
+      frontGaps.push([...F.frontGap]); frontGaps.sort((a,b)=>a[0]-b[0]);
+      const office = this.sim.objs('office').some(o=>o.staffDoor);
+      for (const f of F.fence) run(...(office && f.office ? f.office : f.run));
+      if(F.gateLine && !this.sim.objs('gate').some(g=>recessed(s,g))) run(...F.gateLine);
     }
     let frontX = p.x0;
     for (const [gap0, gap1] of frontGaps) {

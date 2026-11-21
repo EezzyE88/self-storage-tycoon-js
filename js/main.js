@@ -3,7 +3,6 @@ import { portfolioCareer } from './career.js';
 import { FINANCIAL_MINUTE } from './finance.js';
 import { Sim, fmtTime } from './sim.js';
 import { TICKS_PER_SEC_1X, TIERS } from './data.js';
-import { MAPLE_PUBLIC } from './mapleaccess.js';
 import { makeMaple, makePublicMaple, makeEmptyLot } from './maple.js';
 import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from './scenarios.js';
 export { modeLabel };
@@ -141,7 +140,8 @@ const game = {
     this.lastCam = opts.cam || null;
     if (opts.cam) this.rend.applyCamState(opts.cam); // a restored player camera replaces the default framing and the phone re-fit
     else {
-    if(sim.s.layout===MAPLE_PUBLIC) this.rend.lookAt(14,23);
+    const frontage=sim.frontage()?.desc;
+    if(frontage) this.rend.lookAt(frontage.camera.x,frontage.camera.y);
     else this.rend.lookAt(sim.s.market.id === 'maple' ? (sim.s.mirror ? sim.s.W - 17 : 16) : Math.round(sim.s.W / 2) - 1, sim.s.market.id === 'maple' ? 16 : Math.round(sim.s.H * 0.6));
     this.rend.zoom = (sim.s.mode === 'tutorial' ? 1.05 : 0.95) * (window.innerWidth < 600 ? 0.8 : 1); this.rend.updateCamera();
     if (this.ui && this.ui.phone()) {
@@ -194,6 +194,9 @@ const game = {
       if (!st || typeof st !== 'object') return { ok: false, msg: 'Not a save' };
       // Validate every property before ANY incoming constructor/migration or session replacement.
       if (!sameSaveGeneration(st)) return { ok: false, reason: 'save-generation', msg: 'This save belongs to a different or unsupported generation. Keep it unchanged and open legacy saves in retained Build 5ce4cfa.' };
+      // A property layout this build does not know would otherwise route as a classic lot. Refuse it whole.
+      const layouts = st.company && Array.isArray(st.props) ? st.props.map((p) => p?.s?.layout) : [st.layout];
+      if (!layouts.every((l) => Sim.knownLayout(l))) return { ok: false, reason: 'unknown-layout', msg: 'This save uses a property layout this build does not recognize. It was not loaded, and your current game is unchanged.' };
       let company, view, cam;
       if (st.company && Array.isArray(st.props) && st.props.length) {
         if (st.props.length > 12 || !st.props.every((p) => p && typeof p.name === 'string' && validState(p.s)) || !Number.isInteger(st.active ?? 0) || (st.active ?? 0) < 0 || (st.active ?? 0) >= st.props.length || (st.feed != null && !Array.isArray(st.feed))) return { ok: false, msg: 'Invalid portfolio save' };
