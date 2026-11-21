@@ -1,4 +1,4 @@
-import { MAPLE_PUBLIC, publicDrive, accessState, lostMapleAccess } from './mapleaccess.js';
+import { publicDrive, accessState, lostMapleAccess } from './mapleaccess.js';
 // Universal removal. F1-F5 removal terms are owner-approved for release (2026-11-18).
 import { G, SIZES } from './data.js';
 import { unregisterGateAccess } from './gateaccess.js';
@@ -113,7 +113,7 @@ export function analyzeRemoval(sim,value,gateCheck,identity) {
   const q={ids:[...ids].sort((a,b)=>a-b),cartIds,tiles,floor,keypad,closeProperty};
   if(!prerequisites.length){
     const state=structuredClone(s);applyRemovalState(state,q);const after=new sim.constructor(state);
-    if (s.layout===MAPLE_PUBLIC && !closeProperty && after.objs('office').length) {
+    if (sim.frontage() && !closeProperty && after.objs('office').length) {
       const reason=lostMapleAccess(accessState(sim),accessState(after)); if(reason) bad(reason);
     }
     const lost=[];
