@@ -44,6 +44,7 @@ test('new Comeback starts are Cedar Creek: record v2, own layout and site, autho
   assert.equal(s.layout, CEDAR_LAYOUT); assert.equal(c.id, 'comeback'); assert.equal(c.v, 2); assert.equal(c.site, CEDAR_SITE);
   assert.equal(c.name, SCENARIOS.comeback.name); assert.equal(c.status, 'active'); assert.equal(c.deadline, null); assert.equal(c.fail, null);
   assert.equal(s.cash, CEDAR_START.cash); assert.equal(c.cash0, CEDAR_START.cash); assert.equal(c.leaseGoal, CEDAR_START.leaseGoal);
+  assert.equal(c.liquidGoal, 2150); assert.equal(CEDAR_START.cash, 1150, 'R1 keeps the $1,150 start');
   assert.equal(s.speed, 0, 'starts paused'); assert.equal(s.open, true); assert.equal(s.policies.ownerChores, false);
   assert.deepEqual(c.targets.map((t) => [t.x, t.y, t.w, t.h, t.dir.join()]), CEDAR_TARGETS.map((t) => [t.x, t.y, t.w, t.h, t.dir.join()]));
   const work = c.targets.map((t) => s.tasks.find((x) => x.type === 'makeready' && x.obj === t.id)?.total);
@@ -150,31 +151,55 @@ test('30 days x 8 seeds of ordinary play: visitors stay public, tenant cars use 
   }
 });
 
-test('goals hold only together: restored and leased with cash at the start is not a win; one cent above wins at once, once (SYNTHETIC cash)', () => {
+// Ready the yard with all six restored and the given number of leases on restored targets (production methods).
+function readyYard(leases) {
   const sim = makeScenario('comeback'), s = sim.s, c = s.scenario;
   for (const t of CEDAR_TARGETS.filter((t) => t.apron)) finishOrder(sim, sim.dispatch(apronArgs(t)));
   for (const t of [...s.tasks].filter((t) => t.type === 'makeready')) sim.finishTask(t, null);
-  sim.ensure(); sim.poll();
-  assert.equal(comebackProgress(sim).restored, 6); assert.equal(c.status, 'active');
-  const us = c.targets.map((t) => s.objects[t.id]);
-  for (const u of us.slice(0, 2)) sim.signLease(u, { size: '10x10' });
-  sim.poll(); assert.equal(comebackProgress(sim).leased, 2); assert.equal(c.status, 'active', 'two leases is not enough');
-  // SYNTHETIC: put cash exactly at the start, then sign the third lease without its cash.
-  const third = us[2]; sim.signLease(third, { size: '10x10' });
-  const pos = () => sim.financialPosition(); s.cash = c.cash0 + pos().committed + s.loan.bal;
-  assert.equal(pos().netLiquid, c.cash0); sim.events.length = 0; sim.poll();
-  const p = comebackProgress(sim); assert.deepEqual(p.goals.map((g) => g.met), [true, true, false]);
-  assert.equal(c.status, 'active', 'cash equal to the start is not above it');
+  sim.ensure(); const us = c.targets.map((t) => s.objects[t.id]);
+  for (const u of us.slice(0, leases)) sim.signLease(u, { size: '10x10' });
+  sim.ensure(); sim.events.length = 0; return { sim, s, c, us };
+}
+const setLiquid = (sim, v) => { const s = sim.s, P = sim.financialPosition(); s.cash = Math.round((v + P.committed + s.loan.bal) * 100) / 100; }; // SYNTHETIC
+
+test('goals hold only together: one cent under the $2,150 net-liquid goal is not a win; reaching it wins at once, once (SYNTHETIC cash)', () => {
+  const { sim, s, c, us } = readyYard(2);
+  setLiquid(sim, 5000); sim.poll(); assert.equal(c.status, 'active', 'two leases is not enough, even with plenty of net liquid');
+  sim.signLease(us[2], { size: '10x10' }); sim.ensure();
+  setLiquid(sim, c.liquidGoal - 0.01); sim.events.length = 0; sim.poll();
+  assert.equal(sim.financialPosition().netLiquid, c.liquidGoal - 0.01);
+  assert.deepEqual(comebackProgress(sim).goals.map((g) => g.met), [true, true, false]);
+  assert.equal(c.status, 'active', '$2,149.99 net liquid is under the goal');
   assert.deepEqual(c.earned, [true, true, true], 'each goal has been met at some moment (cash with two leases); that alone is not a win');
-  s.cash += 0.01; sim.poll();
-  assert.equal(c.status, 'won'); assert.equal(c.endDay, sim.day); assert.ok(c.endCash > c.cash0);
+  // cash in hand above the goal does not count while bills already owed take net liquid under it
+  const P = sim.financialPosition(); if (P.committed > 0) { assert.ok(s.cash > c.liquidGoal - P.committed); }
+  setLiquid(sim, c.liquidGoal); sim.poll();
+  assert.equal(c.status, 'won'); assert.equal(c.endDay, sim.day); assert.equal(c.endCash, c.liquidGoal);
   assert.equal(sim.events.filter((e) => e.type === 'scenario_end').length, 1);
   sim.events.length = 0; for (let i = 0; i < 2 * 1440; i++) { sim.step(); sim.poll(); }
   assert.equal(sim.events.filter((e) => e.type === 'scenario_end').length, 0, 'no repeated win');
-  // conditions may change after the win; the result stays
   sim.endLease(s.leases[us[0].lease], 'test'); s.cash = 0; sim.poll(); assert.equal(c.status, 'won');
   assert.ok(validComeback(s)); assert.ok(sim.dispatch({ type: 'comebackAck' }).ok); assert.equal(careerEligibility(s).eligible, true);
   assert.equal(yardInfill(sim), null); assert.equal(!!authoredYard(sim), false);
+});
+
+test('bills owed count against the goal: unpaid wages hold net liquid under $2,150 even with $2,150 cash in hand (SYNTHETIC cash)', () => {
+  const { sim, s, c } = readyYard(3);
+  assert.ok(sim.dispatch({ type: 'hire', role: 'porter' }).ok);
+  for (let i = 0; i < 1440; i++) { sim.step(); sim.events.length = 0; }
+  const owed = sim.financialPosition().committed; assert.ok(owed > 0, 'wages and costs accrue as bills');
+  s.cash = c.liquidGoal; sim.poll(); assert.equal(c.status, 'active', 'cash at the goal with bills owed is not net liquid at the goal');
+  s.cash = c.liquidGoal + owed; sim.poll(); assert.equal(c.status, 'won');
+});
+
+test('a 3fd14ab Cedar record without liquidGoal keeps its original goal: net liquid above its $1,150 start (SYNTHETIC cash)', () => {
+  const { sim, s, c } = readyYard(3); delete c.liquidGoal;
+  const re = new Sim(JSON.parse(JSON.stringify(s))), rc = re.s.scenario;
+  assert.ok(validComeback(re.s)); assert.equal(rc.liquidGoal, undefined);
+  assert.equal(rc.goals[2].label, 'Net liquid above your $1,150 start'); assert.equal(rc.goals[2].v, 1150);
+  setLiquid(re, 1150); re.poll(); assert.equal(rc.status, 'active');
+  setLiquid(re, 1150.01); re.poll(); assert.equal(rc.status, 'won');
+  for (const bad of [1150, 'lots', -1]) { const st = JSON.parse(JSON.stringify(s)); st.scenario.liquidGoal = bad; assert.equal(new Sim(st).s.scenario.status, 'unavailable', 'liquidGoal ' + bad); }
 });
 
 test('leases count distinct live leases on restored targets, not history; a target out of service blocks the win (SYNTHETIC cash)', () => {
@@ -201,9 +226,23 @@ test('progress checks use no randomness and add no per-unit inquiry state; deman
   const rng = s.rngS, before = JSON.stringify(s);
   for (let i = 0; i < 200; i++) { comebackProgress(sim); checkComeback(sim); scenarioProgress(sim); cedarDemand(sim); }
   assert.equal(s.rngS, rng); assert.equal(JSON.stringify(s), before);
-  assert.deepEqual(Object.keys(s.scenario).sort(), ['acknowledged', 'cash0', 'deadline', 'earned', 'fail', 'goals', 'id', 'leaseGoal', 'name', 'ownerDone', 'site', 'staffDone', 'status', 'targets', 'v'].sort());
+  assert.deepEqual(Object.keys(s.scenario).sort(), ['acknowledged', 'cash0', 'deadline', 'earned', 'fail', 'goals', 'id', 'leaseGoal', 'liquidGoal', 'name', 'ownerDone', 'site', 'staffDone', 'status', 'targets', 'v'].sort());
   for (const t of s.scenario.targets) assert.deepEqual(Object.keys(t).sort(), ['access', 'dir', 'env', 'f', 'h', 'id', 'ids', 'num', 'w', 'x', 'y'].sort());
-  const D = cedarDemand(sim); assert.equal(D.size, '10x10'); assert.deepEqual(Object.keys(D.lost).sort(), ['noReady', 'other', 'price', 'service']);
+  const D = cedarDemand(sim); assert.equal(D.size, '10x10'); assert.deepEqual(Object.keys(D.lost).sort(), ['competitor', 'noReady', 'other', 'price', 'service']);
+});
+
+test('shopper feedback names competitor losses from the reasons the game records, and the rival from its market data', () => {
+  const sim = makeScenario('comeback'), s = sim.s, d = sim.day;
+  // SYNTHETIC log rows in the existing lostLog shape; each reason the game records lands in its own bucket
+  for (const r of ['competitor', 'competitor', 'price', 'noReady', 'service', 'ownerDeferred', 'shopping', 'convenience', 'reputation']) s.mkt.lostLog.push({ d, r, sz: '10x10', climate: false });
+  s.mkt.lostLog.push({ d, r: 'competitor', sz: '5x10', climate: false }, { d, r: 'competitor', sz: '10x10', climate: true }, { d: d - 7, r: 'competitor', sz: '10x10', climate: false });
+  const D = cedarDemand(sim);
+  assert.deepEqual(D.lost, { price: 1, competitor: 2, noReady: 1, service: 2, other: 3 });
+  assert.equal(D.rival, null); assert.equal(D.coming, null);
+  s.mkt.comp.push({ id: 1, name: 'Northgate Self Storage', announced: d, opens: d + 30, strength: 0.2, price: 0.9, dist: 2 });
+  assert.deepEqual(cedarDemand(sim).coming, { name: 'Northgate Self Storage', opens: d + 30, price: 0.9 }); assert.equal(cedarDemand(sim).rival, null);
+  s.mkt.comp[0].opens = d; assert.deepEqual(cedarDemand(sim).rival, { name: 'Northgate Self Storage', price: 0.9 });
+  assert.equal(sim.compPrice(), 0.9, 'the same rival price the shopper decision uses');
 });
 
 test('save round trip at the start, mid-restoration and after the win continues identically', () => {
@@ -232,6 +271,7 @@ test('old Comeback v1 saves stay v1; damaged or mismatched v2 records become una
     'Maple layout': (s) => { s.layout = 'maple-public-office-v1'; },
     'zero lease goal': (s) => { s.scenario.leaseGoal = 0; },
     'bad start cash': (s) => { s.scenario.cash0 = 'lots'; },
+    'goal under start': (s) => { s.scenario.liquidGoal = 1000; },
     'won without end day': (s) => { s.scenario.status = 'won'; s.scenario.earned = [true, true, true]; },
     'acknowledged while active': (s) => { s.scenario.acknowledged = true; },
     'unknown version': (s) => { s.scenario.v = 3; },

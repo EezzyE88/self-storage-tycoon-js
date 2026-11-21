@@ -11,7 +11,7 @@ import { CEDAR_LAYOUT, CEDAR_SITE, CEDAR_FRONTAGE, CEDAR_AISLES, CEDAR_CORE, CED
 export const SCENARIOS = {
   comeback: {
     name: 'Cedar Creek Storage Yard',
-    blurb: 'A tired drive-up yard with its office out front. Six rear units need make-ready and two door aprons are washed out. You have $1,150: your hours, a Porter\'s wages or the paving order. Restore the wing, lease the units and finish with more cash than you started with.',
+    blurb: 'A tired drive-up yard with its office out front. Six rear units need make-ready and two door aprons are washed out. You start with $1,150 and every choice costs something: your counter hours, a Porter\'s wages, a vendor or the paving order. Restore the wing, lease the units and build net liquid to $2,150.',
     goals: cedarGoals(CEDAR_START), deadline: null, fail: null,
   },
   turnaround: {
@@ -186,8 +186,8 @@ export function makeCedarCreek(seed = 4401) {
   sim.spawnStaffAgent(s.staff[0]);
   targets.forEach((u, k) => sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Make-ready ' + u.name, work: CEDAR_TARGETS[k].work }));
   ensureCustomerAccounts(s);
-  s.scenario = { id: 'comeback', name: SCENARIOS.comeback.name, v: 2, site: CEDAR_SITE, cash0: CEDAR_START.cash, leaseGoal: CEDAR_START.leaseGoal,
-    goals: cedarGoals({ cash: CEDAR_START.cash, leaseGoal: CEDAR_START.leaseGoal }),
+  s.scenario = { id: 'comeback', name: SCENARIOS.comeback.name, v: 2, site: CEDAR_SITE, cash0: CEDAR_START.cash, leaseGoal: CEDAR_START.leaseGoal, liquidGoal: CEDAR_START.liquidGoal,
+    goals: cedarGoals(CEDAR_START),
     targets: targets.map(u => ({ id: u.id, ids: [u.id], num: u.num, x: u.x, y: u.y, w: u.w, h: u.h, f: 0, access: u.access, env: u.env, dir: [...u.dir] })),
     deadline: null, fail: null, status: 'active', ownerDone: [], staffDone: [], earned: [false, false, false], acknowledged: false };
   freshBooks(s); s.ledger = []; s.lastCommit = null;

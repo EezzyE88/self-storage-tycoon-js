@@ -2775,34 +2775,36 @@ export class UI {
     if (this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
     const owner = s.staff.find(st => st.role === 'owner'), left = owner ? sim.workRemaining(owner) : 0;
     const porter = s.staff.find(st => st.role === 'porter'), pay = ROLES.porter.wage * ROLES.porter.workHours;
-    const D = cedarDemand(sim), won = c.status === 'won', diff = Math.round(p.cash - p.cash0);
+    const D = cedarDemand(sim), won = c.status === 'won', goalCash = p.liquidGoal ?? p.cash0;
     const lines = c.targets.map((t, k) => this.cedarUnitLine(t, k));
     const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p.goals.map(g => [g.met, Math.round(g.cur)]), lines, left, !!porter, D, sim.day]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
-    const goalValue = (g) => g.k === 'cedarCash' ? `${money(Math.round(g.cur))} · ${diff > 0 ? '+' : ''}${money(diff)}` : `${Math.round(g.cur)}/${g.v}`;
+    const goalValue = (g) => g.k === 'cedarCash' ? (p.liquidGoal != null ? `${money(Math.round(g.cur))} of ${money(goalCash)}` : `${money(Math.round(g.cur))} · start ${money(p.cash0)}`) : `${Math.round(g.cur)}/${g.v}`;
     const goals = `<ul class="goals">${p.goals.map(g => `<li class="${g.met ? 'met' : ''}"><span class="ck">${g.met ? '&#10003;' : ''}</span><span>${esc(g.label)}</span><b>${goalValue(g)}</b></li>`).join('')}</ul>`;
     const units = `<div class="cedar-units">${c.targets.map((t, k) => `<button class="btn sm cedar-unit" data-a="comebackUnit" data-v="${t.id}" ${targetUnits(s, t).length ? '' : 'disabled'}><b>${targetLeased(s, t) ? '&#10003; ' : ''}Unit ${t.num}</b><small>${lines[k]}</small></button>`).join('')}</div>`;
-    const lostTxt = [D.lost.price && `${D.lost.price} said too expensive`, D.lost.noReady && `${D.lost.noReady} found nothing ready`, D.lost.service && `${D.lost.service} left unserved at the counter`, D.lost.other && `${D.lost.other} kept shopping`].filter(Boolean);
-    const demand = `<p class="note"><b>10×10 shoppers, last ${D.days} days:</b> ${D.leased} signed${lostTxt.length ? ' · ' + lostTxt.join(' · ') : ''}. Shopper results are kept by unit size, not for each unit.</p>`;
-    const briefing = `<p>Cedar Creek has seen better decades. Six units out back need make-ready before anyone will rent them, and two door aprons are washed out. You have ${money(p.cash0)}. Restore the units, lease ${c.leaseGoal} of them, and get the business back above the cash you started with.</p>`;
+    const lostTxt = [D.lost.price && `${D.lost.price} said your rent was too high`, D.lost.competitor && `${D.lost.competitor} chose a cheaper competitor`, D.lost.noReady && `${D.lost.noReady} found nothing ready`, D.lost.service && `${D.lost.service} left unserved at the counter`, D.lost.other && `${D.lost.other} kept shopping`].filter(Boolean);
+    const rivalTxt = D.rival ? ` ${esc(D.rival.name)} is open nearby at about ${Math.round(D.rival.price * 100)}% of market rent; asking more than that loses some shoppers to them.` : D.coming ? ` ${esc(D.coming.name)} opens nearby on Day ${D.coming.opens} at about ${Math.round(D.coming.price * 100)}% of market rent.` : ' No competitor is open nearby yet.';
+    const demand = `<p class="note"><b>10×10 shoppers, last ${D.days} days:</b> ${D.leased} signed${lostTxt.length ? ' · ' + lostTxt.join(' · ') : ''}. Shopper results are kept by unit size, not for each unit.${rivalTxt}</p>`;
+    const briefing = `<p>Cedar Creek has seen better decades. Six units out back need make-ready before anyone will rent them, and two door aprons are washed out. You have ${money(p.cash0)}. Restore the units, lease ${c.leaseGoal} of them, and ${p.liquidGoal != null ? `build net liquid to ${money(p.liquidGoal)}` : 'get net liquid back above what you started with'}.</p>`;
     let detail;
     if (won) {
       const leasedT = c.targets.filter(t => targetLeased(s, t));
       detail = `<h4>Cedar Creek is back.</h4>
-      <p>Finished on Day ${c.endDay} with all six rear units restored, ${leasedT.length} leased and ${money(Math.round(c.endCash))} cash against your ${money(p.cash0)} start.</p>
+      <p>Finished on Day ${c.endDay} with all six rear units restored, ${leasedT.length} leased and ${money(Math.round(c.endCash))} net liquid (cash after unpaid bills)${p.liquidGoal != null ? ` against the ${money(p.liquidGoal)} goal. You started with ${money(p.cash0)}` : ` against your ${money(p.cash0)} start`}.</p>
       <ul class="cedar-results">${c.targets.map((t, k) => `<li>Unit ${t.num}: ${lines[k]}</li>`).join('')}</ul>
       <p><b>What next:</b> the back pads are yours to develop. The rear pad takes a row facing the service aisle, and the east pad takes units facing the east lane. Build them in your own time.</p>
       <div class="row wrap">${c.acknowledged ? '<button class="btn" data-a="comebackWork">Review operations</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="rescueLeasing">Review leasing</button>'}</div>`;
     } else {
       detail = `${sim.day <= 1 && !p.restored ? briefing : ''}${goals}
-      <p class="note">All three must be true at the same time. Cash counts bills already owed and any credit-line draw. No deadline: the yard is yours the moment all three hold.</p>
+      <p class="note">All three must be true at the same time. Net liquid is your cash minus bills already owed (wages and operating costs, paid at the weekly settlement) and any credit-line draw. The top bar shows cash before those bills; Business › Bills &amp; reserve shows net liquid. No deadline: the yard is yours the moment all three hold.</p>
       ${units}
       <div class="row wrap"><button class="btn" data-a="comebackWork">Review work</button><button class="btn" data-a="comebackHire">Review Porter hire</button></div>
       <details class="comeback-details" ${detailOpen ? 'open' : ''}><summary>Demand, staffing and the yard</summary>
         ${demand}
         <p><b>Owner:</b> no wage · ${left}h of ${ROLES.owner.workHours}h left today. Field work takes you away from the counter, and shoppers who arrive then may leave.</p>
-        <p><b>Porter:</b> ${money(pay)}/employed day, settled weekly. Make-ready is picked up automatically. ${porter ? 'A Porter is employed; you can let them go once the wing is done.' : 'Hire to free your hours; let go when the work is done.'}</p>
-        <p><b>Aprons:</b> two units need a Drive Aisle on the two cells in front of their doors ($45 a cell). The through lane stays open for everyone else.</p>
+        <p><b>Porter:</b> ${money(pay)}/employed day. Wages are paid at the weekly settlement but count against net liquid as they build up. Make-ready is picked up automatically. ${porter ? 'A Porter is employed; you can let them go once the wing is done.' : 'Hire to free your hours; let go when the work is done.'}</p>
+        <p><b>Vendor:</b> any make-ready can go to a vendor from Review work for $250, paid from cash when booked. It takes about 10 hours and none of your time.</p>
+        <p><b>Aprons:</b> two units need a Drive Aisle on the two cells in front of their doors ($45 a cell, paid from cash when ordered). The through lane stays open for everyone else.</p>
         ${sim.day > 1 || p.restored ? briefing : ''}
       </details>`;
     }

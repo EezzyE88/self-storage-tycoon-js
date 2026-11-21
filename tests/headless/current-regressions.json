@@ -332,8 +332,8 @@
           "@node",
           "tests/headless/tcedar_creek.mjs"
         ],
-        "completion": "11\\ Cedar\\ Creek\\ checks\\ passed",
-        "minimum_pass_lines": 11,
+        "completion": "14\\ Cedar\\ Creek\\ checks\\ passed",
+        "minimum_pass_lines": 14,
         "timeout": 240,
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
       },

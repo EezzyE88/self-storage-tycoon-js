@@ -84,7 +84,9 @@ export const CEDAR_TARGETS = [
 ].map((t) => ({ ...t, w: 2, h: 2, f: 0, size: '10x10', dir: [0, 1] }));
 
 // PROVISIONAL authored values, recorded in each new save so a started yard keeps them.
-export const CEDAR_START = { cash: 1150, leaseGoal: 3 };
+// liquidGoal (SC-01R1): the net-liquid recovery target; a record without it
+// (3fd14ab starts) keeps its original goal of net liquid above the start.
+export const CEDAR_START = { cash: 1150, leaseGoal: 3, liquidGoal: 2150 };
 
 // Ground features painted by the builder (besides aisles, lanes and the pocket).
 export const CEDAR_PADS = [
