@@ -1,7 +1,7 @@
 // Authored scenarios (GDD §44) and configurable sandbox starts (GDD §45).
 // Every scenario shows its goals and fail condition from the first minute.
 import { newState, Sim } from './sim.js';
-import { makeMaple } from './maple.js';
+import { makeMaple, makePublicMaple } from './maple.js';
 import { G, WORK } from './data.js';
 import { COMEBACK_GOALS, comebackProgress, isComeback } from './comeback.js';
 import { ensureCustomerAccounts } from './customeraccounts.js';
@@ -14,8 +14,8 @@ export const SCENARIOS = {
   },
   turnaround: {
     name: 'Maple Turnaround',
-    blurb: 'The previous owner let Maple Street slide: broken lights, a failing gate, dirty loading bays and ten empty units. Legacy rents are low and cash is thin.',
-    goals: [{ k: 'occ', v: 0.95, label: 'Occupancy at least 95%', fmt: 'pct' }, { k: 'rep', v: 0.8, label: 'Reputation at least 80%', fmt: 'pct' }, { k: 'roll', v: 3750, label: 'Monthly rent roll at least $3,750', fmt: 'money' }],
+    blurb: 'The previous owner let Maple Street slide: worn lights, a failing gate, dirty loading bays, 11 empty units and 3 late accounts. Legacy rents are low, and the interior building has an unfinished west corridor with room for more units.',
+    goals: [{ k: 'occ', v: 0.92, label: 'Occupancy at least 92%', fmt: 'pct' }, { k: 'rep', v: 0.8, label: 'Reputation at least 80%', fmt: 'pct' }, { k: 'roll', v: 3600, label: 'Monthly rent roll at least $3,600', fmt: 'money' }],
     deadline: 150, fail: { cashBelow: -5000, cashDays: 14 },
   },
   vertical: {
@@ -49,7 +49,9 @@ function freshBooks(s) { s.today = { day: 1, rent: 0, other: 0, opex: 0, payroll
 export function makeScenario(id, seed = 4401) {
   if (id === 'comeback') return makeComeback(seed);
   if (id === 'turnaround') {
-    const sim = makeMaple(4401); const s = sim.s;
+    // Maple Turnaround v2: the accepted public-frontage layout (street office and parking, recessed storage gate).
+    // Saves made before this keep their own layout; only new runs start here.
+    const sim = makePublicMaple(4401); const s = sim.s;
     s.mode = 'scenario'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true;
     s.cash = 7000;
     // ten tenants have left; their units need make-ready

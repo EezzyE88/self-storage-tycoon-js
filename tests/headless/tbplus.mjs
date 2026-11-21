@@ -184,6 +184,7 @@ test('Business, Operate, Growth and modal HTML render without invalid numbers', 
   for (const method of ['showFinances', 'showCalendar']) {
     ui[method](); assert.ok(modal.innerHTML.length > 100); assert.ok(!/NaN|undefined/.test(modal.innerHTML), method);
   }
-  assert.equal(sim.s.scenario.goals.find((g) => g.k === 'roll').v, 3750);
+  // Maple Turnaround v2: $3,600 (all 23 original units at market rent give $3,350; growth or repricing is needed).
+  assert.equal(sim.s.scenario.goals.find((g) => g.k === 'roll').v, 3600);
 });
 console.log(`ALL PASS: ${checks} B+ tests`);

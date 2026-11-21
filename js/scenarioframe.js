@@ -12,8 +12,8 @@ const money = (v) => (v < 0 ? '-' : '') + '$' + Math.abs(Math.round(v)).toLocale
 export const BRIEFS = {
   comeback: { situation: 'Six drive-up spaces at Maple Street need make-ready before anyone can rent them.',
     pressure: 'Your own hours cost nothing but run out each day; a Porter shares the work for a daily wage. First: open Review work.' },
-  turnaround: { situation: 'You bought Maple Street from an owner who let it slide.',
-    pressure: 'Ten empty units need make-ready, lights and the gate are worn, and three accounts are behind. First: start the make-ready jobs in Operate.' },
+  turnaround: { situation: 'You bought a run-down Maple Street. Office and parking face the street; storage is behind the gate.',
+    pressure: '11 units need make-ready, lights and the gate are worn, and 3 accounts are behind. Full at market rent falls short: fit out the dark west corridor or reprice. Start make-ready in Operate.' },
   vertical: { situation: 'A tight urban lot with strong demand for small units. The gate, aisle and office are in.',
     pressure: 'The only way to grow is up: upper floors need elevators, stairs and power. First: plan a building in Build.' },
   climate: { situation: 'A new crowd is moving into town, and two in three shoppers want climate control.',
