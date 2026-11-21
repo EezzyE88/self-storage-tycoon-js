@@ -467,6 +467,7 @@ export class UI {
         if (u) { this.scMin = true; this.renderTut(true); this.setTab(null); this.setView(u.f || 0); this.rend.lookAt(u.x + u.w/2, u.y + u.h/2); this.select(u.id); }
         break;
       }
+      case 'cedarDriveway': this.reviewCedarDriveway(+v); break;
       case 'scenMin': this.scMin = !this.scMin; this.renderTut(true); break;
       case 'saveCode': this.showSave(); break;
       case 'saveFile': this.toast('This save uses floor-based unit numbers. Keep your original export for older builds.');this.g.saveFile(); break;
@@ -2761,12 +2762,42 @@ export class UI {
   cedarUnitLine(t, k) {
     const s = this.sim.s, u = targetUnits(s, t)[0], task = u && s.tasks.find(x => x.type === 'makeready' && x.obj === u.id);
     if (!u) return 'Original space changed';
-    if (u.missing?.length) return CEDAR_TARGETS[k]?.apron ? 'Door apron washed out · order a Drive Aisle on the 2 cells in front' : esc(u.missing[0]);
+    if (u.missing?.length) { const d = this.cedarDriveway(k); return d ? (d.building ? 'Damaged Driveway · repair under way' : 'Damaged Driveway · 2 cells in front of the door') : esc(u.missing[0]); }
     if (targetLeased(s, t)) { const L = s.leases[u.lease]; return `Leased · ${money(L.rent, true)}/mo (market ${money(this.sim.marketRent(u), true)})`; }
     if (targetInService(s, t)) return `Ready to rent · asking ${money(this.sim.askFor(u), true)}/mo`;
     if (task) { const who = task.assigned ? (s.staff.find(st => st.id === task.assigned)?.role === 'owner' ? 'Owner' : 'Porter') : null;
       return `Make-ready ${this.sim.taskHours(task)}h${task.prog ? ` · ${Math.round(100 * task.prog / task.total)}% done` : ''}${who ? ' · ' + who : ' · not started'}`; }
     return 'Not in service';
+  }
+  // Cedar Damaged Driveway (the authored apron): the two cells in front of a rear unit's door, while that unit still
+  // lacks frontage. Read-only: the quote comes from the ordinary build planner, so cost and rules stay the planner's.
+  cedarDriveway(k) {
+    const s = this.sim.s, t = s.scenario?.v === 2 ? s.scenario.targets?.[k] : null, cells = CEDAR_TARGETS[k]?.apron;
+    if (!t || !cells?.length || s.scenario.status === 'unavailable') return null;
+    const u = targetUnits(s, t)[0]; if (!u?.missing?.length) return null;
+    const xs = cells.map(c => c[0]), y = cells[0][1], a = { x: Math.min(...xs), y }, b = { x: Math.max(...xs), y };
+    const building = (s.orders || []).some(o => o.st === 'construction' && o.cells?.some(c => (c.f || 0) === 0 && cells.some(([x, yy]) => c.x === x && c.y === yy)));
+    const plan = building ? null : this.sim.plan({ tool: 'aisle', a, b, f: 0 });
+    return { k, a, b, building, cost: plan?.status === 'valid' ? plan.cost : null };
+  }
+  // "Review driveway repair": open the existing Drive Aisle review on exactly those two cells. Nothing is charged or
+  // built until the player taps Confirm in that review; ✕ backs out as with any build.
+  reviewCedarDriveway(k) {
+    const d = this.cedarDriveway(k); if (!d || d.cost == null) return;
+    this.scMin = true; this.renderTut(true); this.select(null); this.setView(0);
+    this.cat = 'roads'; this.setTab('build'); this.pickTool('aisle');
+    if (this.tool !== 'aisle') return;
+    this.placeStart(d.a); this.placeMove(d.b); this.finishPlacement();
+    const R = this.rend, w = d.b.x - d.a.x + 1;
+    R.lookAt?.(d.a.x + (w - 1) / 2, d.a.y); if (R.zoom < 1.2) R.zoomBy?.(1.2 / R.zoom);
+    R.highlightProject?.({ x: d.a.x, y: d.a.y, w, h: 1 });
+    // Once the review card is laid out, centre the two cells in the open map above it.
+    if (typeof document !== 'undefined' && typeof requestAnimationFrame === 'function' && R.project && R.pan) requestAnimationFrame(() => {
+      const args = this.plan?.args; if (this.tool !== 'aisle' || args?.a?.x !== d.a.x || args?.a?.y !== d.a.y) return;
+      const sr = this.safeRect(), box = document.querySelector('#abar')?.getBoundingClientRect?.();
+      const bottom = box && box.height ? Math.min(sr.bottom, box.top) : sr.bottom, p = R.project(d.a.x + w / 2, d.a.y + 0.5, 0);
+      R.pan((sr.left + sr.right) / 2 - p.x, (sr.top + bottom) / 2 - p.y);
+    });
   }
   renderCedar(force = false) {
     const box = this.$('tut'), previous = box.querySelector?.('.comeback'), detailOpen = !!previous?.querySelector('.comeback-details')?.open, scroll = previous?.scrollTop || 0;
@@ -2776,16 +2807,18 @@ export class UI {
     const owner = s.staff.find(st => st.role === 'owner'), left = owner ? sim.workRemaining(owner) : 0;
     const porter = s.staff.find(st => st.role === 'porter'), pay = ROLES.porter.wage * ROLES.porter.workHours;
     const D = cedarDemand(sim), won = c.status === 'won', goalCash = p.liquidGoal ?? p.cash0;
-    const lines = c.targets.map((t, k) => this.cedarUnitLine(t, k));
-    const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p.goals.map(g => [g.met, Math.round(g.cur)]), lines, left, !!porter, D, sim.day]);
+    const lines = c.targets.map((t, k) => this.cedarUnitLine(t, k)), drive = won ? [] : c.targets.map((t, k) => this.cedarDriveway(k));
+    const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p.goals.map(g => [g.met, Math.round(g.cur)]), lines, drive.map(d => d?.cost ?? null), left, !!porter, D, sim.day]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
     const goalValue = (g) => g.k === 'cedarCash' ? (p.liquidGoal != null ? `${money(Math.round(g.cur))} of ${money(goalCash)}` : `${money(Math.round(g.cur))} · start ${money(p.cash0)}`) : `${Math.round(g.cur)}/${g.v}`;
     const goals = `<ul class="goals">${p.goals.map(g => `<li class="${g.met ? 'met' : ''}"><span class="ck">${g.met ? '&#10003;' : ''}</span><span>${esc(g.label)}</span><b>${goalValue(g)}</b></li>`).join('')}</ul>`;
-    const units = `<div class="cedar-units">${c.targets.map((t, k) => `<button class="btn sm cedar-unit" data-a="comebackUnit" data-v="${t.id}" ${targetUnits(s, t).length ? '' : 'disabled'}><b>${targetLeased(s, t) ? '&#10003; ' : ''}Unit ${t.num}</b><small>${lines[k]}</small></button>`).join('')}</div>`;
+    const units = `<div class="cedar-units">${c.targets.map((t, k) => drive[k]?.cost != null
+      ? `<button class="btn sm cedar-unit driveway" data-a="cedarDriveway" data-v="${k}"><b>Unit ${t.num}</b><small>${lines[k]}</small><span class="cedar-act">Review driveway repair · ${money(drive[k].cost)}</span></button>`
+      : `<button class="btn sm cedar-unit" data-a="comebackUnit" data-v="${t.id}" ${targetUnits(s, t).length ? '' : 'disabled'}><b>${targetLeased(s, t) ? '&#10003; ' : ''}Unit ${t.num}</b><small>${lines[k]}</small></button>`).join('')}</div>`;
     const lostTxt = [D.lost.price && `${D.lost.price} said your rent was too high`, D.lost.competitor && `${D.lost.competitor} chose a cheaper competitor`, D.lost.noReady && `${D.lost.noReady} found nothing ready`, D.lost.service && `${D.lost.service} left unserved at the counter`, D.lost.other && `${D.lost.other} kept shopping`].filter(Boolean);
     const rivalTxt = D.rival ? ` ${esc(D.rival.name)} is open nearby at about ${Math.round(D.rival.price * 100)}% of market rent; asking more than that loses some shoppers to them.` : D.coming ? ` ${esc(D.coming.name)} opens nearby on Day ${D.coming.opens} at about ${Math.round(D.coming.price * 100)}% of market rent.` : ' No competitor is open nearby yet.';
     const demand = `<p class="note"><b>10×10 shoppers, last ${D.days} days:</b> ${D.leased} signed${lostTxt.length ? ' · ' + lostTxt.join(' · ') : ''}. Shopper results are kept by unit size, not for each unit.${rivalTxt}</p>`;
-    const briefing = `<p>Cedar Creek has seen better decades. Six units out back need make-ready before anyone will rent them, and two door aprons are washed out. You have ${money(p.cash0)}. Restore the units, lease ${c.leaseGoal} of them, and ${p.liquidGoal != null ? `build net liquid to ${money(p.liquidGoal)}` : 'get net liquid back above what you started with'}.</p>`;
+    const briefing = `<p>Cedar Creek has seen better decades. Six units out back need make-ready before anyone will rent them, and two units have a Damaged Driveway. You have ${money(p.cash0)}. Restore the units, lease ${c.leaseGoal} of them, and ${p.liquidGoal != null ? `build net liquid to ${money(p.liquidGoal)}` : 'get net liquid back above what you started with'}.</p>`;
     let detail;
     if (won) {
       const leasedT = c.targets.filter(t => targetLeased(s, t));
@@ -2804,7 +2837,7 @@ export class UI {
         <p><b>Owner:</b> no wage · ${left}h of ${ROLES.owner.workHours}h left today. Field work takes you away from the counter, and shoppers who arrive then may leave.</p>
         <p><b>Porter:</b> ${money(pay)}/employed day. Wages are paid at the weekly settlement but count against net liquid as they build up. Make-ready is picked up automatically. ${porter ? 'A Porter is employed; you can let them go once the wing is done.' : 'Hire to free your hours; let go when the work is done.'}</p>
         <p><b>Vendor:</b> any make-ready can go to a vendor from Review work for $250, paid from cash when booked. It takes about 10 hours and none of your time.</p>
-        <p><b>Aprons:</b> two units need a Drive Aisle on the two cells in front of their doors ($45 a cell, paid from cash when ordered). The through lane stays open for everyone else.</p>
+        <p><b>Damaged Driveway:</b> two units need a Drive Aisle on the two damaged driveway cells in front of their doors ($45 a cell, paid from cash when you confirm the order). Use Review driveway repair on the unit to see the cells. The through lane stays open for everyone else.</p>
         ${sim.day > 1 || p.restored ? briefing : ''}
       </details>`;
     }

@@ -11,7 +11,7 @@ import { CEDAR_LAYOUT, CEDAR_SITE, CEDAR_FRONTAGE, CEDAR_AISLES, CEDAR_CORE, CED
 export const SCENARIOS = {
   comeback: {
     name: 'Cedar Creek Storage Yard',
-    blurb: 'A tired drive-up yard with its office out front. Six rear units need make-ready and two door aprons are washed out. You start with $1,150 and every choice costs something: your counter hours, a Porter\'s wages, a vendor or the paving order. Restore the wing, lease the units and build net liquid to $2,150.',
+    blurb: 'A tired drive-up yard with its office out front. Six rear units need make-ready and two units have a Damaged Driveway. You start with $1,150 and every choice costs something: your counter hours, a Porter\'s wages, a vendor or the paving order. Restore the wing, lease the units and build net liquid to $2,150.',
     goals: cedarGoals(CEDAR_START), deadline: null, fail: null,
   },
   turnaround: {
