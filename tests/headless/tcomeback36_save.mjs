@@ -4,13 +4,16 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {Sim,fmtTime} from '../../js/sim.js';
-import {makeScenario,SCENARIOS,modeLabel,sandboxName} from '../../js/scenarios.js';
+import {makeScenario,makeComeback,SCENARIOS,modeLabel,sandboxName} from '../../js/scenarios.js';
 import {MARKETS,ROLES,MIN_PER_DAY,FLOOR_H} from '../../js/data.js';
 import {comebackProgress} from '../../js/comeback.js';
 const memory=new Map();globalThis.window={localStorage:{getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)}};
 const {localsave}=await import('../../js/localsave.js');const {savearchive}=await import('../../js/savearchive.js');
 const main=readFileSync('js/main.js','utf8');
-const ctx=vm.createContext({Sim,makeScenario,SCENARIOS,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'comeback-save-test'},localsave,savearchive,cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,setTimeout,console:{warn(){}}});
+// Comeback record v1 through the production save paths: new starts are Cedar Creek (v2, tcedar_creek_save.mjs),
+// so this test's factory maps 'comeback' to the v1 builder and name the game used before Cedar.
+const v1Scenario=(id,seed)=>id==='comeback'?makeComeback(seed):makeScenario(id,seed),v1Names={...SCENARIOS,comeback:{...SCENARIOS.comeback,name:'The Comeback Yard'}};
+const ctx=vm.createContext({Sim,makeScenario:v1Scenario,SCENARIOS:v1Names,Audio:class{},fmtTime,modeLabel,sandboxName,MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,BUILD:{name:'comeback-save-test'},localsave,savearchive,cloud:{ok:false},CompressionStream,DecompressionStream,Response,Blob,btoa,atob,escape,unescape,encodeURIComponent,decodeURIComponent,performance,setTimeout,console:{warn(){}}});
 vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initial world'))+main.slice(main.indexOf('function validState('),main.indexOf('function makeMapleSeedPrice'))+';globalThis.game=game;',ctx);
 const g=ctx.game;g.ui={title:false,scMin:true};g.rend={view:'ext'};g.attach=function(sim){this.sim=sim;};g.newGame('sc:comeback');assert.equal(g.sim.s.speed,0);assert.equal(g.ui.scMin,false);assert.equal(g.company.props[0].name,'The Comeback Yard');
 let n=0;async function roundtrip(label){

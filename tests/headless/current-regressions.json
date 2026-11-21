@@ -327,6 +327,28 @@
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
       },
       {
+        "id": "tcedar_creek",
+        "command": [
+          "@node",
+          "tests/headless/tcedar_creek.mjs"
+        ],
+        "completion": "11\\ Cedar\\ Creek\\ checks\\ passed",
+        "minimum_pass_lines": 11,
+        "timeout": 240,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
+        "id": "tcedar_creek_save",
+        "command": [
+          "@node",
+          "tests/headless/tcedar_creek_save.mjs"
+        ],
+        "completion": "4\\ Cedar\\ production\\ save\\ checkpoints\\ passed;\\ mismatched\\ site\\ retains\\ property\\ with\\ notice;\\ unknown\\ layout\\ refused",
+        "minimum_pass_lines": 4,
+        "timeout": 180,
+        "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
+      },
+      {
         "id": "tcomplaint_capacity",
         "command": [
           "@node",

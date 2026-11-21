@@ -1,7 +1,7 @@
 import {restorationViews} from '../performance/restoration-appearance.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { makeScenario, makeSandbox, scenarioProgress } from '../../js/scenarios.js';
+import { makeScenario, makeComeback, makeSandbox, scenarioProgress } from '../../js/scenarios.js';
 import { makeMaple } from '../../js/maple.js';
 import { Sim } from '../../js/sim.js';
 import { UI } from '../../js/ui.js';
@@ -9,7 +9,8 @@ import { installTutorial } from '../../js/tutorial.js';
 import { comebackProgress, targetUnits, targetInService, unitInService, checkComeback, mapComebackReplacements } from '../../js/comeback.js';
 import { loadRenderer } from '../performance/renderer-fixture.mjs';
 let n=0;function test(name,fn){fn();n++;console.log('PASS '+name)}
-const fresh = seed => makeScenario('comeback',seed);
+// Comeback record v1 (the original yard): new starts are Cedar Creek (v2, tcedar_creek.mjs).
+const fresh = seed => makeComeback(seed);
 const reload = sim => new Sim(JSON.parse(JSON.stringify(sim.s)));
 function restore(sim,path='owner',limit=10080){
  const s=sim.s, actions=[];
