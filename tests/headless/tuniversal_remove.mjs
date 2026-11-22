@@ -9,6 +9,13 @@ function test(name,fn){fn();groups++;console.log('PASS '+name);}
 function fresh(){return makeSandbox({kind:'business',start:'empty',cash:500000,instant:true,tiers:'all'});}
 const args=(tool,x,y,b={x,y},extra={})=>({tool,a:{x,y},b,f:0,...extra});
 function build(s,a){const r=s.dispatch({type:'build',...a});assert.ok(r.ok,`${a.tool}: ${r.msg}`);const ord=s.s.orders.find(q=>q.id===r.order);return ord.objs.map(id=>s.s.objects[id]).filter(Boolean);}
+function office(s){
+ build(s,args('aisle',27,9,{x:27,y:29}));
+ build(s,args('aisle',28,9));
+ build(s,args('gate',27,29));
+ build(s,args('parking',28,9));
+ return build(s,args('office',28,10,undefined,{rotation:0}))[0];
+}
 function shell(s,two=true){return build(s,args(two?'shell2':'shell1',10,2,{x:19,y:12}))[0];}
 function halls(s){for(let f=0;f<2;f++)build(s,args('hall',10,2,{x:10,y:12},{f}));}
 function remove(s,target){const before=snap(s),q=s.placeableRemoval(target);assert.equal(snap(s),before,'pure preview');assert.notEqual(q.classification,'blocked',q.prerequisites.join(';'));const cash=s.s.cash,ledger=s.s.ledger.length;let r=s.dispatch({type:'remove',target,stamp:q.stamp});assert.ok(r.ok,r.msg);assert.equal(s.s.cash,cash-q.cost);assert.equal(s.s.ledger.length,ledger+(q.cost?1:0));assert.equal(s.s.speed,0);const after=snap(s);assert.equal(s.dispatch({type:'remove',target,stamp:q.stamp}).ok,false);assert.equal(snap(s),after);return q;}
@@ -23,7 +30,7 @@ test('existing equipment and new keypad remove with exact charges; door remains 
  for(const k of ['office','gate','canopy','doorStd','doorWide','doorAuto','elevator','stairs','light','camera','power','water','hvac','restroom','fountain','corral','keypad']){
   const s=fresh();let o;
   if(['doorStd','doorWide','doorAuto','elevator','stairs','water','hvac','restroom','fountain','keypad'].includes(k)){shell(s);halls(s);}
-  if(k==='office')o=build(s,args(k,28,10,undefined,{rotation:0}))[0];
+  if(k==='office')o=office(s);
   else if(k==='gate')o=build(s,args(k,5,29))[0];
   else if(k==='canopy'){build(s,args('walk',9,3,{x:9,y:6}));shell(s,false);o=build(s,args(k,9,3,{x:9,y:6}))[0];}
   else if(k.startsWith('door'))o=build(s,args(k,10,4))[0];
@@ -67,7 +74,7 @@ test('Maple entrance and ground removal protect customer access',()=>{
  let s=makeMaple();deny(s,s.objs('door')[0].id,/access/);deny(s,{kind:'surface',x:20,y:13,f:0,layer:'ground'},/access/);
 });
 test('empty-site close-and-remove preserves expenses/debt and normal reopen rules',()=>{
- const s=fresh(),o=build(s,args('office',28,10,undefined,{rotation:0}))[0];s.s.open=true;const loan=JSON.stringify(s.s.loan),staff=JSON.stringify(s.s.staff);const q=remove(s,o.id);assert.equal(q.mutation.closeProperty,true);assert.equal(s.s.open,false);assert.equal(JSON.stringify(s.s.loan),loan);assert.equal(JSON.stringify(s.s.staff),staff);assert.equal(s.dispatch({type:'open'}).ok,false);
+ const s=fresh(),o=office(s);s.s.open=true;const loan=JSON.stringify(s.s.loan),staff=JSON.stringify(s.s.staff);const q=remove(s,o.id);assert.equal(q.mutation.closeProperty,true);assert.equal(s.s.open,false);assert.equal(JSON.stringify(s.s.loan),loan);assert.equal(JSON.stringify(s.s.staff),staff);assert.equal(s.dispatch({type:'open'}).ok,false);
 });
 test('JSON save roundtrip after removal preserves deterministic continuation and Pause',()=>{
  const s=fresh();const o=build(s,args('du5x5',25,15))[0];remove(s,o.id);const copy=new Sim(JSON.parse(snap(s)));assert.equal(copy.s.speed,0);for(let i=0;i<30;i++){s.step();copy.step();}assert.equal(snap(s),snap(copy));

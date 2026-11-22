@@ -37,7 +37,22 @@ for(const tool of Object.keys(TOOLS).filter(k=>TOOLS[k].shape==='rect'))test(`${
  const {sim,ui}=uiFixture(tool);ui.planArgs={a:{x:12,y:12},b:{x:17,y:14}};ui.replan();const state=JSON.stringify(sim.s);ui.rotateBuild();assert.deepEqual(ui.planArgs,{a:{x:12,y:12},b:{x:14,y:17}});for(let i=0;i<3;i++)ui.rotateBuild();assert.deepEqual(ui.planArgs,{a:{x:12,y:12},b:{x:17,y:14}});assert.equal(JSON.stringify(sim.s),state);
 });
 for(let rotation=0;rotation<4;rotation++)test(`office ${rotation} footprint and explicit access side survive build/save`,()=>{
- const sim=fresh(),args={tool:'office',a:{x:10,y:10},b:{x:10,y:10},rotation},r=sim.plan(args),o=r.creates[0];assert.notEqual(r.status,'invalid');assert.deepEqual([o.w,o.h],rotation%2?[4,5]:[5,4]);assert.deepEqual(o.door.dir,[[0,-1],[1,0],[0,1],[-1,0]][rotation]);
+ const sim=fresh(),args={tool:'office',a:{x:10,y:10},b:{x:10,y:10},rotation};
+ const [dx,dy]=[[0,-1],[1,0],[0,1],[-1,0]][rotation], w=rotation%2?4:5,h=rotation%2?5:4;
+ const x=dx ? (dx>0?10+w:9) : 10, y=dy ? (dy>0?10+h:9) : 10;
+ assert.equal(sim.plan(args).status,'invalid');
+ const gate={x:20,y:sim.s.parcel.y1};
+ assert.ok(sim.dispatch({type:'build',tool:'gate',a:gate,b:gate}).ok);
+ if (sim.s.orders.at(-1).st === "construction") sim.completeOrder(sim.s.orders.at(-1));
+ for(let yy=8;yy<=gate.y;yy++)sim.s.ground[sim.idx(20,yy)]=G.ASPHALT;
+ for(let xx=x;xx<20;xx++)sim.s.ground[sim.idx(xx,y)]=G.CONCRETE;
+ if(dx<0){ // Go around the building rather than through the proposed footprint.
+   for(let yy=8;yy<=y;yy++)sim.s.ground[sim.idx(x,yy)]=G.CONCRETE;
+   for(let xx=x;xx<20;xx++)sim.s.ground[sim.idx(xx,8)]=G.CONCRETE;
+ }
+ sim.s.ground[sim.idx(20,y)]=G.PARKING;
+ sim.markDirty();
+ const r=sim.plan(args),o=r.creates[0];assert.equal(r.status,'valid',r.reasons.join());assert.deepEqual([o.w,o.h],[w,h]);assert.deepEqual(o.door.dir,[dx,dy]);
  assert.ok(sim.dispatch({type:'build',...args}).ok);const restored=new Sim(JSON.parse(JSON.stringify(sim.s)));assert.deepEqual(restored.objs('office')[0].door,o.door);
 });
 test('occupied footprint blocks each rotation and failed build spends nothing',()=>{

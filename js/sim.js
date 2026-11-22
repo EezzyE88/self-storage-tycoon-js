@@ -1,4 +1,4 @@
-import { accessState, lostMapleAccess, publicDrive, recessed, staffLanding } from './mapleaccess.js';
+import { accessState, classicOfficeAccess, classicOfficeParking, classicOfficeWalkingField, lostMapleAccess, publicDrive, recessed, staffLanding } from './mapleaccess.js';
 import { frontageOf, knownLayout } from './frontage.js';
 import { applyRemovalState } from './removal.js';
 import { SAVE_GENERATION } from './savegeneration.js';
@@ -201,6 +201,7 @@ export class Sim {
     if (visit.kind === 'prospect') {
       if (this.frontage()) return !!accessState(this).parking;
       const office = this.objs('office')[0]; if (!office) return false;
+      if (office.generalPlacement) return classicOfficeParking(this, reach, classicOfficeWalkingField(this, office)).length > 0;
       const d = this.distField([this.idx(office.door.x, office.door.y)], (n) => this.pedNbr(n));
       for (let i = 0; i < s.ground.length; i++) if (reach[i] && d.has(i) && (s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT)) return true;
       return false;
@@ -346,6 +347,12 @@ export class Sim {
           }
           x=nx; y=ny;
         };
+        if (office.generalPlacement) {
+          link(x - office.door.dir[0], y - office.door.dir[1]);
+          const ix = rear.x - rear.dir[0], iy = rear.y - rear.dir[1];
+          while (x !== ix) link(x + Math.sign(ix-x),y);
+          while (y !== iy) link(x,y + Math.sign(iy-y));
+        }
         while (x !== rear.x) link(x + Math.sign(rear.x-x),y);
         while (y !== rear.y) link(x,y + Math.sign(rear.y-y));
       }
@@ -539,7 +546,7 @@ export class Sim {
     D.dAccess = dAccess;
     // an office whose door faces grass swings its entrance to a side customers can actually reach
     for (const of of this.previewing ? [] : this.objs('office')) {
-      if (of.staffDoor || of.cstate !== 'operating' || !of.door) continue;
+      if (of.generalPlacement || of.staffDoor || of.cstate !== 'operating' || !of.door) continue;
       const di = this.idx(of.door.x, of.door.y); if (D.vehReach[di] || dAccess.has(di)) continue;
       let best = null;
       for (const d of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
@@ -770,6 +777,7 @@ export class Sim {
     const atHere = (D.at.get(f * s.W * s.H + i) || []).map((id) => s.objects[id]);
     switch (a.tool) {
       case 'office': {
+        if (f !== 0) { failItem('Offices must be built on the ground floor.'); return R; }
         R.items = [];
         const rotated = Number.isInteger(a.rotation), turn = rotated ? ((a.rotation % 4)+4)%4 : 0;
         const w = turn % 2 ? T.fd : T.fw, h = turn % 2 ? T.fw : T.fd, ox = rotated ? x : x - 2, oy = rotated ? y : y - 1;
@@ -780,24 +788,60 @@ export class Sim {
           if (!this.cellFree(j) || (D.at.get(j) || []).length || (this.groundAt(j) !== G.GRASS && this.groundAt(j) !== G.CONCRETE)) { it.ok = false; bad('Blocked: office needs clear unpaved land'); }
         }
         if (this.objs('office').length) bad('This property already has an office');
-        // door: pick side facing a paved cell
-        const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]]; let door = null;
-        const facing = rotated ? [[0,-1],[1,0],[0,1],[-1,0]][turn] : a.dir;
-        const pref = rotated ? [facing] : a.dir ? [a.dir, ...sides] : sides;
-        for (const d of pref) {
-          const cells = d[0] ? [...Array(h)].map((_, k) => ({ x: d[0] > 0 ? ox + w : ox - 1, y: oy + k })) : [...Array(w)].map((_, k) => ({ x: ox + k, y: d[1] > 0 ? oy + h : oy - 1 }));
-          const c = cells.find((c) => this.inb(c.x, c.y) && PED_GROUND.has(this.groundAt(this.idx(c.x, c.y))) && this.inParcel(c.x, c.y));
-          if (c) { door = { x: c.x, y: c.y, dir: d }; break; }
-        }
-        if (!door) { const d = facing || [1,0]; door = { x: d[0] ? (d[0]>0?ox+w:ox-1) : ox+Math.floor(w/2), y: d[1] ? (d[1]>0?oy+h:oy-1) : oy+Math.floor(h/2), dir:d }; inc('Office door needs a paved walkway or parking in front'); }
         R.cost = T.cost; R.dur = 1440; R.count = 1;
-        const office={ type:'office', x:ox, y:oy, w, h, f:0, door };
-        const slot = this.frontage()?.desc.office;
-        if (slot && ox===slot.x && oy===slot.y && w===slot.w && h===slot.h) {
-          office.door={x:slot.door.x,y:slot.door.y,dir:[...slot.door.dir]};
-          office.staffDoor={x:slot.staffDoor.x,y:slot.staffDoor.y,dir:[...slot.staffDoor.dir]};
+        if (R.status === 'invalid') return R;
+        const K = this.frontage();
+        if (K && R.items.some(c => K.lanes(c.x,c.y))) {
+          bad('Keep the vehicle lanes and gate approach clear.'); return R;
+        }
+        const sides = [[0,-1],[1,0],[0,1],[-1,0]];
+        const facing = rotated ? [sides[turn]] : a.dir ? [a.dir] : sides;
+        const landings = dirs => dirs.flatMap(dir => {
+          const [dx,dy] = dir;
+          return Array.from({length: dx ? h : w}, (_, k) => ({
+            x: dx ? (dx > 0 ? ox+w : ox-1) : ox+k,
+            y: dy ? (dy > 0 ? oy+h : oy-1) : oy+k, dir
+          }));
+        }).filter(c => this.inParcel(c.x,c.y) && D.walk[0][this.idx(c.x,c.y)] && !D.shellAt[this.idx(c.x,c.y)]);
+        const office = { type:'office', x:ox, y:oy, w, h, f:0, generalPlacement:true };
+        const doors = landings(facing);
+        const footprint = new Set(R.items.map(c => this.idx(c.x,c.y)));
+        const occupying = o => footprint.has(this.idx(Math.floor(o.x),Math.floor(o.y)));
+        if (s.vehicles.some(occupying) || s.agents.some(o => !o.hidden && o.f === 0 && occupying(o))) {
+          bad('Wait for people and vehicles to clear the office footprint.'); return R;
+        }
+        let reason = 'Office entrance needs a clear outdoor pedestrian landing on the selected side.';
+        for (const door of doors) {
+          office.door = door;
+          if (!K) {
+            reason = classicOfficeAccess(this,office,footprint);
+            if (!reason) break;
+            continue;
+          }
+          reason = 'Connect the office entrance to the public sidewalk.';
+          if (!K.pocket(door.x,door.y)) continue;
+          const rears = landings(sides).filter(c => !K.pocket(c.x,c.y) && !K.approach(c.x,c.y));
+          // Project public paths even when there is no eligible staff landing.
+          office.staffDoor = rears[0] || door;
+          const projection = { creates:[office] };
+          const access = accessState(this,projection);
+          if (!access.pedestrian) continue;
+          reason = 'Provide a public parking bay with vehicle entry and exit and a walk to the office.';
+          if (!access.parking) continue;
+          reason = 'Connect a separate staff door to the secured yard.';
+          for (const rear of rears) {
+            office.staffDoor = rear;
+            if (accessState(this,projection).staff) { reason = null; break; }
+          }
+          if (!reason) break;
+        }
+        if (!doors.length) {
+          const [dx,dy] = facing[0];
+          office.door = { x:dx ? (dx > 0 ? ox+w : ox-1) : ox+Math.floor(w/2),
+            y:dy ? (dy > 0 ? oy+h : oy-1) : oy+Math.floor(h/2), dir:facing[0] };
         }
         R.creates.push(office);
+        if (reason) bad(reason);
         return R;
       }
       case 'gate': {
@@ -1240,6 +1284,9 @@ export class Sim {
       const access=accessState(this,null,false);
       if(!access.staff) out.push('Office needs a secured staff passage into the yard.');
       if(!access.pedestrian || !access.parking) out.push('Office needs a public walk and driveable public parking.');
+    } else if (office.generalPlacement) {
+      const issue = classicOfficeAccess(this,office);
+      if (issue) out.push(issue);
     } else { const di = this.idx(office.door.x, office.door.y); if (!D.vehReach[di] && !(D.dAccess && D.dAccess.has(di))) out.push('Office door has no customer route - pave a walkway or parking in front of it'); }
     if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No operating rent-ready units');
     return out;
@@ -2874,11 +2921,18 @@ export class Sim {
     const free = (i) => !taken.has(i) && reach[i];
     if (ag.vt === 'prospect') {
       const office = this.objs('office')[0]; if (!office) return null;
+      if (office.generalPlacement && !this.frontage()) {
+        const walks = classicOfficeWalkingField(this, office);
+        const bays = classicOfficeParking(this, reach, walks);
+        bays.sort((a, b) => walks.get(a) - walks.get(b));
+        return bays.find(free) ?? null;
+      }
       const oi = this.idx(office.door.x, office.door.y);
       const cands = [];
       for (let i = 0; i < s.ground.length; i++) if (s.ground[i] === G.PARKING && reach[i]) cands.push(i);
       const d = this.distField([oi], (n) => this.pedNbr(n));
       cands.sort((a, b) => (d.get(a) ?? 999) - (d.get(b) ?? 999));
+      if (office.generalPlacement) return cands.find(i => d.has(i) && free(i)) ?? null;
       const c = cands.find(free) ?? cands[0];
       if (c != null) return c;
       // fall back: any asphalt near office
