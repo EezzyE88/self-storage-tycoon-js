@@ -28,6 +28,7 @@ import { LEGACY_BUILD_URL } from './savegeneration.js';
 import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup, verticalReviewGuide, financingReview } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
+import { scenarioRulesHtml } from './newscenarioui.js';
 import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
 import { guideFor } from './handbook.js';
@@ -2713,7 +2714,7 @@ export class UI {
     if(this.scMin==null) this.scMin=true;
     if(this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
     const prog = scenarioProgress(sim);
-    const key = JSON.stringify([sc.status, this.scMin, sim.day, prog.map((g) => [g.met, this.fmtGoal(g, g.cur)]), sc.badDays]);
+    const key = JSON.stringify([sc.status, this.scMin, sim.day, prog.map((g) => [g.met, this.fmtGoal(g, g.cur)]), sc.badDays, sc.held, sc.downDays, s.staff.length]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
     const left = sc.deadline - sim.day + 1;
     const again = this.scShown === sc.id + sc.status; this.scShown = sc.id + sc.status;
@@ -2721,6 +2722,7 @@ export class UI {
       <h4>${sc.status === 'won' ? 'Scenario complete' : sc.status === 'lost' ? 'Scenario failed' : `Day ${sim.day} of ${sc.deadline} · ${left} left`}</h4>
       <ul class="goals">${prog.map((g) => `<li class="${g.met ? 'met' : ''}"><span class="ck">${g.met ? '&#10003;' : ''}</span><span>${esc(g.label)}</span><b>${this.fmtGoal(g, g.cur)}</b></li>`).join('')}</ul>
       <p class="fail ${sc.badDays ? 'on' : ''}">Fail: cash after bills and debt (cash minus unpaid bills and credit-line balance) below ${money(sc.fail.cashBelow)} for ${sc.fail.cashDays} days${sc.badDays ? ` · ${sc.badDays} so far` : ''}, or the deadline passes. Reserve is advisory.</p>
+      ${sc.rules ? scenarioRulesHtml(sim, esc) : ''}
       ${sc.status !== 'active' ? `<p>${sc.status === 'won' ? `Finished on day ${sc.endDay}. Keep playing this property as a sandbox if you like.` : esc(sc.why || '')}</p><div class="row"><button class="btn pri" data-a="scenarios">Scenarios</button></div>` : ''}</div>`;
   }
   renderComeback(force = false) {
@@ -2857,7 +2859,7 @@ export class UI {
   showScenarios() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Scenarios</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
       <p class="note">Cedar Creek has no deadline; it completes the moment all its goals hold together. Other scenarios use morning checkpoints and the limits shown below.</p>
-      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map(g => `<li>${esc(g.label)}</li>`).join('')}${id==='comeback'?'<li>No deadline · keep playing after the rescue</li>':`<li>Deadline: day ${S.deadline}</li><li class="f">Fail: cash after unpaid bills and credit-line balance below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li>`}</ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
+      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map(g => `<li>${esc(g.label)}</li>`).join('')}${id==='comeback'?'<li>No deadline · keep playing after the rescue</li>':`<li>Deadline: day ${S.deadline}</li><li class="f">Fail: cash after unpaid bills and credit-line balance below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li>`}${(S.extra || []).map(x => `<li${/^Fail/.test(x) ? ' class="f"' : ''}>${esc(x)}</li>`).join('')}${S.perRun ? '<li>Each new start draws its own layout seed and one starting variant</li>' : ''}</ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
   }
   showSandbox() {

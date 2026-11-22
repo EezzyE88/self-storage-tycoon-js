@@ -5,6 +5,8 @@ import { Sim, fmtTime } from './sim.js';
 import { TICKS_PER_SEC_1X, TIERS } from './data.js';
 import { makeMaple, makePublicMaple, makeEmptyLot } from './maple.js';
 import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from './scenarios.js';
+// Per-run seed for scenarios marked perRun (the Nov 22 prototypes only); older scenarios keep their fixed starts.
+const freshScenarioSeed = () => { try { return crypto.getRandomValues(new Uint32Array(1))[0] || 1; } catch { return (Date.now() >>> 0) || 1; } };
 export { modeLabel };
 import { MARKETS, MIN_PER_DAY, ROLES } from './data.js';
 import { installTutorial } from './tutorial.js';
@@ -41,7 +43,7 @@ const game = {
   newGame(kind, opts) {
     this.beginSaveSession();
     let sim, name;
-    if (kind && kind.startsWith('sc:')) { sim = makeScenario(kind.slice(3)); name = SCENARIOS[kind.slice(3)].name; }
+    if (kind && kind.startsWith('sc:')) { const id = kind.slice(3); sim = SCENARIOS[id]?.perRun ? makeScenario(id, freshScenarioSeed()) : makeScenario(id); name = SCENARIOS[id].name; }
     else if (kind === 'custom') { sim = makeSandbox(opts); name = sandboxName(sim.s); }
     else if (kind === 'empty' || kind === 'creative') { sim = makeSandbox({ kind: kind === 'creative' ? 'free' : 'business' }); name = kind === 'creative' ? 'Free Build Lot' : 'Empty Lot'; sim.s.sb.name = name; } // quick starts (menu, tests)
     else if (kind === 'maple-public') { sim = makePublicMaple(); name = 'Maple Street Storage'; }

@@ -6,6 +6,7 @@ import { G, WORK, MARKETS, ROUTINE_VISIT_CHANCE, BILLING_CYCLE_DAYS, NAMES_FIRST
 import { COMEBACK_GOALS, cedarGoals, comebackProgress, isComeback } from './comeback.js';
 import { ensureCustomerAccounts } from './customeraccounts.js';
 import { nameUnit } from './unitnumbering.js';
+import { makeRateReset, makeFreightLift, makeCampus } from './newscenarios.js';
 import { CEDAR_LAYOUT, CEDAR_SITE, CEDAR_FRONTAGE, CEDAR_AISLES, CEDAR_CORE, CEDAR_TARGETS, CEDAR_START } from './cedarcreek.js';
 
 export const SCENARIOS = {
@@ -32,6 +33,28 @@ export const SCENARIOS = {
     goals: [{ k: 'climateLeased', v: 24, label: '24 climate units leased', fmt: 'n' }, { k: 'climateScore', v: 0.9, label: 'Climate experience at least 90% (with 5+ climate tenants)', fmt: 'pct' }],
     deadline: 240, fail: { cashBelow: -8000, cashDays: 14 },
   },
+  // Nov 22, 2026 prototypes (local, not accepted). perRun: each new start draws its own seed and variant.
+  ratereset: {
+    name: 'Harborview Rate Reset', perRun: true,
+    blurb: 'You just bought Harborview, a full 44-unit drive-up yard whose last owner never raised a rent. Tenants pay well under market, the posted street rates are just as stale, and shoppers are scarce. Raise rents too fast and people leave into a slow market; do nothing and the numbers never work.',
+    goals: [{ k: 'roll', v: 0, label: 'Monthly lease rent 15% above your start', fmt: 'money' }, { k: 'occ', v: 0.92, label: 'Occupancy at least 92%', fmt: 'pct' }],
+    extra: ['All goals must hold together for 14 days in a row'], hold: 14, rollUp: 0.15, cash: 2500,
+    deadline: 100, fail: { cashBelow: -1500, cashDays: 14 }, rules: { kind: 'ratereset' },
+  },
+  freightlift: {
+    name: 'Ironworks Lofts', perRun: true,
+    blurb: 'A converted two-story brick warehouse with one freight elevator from 1962. The ground floor pays the bills; the upstairs is where the money is, and three upper rows are still empty. If the cab stops, nobody can reach the second floor. Keep it running, fit out the empty rows in any sizes you like, and grow upstairs rent.',
+    goals: [{ k: 'upperRoll', v: 0, label: 'Upper-floor lease rent up by your target', fmt: 'money' }, { k: 'elevUptime30', v: 0.95, label: 'Elevator in service at least 95% of hours (last 30 days)', fmt: 'pct' }, { k: 'op30', v: 1, label: 'Positive operating result over 30 days', fmt: 'money' }],
+    extra: ['All goals must hold together for 21 days in a row', 'Fail: no working elevator for 10 days in a row'], hold: 21, upperAdd: 1500, cash: 6000,
+    deadline: 100, fail: { cashBelow: -1500, cashDays: 14, upperDownDays: 10 }, rules: { kind: 'freightlift', uptime: true },
+  },
+  campus: {
+    name: 'Campus Crunch', perRun: true,
+    blurb: 'A 43-unit yard beside State University. Graduation week empties two dozen units, each left full of furniture and trash. The fall rush arrives about two and a half weeks later and lasts less than three weeks; after it, almost nobody shops. You choose who cleans out, when to bring on help and when to let it go. The crew log shows how many paid hours were actually used.',
+    goals: [{ k: 'occ', v: 0.95, label: 'Occupancy at least 95%', fmt: 'pct' }, { k: 'op30', v: 3000, label: 'Operating result at least $3,000 over 30 days', fmt: 'money' }],
+    extra: ['Both goals must hold together for 7 days in a row'], hold: 7, cash: 2500,
+    deadline: 60, fail: { cashBelow: -1500, cashDays: 10 }, rules: { kind: 'campus', crewLog: true, turnWork: 3 },
+  },
 };
 
 function scenarioState(id) {
@@ -50,6 +73,9 @@ function freshBooks(s) { s.today = { day: 1, rent: 0, other: 0, opex: 0, payroll
 
 export function makeScenario(id, seed = 4401) {
   if (id === 'comeback') return makeCedarCreek(seed);
+  if (id === 'ratereset') return makeRateReset(SCENARIOS.ratereset, seed);
+  if (id === 'freightlift') return makeFreightLift(SCENARIOS.freightlift, seed);
+  if (id === 'campus') return makeCampus(SCENARIOS.campus, seed);
   if (id === 'turnaround') {
     const sim = makeMaple(4401); const s = sim.s;
     s.mode = 'scenario'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true;

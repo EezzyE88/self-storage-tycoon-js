@@ -28,6 +28,7 @@ import { operations, diagnostics, staffingEvidence, investment, growthReadiness,
 import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
 import { ensureCustomerAccounts, customerHistory, returningAccount } from './customeraccounts.js';
 import { normalizeSupplies, sellAtCounter } from './supplies.js';
+import { scenarioRules, demandFactor, turnWorkFactor, hourlyTick, closeDay, scenarioMetric, extraFail, holdStep } from './scenariorules.js';
 import { recoverMoveOut, noteMoveOutJob, moveOutClaimed, startMoveOut, leaveMoveOut, finishMoveOut } from './moveout.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -1594,6 +1595,7 @@ export class Sim {
     if (mod % 30 === 0) this.generateTasks();
     if (mod % 10 === 0) this.serveOffice();
     if (mod % 60 === 20) this.managerTick();
+    if (mod % 60 === 0 && s.scenario && s.scenario.rules) hourlyTick(this);
     for (const t of s.tasks) if (t.vendor && s.t >= t.vendor) this.finishTask(t, null);
     // tutorial hooks run in tutorial module via sim.onTick
     if (this.onTick) this.onTick(this);
@@ -1610,6 +1612,7 @@ export class Sim {
     s.today.ownerUsed = owner && owner.workDay === s.today.day ? owner.workUsed || 0 : 0;
     s.today.ownerOffice = owner && owner.workDay === s.today.day ? owner.officeUsed || 0 : 0;
     s.today.workMeasured = true;
+    closeDay(this);
     s.days.push(s.today); if (s.days.length > 90) s.days.shift();
     s.today = blankDay(day);
     for (const st of s.staff) if (this.workCapacity(st)) { st.workDay = day; st.workUsed = 0; st.officeUsed = 0; }
@@ -1704,7 +1707,7 @@ export class Sim {
       case 'contrib30': return last.length < 30 ? -1 : last.reduce((a, d) => a + d.rent - d.opex - d.payroll, 0);
       case 'roll': return this.rentRoll();
       case 'cash': return s.cash;
-      default: return 0;
+      default: { const v = scenarioMetric(this, k); return v === undefined ? 0 : v; }
     }
   }
   // GV-01: the elevator-wait goal needs live service. A broken, unpowered or extension-closed cab, a cab nobody has
@@ -1727,7 +1730,9 @@ export class Sim {
     const f = sc.fail; let failing = false;
     if (f && f.cashBelow != null && this.financialPosition().netLiquid < f.cashBelow) failing = true;
     sc.badDays = failing ? (sc.badDays || 0) + 1 : 0;
-    const allMet = sc.goals.every((g) => this.goalMet(g));
+    const extra = extraFail(this, sc);
+    if (extra) { sc.status = 'lost'; sc.endDay = day; sc.why = extra; this.emit('scenario_end', { won: false }); return; }
+    const allMet = holdStep(sc, sc.goals.every((g) => this.goalMet(g)));
     if (allMet) { sc.status = 'won'; sc.endDay = day; this.emit('scenario_end', { won: true }); this.milestone('scenario_' + sc.id); return; }
     if (f && f.cashDays && sc.badDays >= f.cashDays) { sc.status = 'lost'; sc.endDay = day; sc.why = `Cash after bills and debt stayed below $${f.cashBelow.toLocaleString()} for ${f.cashDays} days`; this.emit('scenario_end', { won: false }); return; }
     if (failing && sc.badDays === 1) this.emit('cash_warn', { msg: `Scenario risk: cash after bills and debt below $${f.cashBelow.toLocaleString()} - ${f.cashDays} days of this ends the run` });
@@ -1738,7 +1743,7 @@ export class Sim {
     const ad = this.activeAd();
     for (const sz of Object.keys(M.demand)) {
       const adF = this.adFactor(sz);
-      const lam = M.demand[sz] * (s.opts && s.opts.demand || 1) * frac * (0.45 + 0.8 * rep) * (s.mode === 'tutorial' && !s.tut.done ? 0.75 : 1) * press * adF;
+      const lam = M.demand[sz] * (s.opts && s.opts.demand || 1) * demandFactor(s, day) * frac * (0.45 + 0.8 * rep) * (s.mode === 'tutorial' && !s.tut.done ? 0.75 : 1) * press * adF;
       let k = 0; const L = Math.exp(-lam); let p = 1; do { k++; p *= this.rnd(); } while (p > L); k--;
       for (let j = 0; j < k; j++) {
         const needsClimate = this.rnd() < (s.opts && s.opts.climateShare != null ? s.opts.climateShare : M.climateShare);
@@ -2331,7 +2336,7 @@ export class Sim {
     delete s.leases[L.id]; if (tn) { delete s.tenants[tn.id]; this.dropConvo('mo' + tn.id); } this.dropConvo('lien' + L.id); this.dropConvo('rate' + L.id);
     u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t; u.overlock = false;
     { const fc = this.unitFront(u)[0]; if (fc) s.dirt[u.f || 0][this.idx(fc.x, fc.y)] += 0.25; }
-    const mr = this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Prepare ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) });
+    const mr = this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Prepare ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) * turnWorkFactor(s) });
     if (why !== 'auction') noteMoveOutJob(this, mr);
     s.today.moveouts++;
     this.emit('moveout', { unit: u.id });
