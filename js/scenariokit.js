@@ -44,7 +44,7 @@ export function kitMetric(sim, k) {
   const s = sim.s, kit = s.scenario && s.scenario.kit, def = kitDef(s);
   if (def && def.metric) { const v = def.metric(sim, k); if (v !== undefined) return v; }
   switch (k) {
-    case 'opProfit30': { const d = lastDays(sim); if (d.length < 30) return -1; return d.reduce((a, x) => a + x.rent + (x.anc || 0) + (x.other || 0) - x.opex - x.payroll - (x.service || 0) - (x.marketing || 0), 0); }
+    case 'opProfit30': { const d = lastDays(sim); if (d.length < 30) return -1; return d.reduce((a, x) => a + x.rent + (x.anc || 0) - x.opex - x.payroll - (x.service || 0) - (x.marketing || 0), 0); }
     case 'debtPay': return s.debt.reduce((a, d) => a + d.pmt, 0) || 0;
     case 'dscr': { const p = kitMetric(sim, 'opProfit30'), pay = kitMetric(sim, 'debtPay'); if (p === -1) return 0; return pay > 0 ? p / pay : 9; }
     case 'netLiquid': return sim.financialPosition().netLiquid;

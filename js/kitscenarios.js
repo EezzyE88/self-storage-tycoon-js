@@ -351,7 +351,8 @@ function ssStorm(sim, st) {
 function ssOnDay(sim, day) {
   const s = sim.s, k = s.scenario.kit;
   if (k.insurance && day >= k.nextPrem) ssPremium(sim);
-  for (const p of k.payouts) if (!p.paid && day >= p.day) { p.paid = true; sim.money(p.amt, 'anc', 'Insurance payout'); kitLog(sim, `Insurance paid ${money(p.amt)}`, 'good'); }
+  // insurance is a non-operating receipt: cash and net liquid include it, operating profit does not (SK-01 D2)
+  for (const p of k.payouts) if (!p.paid && day >= p.day) { p.paid = true; sim.money(p.amt, 'insurance', 'Insurance payout'); kitLog(sim, `Insurance paid ${money(p.amt)}`, 'good'); }
   // repairs finishing; one owner patch a day
   const done = (d, patched) => { d.state = 'fixed'; d.fixed = day; const u = s.objects[d.unit]; if (!u) return; u.kitDamaged = false; if (patched) u.kitPatched = true; if (!u.lease && u.commercial === 'unready') u.commercial = 'ready'; };
   for (const d of k.damage) if (d.state === 'crew' && day >= d.fixDay) done(d, false);

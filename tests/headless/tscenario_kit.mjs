@@ -134,4 +134,77 @@ await test('the result record is versioned and self-checking: edits are detected
 await test('kit scenarios never touch manual Pause, and time only moves when stepped', async () => {
   for (const id of IDS) { const sim = makeScenario(id, 9); assert.equal(sim.s.speed, 0, id + ' starts paused'); const t = sim.s.t; play(sim, null, 3); assert.equal(sim.s.speed, 0, id); assert.ok(sim.s.t > t); }
 });
+// ---- D1/D2: operating profit excludes transfers and other non-operating receipts; insurance is a non-operating receipt
+const opOnly = (sim) => sim.s.days.slice(-30).reduce((a, x) => a + x.rent + (x.anc || 0) - x.opex - x.payroll - (x.service || 0) - (x.marketing || 0), 0);
+const stepDay = (sim) => { const d = sim.day; while (sim.day === d) { sim.step(); sim.events.length = 0; } };
+await test('D1: a transfer from another property never counts as operating profit or debt-service coverage', async () => {
+  const a = play(makeScenario('grandopening', 31), PLANS.grandopening, 60), b = play(makeScenario('grandopening', 31), PLANS.grandopening, 60);
+  assert.equal(JSON.stringify(a.s.days), JSON.stringify(b.s.days), 'twins match before the transfer');
+  const g = harness(a), other = makeScenario('chainnextdoor', 5); g.company.props.push({ name: 'Second Lot', sim: other }); other.s.cash = 20000;
+  const cash0 = a.s.cash, r = g.transfer(1, 0, 10000); assert.equal(r.ok, true, r.msg); assert.equal(a.s.cash - cash0, 10000, 'the transfer arrives as cash');
+  assert.equal(a.s.ledger.at(-1).cat, 'other'); assert.equal(a.s.today.other >= 10000, true, 'booked on the other line');
+  stepDay(a); stepDay(b);
+  assert.equal(Math.round(a.metric('opProfit30')), Math.round(opOnly(a)), 'opProfit30 is operating-only');
+  assert.equal(a.metric('opProfit30'), b.metric('opProfit30'), 'transfer leaves operating profit unchanged');
+  assert.equal(a.metric('dscr'), b.metric('dscr'), 'transfer leaves DSCR unchanged');
+  assert.equal(Math.round(a.s.cash - b.s.cash), 10000, 'cash differs by exactly the transfer');
+});
+await test('D2: Storm Season insurance payouts are paid once, as non-operating cash that never enters operating profit', async () => {
+  const sim = makeScenario('stormseason', 31), s = sim.s, f = player({ insure: 1, prep: 1, repair: 0, claims: 1 }); const k = s.scenario.kit;
+  let seen = 0;
+  while (s.scenario.status === 'active') {
+    const paidBefore = k.payouts.filter((p) => p.paid).length, rows = s.ledger.length, anc0 = s.today.anc || 0, other0 = s.today.other || 0;
+    if (sim.mod === 9 * 60) f(sim); sim.step(); sim.events.length = 0;
+    const newly = k.payouts.filter((p) => p.paid).length - paidBefore;
+    if (newly > 0 && s.today.day === sim.day) {
+      const paid = k.payouts.filter((p) => p.paid).slice(-newly), amt = paid.reduce((a, p) => a + p.amt, 0);
+      const ins = s.ledger.slice(rows).filter((l) => l.note === 'Insurance payout');
+      assert.equal(ins.length, newly, 'one ledger row per payout'); assert.ok(ins.every((l) => l.cat === 'insurance'), 'category insurance');
+      assert.equal(ins.reduce((a, l) => a + l.amt, 0), amt, 'ledger amount equals the payout');
+      assert.equal((s.today.other || 0) - other0, amt, 'payout on the non-operating line'); assert.equal((s.today.anc || 0) - anc0, 0, 'not ancillary revenue');
+      seen += newly;
+    }
+  }
+  assert.ok(seen >= 1, 'at least one payout was paid'); assert.equal(seen, k.payouts.filter((p) => p.paid).length);
+  assert.equal(k.payouts.filter((p) => p.paid).length, s.ledger.filter((l) => l.note === 'Insurance payout').length, 'paid exactly once each');
+  const recorded = s.finance.cashDays.reduce((a, d) => a + (d.categories.insurance || 0), 0), recent = k.payouts.filter((p) => p.paid && p.day > sim.day - 90).reduce((a, p) => a + p.amt, 0);
+  assert.equal(Math.round(recorded), Math.round(recent), 'cash-day categories carry the receipts');
+  assert.ok(!s.days.some((d) => (d.anc || 0) > 0 && s.ledger.some((l) => l.cat === 'anc' && l.note === 'Insurance payout')), 'no payout booked as anc');
+});
+await test('D1: debt-service coverage is operating profit over the current loan payment; loan draws and added funds never count', async () => {
+  for (const finance of [0, 1]) {
+    const plan = player({ finance, opening: 0, movers: 0, rival: 1, bulk: 1 }, (sim) => { if (!sim.s.mkt.ad) sim.dispatch({ type: 'ad', kind: 'local' }); });
+    for (const day of [60, 120]) {
+      const a = play(makeScenario('grandopening', 31), plan, day), b = play(makeScenario('grandopening', 31), plan, day);
+      if (a.s.scenario.status !== 'active') continue;
+      const pay = a.s.debt.reduce((x, d) => x + d.pmt, 0); assert.equal(a.metric('debtPay'), pay, 'debtPay is the current loan payment');
+      assert.ok(Math.abs(a.metric('dscr') - opOnly(a) / pay) < 1e-9, 'DSCR recomputes from operating lines only');
+      a.money(2000, 'loan', 'Credit line draw'); a.money(3000, 'inject', 'Added funds'); stepDay(a); stepDay(b);
+      assert.equal(a.metric('dscr'), b.metric('dscr'), `finance ${finance} day ${day}: loan draws and added funds leave DSCR unchanged`);
+    }
+  }
+});
+async function claimReload(answer) {
+  const pol = answer ? { insure: 2, prep: 2, repair: 0, claims: 0 } : { insure: 2, prep: 2, repair: 0 };
+  for (const seed of [31, 3, 11, 29, 47, 61, 88, 5]) {
+    const f = player(pol), base = play(makeScenario('stormseason', seed), f);
+    const a = makeScenario('stormseason', seed), s = a.s;
+    while (s.scenario.status === 'active' && !(s.scenario.kit.pending && s.scenario.kit.pending.id.startsWith('claims') && a.mod > 7 * 60 && a.mod < 9 * 60)) { if (a.mod === 9 * 60) f(a); a.step(); a.events.length = 0; }
+    if (s.scenario.status !== 'active') continue;
+    const id = s.scenario.kit.pending.id, b = await reload(a);
+    assert.equal(JSON.stringify(b.s.scenario), JSON.stringify(s.scenario), 'pending claim survives reload');
+    play(b, f);
+    assert.equal(JSON.stringify(b.s.scenario.kit.result), JSON.stringify(base.s.scenario.kit.result), 'same result as an uninterrupted run');
+    assert.equal(b.s.cash, base.s.cash); assert.equal(b.s.ledger.length, base.s.ledger.length);
+    const ev = b.s.scenario.kit.events.find((e) => e.id === id), ev0 = base.s.scenario.kit.events.find((e) => e.id === id);
+    assert.equal(ev.choice, ev0.choice); assert.equal(ev.choice, answer ? 0 : 2, answer ? 'answered: pay all' : 'expired: the default applies');
+    const claimPays = (x) => x.s.scenario.kit.payouts.filter((p) => p.why === 'claims').length;
+    assert.equal(claimPays(b), claimPays(base), 'claims payouts are not duplicated or lost');
+    if (answer) assert.ok(claimPays(b) >= 1, 'full cover repays a paid claim');
+    return seed;
+  }
+  assert.fail('no seed opened a claims decision');
+}
+await test('a reload while a claims decision is waiting continues identically when the player answers', async () => { await claimReload(true); });
+await test('a reload while a claims decision is waiting continues identically when it expires to its default', async () => { await claimReload(false); });
 console.log(`${n} scenario kit groups passed`);
