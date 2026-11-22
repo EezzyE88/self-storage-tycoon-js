@@ -43,9 +43,9 @@ export const SCENARIOS = {
   },
   freightlift: {
     name: 'Ironworks Lofts', perRun: true,
-    blurb: 'A converted two-story brick warehouse with one freight elevator from 1962. The ground floor pays the bills; the upstairs is where the money is, and three upper rows are still empty. If the cab stops, nobody can reach the second floor. Keep it running, fit out the empty rows in any sizes you like, and grow upstairs rent.',
+    blurb: 'A converted two-story brick warehouse with one freight elevator from 1962. The ground floor pays the bills; the upstairs is where the money is, and three upper rows are still empty. If the cab stops, tenants can still take the stairs, but carts can\'t go up and no upstairs unit can be rented until it\'s fixed. Keep it running, fit out the empty rows in any sizes you like, and grow upstairs rent.',
     goals: [{ k: 'upperRoll', v: 0, label: 'Upper-floor lease rent up by your target', fmt: 'money' }, { k: 'elevUptime30', v: 0.95, label: 'Elevator in service at least 95% of hours (last 30 days)', fmt: 'pct' }, { k: 'op30', v: 1, label: 'Positive operating result over 30 days', fmt: 'money' }],
-    extra: ['All goals must hold together for 21 days in a row', 'Fail: no working elevator for 10 days in a row'], hold: 21, upperAdd: 1500, cash: 6000,
+    extra: ['All goals must hold together for 21 days in a row', 'Fail: elevator out of service at the 7:00 AM check on 10 mornings in a row'], hold: 21, upperAdd: 1500, cash: 6000,
     deadline: 100, fail: { cashBelow: -1500, cashDays: 14, upperDownDays: 10 }, rules: { kind: 'freightlift', uptime: true },
   },
   campus: {

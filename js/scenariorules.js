@@ -73,12 +73,12 @@ export function scenarioMetric(sim, k) {
   }
 }
 
-// [E] Extra fail rule: the upper floor unreachable (no elevator in service at the 7:00 check) for N days in a row.
+// [E] Extra fail rule: upstairs blocked for carts and leasing (no elevator in service at the 7:00 AM check) on N consecutive mornings; stairs still carry people.
 export function extraFail(sim, sc) {
   const f = sc.fail; if (!sc.rules || !f || !f.upperDownDays) return null;
   sc.downDays = elevatorInService(sim) ? 0 : (sc.downDays || 0) + 1;
-  if (sc.downDays === Math.max(1, f.upperDownDays - 3)) sim.emit('cash_warn', { msg: `Scenario risk: the upper floor has had no working elevator for ${sc.downDays} days. ${f.upperDownDays} days ends the run.` });
-  return sc.downDays >= f.upperDownDays ? `The upper floor had no working elevator for ${f.upperDownDays} days in a row` : null;
+  if (sc.downDays === Math.max(1, f.upperDownDays - 3)) sim.emit('cash_warn', { msg: `Scenario risk: the elevator was out of service at the 7:00 AM check ${sc.downDays} mornings in a row. ${f.upperDownDays} mornings in a row ends the run.` });
+  return sc.downDays >= f.upperDownDays ? `The elevator was out of service at the 7:00 AM check ${f.upperDownDays} mornings in a row` : null;
 }
 
 // [E] Goals must hold together for `hold` consecutive daily checks before the scenario is won.

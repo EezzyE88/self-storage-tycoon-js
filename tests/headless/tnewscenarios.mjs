@@ -52,13 +52,24 @@ await test('goals must hold together for the full hold before the win, and a bro
   assert.equal(holdStep(sc, true), false); assert.equal(holdStep(sc, true), false); assert.equal(holdStep(sc, false), false); assert.equal(sc.held, 0);
   assert.equal(holdStep(sc, true), false); assert.equal(holdStep(sc, true), false); assert.equal(holdStep(sc, true), true);
 });
-await test('Ironworks samples elevator service hourly; an out-of-service cab lowers uptime and ends the run after 10 days', async () => {
+await test('Ironworks samples elevator service hourly; an out-of-service cab lowers uptime and ends the run after 10 consecutive 7:00 AM checks; the wording says stairs still work and carts and leasing are blocked', async () => {
   const sim = makeScenario('freightlift', 11); const el = sim.objs('elevator')[0];
   assert.equal(elevatorInService(sim), true); days(sim, 8);
   const up = scenarioMetric(sim, 'elevUptime30'); assert.ok(up > 0, 'uptime sampled after a week: ' + up);
   el.cond = 0.1; assert.equal(elevatorInService(sim), false);
-  for (let d = 0; d < 12 && sim.s.scenario.status === 'active'; d++) { el.cond = 0.1; days(sim, 1); }
-  assert.equal(sim.s.scenario.status, 'lost'); assert.match(sim.s.scenario.why, /no working elevator for 10 days/);
+  const warns = []; const emit0 = sim.emit.bind(sim); sim.emit = (k, e) => { if (k === 'cash_warn' && e && e.msg) warns.push(e.msg); return emit0(k, e); };
+  let panel = '';
+  for (let d = 0; d < 12 && sim.s.scenario.status === 'active'; d++) { el.cond = 0.1; days(sim, 1); if (sim.s.scenario.status === 'active' && sim.s.scenario.downDays) panel = scenarioRulesHtml(sim, esc); }
+  // Wording matches the mechanics: stairs still carry people; carts and leasing are blocked; the rule counts 7:00 AM checks.
+  const S = SCENARIOS.freightlift;
+  for (const txt of [S.blurb, panel]) { assert.doesNotMatch(txt, /nobody can reach|unreachable/i); }
+  assert.match(S.blurb, /stairs/); assert.match(S.blurb, /carts/); assert.match(S.blurb, /rented/);
+  assert.match(panel, /OUT OF SERVICE: stairs only, no carts/); assert.match(panel, /mornings down at 7:00 AM/);
+  const failLine = S.extra.find((x) => /^Fail/.test(x)); assert.match(failLine, /7:00 AM/); assert.match(failLine, /mornings in a row/);
+  const warn = warns.find((m) => /Scenario risk: the elevator/.test(m)); assert.ok(warn, 'warning emitted: ' + JSON.stringify(warns));
+  assert.match(warn, /7:00 AM/); assert.match(warn, /mornings in a row/); assert.doesNotMatch(warn, /unreachable|no working elevator/);
+  assert.match(sim.s.scenario.why, /7:00 AM/); assert.match(sim.s.scenario.why, /mornings in a row/);
+  assert.equal(sim.s.scenario.status, 'lost'); assert.match(sim.s.scenario.why, /out of service at the 7:00 AM check 10 mornings in a row/);
   assert.ok(scenarioMetric(sim, 'elevUptime30') < up);
 });
 await test('Campus Crunch: the demand curve follows the rush, make-ready is three times heavier, and the crew log records Porter hours', async () => {
