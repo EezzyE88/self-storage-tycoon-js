@@ -6,6 +6,7 @@ import { G, WORK, MARKETS, ROUTINE_VISIT_CHANCE, BILLING_CYCLE_DAYS, NAMES_FIRST
 import { COMEBACK_GOALS, cedarGoals, comebackProgress, isComeback } from './comeback.js';
 import { ensureCustomerAccounts } from './customeraccounts.js';
 import { nameUnit } from './unitnumbering.js';
+import { KIT_SCENARIOS, makeKitScenario } from './kitscenarios.js';
 import { CEDAR_LAYOUT, CEDAR_SITE, CEDAR_FRONTAGE, CEDAR_AISLES, CEDAR_CORE, CEDAR_TARGETS, CEDAR_START } from './cedarcreek.js';
 
 export const SCENARIOS = {
@@ -33,6 +34,8 @@ export const SCENARIOS = {
     deadline: 240, fail: { cashBelow: -8000, cashDays: 14 },
   },
 };
+// SK-01: three newer scenarios on the scenario kit (seeded starts, held goals, decisions, checkpoints, results).
+for (const [id, K] of Object.entries(KIT_SCENARIOS)) SCENARIOS[id] = { name: K.name, blurb: K.blurb, goals: K.goals, deadline: K.deadline, fail: K.fail, kit: true, hold: K.hold, winFrom: K.winFrom, failText: K.failText };
 
 function scenarioState(id) {
   const S = SCENARIOS[id];
@@ -48,7 +51,8 @@ function prebuild(sim, list) {
 }
 function freshBooks(s) { s.today = { day: 1, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; s.days = []; s.milestones = {}; }
 
-export function makeScenario(id, seed = 4401) {
+export function makeScenario(id, seed) { // seed: Cedar Creek defaults to 4401 as before; kit scenarios pick a fresh run seed
+  if (KIT_SCENARIOS[id]) return makeKitScenario(id, seed);
   if (id === 'comeback') return makeCedarCreek(seed);
   if (id === 'turnaround') {
     const sim = makeMaple(4401); const s = sim.s;
