@@ -1327,3 +1327,40 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .removal-review .remove-body { overflow:auto; min-height:0; }
 .removal-review .remove-buttons { flex:none; padding-top:12px; }
 .removal-actions { padding:8px 0; }
+
+/* SK-01 kit scenarios: decision panel, held-goal line, coming up, projects, results screen */
+#ui .tut.scen.kit h5 { margin: 2px 0 4px; font-size: 15px; color: #fff; }
+.tut.kit .kit-decision { border: 1px solid #c9a24a; border-radius: 10px; padding: 8px 10px; margin: 6px 0 8px; background: rgba(201,162,74,.10); }
+.tut.kit .kit-decision > small { color: #e8c77a; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.tut.kit .kit-decision p { margin: 2px 0 6px; font-size: 13px; line-height: 1.4; color: #e8e3d6; }
+.tut.kit .kit-opts { display: grid; gap: 6px; }
+.tut.kit .kit-opt { display: grid; gap: 2px; text-align: left; justify-content: stretch; justify-items: start; min-height: 44px; padding: 8px 10px; white-space: normal; height: auto; }
+.tut.kit .kit-opt small { font-weight: 500; font-size: 12px; opacity: .85; line-height: 1.3; }
+.tut.kit .kit-opt[disabled] { opacity: .5; }
+.tut.kit .note { font-size: 12px; color: #b8b2a5; margin: 6px 0 0; }
+.tut.kit .kit-hold { font-size: 12px; color: #b8b2a5; margin: 2px 0 6px; }
+.tut.kit .kit-hold.on b { color: #7fd3a1; }
+.tut.kit .kit-up { font-size: 12px; color: #d9d4c8; margin: 4px 0 6px; }
+.tut.kit .kit-up ul { margin: 2px 0 0; padding-left: 16px; }
+.tut.kit .kit-up li.urgent { color: #f0b37a; font-weight: 600; }
+.tut.kit details { margin: 4px 0; font-size: 12px; color: #d9d4c8; }
+.tut.kit details summary { min-height: 32px; display: flex; align-items: center; cursor: pointer; font-weight: 700; }
+.tut.kit .kit-proj { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.08); }
+.tut.kit .kit-proj small { display: block; color: #b8b2a5; line-height: 1.3; }
+.tut.kit .kit-proj .btn { min-height: 40px; }
+.tut.kit .kit-log ul { margin: 2px 0; padding-left: 16px; } .tut.kit .kit-log li.bad { color: #f0a08f; } .tut.kit .kit-log li.good { color: #8fd8ad; }
+.kit-stars { color: #d8a531; letter-spacing: 1px; } .kit-stars i { font-style: normal; color: rgba(140,135,124,.45); }
+.modal.kit-end .kicker { display: block; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.modal.kit-end h2 { margin: 4px 0 6px; }
+.modal.kit-end .kit-big { font-size: 34px; line-height: 1; margin: 4px 0 10px; }
+.modal.kit-end .kit-why { color: #8e2716; font-weight: 600; margin: 4px 0 10px; }
+.modal.kit-end .kit-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.modal.kit-end .kit-tiles div { background: var(--paper2); border-radius: 10px; padding: 6px 8px; min-width: 0; }
+.modal.kit-end .kit-tiles small { display: block; color: var(--muted); font-size: 11px; } .modal.kit-end .kit-tiles b { font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.modal.kit-end .kit-goals { list-style: none; padding: 0; margin: 4px 0 8px; display: grid; gap: 4px; }
+.modal.kit-end .kit-goals li { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; font-size: 13px; color: #8e2716; } .modal.kit-end .kit-goals li.met { color: var(--ink); }
+.modal.kit-end .kit-goals li.met .ck { color: #1d6b41; }
+.modal.kit-end .kit-notes { margin: 4px 0 8px; padding-left: 18px; font-size: 13px; }
+.modal.kit-end h3 { font-size: 14px; margin: 10px 0 2px; }
+.modal.kit-end .kit-end-btns .btn { min-height: 44px; }
+.scen-card.kit-card .kit-rec { margin: 0 0 6px; font-size: 12px; color: var(--ink2); }
