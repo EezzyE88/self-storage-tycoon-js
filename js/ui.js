@@ -2707,7 +2707,7 @@ export class UI {
     g.classList.toggle('below', !!place?.below); g.classList.toggle('nolabel', inCard || !place); g.classList.toggle('passive', !!t.passive);
   }
 
-  fmtGoal(g, v) { return g.fmt === 'pct' ? pct(v) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (g.k === 'elevWait' ? this.sim.elevWaitStatus().note || v.toFixed(1) + ' min' : v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
+  fmtGoal(g, v) { return g.fmt === 'pct' ? (g.k === 'elevUptime30' && v === -1 ? 'needs 7 days' : pct(v)) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (g.k === 'elevWait' ? this.sim.elevWaitStatus().note || v.toFixed(1) + ' min' : v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
   renderScenario(force) {
     const sim = this.sim, s = sim.s, sc = s.scenario, box = this.$('tut');
     if (isComeback(s)) { this.renderComeback(force); return; }

@@ -48,7 +48,7 @@ export function scenarioMetric(sim, k) {
     case 'upperRoll': return Object.values(s.leases).reduce((a, L) => { const u = s.objects[L.unit]; return a + (u && (u.f || 0) > 0 ? L.rent : 0); }, 0);
     case 'elevUptime30': {
       const d = [...s.days.slice(-29), s.today].filter((x) => x && x.elevHrs);
-      const hrs = d.reduce((a, x) => a + x.elevHrs, 0); if (hrs < 7 * 24) return 0; // a week of service history first
+      const hrs = d.reduce((a, x) => a + x.elevHrs, 0); if (hrs < 7 * 24) return -1; // a week of service history first (the goal card says 'needs 7 days')
       return d.reduce((a, x) => a + (x.elevUp || 0), 0) / hrs;
     }
     case 'op30': { const last = s.days.slice(-30); if (last.length < 30) return -1;
