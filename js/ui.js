@@ -2309,7 +2309,7 @@ export class UI {
       case 'power_restored': break;
       case 'sb_goal': this.sfx('milestone'); this.toast(`Goal met: ${e.label}. Keep playing - the facility is still yours.`, 'good'); break;
       case 'comeback_goal': this.toast(e.label + ' · complete', 'good'); this.renderTut(true); break;
-      case 'scenario_end': if (e.comeback) this.scMin = false; this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
+      case 'scenario_end': if (e.comeback || this.sim?.s.scenario?.rules) this.scMin = false; /* rules scenarios open the panel on the outcome */ this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
       case 'rent_review': this.sfx('rent'); break;
       case 'manager': if (!e.request && s.speed <= 2) this.toast(/^(Clerk|Manager) /.test(e.msg) ? e.msg : 'Manager: ' + e.msg); this.renderFeed(true); break;
       case 'pastdue': { const u = s.objects[e.unit]; if (s.speed <= 2) this.toast(`${u ? u.name : 'A unit'} missed its rent payment`); break; }

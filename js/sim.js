@@ -28,7 +28,7 @@ import { operations, diagnostics, staffingEvidence, investment, growthReadiness,
 import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
 import { ensureCustomerAccounts, customerHistory, returningAccount } from './customeraccounts.js';
 import { normalizeSupplies, sellAtCounter } from './supplies.js';
-import { scenarioRules, demandFactor, turnoverWork, hourlyTick, closeDay, scenarioMetric, extraFail, holdStep } from './scenariorules.js';
+import { scenarioRules, demandFactor, turnoverWork, hourlyTick, closeDay, scenarioMetric, extraFail, holdStep, cashText } from './scenariorules.js';
 import { recoverMoveOut, noteMoveOutJob, moveOutClaimed, startMoveOut, leaveMoveOut, finishMoveOut } from './moveout.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -1734,8 +1734,8 @@ export class Sim {
     if (extra) { sc.status = 'lost'; sc.endDay = day; sc.why = extra; this.emit('scenario_end', { won: false }); return; }
     const allMet = holdStep(sc, sc.goals.every((g) => this.goalMet(g)));
     if (allMet) { sc.status = 'won'; sc.endDay = day; this.emit('scenario_end', { won: true }); this.milestone('scenario_' + sc.id); return; }
-    if (f && f.cashDays && sc.badDays >= f.cashDays) { sc.status = 'lost'; sc.endDay = day; sc.why = `Cash after bills and debt stayed below $${f.cashBelow.toLocaleString()} for ${f.cashDays} days`; this.emit('scenario_end', { won: false }); return; }
-    if (failing && sc.badDays === 1) this.emit('cash_warn', { msg: `Scenario risk: cash after bills and debt below $${f.cashBelow.toLocaleString()} - ${f.cashDays} days of this ends the run` });
+    if (f && f.cashDays && sc.badDays >= f.cashDays) { sc.status = 'lost'; sc.endDay = day; sc.why = `Cash after bills and debt stayed below ${cashText(sc, f.cashBelow)} for ${f.cashDays} days`; this.emit('scenario_end', { won: false }); return; }
+    if (failing && sc.badDays === 1) this.emit('cash_warn', { msg: `Scenario risk: cash after bills and debt below ${cashText(sc, f.cashBelow)} - ${f.cashDays} days of this ends the run` });
   }
   genProspects(day, frac) {
     const s = this.s, M = MARKETS[s.market.id]; const rep = this.reputation();

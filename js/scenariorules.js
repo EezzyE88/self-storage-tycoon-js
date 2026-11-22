@@ -30,11 +30,16 @@ export function makeReadyCapMin() {
   return Math.min(...hrs) * 60;
 }
 
-// [E] Hourly sample of elevator service: in service = built, working, powered and not closed for an extension.
-export function elevatorInService(sim) {
+// [E] Hourly sample of elevator service: in service = at least one built cab that is working, powered and not closed
+// for an extension. Carts and upstairs leasing keep working while any one cab runs, so a second (backup) cab that is
+// down does not count as an outage while the other one is in service.
+export function elevatorCabs(sim) {
   const s = sim.s, els = sim.objs('elevator').filter((e) => e.cstate === 'operating');
-  return els.length > 0 && els.every((e) => sim.works(e) && !e.extensionDrain && !(e.serviceTestUntil > s.t));
+  return { total: els.length, up: els.filter((e) => sim.works(e) && !e.extensionDrain && !(e.serviceTestUntil > s.t)).length };
 }
+export function elevatorInService(sim) { return elevatorCabs(sim).up > 0; }
+// Scenario cash amounts as -$1,500 rather than $-1,500 (only for the rules scenarios; older scenarios keep their text).
+export function cashText(sc, v) { return sc && sc.rules && v < 0 ? `-$${(-v).toLocaleString()}` : `$${v.toLocaleString()}`; }
 export function hourlyTick(sim) {
   const s = sim.s, R = scenarioRules(s); if (!R || s.scenario.status !== 'active') return;
   if (R.uptime) { s.today.elevHrs = (s.today.elevHrs || 0) + 1; if (elevatorInService(sim)) s.today.elevUp = (s.today.elevUp || 0) + 1; }
