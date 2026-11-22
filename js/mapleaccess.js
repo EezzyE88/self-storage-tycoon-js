@@ -99,15 +99,31 @@ export function lostMapleAccess(before,after) {
   return null;
 }
 
+// Match the same outdoor pedestrian route for quotes, gate selection, and
+// parking. Occupancy is a destination constraint, separate from reachability.
+export function classicOfficeWalkingField(sim, office, usable = () => true) {
+  const { s, D } = sim;
+  const door = sim.idx(office.door.x, office.door.y);
+  if (!D.walk[0][door] || D.shellAt[door] || !usable(door, PED_GROUND)) return null;
+  return sim.distField([door], i => sim.pedNbr(i).filter(j => j < s.W * s.H && !D.shellAt[j] && usable(j, PED_GROUND)));
+}
+
+export function classicOfficeParking(sim, reach, walks) {
+  const bays = [];
+  for (let i = 0; i < sim.s.ground.length; i++) {
+    if (reach[i] && sim.s.ground[i] === G.PARKING && walks?.has(i)) bays.push(i);
+  }
+  return bays;
+}
+
 // Classic parcels share one secured customer/staff entrance. Reuse the live
 // routing graph, excluding the proposed footprint and any pending obstructions.
 export function classicOfficeAccess(sim, office, solids = new Set()) {
   const { s, D } = sim;
   const usable = (i, types) => !solids.has(i) &&
     (!D.pendingGround.has(i) || types.has(D.pendingGround.get(i)));
-  const door = sim.idx(office.door.x, office.door.y);
-  if (!D.walk[0][door] || D.shellAt[door] || !usable(door, PED_GROUND)) return 'Office entrance needs a clear outdoor pedestrian landing.';
-  const walks = sim.distField([door], i => sim.pedNbr(i).filter(j => j < s.W * s.H && !D.shellAt[j] && usable(j, PED_GROUND)));
+  const walks = classicOfficeWalkingField(sim, office, usable);
+  if (!walks) return 'Office entrance needs a clear outdoor pedestrian landing.';
   const starts = Array.from({ length: s.W }, (_, x) => sim.idx(x, s.parcel.y1 + 2));
   const gates = sim.routeGateIds().filter(id => sim.works(sim.obj(id)));
   if (!gates.length) return 'Connect an operating secured gate to the street before building the office.';

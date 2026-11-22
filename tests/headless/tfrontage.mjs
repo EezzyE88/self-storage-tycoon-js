@@ -290,4 +290,43 @@ await test('Maple office rebuild uses actual public and secured routes off the a
   assert.ok(!loaded.s.agents.includes(visitor));
 
 });
+await test('east-side classic prospect completes the office visit via the only gate with parking', () => {
+  const sim = makeSandbox({kind:'business',cash:100000,tiers:'all',instant:true});
+  const {s} = sim, y1 = s.parcel.y1;
+  for (const x of [8,32]) {
+    const result = sim.dispatch(build('gate',x,y1));
+    assert.ok(result.ok,result.msg);
+    const order = s.orders.find(o => o.id === result.order);
+    if (order.st === 'construction') sim.completeOrder(order);
+    for (let y=14;y<=y1;y++) s.ground[sim.idx(x,y)] = G.ASPHALT;
+  }
+  for (let x=9;x<32;x++) s.ground[sim.idx(x,14)] = G.CONCRETE;
+  const bay = sim.idx(8,14);
+  s.ground[bay] = G.PARKING;
+  sim.markDirty();
+  complete(sim,{...build('office',14,10),rotation:2});
+  const [west,east] = sim.objs('gate');
+  s.open=true; s.t=10*60; s.visits=[];
+  const visit = {kind:'prospect',size:'5x10',keen:true};
+  assert.ok(sim.gateCanServeVisit(west.id,visit));
+  assert.equal(sim.gateCanServeVisit(east.id,visit),false);
+  const rng = sim.rnd;
+  sim.rnd=()=>0.1; // Deterministically start the car on the east edge.
+  sim.startVisit(visit);
+  sim.rnd=rng;
+  const agent = s.agents.find(a => a.vt === 'prospect');
+  assert.ok(agent);
+  assert.equal(agent.gateId,west.id);
+  const car = sim.vehAt(agent.veh);
+  assert.equal(Math.floor(car.x),s.W-1);
+  const seen = new Set();
+  for(let i=0;i<1800 && s.agents.includes(agent);i++){
+    seen.add(agent.st);
+    if (car.parked != null) assert.equal(car.parked,bay);
+    sim.step();
+  }
+  for (const state of ['gateq','toOffice','office','back','leave']) assert.ok(seen.has(state),state);
+  assert.ok(!agent.failed);
+  assert.ok(!s.agents.includes(agent));
+});
 console.log(`${groups} frontage descriptor groups passed`);

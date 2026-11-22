@@ -1,4 +1,4 @@
-import { accessState, classicOfficeAccess, lostMapleAccess, publicDrive, recessed, staffLanding } from './mapleaccess.js';
+import { accessState, classicOfficeAccess, classicOfficeParking, classicOfficeWalkingField, lostMapleAccess, publicDrive, recessed, staffLanding } from './mapleaccess.js';
 import { frontageOf, knownLayout } from './frontage.js';
 import { applyRemovalState } from './removal.js';
 import { SAVE_GENERATION } from './savegeneration.js';
@@ -201,6 +201,7 @@ export class Sim {
     if (visit.kind === 'prospect') {
       if (this.frontage()) return !!accessState(this).parking;
       const office = this.objs('office')[0]; if (!office) return false;
+      if (office.generalPlacement) return classicOfficeParking(this, reach, classicOfficeWalkingField(this, office)).length > 0;
       const d = this.distField([this.idx(office.door.x, office.door.y)], (n) => this.pedNbr(n));
       for (let i = 0; i < s.ground.length; i++) if (reach[i] && d.has(i) && (s.ground[i] === G.PARKING || s.ground[i] === G.ASPHALT)) return true;
       return false;
@@ -2920,6 +2921,12 @@ export class Sim {
     const free = (i) => !taken.has(i) && reach[i];
     if (ag.vt === 'prospect') {
       const office = this.objs('office')[0]; if (!office) return null;
+      if (office.generalPlacement && !this.frontage()) {
+        const walks = classicOfficeWalkingField(this, office);
+        const bays = classicOfficeParking(this, reach, walks);
+        bays.sort((a, b) => walks.get(a) - walks.get(b));
+        return bays.find(free) ?? null;
+      }
       const oi = this.idx(office.door.x, office.door.y);
       const cands = [];
       for (let i = 0; i < s.ground.length; i++) if (s.ground[i] === G.PARKING && reach[i]) cands.push(i);
