@@ -2831,17 +2831,17 @@ export class UI {
       <div class="row wrap">${c.acknowledged ? '<button class="btn" data-a="comebackWork">Review operations</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="rescueLeasing">Review leasing</button>'}</div>`;
     } else {
       const recovery = finishing ? `<div class="cedar-recovery"><b>Units done. One goal left: financial recovery.</b>
-        <div class="rec-row"><span>Cash after bills</span><b>${money(nlNow)} of ${money(p.liquidGoal)}</b></div>
+        <div class="rec-row"><span>Cash after bills and debt</span><b>${money(nlNow)} of ${money(p.liquidGoal)}</b></div>
         <div class="rec-bar" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, Math.floor(100 * p.cash / p.liquidGoal)))}%"></i></div>
-        <p>${money(Math.ceil(p.liquidGoal - p.cash))} to go. All six units are restored and ${p.leased} are leased. Rent comes in as tenants pay; wages and bills already owed count against cash after bills. The yard is yours the moment cash after bills reaches ${money(p.liquidGoal)} while the units stay restored and leased.</p></div>` : '';
+        <p>${money(Math.ceil(p.liquidGoal - p.cash))} to go. All six units are restored and ${p.leased} are leased. Rent comes in as tenants pay; wages, bills already owed and any credit-line balance count against it. The yard is yours the moment cash after bills and debt reaches ${money(p.liquidGoal)} while the units stay restored and leased.</p></div>` : '';
       detail = `${sim.day <= 1 && !p.restored ? briefing : ''}${recovery}${goals}
-      <p class="note">All three must be true at the same time. Cash after bills is your cash minus bills already owed (wages and operating costs, paid at the weekly settlement) and any credit-line balance. The top bar shows cash before those bills; Business › Bills &amp; reserve shows cash after bills. No deadline: the yard is yours the moment all three hold.</p>
+      <p class="note">All three must be true at the same time. Cash after bills and debt is your cash minus bills already owed (wages and operating costs, paid at the weekly settlement) and any credit-line balance. The top bar shows cash before those bills and debt, so borrowing raises it but not this goal; Business › Bills &amp; reserve shows cash after unpaid bills and debt. No deadline: the yard is yours the moment all three hold.</p>
       ${units}
       <div class="row wrap"><button class="btn" data-a="comebackWork">Review work</button><button class="btn" data-a="comebackHire">Review Porter hire</button></div>
       <details class="comeback-details" ${detailOpen ? 'open' : ''}><summary>Demand, staffing and the yard</summary>
         ${demand}
         <p><b>Owner:</b> no wage · ${left}h of ${ROLES.owner.workHours}h left today. Field work takes you away from the counter, and shoppers who arrive then may leave.</p>
-        <p><b>Porter</b> (cleaning and unit-preparation worker): ${money(pay)}/employed day. Wages are paid at the weekly settlement but count against cash after bills as they build up. Unit preparation is picked up automatically. ${porter ? 'A Porter is employed; you can let them go once the wing is done.' : 'Hire to free your hours; let go when the work is done.'}</p>
+        <p><b>Porter</b> (cleaning and unit-preparation worker): ${money(pay)}/employed day. Wages are paid at the weekly settlement but count against cash after bills and debt as they build up. Unit preparation is picked up automatically. ${porter ? 'A Porter is employed; you can let them go once the wing is done.' : 'Hire to free your hours; let go when the work is done.'}</p>
         <p><b>Outside contractor (vendor):</b> any unit preparation can go to a vendor from Review work for $250, paid from cash when booked. It takes about 10 hours and none of your time.</p>
         <p><b>Damaged Driveway:</b> two units need a Drive Aisle on the two damaged driveway cells in front of their doors ($45 a cell, paid from cash when you confirm the order). Use Review driveway repair on the unit to see the cells. The through lane stays open for everyone else.</p>
         ${sim.day > 1 || p.restored ? briefing : ''}

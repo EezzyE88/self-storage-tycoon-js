@@ -196,7 +196,7 @@ test('a 3fd14ab Cedar record without liquidGoal keeps its original goal: net liq
   const { sim, s, c } = readyYard(3); delete c.liquidGoal;
   const re = new Sim(JSON.parse(JSON.stringify(s))), rc = re.s.scenario;
   assert.ok(validComeback(re.s)); assert.equal(rc.liquidGoal, undefined);
-  assert.equal(rc.goals[2].label, 'Cash after bills above your $1,150 start'); assert.equal(rc.goals[2].v, 1150);
+  assert.equal(rc.goals[2].label, 'Cash after bills and debt above your $1,150 start'); assert.equal(rc.goals[2].v, 1150);
   setLiquid(re, 1150); re.poll(); assert.equal(rc.status, 'active');
   setLiquid(re, 1150.01); re.poll(); assert.equal(rc.status, 'won');
   for (const bad of [1150, 'lots', -1]) { const st = JSON.parse(JSON.stringify(s)); st.scenario.liquidGoal = bad; assert.equal(new Sim(st).s.scenario.status, 'unavailable', 'liquidGoal ' + bad); }
