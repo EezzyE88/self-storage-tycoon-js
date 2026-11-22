@@ -1,3 +1,4 @@
+import { hvacRepairOutlook, hvacRepairOutlookText } from './hvacdecision.js';
 import { officePanelState } from './officepanel.js';
 import { suppliesSummary } from './supplies.js';
 import { upgradesEnabled, retrofitEligible, mountedOn } from './unitupgrades.js';
@@ -1648,7 +1649,9 @@ export class UI {
         return this.sheet('Freight Elevator', o.cond < 0.2 ? 'Out of service' : `Floor ${Math.round(o.pos) + 1}`, `${this.condBar(o.cond)}<div class="kv"><span>Waiting</span><span>${waiting}</span><span>Riding</span><span>${o.riders.length}</span><span>Average wait</span><span>${Math.round(o.avgWait || 0)} min</span><span>Trips</span><span>${o.trips}</span><span>Capacity</span><span>4 people · a cart takes 2</span></div>${this.taskActions(o)}`);
       }
       case 'hvac': {
-        const hv = D.hvac[o.serves]; return this.sheet('HVAC Plant', 'Climate control', `${this.condBar(o.cond)}<div class="kv"><span>Zone capacity</span><span>${hv ? Math.round(hv.cap) : 0} cells</span><span>Climate load</span><span>${hv ? Math.round(hv.load) : 0} cells</span></div>${this.taskActions(o)}<p class="note">Each climate unit loads the plant by its area. Over capacity, climate customers are unhappy.</p>`);
+        const hv = D.hvac[o.serves];
+        const repairOutlook = hvacRepairOutlookText(hvacRepairOutlook(sim, o, TOOLS.hvac.capacity));
+        return this.sheet('HVAC Plant', 'Climate control', `${this.condBar(o.cond)}<div class="kv"><span>Zone capacity</span><span>${hv ? Math.round(hv.cap) : 0} cells</span><span>Climate load</span><span>${hv ? Math.round(hv.load) : 0} cells</span></div><p class="note">${esc(repairOutlook)}</p>${this.taskActions(o)}<p class="note">Each climate unit loads the plant by its area. Over capacity, climate customers are unhappy.</p>`);
       }
       case 'corral': {
         const at = sim.cartsAt(o.id).length, all = s.carts.filter((c) => c.home === o.id).length, stranded = s.carts.filter((c) => (c.st === 'stranded' || c.st === 'damaged')).length, inuse = s.carts.filter((c) => c.st === 'inuse').length;
