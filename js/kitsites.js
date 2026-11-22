@@ -131,6 +131,7 @@ const CN_YARD = {
       { tool: 'iu5x5', a: { x: 36, y: 27 }, b: { x: 37, y: 27 }, f, climate: true },
     ]),
     tap('corral', 34, 19),
+    tap('light', 32, 21), // entrance spur: door (32,20) and (32,21) were outside every hall light's reach
   ],
   carts: 4,
 };
