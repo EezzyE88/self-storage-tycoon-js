@@ -1700,12 +1700,23 @@ export class Sim {
       case 'upperLeased': return this.objs('unit').filter((u) => (u.f || 0) > 0 && u.lease).length;
       case 'climateLeased': return this.objs('unit').filter((u) => u.env === 'climate' && u.lease).length;
       case 'climateScore': return this.metric('climateLeased') >= 5 ? s.exp.climate : 0; // only counts once climate tenants are actually rating it
-      case 'elevWait': { const els = this.objs('elevator').filter((e) => e.cstate === 'operating'); return els.length ? Math.max(...els.map((e) => e.avgWait || 0)) : 99; }
+      case 'elevWait': return this.elevWaitStatus().v;
       case 'contrib30': return last.length < 30 ? -1 : last.reduce((a, d) => a + d.rent - d.opex - d.payroll, 0);
       case 'roll': return this.rentRoll();
       case 'cash': return s.cash;
       default: return 0;
     }
+  }
+  // GV-01: the elevator-wait goal needs live service. A broken, unpowered or extension-closed cab, a cab nobody has
+  // boarded, or an average with no boarding in the last 7 days is unmet (99). el.avgWait itself is unchanged.
+  elevWaitStatus() {
+    const s = this.s, els = this.objs('elevator').filter((e) => e.cstate === 'operating');
+    if (!els.length) return { v: 99, note: 'no elevator' };
+    if (els.some((e) => !this.works(e))) return { v: 99, note: 'out of service' };
+    if (els.some((e) => e.extensionDrain || e.serviceTestUntil > s.t)) return { v: 99, note: 'closed for extension' };
+    const fresh = els.filter((e) => Number.isFinite(e.avgWait) && Number.isFinite(e.lastBoardT) && s.t - e.lastBoardT <= 7 * MIN_PER_DAY);
+    if (!fresh.length) return { v: 99, note: els.some((e) => Number.isFinite(e.lastBoardT)) ? 'no riders this week' : 'no riders yet' };
+    return { v: Math.max(...fresh.map((e) => e.avgWait)), note: null };
   }
   goalMet(g) { const v = this.metric(g.k); return g.cmp === '<' ? v < g.v : v >= g.v; }
   scenarioCheck(day) {
@@ -3157,7 +3168,7 @@ export class Sim {
         const used = el.riders.reduce((acc, r) => acc + r.slots, 0), slots = a.cart ? 2 : 1;
         if (used + slots > el.cap) break;
         q.shift(); el.riders.push({ a: a.id, dest: a.elevDest, slots }); changed = true;
-        const w = s.t - a.elevT0; a.elevWaited = w; el.avgWait = (el.avgWait || 0) * 0.85 + w * 0.15;
+        const w = s.t - a.elevT0; a.elevWaited = w; el.avgWait = (el.avgWait || 0) * 0.85 + w * 0.15; el.lastBoardT = s.t;
         if (a.kind === 'cust' && w > 40) this.thought(a, "I've been waiting forever for the elevator.", 'bad');
         a.inElev = true; this.wear(el, 0.0022); el.trips++;
       }
