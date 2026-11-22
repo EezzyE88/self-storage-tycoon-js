@@ -246,4 +246,48 @@ await test('synthetic acceptance: several seeds and days keep visitors public an
   }
 });
 
+await test('Maple office rebuild uses actual public and secured routes off the authored slot', () => {
+  const sim = makePublicMaple(), s = sim.s, old = sim.objs('office')[0];
+  delete s.objects[old.id]; sim.markDirty();
+  const args = { tool:'office', a:{x:4,y:18}, b:{x:4,y:18}, rotation:2 };
+  const valid = sim.plan(args);
+  assert.equal(valid.status,'valid',valid.reasons.join());
+  const original = s.ground.slice();
+  for (const bay of MAPLE_FRONTAGE.desc.bays) for (let y=bay.y0;y<=bay.y1;y++)
+    for (let x=bay.x0;x<=bay.x1;x++) s.ground[sim.idx(x,y)]=G.ASPHALT;
+  sim.markDirty();
+  refused(sim,args,/parking bay/);
+  s.ground=original; sim.markDirty();
+  const cash=s.cash;
+  assert.ok(sim.dispatch({type:'build',...args}).ok);
+  assert.equal(s.cash,cash-valid.cost);
+  sim.completeOrder(s.orders.at(-1));
+  const office = sim.objs('office')[0];
+  assert.notDeepEqual([office.x,office.y],[old.x,old.y]);
+  assert.deepEqual(office.door.dir,[0,1]);
+  assert.ok(!MAPLE_FRONTAGE.pocket(office.staffDoor.x,office.staffDoor.y));
+  const access = NEW.accessState(sim,null,false);
+  assert.ok(access.pedestrian && access.parking && access.staff);
+  const door = sim.idx(office.door.x,office.door.y), rear = sim.idx(office.staffDoor.x,office.staffDoor.y);
+  assert.ok(sim.pedPath(door,rear,{kind:'staff'}));
+  assert.equal(sim.pedPath(door,rear),null);
+  assert.equal(s.speed,0);
+  const loaded = new Sim(JSON.parse(snap(sim)));
+  assert.deepEqual(loaded.objs('office')[0],office);
+  assert.deepEqual(loaded.openingIssues(),[]);
+  loaded.s.tut.on=false; loaded.s.tut.done=true;
+  loaded.s.t=10*60; loaded.s.visits=[];
+  loaded.startVisit({kind:'prospect',size:'5x10',keen:true});
+  const visitor=loaded.s.agents.find(a=>a.publicVisit);
+  assert.ok(visitor);
+  const seen=new Set();
+  for(let i=0;i<900 && loaded.s.agents.includes(visitor);i++){
+    seen.add(visitor.st);
+    if(!visitor.hidden) assert.ok(MAPLE_FRONTAGE.pocket(Math.floor(visitor.x),Math.floor(visitor.y)));
+    loaded.step();
+  }
+  assert.deepEqual([...seen],['drive','toOffice','office','back','leave']);
+  assert.ok(!loaded.s.agents.includes(visitor));
+
+});
 console.log(`${groups} frontage descriptor groups passed`);

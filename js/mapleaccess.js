@@ -31,7 +31,7 @@ function flood(sim, starts, valid, edge) {
 // Read-only projection. Pending losses count now; unfinished alternative pavement
 // cannot justify blocking a route which is still needed during construction.
 export function accessState(sim, plan, pending=true) {
-  const s=sim.s, office=sim.objs('office')[0], K=sim.frontage() || MAPLE_FRONTAGE, P=K.desc.pocket;
+  const s=sim.s, office=plan?.creates?.find(o=>o.type==='office') || sim.objs('office')[0], K=sim.frontage() || MAPLE_FRONTAGE, P=K.desc.pocket;
   const pocket=K.pocket, publicBay=K.bay, pedestrianEdge=K.pedestrianEdge, vehicleEdge=K.vehicleEdge;
   if(!office?.staffDoor) return {};
   const ground=new Map(), solid=new Set();
@@ -51,11 +51,16 @@ export function accessState(sim, plan, pending=true) {
     if(K.throat(x) && drive(sim.idx(x,K.streetY))) entrance.push(sim.idx(x,P.y1));
   }
   const cars=flood(sim,entrance,drive,(x,y,nx,ny)=>pocket(nx,ny) && vehicleEdge(sim,x,y,nx,ny,publicDrive));
+  // Generalized offices require a return trip as well as entry. Walk the
+  // directed driving graph backwards from the street exits.
+  const exits = office.generalPlacement
+    ? flood(sim,entrance,drive,(x,y,nx,ny)=>pocket(nx,ny) && vehicleEdge(sim,nx,ny,x,y,publicDrive))
+    : cars;
   const bays=[];
-  for(const i of cars) if(fromDoor.has(i) && publicBay(i%s.W,Math.floor(i/s.W))>=0 &&
+  for(const i of cars) if(exits.has(i) && fromDoor.has(i) && publicBay(i%s.W,Math.floor(i/s.W))>=0 &&
     (ground.get(i)??s.ground[i])===G.PARKING && (!pending || (sim.D.pendingGround.get(i)??G.PARKING)===G.PARKING)) bays.push(i);
   bays.sort((a,b)=>Math.floor(a/s.W)-Math.floor(b/s.W) || a%s.W-b%s.W);
-  const staff=flood(sim,[rear],walk,(x,y,nx,ny)=>ny<K.streetY && !pocket(nx,ny) && pedestrianEdge(x,y,nx,ny));
+  const staff=flood(sim,office.generalPlacement && pocket(office.staffDoor.x,office.staffDoor.y) ? [] : [rear],walk,(x,y,nx,ny)=>ny<K.streetY && !pocket(nx,ny) && pedestrianEdge(x,y,nx,ny,office.generalPlacement ? false : null));
   const assigned = new Set();
   for (const a of s.agents) if(a.publicVisit) {
     const car=sim.vehAt(a.veh);
@@ -92,4 +97,29 @@ export function lostMapleAccess(before,after) {
   if(before.assigned && [...before.assigned].some(id=>!after.assigned?.has(id))) return 'Keep the parking and return route for the current office visitor.';
   if(before.workers && [...before.workers].some(id=>!after.workers?.has(id))) return 'Keep a secured return route for the worker in the yard.';
   return null;
+}
+
+// Classic parcels share one secured customer/staff entrance. Reuse the live
+// routing graph, excluding the proposed footprint and any pending obstructions.
+export function classicOfficeAccess(sim, office, solids = new Set()) {
+  const { s, D } = sim;
+  const usable = (i, types) => !solids.has(i) &&
+    (!D.pendingGround.has(i) || types.has(D.pendingGround.get(i)));
+  const door = sim.idx(office.door.x, office.door.y);
+  if (!D.walk[0][door] || D.shellAt[door] || !usable(door, PED_GROUND)) return 'Office entrance needs a clear outdoor pedestrian landing.';
+  const walks = sim.distField([door], i => sim.pedNbr(i).filter(j => j < s.W * s.H && !D.shellAt[j] && usable(j, PED_GROUND)));
+  const starts = Array.from({ length: s.W }, (_, x) => sim.idx(x, s.parcel.y1 + 2));
+  const gates = sim.routeGateIds().filter(id => sim.works(sim.obj(id)));
+  if (!gates.length) return 'Connect an operating secured gate to the street before building the office.';
+  let parking = false;
+  for (const id of gates) {
+    const reach = sim.distField(starts, i => sim.vehNbr(i, id).filter(j => usable(j, VEH_GROUND)));
+    for (const i of reach.keys()) {
+      if (s.ground[i] !== G.PARKING || (D.pendingGround.get(i) ?? G.PARKING) !== G.PARKING) continue;
+      parking = true;
+      if (walks.has(i)) return null;
+    }
+  }
+  return parking ? 'Connect the office entrance to parking with an outdoor pedestrian route.' :
+    'Provide a parking bay reachable by vehicles through the secured gate.';
 }

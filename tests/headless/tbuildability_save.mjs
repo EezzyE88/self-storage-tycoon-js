@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {Sim,fmtTime} from '../../js/sim.js';
 import {makeScenario,makeSandbox,SCENARIOS,modeLabel,sandboxName} from '../../js/scenarios.js';
 import {makeMaple} from '../../js/maple.js';
-import {MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,TIERS} from '../../js/data.js';
+import {MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,TIERS,G} from '../../js/data.js';
 import {FINANCIAL_MINUTE} from '../../js/finance.js';
 import {installTutorial,lessonTick,lessonAllowed,lessonById} from '../../js/tutorial.js';
 import {careerEligibility,portfolioCareer} from '../../js/career.js';
@@ -23,6 +23,13 @@ for(let rotation=0;rotation<4;rotation++) {
  const x=6+rotation*6,y=8;
  assert.ok(sm.dispatch({type:'build',tool:'du5x10',a:{x,y},b:{x,y},rotation}).ok);
 }
+const gate={x:7,y:sm.s.parcel.y1};
+assert.ok(sm.dispatch({type:'build',tool:'gate',a:gate,b:gate}).ok);
+sm.completeOrder(sm.s.orders.at(-1));
+for(let y=18;y<=gate.y;y++)sm.s.ground[sm.idx(7,y)]=G.ASPHALT;
+sm.s.ground[sm.idx(7,18)]=G.PARKING;
+sm.s.ground[sm.idx(8,18)]=sm.s.ground[sm.idx(9,18)]=G.CONCRETE;
+sm.markDirty();
 assert.ok(sm.dispatch({type:'build',tool:'office',a:{x:10,y:18},b:{x:10,y:18},rotation:3}).ok);
 g.company={props:[{name:'Rotated construction test',sim:sm}],active:0,feed:[]};g.sim=sm;
 const geometry=sim=>JSON.stringify(Object.values(sim.s.objects).filter(o=>['office','unit'].includes(o.type)).map(o=>({type:o.type,x:o.x,y:o.y,w:o.w,h:o.h,dir:o.dir,door:o.door,cstate:o.cstate})));const expected=geometry(sm),cash=sm.s.cash,t=sm.s.t;
