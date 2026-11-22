@@ -28,7 +28,7 @@ import { operations, diagnostics, staffingEvidence, investment, growthReadiness,
 import { rollingShopperPeriod, lossesInPeriod } from './reporting.js';
 import { ensureCustomerAccounts, customerHistory, returningAccount } from './customeraccounts.js';
 import { normalizeSupplies, sellAtCounter } from './supplies.js';
-import { scenarioRules, demandFactor, turnWorkFactor, hourlyTick, closeDay, scenarioMetric, extraFail, holdStep } from './scenariorules.js';
+import { scenarioRules, demandFactor, turnoverWork, hourlyTick, closeDay, scenarioMetric, extraFail, holdStep } from './scenariorules.js';
 import { recoverMoveOut, noteMoveOutJob, moveOutClaimed, startMoveOut, leaveMoveOut, finishMoveOut } from './moveout.js';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -2336,7 +2336,7 @@ export class Sim {
     delete s.leases[L.id]; if (tn) { delete s.tenants[tn.id]; this.dropConvo('mo' + tn.id); } this.dropConvo('lien' + L.id); this.dropConvo('rate' + L.id);
     u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t; u.overlock = false;
     { const fc = this.unitFront(u)[0]; if (fc) s.dirt[u.f || 0][this.idx(fc.x, fc.y)] += 0.25; }
-    const mr = this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Prepare ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) * turnWorkFactor(s) });
+    const mr = this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Prepare ${u.name}`, work: turnoverWork(s, WORK.makeready * (why === 'auction' ? 2 : 1)) });
     if (why !== 'auction') noteMoveOutJob(this, mr);
     s.today.moveouts++;
     this.emit('moveout', { unit: u.id });

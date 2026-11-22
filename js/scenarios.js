@@ -53,7 +53,7 @@ export const SCENARIOS = {
     blurb: 'A 43-unit yard beside State University. Graduation week empties two dozen units, each left full of furniture and trash. The fall rush arrives about two and a half weeks later and lasts less than three weeks; after it, almost nobody shops. You choose who cleans out, when to bring on help and when to let it go. The crew log shows how many paid hours were actually used.',
     goals: [{ k: 'occ', v: 0.95, label: 'Occupancy at least 95%', fmt: 'pct' }, { k: 'op30', v: 3000, label: 'Operating result at least $3,000 over 30 days', fmt: 'money' }],
     extra: ['Both goals must hold together for 7 days in a row'], hold: 7, cash: 2500,
-    deadline: 60, fail: { cashBelow: -1500, cashDays: 10 }, rules: { kind: 'campus', crewLog: true, turnWork: 3 },
+    deadline: 60, fail: { cashBelow: -1500, cashDays: 10 }, rules: { kind: 'campus', crewLog: true, turnWork: 3, turnWorkCap: 450 },
   },
 };
 

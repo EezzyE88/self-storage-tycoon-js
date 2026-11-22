@@ -2,6 +2,7 @@
 // Every function here is inert unless the active scenario carries a `rules` record, which only those three
 // scenario starts create. Maple, the tutorial, Sandbox, Cedar Creek and the older scenarios never set it, so
 // their simulation, saves and economy are unchanged.
+import { ROLES } from './data.js';
 const DAY = 1440;
 
 export function scenarioRules(s) { return (s && s.mode === 'scenario' && s.scenario && s.scenario.rules) || null; }
@@ -15,6 +16,19 @@ export function demandFactor(s, day) {
 
 // [E] Turnover work multiplier for make-ready after a move-out (students leave more behind).
 export function turnWorkFactor(s) { const R = scenarioRules(s); return R && R.turnWork ? R.turnWork : 1; }
+// Make-ready minutes for a turnover. Unchanged (the same base value) outside rules scenarios. In a rules scenario the
+// multiplier applies, but the result never exceeds what one worker can finish in a day: the smaller of rules.turnWorkCap
+// and the least daily capacity among roles allowed to do make-ready (8 h today). This keeps an auction clean-out
+// (base x2) from stacking past capacity (x2 x3 = 15 h) while ordinary move-outs keep their 7.5 h.
+export function turnoverWork(s, base) {
+  const R = scenarioRules(s); if (!R || !R.turnWork) return base;
+  const cap = Math.min(R.turnWorkCap || Infinity, makeReadyCapMin());
+  return Math.min(base * R.turnWork, cap);
+}
+export function makeReadyCapMin() {
+  const hrs = Object.values(ROLES).filter((r) => r.workHours && (r.can || []).includes('makeready')).map((r) => r.workHours);
+  return Math.min(...hrs) * 60;
+}
 
 // [E] Hourly sample of elevator service: in service = built, working, powered and not closed for an extension.
 export function elevatorInService(sim) {
