@@ -68,7 +68,7 @@ const SS_FRONTAGE = {
   fence: [{ run: [41, 30, 41, 22], office: [41, 30, 41, 25] }, { run: [34, 22, 41, 22], office: [34, 22, 37, 22] }, { run: [28, 22, 28, 30] }],
   gateLine: [28, 22, 34, 22], frontGap: [28, 41], crosswalks: [], yardEdgeY: 16,
   gatePlacementBlocked: { x0: 28, x1: 40 }, camera: { x: 36, y: 24 },
-  keepClear: [{ x0: 36, x1: 36, y0: 24, y1: 24, why: 'office walk' }, { x0: 31, x1: 33, y0: 22, y1: 29, why: 'gate stacking' }, { x0: 38, x1: 40, y0: 25, y1: 29, why: 'public driveway' }, { x0: 3, x1: 26, y0: 27, y1: 29, why: 'drainage ditch' }],
+  keepClear: [{ x0: 36, x1: 36, y0: 24, y1: 24, why: 'office walk' }, { x0: 31, x1: 33, y0: 22, y1: 29, why: 'gate stacking' }, { x0: 38, x1: 40, y0: 25, y1: 29, why: 'public driveway' }, { x0: 3, x1: 26, y0: 27, y1: 29, why: 'front setback' }],
   keepClearRule: 'refuse',
 };
 const SS_YARD = {
