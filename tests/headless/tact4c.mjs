@@ -85,7 +85,7 @@ test('asking-rent changes invalidate the live route quote without touching money
   const rngS = sim.s.rngS, orders = JSON.stringify(sim.s.orders), speed = sim.s.speed;
   const second = financingReview(sim), { u, boxes } = makeUI(sim); u.showFinancingReview();
   assert.equal(second.q.askRoll, first.q.askRoll + matching * 25, 'quote follows the applicable asking-rent change');
-  assert.ok(plain(boxes.modal.innerHTML).includes(`asking rents total ${usd(second.q.askRoll)} a month`), plain(boxes.modal.innerHTML));
+  assert.ok(plain(boxes.modal.innerHTML).includes(`new-tenant rents total ${usd(second.q.askRoll)} a month`), plain(boxes.modal.innerHTML));
   assert.equal(sim.s.cash, cash); assert.equal(JSON.stringify(sim.s.debt), debt); assert.equal(JSON.stringify(sim.s.loan), loan);
   assert.equal(sim.s.rngS, rngS); assert.equal(JSON.stringify(sim.s.orders), orders); assert.equal(sim.s.speed, speed);
   assert.equal(JSON.stringify(sim.events), events); assert.equal(JSON.stringify(sim.s), saved, 'review and quote add nothing to the save state');

@@ -111,7 +111,7 @@ test('payback shortfall names the existing thresholds and actual matching observ
  const one=investment(synthetic({leased:1,losses:8}),plan());assert.equal(one.range,null);
  assert.match(paybackText(one),/insufficient comparable evidence for 5x10 standard \(1 leased 5x10 standard to compare; estimates need 3\)\./);
  assert.doesNotMatch(paybackText(one),/months|matching shopper loss|days of observations/);
- assert.equal(paybackEvidenceNote(one),demandEvidenceText(one.evidence));assert.match(paybackEvidenceNote(one),/8 matching availability losses.*support reviewing/);
+ assert.equal(paybackEvidenceNote(one),demandEvidenceText(one.evidence));assert.match(paybackEvidenceNote(one),/8 matching shoppers turned away because nothing suitable was free.*support reviewing/);
  const few=investment(synthetic({day:10,leased:3,losses:1}),plan());
  assert.match(paybackText(few),/\(1 matching shopper loss observed; estimates need 5; 9 days of observations; estimates need 14\)/);assert.match(paybackEvidenceNote(few),/Gather more/);
  const two=investment(synthetic({leased:2,losses:2}),plan());assert.match(paybackText(two),/2 leased 5x10 standard to compare; estimates need 3; 2 matching shopper losses observed; estimates need 5/);

@@ -122,8 +122,8 @@ await test('4. an armed build tool does not hide the usable run-time control for
   const place=BEATS.find(b=>b.id==='expand').steps.find(s=>s.placement);assert.equal(ui.resolveStep(place),place);ui.tool=null;assert.equal(ui.resolveStep(opening),opening);assert.doesNotMatch(JSON.stringify(BEATS),/Commission whole order|Commission unit/);});
 await test('4. instructions use current UI terms and navigation',()=>{
   const all=[...BEATS,...LESSONS].flatMap(b=>b.steps||[]);for(const st of all)assert.doesNotMatch(st.d||'',/Scroll (down )?to/i,st.t);
-  assert.match(BEATS.find(b=>b.id==='hire').steps[1].d,/section selector/);assert.match(BEATS.find(b=>b.id==='makeready').steps[1].t,/Owner Make-Ready/);assert.doesNotMatch(BEATS.find(b=>b.id==='makeready').steps[1].t,/Start Owner/);
-  const ui=readFileSync('js/ui.js','utf8');assert.match(ui,/>Owner Make-Ready · \$\{mh\}h</);assert.match(ui,/\['Overlays', 'Overlays'\]/);
+  assert.match(BEATS.find(b=>b.id==='hire').steps[1].d,/section selector/);assert.match(BEATS.find(b=>b.id==='makeready').steps[1].t,/Prepare it yourself/);assert.doesNotMatch(BEATS.find(b=>b.id==='makeready').steps[1].t,/Start Owner/);
+  const ui=readFileSync('js/ui.js','utf8');assert.match(ui,/>Prepare it yourself · \$\{mh\}h</);assert.match(ui,/\['Overlays', 'Overlays'\]/);
   const css=readFileSync('css/game.css','utf8');assert.doesNotMatch(css,/#ui\.has-sheet #tut, #ui:has\(\.modal-bg\) #tut, #ui:has\(\.actionbar\) #tut \{ display:none; \}/,'instruction no longer disappears behind panels');assert.match(css,/#ui\.has-sheet \.tut:not\(\.offer\):not\(\.scen\)/);assert.match(css,/#guide\.nolabel \.glbl/);});
 await test('4. passive watch steps are labelled as watching, not tapping',()=>{const src=readFileSync('js/ui.js','utf8');assert.match(src,/'Watch here'/);});
 
@@ -171,7 +171,7 @@ await test('A. map rings require the point itself to be the map, never an interf
 await test('B. make-ready action stays in compact and detailed unit views until accepted, then shows status only',()=>{
   const s=makeMaple(3);const u=s.s.objects[s.s.unitRoles.mapleTurnover];if(u.lease)s.endLease(s.s.leases[u.lease],'moveout');assert.ok(s.s.tasks.some(t=>t.type==='makeready'&&t.obj===u.id));const {ui}=fixture(s);ui.sel=u.id;
   for(const tall of [false,true]){ui.sheetTall=tall;const h=ui.inspector(),rail=h.slice(h.indexOf('class="dock-actions"'),h.indexOf('class="body"'));assert.match(rail,/ownerMakeReady/,`action present when ${tall?'detailed':'compact'}`);}
-  assert.ok(s.dispatch({type:'ownerMakeReady',unit:u.id,forceOwner:true}).ok);for(const tall of [false,true]){ui.sheetTall=tall;const h=ui.inspector();assert.doesNotMatch(h,/"type":"ownerMakeReady"/,'no stale action');assert.match(h,/Make-ready assigned|Make-ready \d+%/);}
+  assert.ok(s.dispatch({type:'ownerMakeReady',unit:u.id,forceOwner:true}).ok);for(const tall of [false,true]){ui.sheetTall=tall;const h=ui.inspector();assert.doesNotMatch(h,/"type":"ownerMakeReady"/,'no stale action');assert.match(h,/Preparing · assigned|Preparing \d+%/);}
   const p=makeMaple(3);const v=p.s.objects[p.s.unitRoles.mapleTurnover];if(v.lease)p.endLease(p.s.leases[v.lease],'moveout');p.dispatch({type:'hire',role:'porter'});const f=fixture(p).ui;f.sel=v.id;assert.match(f.inspector(),/Queue Porter|ownerMakeReady/,'staff-first route still offered');});
 await test('D. floor chooser shows live in-progress state, never "not built yet", never counts it complete',()=>{
   const s=makeMaple(3);s.s.cash=1e6;const R=s.verticalPlan(SH);s.dispatch({type:'verticalUpgrade',...R});const ord=s.s.orders.at(-1);const {ui}=fixture(s);

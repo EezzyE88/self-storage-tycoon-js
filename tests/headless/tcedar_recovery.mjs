@@ -48,10 +48,10 @@ test('six restored and three leased: the panel shows net liquid against the $2,1
   const b = block(box.innerHTML), nl = sim.financialPosition().netLiquid;
   assert.equal(nl, 1604.4); assert.equal(c.status, 'active');
   assert.match(b, /Units done\. One goal left: financial recovery\./);
-  assert.match(b, new RegExp(`<span>Net liquid</span><b>\\${usd(1604)} of \\$2,150</b>`));
+  assert.match(b, new RegExp(`<span>Cash after bills and debt</span><b>\\${usd(1604)} of \\$2,150</b>`));
   assert.match(b, /<i style="width:74%"><\/i>/); assert.match(b, /\$546 to go\. All six units are restored and 3 are leased\./);
   assert.equal(head(box.innerHTML), 'Cedar Creek · recovery $1,604 of $2,150');
-  assert.match(box.innerHTML, /<span>Reach \$2,150 net liquid<\/span><b>\$1,604 of \$2,150<\/b>/, 'block and goal row agree');
+  assert.match(box.innerHTML, /<span>Reach \$2,150 cash after bills and debt<\/span><b>\$1,604 of \$2,150<\/b>/, 'block and goal row agree');
 });
 test('the shown balance is net liquid (bills owed and credit-line draw subtracted), not the cash on hand', () => {
   const { sim, s } = yard(3); s.cash = 1900; s.loan.bal = 200; // SYNTHETIC: a credit-line draw lowers net liquid
@@ -64,7 +64,7 @@ test('one cent short shows $1 to go and no win, and the block agrees with the go
   const r = ui(sim); assert.equal(c.status, 'active');
   // Display rounds like the existing goal row ($2,150 of $2,150); the amount left still says $1 and nothing is won.
   assert.match(block(r.box.innerHTML), /<b>\$2,150 of \$2,150<\/b>/); assert.match(block(r.box.innerHTML), /\$1 to go\./);
-  assert.match(r.box.innerHTML, /<span>Reach \$2,150 net liquid<\/span><b>\$2,150 of \$2,150<\/b>/, 'block and goal row agree');
+  assert.match(r.box.innerHTML, /<span>Reach \$2,150 cash after bills and debt<\/span><b>\$2,150 of \$2,150<\/b>/, 'block and goal row agree');
   setLiquid(sim, c.liquidGoal); sim.poll(); assert.equal(c.status, 'won');
   r.u.renderCedar(true); assert.equal(block(r.box.innerHTML), ''); assert.equal(head(r.box.innerHTML), 'Cedar Creek · complete');
 });

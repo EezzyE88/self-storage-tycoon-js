@@ -17,7 +17,7 @@ const COPY = {
   elevator_fault: ['Elevator was out of service.', 'The lift was not working while passengers waited.', 'Check current condition and repair status.'],
   elevator_queue: ['Long elevator wait reported.', 'The customer waited too long to board.', 'Check the queue now; fix faults before assessing another lift.'],
   noSize: ['Requested size was unavailable.', 'No suitable ready unit of this size was available.', 'Check current unit states before assessing more stock.'],
-  price: ['Shopper rejected the price.', 'Asking rent exceeded this shopper’s willingness to pay.', 'Compare repeated losses, rents and service quality before changing prices.'],
+  price: ['Shopper rejected the price.', 'The new-tenant rent was more than this shopper would pay.', 'Compare repeated losses, rents and service quality before changing prices.'],
   convenience: ['Shopper rejected the convenience.', 'The property did not meet this shopper’s preferences.', 'Review recurring route, cart and elevator problems.'],
   shopping: ['Shopper continued shopping.', 'The shopper left without signing.', 'No immediate action. Watch for repeated reasons.'],
   competitor: ['Shopper chose a competitor.', 'The shopper preferred the competing offer.', 'Compare repeated losses, rents and service quality before changing prices.'],
@@ -27,7 +27,7 @@ const COPY = {
 const AVAILABILITY = {
   full: ['All units were occupied or reserved.', 'Check vacancies now. If still full, review Growth Readiness before expanding.'],
   sizeFull: ['No accessible rent-ready unit of this size was available.', 'Check this size’s availability now; assess expansion only if unmet demand repeats.'],
-  makeReady: ['Matching vacant units needed make-ready.', 'Check their current make-ready jobs and staff availability.'],
+  makeReady: ['Matching vacant units still needed preparation.', 'Check their current preparation jobs and staff availability.'],
   access: ['Matching units had blocked rental access.', 'Inspect the unit’s door, hall or drive-up route.'],
   construction: ['Matching units were unfinished or waiting on readiness requirements.', 'Complete construction and the listed readiness requirements; eligible units open automatically.']
 };
@@ -53,13 +53,13 @@ export function complaintCopy(th, d) {
     } else {
       const c = r.counts, blockers = [];
       if (c.occupied || c.reserved) blockers.push('occupied or reserved');
-      if (c.makeReady) blockers.push('needing make-ready');
+      if (c.makeReady) blockers.push('needing preparation');
       if (c.blocked) blockers.push('access-blocked');
       if (c.unfinished) blockers.push('unfinished or waiting on readiness requirements');
       if (c.other) blockers.push('in another unavailable state');
       why = blockers.length ? 'Recorded matching stock included units ' + blockers.join('; ') + '.' : 'Matching stock was recorded as ready to offer; the detailed rejection cause is unknown.';
-      if (blockers.length === 1 && (c.occupied || c.reserved)) next = 'Check availability now. If still full, wait for turnover or assess expansion.';
-      else if (blockers.length === 1 && c.makeReady) next = 'Check these units’ current make-ready jobs and staff availability.';
+      if (blockers.length === 1 && (c.occupied || c.reserved)) next = 'Check availability now. If still full, wait for a move-out or assess expansion.';
+      else if (blockers.length === 1 && c.makeReady) next = 'Check these units’ current preparation jobs and staff availability.';
       else if (blockers.length === 1 && c.blocked) next = 'Inspect current doors, halls and freight access; temporary holds may have cleared.';
       else if (blockers.length === 1 && c.unfinished) next = 'Check these units’ construction and readiness requirements.';
       else next = 'Inspect matching units now. Resolve existing readiness or access issues before adding stock.';
@@ -73,7 +73,7 @@ export function requestCopy(c, d) {
   if (d.id && COPY[d.id]) { const [, why, next] = COPY[d.id]; return {why, next}; }
   if (key.startsWith('bi')) return {why:'A theft was reported at this unit.', next:'Choose a response, then review this unit’s security coverage.'};
   if (key.startsWith('rate')) return {why:'The tenant questioned a rent change.', next:'Compare rents, then choose whether to explain or hold the rate.'};
-  if (key.startsWith('mo')) return {why:d.category==='Normal move-out'?'The tenant has finished using the unit.':'The tenant wants to leave over rent.', next:'Review the available response choices; check make-ready after departure.'};
+  if (key.startsWith('mo')) return {why:d.category==='Normal move-out'?'The tenant has finished using the unit.':'The tenant wants to leave over rent.', next:'Review the available response choices; check unit preparation after departure.'};
   if (key.startsWith('size')) return {why:'The shopper asked whether their contents fit.', next:'Review available sizes and choose the appropriate sizing response.'};
   if (key==='secrisk') return {why:'The security check found dark, unwatched occupied areas.', next:'Inspect current lighting, camera coverage and power at the reported unit.'};
   return {why:'A customer decision is pending.', next:'Review the existing response choices.'};

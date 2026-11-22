@@ -144,7 +144,7 @@ test('growth checklist can pass on evidence and fails when turnover blocks the o
 test('UI financial and calendar surfaces use B+ truths and authoritative 7:00 dates', () => {
   const sim = makeMaple(), ui = Object.create(UI.prototype); ui.g = { sim };
   const html = ui.financialHtml();
-  assert.ok(html.includes('Scheduled next 30 days') && html.includes('Available after bills &amp; reserve') && html.includes('At-risk receivables'));
+  assert.ok(html.includes('Scheduled next 30 days') && html.includes('Available after bills &amp; reserve') && html.includes('Unpaid rent owed to you'));
   assert.ok(!html.includes('Normalized operating'));
   const events = ui.calendarEvents(); assert.ok(events.some((e) => e.label === 'Weekly expense settlement'));
   assert.ok(events.filter((e) => /billing|settlement|loan payment/.test(e.label)).every((e) => e.t % 1440 === 420));

@@ -12,13 +12,13 @@ const info=(roll,n,tier=2)=>portfolioCareer(Array.from({length:n},()=>({sim:{s:{
 test('property-count bottleneck explains an unchanged 50% bar',()=>{
  const p=careerGoalPresentation(info(10000,1));
  assert.equal(p.title,'Next: Regional operator');assert.equal(p.progress,.5);
- assert.equal(p.detail,'Eligible properties 1/2 · Rent roll met');
+ assert.equal(p.detail,'Eligible properties 1/2 · Lease rent met');
  assert.match(p.accessible,/10,000.*8,750.*1 of 2 eligible properties/);
 });
 test('rent-roll bottleneck, simultaneous shortfalls and cents near threshold',()=>{
- const p=careerGoalPresentation(info(5000,2));assert.equal(p.detail,'Rent roll $5,000/$8,750/mo · Property count met');
+ const p=careerGoalPresentation(info(5000,2));assert.equal(p.detail,'Lease rent $5,000/$8,750/mo · Property count met');
  assert.equal(p.progress,5000/8750);
- assert.equal(careerGoalPresentation(info(1000,1)).detail,'Rent roll $1,000/$8,750/mo · Eligible properties 1/2');
+ assert.equal(careerGoalPresentation(info(1000,1)).detail,'Lease rent $1,000/$8,750/mo · Eligible properties 1/2');
  assert.match(careerGoalPresentation(info(8749.99,2)).detail,/8,749\.99/);
 });
 test('pending promotion, all earned tiers and highest tier',()=>{

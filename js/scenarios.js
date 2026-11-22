@@ -11,19 +11,19 @@ import { CEDAR_LAYOUT, CEDAR_SITE, CEDAR_FRONTAGE, CEDAR_AISLES, CEDAR_CORE, CED
 export const SCENARIOS = {
   comeback: {
     name: 'Cedar Creek Storage Yard',
-    blurb: 'A tired drive-up yard with its office out front. Six rear units need make-ready and two units have a Damaged Driveway. You start with $1,150 and every choice costs something: your counter hours, a Porter\'s wages, a vendor or the paving order. Restore the wing, lease the units and build net liquid to $2,150.',
+    blurb: 'A tired drive-up yard with its office out front. Six rear units need cleaning and inspection before they can rent, and two of them have a Damaged Driveway. You start with $1,150 and every choice costs something: your counter hours, a Porter\'s wages, an outside contractor or the driveway repair. Prepare the six units, lease them and grow your cash after unpaid bills and debt to $2,150.',
     goals: cedarGoals(CEDAR_START), deadline: null, fail: null,
   },
   turnaround: {
     name: 'Maple Turnaround',
     blurb: 'The previous owner let Maple Street slide: broken lights, a failing gate, dirty loading bays and ten empty units. Legacy rents are low and cash is thin.',
-    goals: [{ k: 'occ', v: 0.95, label: 'Occupancy at least 95%', fmt: 'pct' }, { k: 'rep', v: 0.8, label: 'Reputation at least 80%', fmt: 'pct' }, { k: 'roll', v: 3750, label: 'Monthly rent roll at least $3,750', fmt: 'money' }],
+    goals: [{ k: 'occ', v: 0.95, label: 'Occupancy at least 95%', fmt: 'pct' }, { k: 'rep', v: 0.8, label: 'Reputation at least 80%', fmt: 'pct' }, { k: 'roll', v: 3750, label: 'Monthly lease rent at least $3,750', fmt: 'money' }],
     deadline: 150, fail: { cashBelow: -5000, cashDays: 14 },
   },
   vertical: {
     name: 'Go Vertical',
     blurb: 'A tight urban parcel with strong small-unit demand. The only way to scale is up - elevators, stairs and power decide how far.',
-    goals: [{ k: 'upperLeased', v: 40, label: '40 upper-floor units leased', fmt: 'n' }, { k: 'elevWait', v: 10, cmp: '<', label: 'Average elevator wait under 10 min', fmt: 'min' }, { k: 'contrib30', v: 1, label: 'Positive operating contribution over 30 days', fmt: 'money' }],
+    goals: [{ k: 'upperLeased', v: 40, label: '40 upper-floor units leased', fmt: 'n' }, { k: 'elevWait', v: 10, cmp: '<', label: 'Average elevator wait under 10 min', fmt: 'min' }, { k: 'contrib30', v: 1, label: 'Positive operating result (rent minus running costs) over 30 days', fmt: 'money' }],
     deadline: 300, fail: { cashBelow: -15000, cashDays: 21 },
   },
   climate: {
@@ -60,7 +60,7 @@ export function makeScenario(id, seed = 4401) {
     for (let k = 0; k < 10 && leased.length; k++) {
       const u = leased.splice(Math.floor(rnd() * leased.length), 1)[0]; const L = s.leases[u.lease];
       delete s.tenants[L.tenant]; delete s.leases[L.id]; u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t - 2000;
-      sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Make-ready ' + u.name, work: 150 });
+      sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Prepare ' + u.name, work: 150 });
     }
     s.visits = s.visits.filter((v) => !v.tenant || s.tenants[v.tenant]);
     ensureCustomerAccounts(s); // CR-01: setup removed leases outside endLease; keep account lease lists equal to what a reload derives
@@ -128,7 +128,7 @@ export function makeComeback(seed = 4401) {
   for (const u of targets) {
     const L = s.leases[u.lease]; if (L) { delete s.tenants[L.tenant]; delete s.leases[L.id]; }
     u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t;
-    sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Make-ready ' + u.name, work: WORK.makeready });
+    sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Prepare ' + u.name, work: WORK.makeready });
   }
   s.visits = s.visits.filter(v => !v.tenant || s.tenants[v.tenant]);
   ensureCustomerAccounts(s); // CR-01: same reconciliation as load, so the running and reloaded states match
@@ -184,7 +184,7 @@ export function makeCedarCreek(seed = 4401) {
   const sim = new Sim(s);
   s.staff.push({ id: sim.id(), role: 'owner', name: 'You', wage: 0, hired: 0 });
   sim.spawnStaffAgent(s.staff[0]);
-  targets.forEach((u, k) => sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Make-ready ' + u.name, work: CEDAR_TARGETS[k].work }));
+  targets.forEach((u, k) => sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Prepare ' + u.name, work: CEDAR_TARGETS[k].work }));
   ensureCustomerAccounts(s);
   s.scenario = { id: 'comeback', name: SCENARIOS.comeback.name, v: 2, site: CEDAR_SITE, cash0: CEDAR_START.cash, leaseGoal: CEDAR_START.leaseGoal, liquidGoal: CEDAR_START.liquidGoal,
     goals: cedarGoals(CEDAR_START),

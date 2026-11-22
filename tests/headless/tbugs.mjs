@@ -58,6 +58,6 @@ for (const manual of [false, true]) {
   ok(sim.s.open === false, `B6 ${label} readiness does not open the property`);
   ok(commissioned.length === 1 && commissioned[0].automatic === true && commissioned[0].n === 13, `B6 ${label} automatically opens exactly the constructed batch`);
   const before = JSON.stringify(sim.s), r = sim.dispatch({ type: 'commission', order });
-  ok(r.ok === false && r.msg === 'Nothing is ready to commission' && JSON.stringify(sim.s) === before && units.every(u => u.cstate === 'operating'), `B6 ${label} redundant legacy command is refused without changing operating state`, r.msg);
+  ok(r.ok === false && r.msg === 'Nothing is ready to open' && JSON.stringify(sim.s) === before && units.every(u => u.cstate === 'operating'), `B6 ${label} redundant legacy command is refused without changing operating state`, r.msg);
 }
 console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);

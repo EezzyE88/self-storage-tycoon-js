@@ -27,7 +27,7 @@ const STORIES = {
 };
 const VISIT = { movein: 'Move-in day', moveout: 'Moving out', access: 'Quick visit', bigaccess: 'Big haul', prospect: 'Shopping for storage' };
 const ROLE_LINE = { owner: 'That\'s you. Handles whatever needs doing.', porter: 'Keeps carts, halls and units ready.', tech: 'Fixes doors, gates, lights and elevators.', clerk: 'Runs the counter and signs new leases.' };
-const TASK = { makeready: 'Make-ready', clean: 'Cleaning', carts: 'Cart run', clean_restroom: 'Cleaning the restroom', pm: 'Preventive maintenance' };
+const TASK = { makeready: 'Unit preparation', clean: 'Cleaning', carts: 'Cart run', clean_restroom: 'Cleaning the restroom', pm: 'Preventive maintenance' };
 const TOD = [['live', 'Live'], [8.2, 'Morning'], [12.5, 'Noon'], [18.2, 'Golden'], [19.5, 'Dusk'], [22.5, 'Night']];
 const WX = [['live', 'Live'], ['fair', 'Clear'], ['rain', 'Rain']];
 const IC = {
@@ -356,7 +356,7 @@ export function installShowcase(game) {
   }
   sc.auctionCrowd = auctionCrowd; sc.clearCrowd = clearCrowd;
   function milestoneSub(k) {
-    return { first_retention: 'A tenant who was leaving decided to stay.', first_auction: 'A delinquent account resolved through a lien sale.', first_loan: 'Borrowed capital is working for the property.', first_makeready: 'A vacant unit is clean and back on the market.', first_lease_after_turnover: 'Turnover to new lease: the core loop works.', first_expansion: 'Your first additional units are rent-ready.', first_cart_trip: 'Carts are moving goods indoors.', first_repair: 'Broken equipment is back in service.', first_delegated: 'Your staff finished a job without you.', first_climate: 'Climate-controlled storage is open.', first_upper: 'Your first upper floor is open.' }[k] || '';
+    return { first_retention: 'A tenant who was leaving decided to stay.', first_auction: 'An unpaid account resolved through a lien sale.', first_loan: 'Borrowed capital is working for the property.', first_makeready: 'A vacant unit is clean and back on the market.', first_lease_after_turnover: 'Move-out to new lease: the core loop works.', first_expansion: 'Your first additional units are rent-ready.', first_cart_trip: 'Carts are moving goods indoors.', first_repair: 'Broken equipment is back in service.', first_delegated: 'Your staff finished a job without you.', first_climate: 'Climate-controlled storage is open.', first_upper: 'Your first upper floor is open.' }[k] || '';
   }
   function checkFull() {
     const sim = game.sim, o = yardInventory(sim), full = fullyOccupied(sim);

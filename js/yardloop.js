@@ -36,7 +36,7 @@ export function yardFocus(sim,ids,{append=false,label='Ready spaces'}={}) {
     if(ids.some(id=>r.targets.some(t=>t.id===id)))return {ok:false,msg:'These spaces are already tracked.'};
     r.groups=groupsOf(r);r.groups.push(group);r.targets.push(...units.map(u=>({id:u.id,signature:signature(u)})));r.completed=null;
   }else sim.s.yardLoop={v:1,started:sim.s.t,targets:units.map(u=>({id:u.id,signature:signature(u)})),leases:[],completed:null,groups:[group]};
-  return {ok:true,msg:'Watching these spaces. Asking rents unchanged.'};
+  return {ok:true,msg:'Watching these spaces. New-tenant rents unchanged.'};
 }
 export function yardLease(sim,u,L) {
   const r=sim.s.yardLoop,t=r?.targets.find(t=>t.id===u.id);

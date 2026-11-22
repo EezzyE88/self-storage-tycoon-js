@@ -77,10 +77,10 @@ export const CATEGORIES = [
 
 // shape: 'rect' drag rectangle, 'row' drag line of repeated units, 'tap' single placement
 export const TOOLS = {
-  aisle:   { cat: 'roads', name: 'Drive Aisle', shape: 'rect', costPerCell: 45, desc: 'Paved vehicle circulation. Drive-up doors need aisle frontage.' },
+  aisle:   { cat: 'roads', name: 'Drive Aisle', shape: 'rect', costPerCell: 45, desc: 'Paved lane for vehicles. Drive-up unit doors must face a connected drive aisle.' },
   loading: { cat: 'roads', name: 'Loading Zone', shape: 'rect', costPerCell: 60, desc: 'Marked stalls where interior customers stop to unload.' },
   parking: { cat: 'roads', name: 'Parking', shape: 'rect', costPerCell: 40, desc: 'Office/customer parking stalls.' },
-  walk:    { cat: 'roads', name: 'Walkway', shape: 'rect', costPerCell: 25, desc: 'Concrete pedestrian apron.' },
+  walk:    { cat: 'roads', name: 'Walkway', shape: 'rect', costPerCell: 25, desc: 'Concrete walkway pad.' },
   canopy:  { cat: 'roads', name: 'Covered Canopy', shape: 'rect', costPerCell: 140, desc: 'Weather-protected loading. Must touch a building.' },
 
   office:  { cat: 'site', name: 'Office', shape: 'tap', cost: 9000, fw: 5, fd: 4, desc: 'Reception, leasing and customer service. Required to open.' },

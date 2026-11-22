@@ -203,7 +203,7 @@ await test('synthetic access protections and keep-clear zones refuse before any 
   refused(sim, build('power', 37, 27), /office walk/);
   refused(sim, build('du5x5', 38, 27), /office walk/);
   assert.equal(sim.plan(build('light', 37, 27)).status, 'valid', 'a pole does not block the walk');
-  refused(sim, build('gate', 36, 29), /secured street frontage/);
+  refused(sim, build('gate', 36, 29), /secure street-facing spot/);
   assert.equal(sim.plan(build('power', 10, 19)).status, 'valid', 'yard away from the frontage stays buildable');
   const maple = makePublicMaple(); maple.s.cash = 90000;
   assert.equal(maple.plan(build('power', 8, 27)).status === 'invalid' && /clear for/.test(maple.plan(build('power', 8, 27)).reasons.join(' ')), false, 'Maple adds no keep-clear refusal');

@@ -10,9 +10,9 @@ export const UNIT_STATUS = {
   available: {label:'Available',mark:'+',color:'#3b916e'},
   occupied: {label:'Occupied',mark:'●',color:'#536777'},
   reserved: {label:'Reserved',mark:'H',color:'#81669e'},
-  turnover: {label:'Turnover',mark:'◇',color:'#ba8b37'},
+  turnover: {label:'Needs preparation',mark:'◇',color:'#ba8b37'},
   blocked: {label:'Blocked',mark:'×',color:'#b45448'},
-  handover: {label:'Handover test',mark:'~',color:'#7e8fa3'},
+  handover: {label:'Elevator test',mark:'~',color:'#7e8fa3'},
   commission: {label:'Opening',mark:'?',color:'#477a99'},
   construction: {label:'Building',mark:'/',color:'#9b917b'},
 };

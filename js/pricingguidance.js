@@ -8,12 +8,12 @@
 import { SIZE_KEYS } from './data.js';
 import { rollingShopperPeriod, periodText } from './reporting.js';
 
-const PRICE_ADVICE = /^(\d+) shoppers left over price(; (.+) charges about (\d+)% under market)?\. Trim asking rents in Business, or win on quality\.$/;
+const PRICE_ADVICE = /^(\d+) shoppers left over price(; (.+) charges about (\d+)% under market)?\. Trim (?:asking|new-tenant) rents in Business, or win on quality\.$/;
 
 export function priceAdviceText(text) {
   const m = typeof text === 'string' ? PRICE_ADVICE.exec(text) : null;
   if (!m) return text;
-  return `${m[1]} shoppers turned down your asking rent${m[2] ? `; ${m[3]} charges about ${m[4]}% under market` : ''}. Other shoppers may still lease the same units at full rent, so a lower price is not guaranteed to earn more. Compare each size in Business → Asking rents before changing price.`;
+  return `${m[1]} shoppers turned down your new-tenant rent${m[2] ? `; ${m[3]} charges about ${m[4]}% under market` : ''}. Other shoppers may still lease the same units at full rent, so a lower price is not guaranteed to earn more. Compare each size in Business → New-tenant rents before changing price.`;
 }
 
 const PRICE_LOSSES = new Set(['price', 'competitor']);

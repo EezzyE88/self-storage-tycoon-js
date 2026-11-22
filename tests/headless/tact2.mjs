@@ -70,7 +70,7 @@ test('Act II is beats 6-8 under "Act II · Stabilize", then the paused Act II br
 test('Beat 6: no pricing left; the build steps are kept with one build-status step between a green preview and Confirm', () => {
   assert.deepEqual(expand.steps.map((st) => st.t), ['Open <b>Build</b>', 'Choose <b>Units</b>', 'Pick <b>Drive-Up 10x10</b>', '<b>Drag</b> a row down the grass beside the main aisle', '<b>Green</b>: ready to build. <b>Amber</b>: can\'t earn yet. <b>Red</b>: can\'t go there. Check <b>cash after</b>', 'Tap <b>Confirm</b>', 'Let construction finish and the units open']);
   const text = JSON.stringify(expand) + expand.steps.map((st) => st.t + st.d).join('') + expand.why + expand.body;
-  assert.ok(!/Asking rent|asking rent|Pricing|Business/.test(text), 'no pricing step or wording in Beat 6');
+  assert.ok(!/Asking rent|asking rent|New-tenant rent|new-tenant rent|Pricing|Business/.test(text), 'no pricing step or wording in Beat 6');
   const st = expand.steps[4];
   for (const re of [/<b>Green<\/b>/, /<b>Amber<\/b>/, /<b>Red<\/b>/, /<b>cash after<\/b>/]) assert.match(st.t, re, 'the title alone carries it: phones hide step details during the build review');
   for (const re of [/<b>Green<\/b>/, /<b>Amber<\/b>/, /<b>Red<\/b>/, /<b>cost<\/b>/, /<b>cash after<\/b>/]) assert.match(st.d, re);
@@ -148,7 +148,7 @@ test('Beat 8: only the Porter is required; Tech, Clerk and Manager are explained
   for (const r of ['porter', 'tech', 'clerk', 'manager']) assert.ok(hire.why.includes(`<b>${ROLES[r].name}</b> (${w(r)})`), r);
   for (const r of ['tech', 'clerk', 'manager']) assert.ok(hire.steps[2].t.includes(`<b>${ROLES[r].name}</b> ${w(r)}`), r + ' in the card title (phones show titles)');
   for (const re of [/Tech<\/b> repairs equipment/, /Clerk<\/b> runs the office counter/, /Manager<\/b> handles routine decisions/, /You don't need them now/]) assert.match(hire.steps[2].d, re);
-  assert.match(hire.why, /Only the Porter is needed now/); assert.equal(hire.steps[3].d, 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', 'Watch step text as before');
+  assert.match(hire.why, /Only the Porter is needed now/); assert.equal(hire.steps[3].d, 'Keep time running. The Porter walks out of the office and picks up the cleaning or the unit preparation on their own.', 'Watch step text as before');
   assert.ok(!hire.steps.some((st) => /"role":"(tech|clerk|manager)"/.test(st.sel || '')), 'no other hire is asked for');
   const { sim } = play(20260929, { stopAt: 'hire' });
   assert.equal(hire.buttonWhen(sim), false, 'no Got it before the hire');

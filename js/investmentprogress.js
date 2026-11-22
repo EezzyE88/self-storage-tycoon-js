@@ -23,7 +23,7 @@ export function actIIProgress(sim) {
 // Act III chapter break and graduation: the full explanation. The headline is omitted when nothing new is leased.
 export function investmentText(sim) {
   const P = investmentProgress(sim); if (!P) return '';
-  return `<br><br>${P.leased ? '<b>Your investment is starting to work.</b> ' : ''}New units: <b>${P.leased} of ${P.built}</b> leased. Monthly rent from new units: <b>${dollars(P.newRent)}</b>. Total property rent roll: <b>${dollars(P.roll)}/month</b>.`
+  return `<br><br>${P.leased ? '<b>Your investment is starting to work.</b> ' : ''}New units: <b>${P.leased} of ${P.built}</b> leased. Monthly rent from new units: <b>${dollars(P.newRent)}</b>. Total monthly lease rent at this property: <b>${dollars(P.roll)}/month</b>.`
     + '<br><br>Occupancy may have dipped because newly opened units start empty. You paid to build them upfront; the empty units can bring in more rent when customers lease them. Monthly rent is not the same as cash collected or profit.';
 }
 
@@ -45,9 +45,9 @@ export function businessProgressHtml(sim, career = null) {
   const recent = Number.isInteger(t.gradDay) && sim.day <= t.gradDay + REMINDER_DAYS;
   if (!P.vacant && !recent) return '';
   const next = career && career.next;
-  return `<div class="note invest-progress"><p><b>New units:</b> ${P.leased} of ${P.built} leased · ${dollars(P.newRent)}/mo in contracted rent · property rent roll ${dollars(P.roll)}/mo. Empty new units can lease over time; occupancy dips while they do.</p>`
+  return `<div class="note invest-progress"><p><b>New units:</b> ${P.leased} of ${P.built} leased · ${dollars(P.newRent)}/mo in contracted rent · property lease rent ${dollars(P.roll)}/mo. Empty new units can lease over time; occupancy dips while they do.</p>`
     + (recent ? '<p>The introductory market boost has ended: fewer shoppers, and normal property taxes, insurance and rising operating costs now apply.</p>' : '')
-    + (next ? `<p><b>Career rent roll</b> ${dollars(career.roll)} of ${dollars(next.roll)}/mo for ${next.name}.</p>` : '')
+    + (next ? `<p><b>Career lease rent</b> ${dollars(career.roll)} of ${dollars(next.roll)}/mo for ${next.name}.</p>` : '')
     + `<p>${STATEMENT_POINTER}</p></div>`;
 }
 
@@ -62,7 +62,7 @@ function driveUpStatus(sim, unit) {
   if (unit.retrofitOrder) return 'Vacant, upgrade in progress';
   const state = unitStatus(unit);
   if (state === 'blocked' || state === 'handover') return 'Vacant, access blocked';
-  if (state === 'turnover') return 'Vacant, needs make-ready';
+  if (state === 'turnover') return 'Vacant, needs preparation';
   if (!sim.s.open) return 'Vacant, property closed';
   return state === 'available' ? 'Rent-ready, vacant' : 'Vacant, unavailable';
 }
@@ -115,7 +115,7 @@ export function investmentCheckinHtml(sim) {
   const C = investmentCheckin(sim);
   if (!C) return '';
   const label = p => `${p.size} ${p.env === 'climate' ? 'climate' : 'standard'}`;
-  const rows = C.products.map(p => `<div class="item"><div class="grow"><b>${label(p)} · ${p.leased}/${p.total} leased</b><small>${dollars(p.rent)}/mo contracted · ${p.losses} matching unmet request${p.losses === 1 ? '' : 's'} recorded (Days ${C.period.from}–${C.period.through})</small></div></div>`).join('');
+  const rows = C.products.map(p => `<div class="item"><div class="grow"><b>${label(p)} · ${p.leased}/${p.total} leased</b><small>${dollars(p.rent)}/mo signed-lease rent · ${p.losses} matching unmet request${p.losses === 1 ? '' : 's'} recorded (Days ${C.period.from}–${C.period.through})</small></div></div>`).join('');
   const outcome = C.leased === 0 ? 'None of these units currently produces contracted rent.'
     : `${C.leased} of ${C.total} units currently produce contracted rent.`;
   const closed = C.notOpen ? ` ${C.notOpen} more unit${C.notOpen === 1 ? '' : 's'} from this build ${C.notOpen === 1 ? 'is' : 'are'} not open yet.` : '';

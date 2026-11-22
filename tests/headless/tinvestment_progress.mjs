@@ -96,7 +96,7 @@ test('Act III break and graduation: headline only when something new is leased; 
   lease(sim, builtUnits(sim)[0]); body = curBeat(sim).body;
   assert.match(body, /<b>Your investment is starting to work\.<\/b> New units: <b>1 of 4<\/b> leased/);
   assert.match(body, /Occupancy may have dipped because newly opened units start empty/); assert.ok(body.includes(NEGATION));
-  assert.match(body, new RegExp(`Total property rent roll: <b>\\$${Math.round(sim.rentRoll()).toLocaleString('en-US')}/month</b>`));
+  assert.match(body, new RegExp(`Total monthly lease rent at this property: <b>\\$${Math.round(sim.rentRoll()).toLocaleString('en-US')}/month</b>`));
   for (const t of [actIIProgress(sim), investmentText(sim), gradProgress(sim), businessProgressHtml(sim)]) {
     const rest = t.replace(NEGATION, '');
     assert.doesNotMatch(rest, /profit|paid for itself|payback|return on|collected|lower (your )?(asking )?rent/i);
@@ -117,11 +117,11 @@ test('Business: graduated campaign only; reminder for 30 days; hidden when full 
   const sim = withRow(19, { grad: true }), s = sim.s; s.tut.gradDay = sim.day;
   let h = businessProgressHtml(sim);
   assert.match(h, /^<div class="note invest-progress">/); assert.doesNotMatch(h, /<h3/, 'never a section heading');
-  assert.match(h, /New units:<\/b> 0 of 4 leased · \$0\/mo in contracted rent · property rent roll/);
+  assert.match(h, /New units:<\/b> 0 of 4 leased · \$0\/mo in contracted rent · property lease rent/);
   assert.match(h, /introductory market boost has ended/); assert.ok(h.includes(STATEMENT_POINTER));
-  assert.doesNotMatch(h, /Career rent roll/, 'no career line without career data');
+  assert.doesNotMatch(h, /Career lease rent/, 'no career line without career data');
   const tier = { roll: 3963.5, next: { name: 'Example tier', roll: 5000 } };
-  assert.match(businessProgressHtml(sim, tier), /<b>Career rent roll<\/b> \$3,964 of \$5,000\/mo for Example tier\./);
+  assert.match(businessProgressHtml(sim, tier), /<b>Career lease rent<\/b> \$3,964 of \$5,000\/mo for Example tier\./);
   assert.doesNotMatch(businessProgressHtml(sim, { roll: 1, next: null }), /Career/);
   s.tut.gradDay = sim.day - REMINDER_DAYS - 1; h = businessProgressHtml(sim);
   assert.doesNotMatch(h, /introductory market boost/); assert.match(h, /0 of 4 leased/, 'still shown while new units are vacant');
@@ -136,8 +136,8 @@ test('Business sheet integration: block sits after the top cards and before Bill
   const html = businessFor(sim, { roll: sim.rentRoll(), next: { name: 'Local operator', roll: 4375 } });
   const i = html.indexOf('invest-progress'), stats = html.indexOf('<div class="stats">'), bills = html.indexOf('>Bills &amp; reserve</h3>');
   assert.ok(stats >= 0 && i > stats && i < bills, 'after the stats block, before Bills & reserve');
-  for (const label of ['<small>Cash</small>', '<small>Monthly rent roll</small>', '<small>Rent collected, last 30 days</small>', '<small>Operating cost / day</small>', 'Operating performance · 30 calendar days']) assert.ok(html.includes(label), label);
-  assert.match(html, /Career rent roll<\/b> \$[\d,]+ of \$4,375\/mo for Local operator/);
+  for (const label of ['<small>Cash</small>', '<small>Monthly lease rent</small>', '<small>Rent collected, last 30 days</small>', '<small>Operating cost / day</small>', 'Operating performance · 30 calendar days']) assert.ok(html.includes(label), label);
+  assert.match(html, /Career lease rent<\/b> \$[\d,]+ of \$4,375\/mo for Local operator/);
   const pre = withRow(27); assert.ok(!businessFor(pre).includes('invest-progress'), 'tutorial Business unchanged');
 });
 

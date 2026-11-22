@@ -90,7 +90,7 @@ for(const kind of ['comeback','sandbox'])for(const speed of [0,1,2,4]) {
     const html=ui.yardLoopHtml(),cards=[...html.matchAll(/<article class="item yard-opportunity">([\s\S]*?)<\/article>/g)];assert.equal(cards.length,choices.length);
     for(let i=0;i<cards.length;i++){
       const card=cards[i][1],c=choices[i];
-      for(const label of ['observed Days','Build:','Added operating costs:','Asking rent:','After build, bills &amp; reserve:'])assert.ok(card.includes(label));
+      for(const label of ['observed Days','Build:','Added operating costs:','New-tenant rent:','After build, bills &amp; reserve:'])assert.ok(card.includes(label));
       assert.ok(card.includes(`data-a="yardOpportunity" data-v="${c.size}"`));
       assert.equal(card.includes('Keeping cash is sensible.'),c.position.available<0);
       assert.equal(card.includes('data-a="reserveStart"'),c.position.available<0);

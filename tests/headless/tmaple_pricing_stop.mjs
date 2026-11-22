@@ -31,16 +31,16 @@ function toPricing(seed) {
 test('Beat 5 carries the three pricing steps; the expand build sequence follows unchanged', () => {
   assert.deepEqual(BEATS.slice(PRICING - 1, EXPAND + 1).map((b) => b.id), ['money', 'pricing', 'actI_break', 'expand']);
   assert.equal(PRICING, 4, 'Beat 5'); assert.equal(pricing.title, 'What should new tenants pay?');
-  assert.deepEqual(pricing.steps.map((st) => st.t), ['Open <b>Business</b>', 'Choose <b>Pricing</b>', 'Asking rents apply to <b>future leases</b>']);
+  assert.deepEqual(pricing.steps.map((st) => st.t), ['Open <b>Business</b>', 'Choose <b>Pricing</b>', 'New-tenant rents apply to <b>future leases</b>']);
   assert.deepEqual(expand.steps.map((st) => st.t), ['Open <b>Build</b>', 'Choose <b>Units</b>', 'Pick <b>Drive-Up 10x10</b>', '<b>Drag</b> a row down the grass beside the main aisle', '<b>Green</b>: ready to build. <b>Amber</b>: can\'t earn yet. <b>Red</b>: can\'t go there. Check <b>cash after</b>', 'Tap <b>Confirm</b>', 'Let construction finish and the units open']);
   assert.match(pricing.steps[2].d, /future leases|leases signed after the change/); assert.match(pricing.steps[2].d, /keep their current rent/); assert.match(pricing.steps[2].d, /don't need to change anything/);
-  assert.equal(pricing.steps[0].sel, '#tabs [data-v="business"]'); assert.equal(pricing.steps[1].sel, '.sheet [data-section-picker]'); assert.deepEqual(pricing.steps[1].section, ['business', 'Asking rents', 'Pricing']);
+  assert.equal(pricing.steps[0].sel, '#tabs [data-v="business"]'); assert.equal(pricing.steps[1].sel, '.sheet [data-section-picker]'); assert.deepEqual(pricing.steps[1].section, ['business', 'New-tenant rents', 'Pricing']);
   assert.equal(pricing.steps[2].sel, '.tut [data-a="tutNext"]', 'read, then Got it (was: open Build)');
   assert.ok(pricing.steps.every((st) => !st.placement && !st.blueprint), 'no placement on pricing steps');
   // The beat is acknowledged like the money beat: Got it, offered once Pricing has been seen.
   assert.equal(pricing.button, 'Got it'); assert.equal(pricing.flag, 'pricingAck');
   // Campaign Unit 5: expand's only button is the build-status Got it (between a green preview and Confirm), not a pricing stop.
-  assert.equal(expand.button, 'Got it'); assert.equal(expand.flag, 'buildStatusAck'); assert.ok(!/Asking rents|Business/.test(expand.steps.map((st) => st.t + st.d).join('')), 'no pricing step left in expand');
+  assert.equal(expand.button, 'Got it'); assert.equal(expand.flag, 'buildStatusAck'); assert.ok(!/Asking rents|New-tenant rents|Business/.test(expand.steps.map((st) => st.t + st.d).join('')), 'no pricing step left in expand');
   assert.ok(!/First look at your asking rents/.test(expand.body));
 });
 
@@ -49,8 +49,8 @@ test('progression follows the real Business -> Pricing -> Got it path', () => {
   assert.equal(stepState(sim, { tab: null, sel: null }).cur, 0, 'map: open Business');
   assert.equal(stepState(sim, rents(null)).cur, 1, 'Business open, no section: choose Pricing');
   assert.equal(stepState(sim, rents('Operating performance')).cur, 1, 'Statement left over from money beat: still choose Pricing');
-  assert.equal(stepState(sim, rents('Asking rents')).cur, 2, 'Asking rents showing: read, then Got it');
-  assert.equal(stepState(sim, { tab: 'operate', sel: null, sectionChoice: { tab: 'operate', label: 'Asking rents' } }).cur, 0, 'wrong tab never counts');
+  assert.equal(stepState(sim, rents('New-tenant rents')).cur, 2, 'New-tenant rents showing: read, then Got it');
+  assert.equal(stepState(sim, { tab: 'operate', sel: null, sectionChoice: { tab: 'operate', label: 'New-tenant rents' } }).cur, 0, 'wrong tab never counts');
   assert.equal(stepState(sim, { tab: 'build', cat: 'site', sel: null }).cur, 0, 'Build open does not pass the stop');
   assert.equal(pricing.buttonWhen(sim), false, 'no Got it before Pricing is seen');
   d({ type: 'tutFlag', flag: 'pricingSeen' }); // what the UI records when Business -> Pricing is shown
@@ -84,7 +84,7 @@ test('guidance is read-only: evaluating every pricing state writes nothing and k
   const A = toPricing(777), B = toPricing(777);
   assert.equal(JSON.stringify(A.sim.s), JSON.stringify(B.sim.s), 'twins identical at Beat 5 start');
   const leases = JSON.stringify(A.sim.s.leases), ask = JSON.stringify(A.sim.s.market.ask), cash = A.sim.s.cash, flags = JSON.stringify(A.sim.s.tut.flags);
-  const uis = [{ tab: null, sel: null }, rents(null), rents('Operating performance'), rents('Asking rents'), { tab: 'build', cat: 'units', sel: null }];
+  const uis = [{ tab: null, sel: null }, rents(null), rents('Operating performance'), rents('New-tenant rents'), { tab: 'build', cat: 'units', sel: null }];
   const before = JSON.stringify(A.sim.s);
   for (const ui of uis) { stepState(A.sim, ui); curBeat(A.sim); }
   assert.equal(JSON.stringify(A.sim.s), before, 'stepState/curBeat do not mutate state');
@@ -113,7 +113,7 @@ test('the story uses live occupancy and vacancy', () => {
 test('save/reload mid-stop restores the same step', () => {
   const { sim, d } = toPricing(20260929);
   const re = new Sim(JSON.parse(JSON.stringify(sim.s)));
-  for (const ui of [{ tab: null, sel: null }, rents(null), rents('Asking rents'), { tab: 'build', cat: 'site', sel: null }]) assert.equal(stepState(re, ui).cur, stepState(sim, ui).cur);
+  for (const ui of [{ tab: null, sel: null }, rents(null), rents('New-tenant rents'), { tab: 'build', cat: 'site', sel: null }]) assert.equal(stepState(re, ui).cur, stepState(sim, ui).cur);
   assert.equal(JSON.stringify(re.s), JSON.stringify(sim.s));
   d({ type: 'tutFlag', flag: 'pricingSeen' }); const re2 = new Sim(JSON.parse(JSON.stringify(sim.s)));
   assert.equal(curBeat(re2).id, 'pricing'); assert.equal(stepState(re2, { tab: null, sel: null }).cur, 2); assert.equal(pricing.buttonWhen(re2), true);

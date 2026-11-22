@@ -175,7 +175,7 @@ test('Act V: graduation is "Act V · Graduate · Beat 16" and no beat was added,
 });
 
 // One entry per item of the spec's Act V final review (Beat 16), in the spec's order.
-const FINAL_REVIEW = [/prepare a vacant unit/, /lease it/, /read property performance/, /asking rents/, /expand capacity/, /build and confirm construction/, /repair work/, /hire help/, /interior customer routes/, /carts and loading/, /read feedback/, /use and close overlays/, /improve security/, /climate-controlled space/, /upstairs access/, /unpaid rent through Collections/, /judge financing/, /<b>Pause<\/b> before a consequential decision/];
+const FINAL_REVIEW = [/prepare a vacant unit/, /lease it/, /read property performance/, /new-tenant rents/, /expand capacity/, /build and confirm construction/, /repair work/, /hire help/, /interior customer routes/, /carts and loading/, /read feedback/, /use and close overlays/, /improve security/, /climate-controlled space/, /upstairs access/, /unpaid rent through Collections/, /judge financing/, /<b>Pause<\/b> before a consequential decision/];
 test('Act V: the final review covers every spec item as a folded summary, and introduces no new system', () => {
   const b = BEATS[GRAD]; assert.equal(FINAL_REVIEW.length, 18);
   for (const re of FINAL_REVIEW) assert.match(b.why, re);

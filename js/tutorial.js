@@ -48,9 +48,9 @@ function buildSteps({ cat, catName, tool, toolName, place, placeD = '', cell, f 
   // A later build group only counts as progressing once the previous group is placed.
   return after ? steps.map((st) => ({ ...st, done: (sim, ui) => placed(sim) || (after(sim) && st.done(sim, ui)) })) : steps;
 }
-// Beat 5 (Asking rents): the UI records `pricingSeen` whenever Business -> Pricing is shown during the tutorial (read-only,
+// Beat 5 (New-tenant rents, formerly Asking rents): the UI records `pricingSeen` whenever Business -> Pricing is shown during the tutorial (read-only,
 // like `businessOpened`), so Pricing opened earlier, e.g. during the money beat, counts. Guidance never touches rents.
-const rentsShowing = (ui) => tabIs(ui, 'business') && ui.sectionChoice?.tab === 'business' && ui.sectionChoice?.label === 'Asking rents';
+const rentsShowing = (ui) => tabIs(ui, 'business') && ui.sectionChoice?.tab === 'business' && ui.sectionChoice?.label === 'New-tenant rents';
 const pricingSeen = (sim) => !!sim.s.tut.flags.pricingSeen;
 // Live figures for Beat 5's story: operating units, how many are leased, how many are vacant. Coach cards show the
 // current step's text (not the beat body) on every screen, so the steps carry the short form as an {occupancy} token,
@@ -268,13 +268,13 @@ export const BEATS = [
       { t: 'The clock (top left) is <b>paused</b>. Tap <b>Look around</b> when ready', d: 'Time stays paused until you start it. Clock controls, top left: <b>Pause</b>, <b>1x</b>, <b>2x</b> and <b>4x</b>. Tap the yellow button below when you\'re ready.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.welcome },
     ],
     button: 'Look around', check: (sim) => sim.s.tut.flags.welcome },
-  { id: 'makeready', act: 'I', chapter: 'Take Over', title: 'Turn over Unit 107',
+  { id: 'makeready', act: 'I', chapter: 'Take Over', title: 'Get Unit 107 ready to rent',
     body: 'Unit 107 just became vacant. Let\'s get it ready for the next tenant.',
-    why: 'A <b>make-ready</b> cleans and checks a vacant unit so it can rent again. Vacant units earn nothing until they are rent-ready.',
+    why: 'To <b>prepare a unit</b>, someone cleans and inspects the vacant unit so it can rent again. Vacant units earn nothing until they are rent-ready.',
     focus: (sim) => ({ obj: unitByRole(sim, 'mapleTurnover').id }),
     steps: [
       { t: 'Tap <b>Unit 107</b>', d: 'It\'s on the drive-up row on the left, under the amber broom pin. Follow the ring and tap the unit.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim, ui) => (ui && ui.sel === unitByRole(sim, 'mapleTurnover').id) || !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
-      { t: 'Tap <b>Owner Make-Ready</b>', d: 'In the unit panel that opened, tap <b>Owner Make-Ready</b> at the top. The Owner (you) does the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
+      { t: 'Tap <b>Prepare it yourself</b>', d: 'In the unit panel that opened, tap <b>Prepare it yourself</b> at the top. The Owner (you) does the job.', sel: `[data-cmd*='"ownerMakeReady"']`, done: (sim) => !!(sim.s.tasks.find((t) => t.type === 'makeready' && t.obj === unitByRole(sim, 'mapleTurnover').id) || {}).assigned || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
       { t: 'Start the clock: tap <b>1x</b>', d: 'At <b>1x</b>, a day takes <b>24 real seconds</b>. Tap <b>Pause</b> whenever you want.', sel: PLAY, done: (sim) => running(sim) || unitByRole(sim, 'mapleTurnover').commercial === 'ready' },
       { t: 'Watch the Owner finish', d: 'Watch the progress pin fill (about 2-3 game hours). Use <b>4x</b> if you\'d like to speed things up.', obj: (sim) => unitByRole(sim, 'mapleTurnover').id, done: (sim) => unitByRole(sim, 'mapleTurnover').commercial === 'ready' || !!unitByRole(sim, 'mapleTurnover').lease },
     ],
@@ -291,30 +291,30 @@ export const BEATS = [
     check: (sim) => !!sim.s.milestones.first_lease_after_turnover },
   { id: 'money', act: 'I', chapter: 'Take Over', title: 'Money without a spreadsheet',
     body: 'Your new lease is in! Let\'s check how Maple Street is doing.',
-    why: 'Rent is billed <b>monthly</b>; costs build up <b>daily</b> and settle weekly. A quiet week can look negative while the business is healthy, so watch the <b>rent roll</b> and <b>occupancy</b>.',
+    why: 'Rent is billed <b>monthly</b>; costs build up <b>daily</b> and settle weekly. A quiet week can look negative while the business is healthy, so watch <b>monthly lease rent</b> and <b>occupancy</b>.',
     focus: () => ({ tab: 'business' }),
     steps: [
       { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => sim.s.tut.flags.businessOpened },
-      { t: 'Check <b>Rent roll</b> and <b>Occupancy</b>', d: '<b>Rent roll</b> is monthly lease rent; <b>Occupancy</b> is the share of units leased. Tap <b>Got it</b> when ready.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.moneyAck },
+      { t: 'Check <b>Monthly lease rent</b> and <b>Occupancy</b>', d: '<b>Monthly lease rent</b> is the rent from signed leases, not cash collected; <b>Occupancy</b> is the share of units leased. Tap <b>Got it</b> when ready.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.moneyAck },
     ],
     button: 'Got it', buttonWhen: (sim) => sim.s.tut.flags.businessOpened, flag: 'moneyAck',
     check: (sim) => sim.s.tut.flags.businessOpened && sim.s.tut.flags.moneyAck },
   // Beat 5: read-only Asking rents comprehension. No rent change is asked for or made; Got it needs Pricing seen.
   { id: 'pricing', act: 'I', chapter: 'Take Over', title: 'What should new tenants pay?',
     body: pricingStory,
-    why: 'Asking rents affect <b>new leases</b> only. Higher prices can slow leasing; existing tenants keep their signed rent.',
+    why: 'New-tenant rents affect <b>new leases</b> only. Higher prices can slow leasing; existing tenants keep their signed rent.',
     steps: [
       { t: 'Open <b>Business</b>', d: '{occupancy} Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || pricingSeen(sim) },
-      { t: 'Choose <b>Pricing</b>', d: '{occupancy} In Business, open the section selector and choose <b>Pricing</b>.', sel: '.sheet [data-section-picker]', section: ['business', 'Asking rents', 'Pricing'], lbl: 'Choose Pricing', done: (sim, ui) => rentsShowing(ui) || pricingSeen(sim) },
-      { t: 'Asking rents apply to <b>future leases</b>', d: 'Changing an asking rent affects only <b>future leases</b>. Tenants with signed leases keep their current rent. You don\'t need to change anything now; tap <b>Got it</b>.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.pricingAck },
+      { t: 'Choose <b>Pricing</b>', d: '{occupancy} In Business, open the section selector and choose <b>Pricing</b>.', sel: '.sheet [data-section-picker]', section: ['business', 'New-tenant rents', 'Pricing'], lbl: 'Choose Pricing', done: (sim, ui) => rentsShowing(ui) || pricingSeen(sim) },
+      { t: 'New-tenant rents apply to <b>future leases</b>', d: 'Changing a new-tenant rent affects only <b>future leases</b>. Tenants with signed leases keep their current rent. You don\'t need to change anything now; tap <b>Got it</b>.', sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => sim.s.tut.flags.pricingAck },
     ],
     button: 'Got it', buttonWhen: pricingSeen, flag: 'pricingAck',
     check: (sim) => pricingSeen(sim) && !!sim.s.tut.flags.pricingAck },
   // Act I chapter break: paused, nothing authored pending. Continue releases held owner reviews (still paused); the next
   // act's first beat enters only after they are answered (or retired as stale).
   chapterBreak({ id: 'actI_break', act: 'I', chapter: 'Take Over', next: 'Act II · Stabilize', title: 'You have control of Maple Street',
-    body: 'Nice work! You turned over a unit, watched it lease and checked your business. <b>Maple Street is paused.</b> This is a good place to stop. Continue when you\'re ready for <b>Act II · Stabilize</b>.',
-    why: 'What you learned: a vacant unit needs a make-ready before it can lease; work takes game time, and <b>Pause</b> and the speeds run the clock; signed leases bring in rent every month; cash alone doesn\'t show how the business is doing; and asking rents set what <b>future</b> leases pay.' }),
+    body: 'Nice work! You prepared a unit, watched it lease and checked your business. <b>Maple Street is paused.</b> This is a good place to stop. Continue when you\'re ready for <b>Act II · Stabilize</b>.',
+    why: 'What you learned: a vacant unit must be prepared before it can lease; work takes game time, and <b>Pause</b> and the speeds run the clock; signed leases bring in rent every month; cash alone doesn\'t show how the business is doing; and new-tenant rents set what <b>future</b> leases pay.' }),
   // Act II "Stabilize" (campaign Unit 5): beats 6-8, then the Act II chapter break.
   { id: 'expand', act: 'II', chapter: 'Stabilize', title: 'Maple Street is full',
     body: 'Every unit is leased and prospects are still asking. Build a new row of drive-up units on the empty grass east of the main aisle.',
@@ -352,7 +352,7 @@ export const BEATS = [
       { t: 'Tap <b>Hire Porter</b>', d: 'In the Operate panel, choose <b>Hire</b> in the section selector at the top, then tap <b>Hire Porter</b>. The button shows the daily wage.', sel: `[data-cmd*='"role":"porter"']`, done: (sim) => sim.s.staff.some((x) => x.role === 'porter') },
       // Explained, never required: read while the Hire list (with every role and wage) is still open and time is paused.
       { t: `Other roles: <b>Tech</b> ${wage('tech')}, <b>Clerk</b> ${wage('clerk')}, <b>Manager</b> ${wage('manager')}`, d: `Each role adds a different kind of capacity for its daily wage: a <b>Tech</b> repairs equipment, a <b>Clerk</b> runs the office counter and a <b>Manager</b> handles routine decisions. They are listed under the Porter. You don't need them now. Tap <b>Got it</b> on this card.`, sel: '.tut [data-a="tutNext"]', lbl: 'Got it', done: (sim) => flag(sim, 'rolesAck') || !!sim.s.milestones.first_delegated },
-      { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the make-ready on their own.', sel: PLAY, run: true, done: (sim) => !!sim.s.milestones.first_delegated },
+      { t: 'Watch the Porter work', d: 'Keep time running. The Porter walks out of the office and picks up the cleaning or the unit preparation on their own.', sel: PLAY, run: true, done: (sim) => !!sim.s.milestones.first_delegated },
     ],
     button: 'Got it', flag: 'rolesAck', buttonWhen: (sim) => porterHired(sim) && !flag(sim, 'rolesAck') && !sim.s.milestones.first_delegated,
     // A Porter already on staff counts once delegated work happens (never fire and re-hire). The act ends after the authored move-out arrives.
@@ -469,8 +469,8 @@ export const BEATS = [
 
   // Act IV Beat 14: collections, the existing lesson contract (LESSONS.collections) on one real returned payment.
   { id: 'collections', act: 'IV', chapter: 'Grow', title: 'When rent goes unpaid',
-    body: 'An account is falling behind. Unpaid rent climbs a ladder: past due, delinquent (locked out), lien, notice, then auction.',
-    why: 'You set the policies (late fee, overlocks, automatic notices, auction or clean-out) and handle the exceptions. A payment plan often saves the tenant and the money.',
+    body: 'An account is falling behind. Unpaid rent climbs a ladder: past due, behind on rent (unit locked), lien-eligible, lien notice (the legal notice for unpaid rent), then auction.',
+    why: 'You set the policies (late fee, locking units for unpaid rent, automatic notices, auction or clean-out) and handle the exceptions. A payment plan often saves the tenant and the money.',
     tick: (sim) => { if (!act4Authored(sim) && sim.s.speed > 0) authorAct4Account(sim); }, // arrives with running time, never during manual Pause
     ownsRequest: (sim, c) => !!c && sim.s.tut.flags.act4Account != null && c.key === 'lien' + sim.s.tut.flags.act4Account,
     steps: [
@@ -499,7 +499,7 @@ export const BEATS = [
   { id: 'grad', act: 'V', chapter: 'Graduate', title: 'Maple Street is yours', pause: true, progress: gradProgress, // live Investment Progress + upcoming transition (Option A)
     body: 'You’ve taken Maple Street from a property you barely knew into one you can operate, diagnose, improve and grow. You understand how customers, staff, buildings and money fit together. There is still plenty to master, but the property is yours now. <b>Maple Street is paused.</b> Take your time, look around, and start the clock when you’re ready.',
     whyLabel: 'What you can do now',
-    why: '<b>You now know how to:</b><br><b>Act I:</b> prepare a vacant unit, lease it, read property performance and judge asking rents.<br><b>Act II:</b> expand capacity, build and confirm construction, manage repair work and hire help.<br><b>Act III:</b> follow interior customer routes, keep carts and loading moving, read feedback, use and close overlays, improve security and create climate-controlled space.<br><b>Act IV:</b> build working upstairs access, follow unpaid rent through Collections and judge financing.<br>And always <b>Pause</b> before a consequential decision.'
+    why: '<b>You now know how to:</b><br><b>Act I:</b> prepare a vacant unit, lease it, read property performance and judge new-tenant rents.<br><b>Act II:</b> expand capacity, build and confirm construction, manage repair work and hire help.<br><b>Act III:</b> follow interior customer routes, keep carts and loading moving, read feedback, use and close overlays, improve security and create climate-controlled space.<br><b>Act IV:</b> build working upstairs access, follow unpaid rent through Collections and judge financing.<br>And always <b>Pause</b> before a consequential decision.'
       + '<br><br><b>What happens next is your call.</b> Your next career goal appears at the top of the screen and in <b>Growth &rarr; Operator career</b>. <b>Growth Readiness</b> shows what demand supports before you spend. Start or replay lessons from <b>Growth &rarr; Lessons</b>; a lesson on adding a two-floor building is offered when the situation comes up. The <b>Builder’s handbook</b> (Menu) explains each tool. A <b>report card</b> arrives every 30 days in <b>Business</b>.',
     steps: [{ t: 'Tap <b>Finish tutorial</b>', d: 'The tutorial closes and every tool is unlocked. Time stays paused until you choose a speed.', sel: '.tut [data-a="tutNext"]', done: (sim) => sim.s.tut.flags.grad }],
     button: 'Finish tutorial', check: (sim) => sim.s.tut.flags.grad },
@@ -591,7 +591,7 @@ export const LESSONS = [
       { t: 'Open <b>Operate</b>', d: 'Tap <b>Operate</b> in the bottom bar.', sel: TAB('operate'), done: (sim, ui) => tabIs(ui, 'operate') || (ui && ui.rend && ui.rend.overlay === 'security') || since(sim, (o) => o.type === 'camera' || o.type === 'light') || ordered(sim, 'camera') || ordered(sim, 'light') },
       { t: 'Turn on the <b>Security</b> overlay', d: 'In the Operate panel, choose <b>Overlays</b> in the section selector, then tap <b>Security</b>. Covered ground glows; uncovered ground stays dark.', sel: '[data-a="overlay"][data-v="security"]', done: (sim, ui) => (ui && ui.rend && ui.rend.overlay === 'security') || ordered(sim, 'camera') || ordered(sim, 'light') },
       ...buildSteps({ cat: 'security', catName: 'Access & Security', tool: 'camera', toolName: 'Camera', cell: { x: 22, y: 14 }, placed: (sim) => ordered(sim, 'camera') || ordered(sim, 'light'),
-        place: '<b>Tap</b> the apron beside the loading stalls to place it', placeD: 'Tap the concrete just right of the loading stalls, below the interior building. A Light works too if you prefer.' }),
+        place: '<b>Tap</b> the concrete beside the loading stalls to place it', placeD: 'Tap the concrete just right of the loading stalls, below the interior building. A Light works too if you prefer.' }),
       waitBuild('Let the installer finish', (sim) => since(sim, (o) => (o.type === 'camera' || o.type === 'light') && o.cstate === 'operating')),
     ],
     check: (sim) => createdSince(sim, 'camera') || createdSince(sim, 'light') },
@@ -637,8 +637,8 @@ export const LESSONS = [
     check:(sim)=>verticalDone(sim,'commissioned') },
 
   { id: 'collections', chapter: 'Lesson', title: 'When rent goes unpaid', generic: true,
-    body: 'An account is falling behind. Unpaid rent climbs a ladder: past due, delinquent (locked out), lien, notice, then auction.',
-    why: 'You set the policies (late fee, overlocks, automatic notices, auction or clean-out) and handle the exceptions. A payment plan often saves the tenant and the money.',
+    body: 'An account is falling behind. Unpaid rent climbs a ladder: past due, behind on rent (unit locked), lien-eligible, lien notice (the legal notice for unpaid rent), then auction.',
+    why: 'You set the policies (late fee, locking units for unpaid rent, automatic notices, auction or clean-out) and handle the exceptions. A payment plan often saves the tenant and the money.',
     offer: (sim) => Object.values(sim.s.leases).some((L) => ['delinquent', 'lien'].includes(L.status)),
     steps: [
       { t: 'Open <b>Business</b>', d: 'Tap <b>Business</b> in the bottom bar.', sel: TAB('business'), done: (sim, ui) => tabIs(ui, 'business') || ctx(sim).flags.collAck },
@@ -648,7 +648,7 @@ export const LESSONS = [
     button: 'Got it', flag: 'collAck', check: (sim) => ctx(sim).flags.collAck },
   { id: 'financing', chapter: 'Lesson', title: 'Paying for growth', generic: true,
     body: 'Expansion costs more than a month of rent. A term loan spreads it over 60 months; the credit line covers short gaps.',
-    why: 'The bank approves loans whose payments stay under 45% of your rent roll. Loan buttons show the monthly payment and your cash after, before you commit. Borrow when new units will earn more than the payment.',
+    why: 'The bank approves loans whose payments stay under 45% of your monthly lease rent. Loan buttons show the monthly payment and your cash after, before you commit. Borrow when new units will earn more than the payment.',
     // Financing is opened explicitly from Lessons or a purchase review, never from a cash/day timer.
     offer: () => false,
     steps: [

@@ -15,7 +15,7 @@ const hire = stepWhere(/"role":"porter"/), overlay = stepWhere(/data-a="overlay"
 const PICKER = '.sheet [data-section-picker]';
 
 // A stub root whose elements are resolved by the exact selectors the production code asks for.
-function fixture({ tab = 'business', menu = null, step = pricing, controlVisible = false, optionVisible = true, available = ['Asking rents', 'Hire capacity', 'Overlays', 'Collections'] } = {}) {
+function fixture({ tab = 'business', menu = null, step = pricing, controlVisible = false, optionVisible = true, available = ['New-tenant rents', 'Hire capacity', 'Overlays', 'Collections'] } = {}) {
   const sim = makeMaple(11), ui = Object.create(UI.prototype); sim.s.tut = { ...sim.s.tut, on: true };
   const picker = { id: 'picker', visible: true, disabled: false };
   const control = { id: 'control', visible: controlVisible };
@@ -40,16 +40,16 @@ test('Choose Pricing: menu closed keeps the ring on the selector (the tap that o
 });
 test('Choose Pricing: menu open moves the ring to the Pricing option, never the selector', () => {
   const f = fixture({ menu: 'business' });
-  const t = ringOn(f.ui); assert.equal(t.el.id, 'opt:Asking rents'); assert.equal(t.el.dataset.v, 'Asking rents'); assert.equal(t.lbl, 'Tap Pricing'); assert.notEqual(t.el, f.picker);
+  const t = ringOn(f.ui); assert.equal(t.el.id, 'opt:New-tenant rents'); assert.equal(t.el.dataset.v, 'New-tenant rents'); assert.equal(t.lbl, 'Tap Pricing'); assert.notEqual(t.el, f.picker);
 });
 test('menu open for another tab, or no option rendered, or no pointer-safe option: falls back to the selector ring', () => {
   assert.equal(ringOn(fixture({ tab: 'business', menu: 'operate' }).ui).el.id, 'picker');
   assert.equal(ringOn(fixture({ menu: 'business', available: ['Bills'] }).ui).el.id, 'picker');
-  const f = fixture({ menu: 'business', optionVisible: false }); assert.equal(ringOn(f.ui).el.id, 'picker'); assert.deepEqual(f.reveals, ['opt:Asking rents'], 'tried to scroll the option into view first');
+  const f = fixture({ menu: 'business', optionVisible: false }); assert.equal(ringOn(f.ui).el.id, 'picker'); assert.deepEqual(f.reveals, ['opt:New-tenant rents'], 'tried to scroll the option into view first');
 });
 test('a menu option scrolled out of a short sheet is revealed and then ringed', () => {
   const f = fixture({ menu: 'business' }); f.options[0].visible = false; f.options[0].reveal = true;
-  const t = ringOn(f.ui); assert.equal(t.el.id, 'opt:Asking rents'); assert.deepEqual(f.reveals, ['opt:Asking rents']);
+  const t = ringOn(f.ui); assert.equal(t.el.id, 'opt:New-tenant rents'); assert.deepEqual(f.reveals, ['opt:New-tenant rents']);
 });
 test('shared mechanism: Hire, Overlays and Collections steps ring their menu option while the menu is open', () => {
   for (const [step, v, lbl, tab] of [[hire, 'Hire capacity', 'Tap Hire', 'operate'], [overlay, 'Overlays', 'Tap Overlays', 'operate'], [collections, 'Collections', 'Tap Collections', 'business']]) {
@@ -71,16 +71,16 @@ test('ring logic never writes game state', () => {
   assert.equal(JSON.stringify(f.sim.s), before);
 });
 test('tutorial step is unchanged apart from naming its section: trigger, order, selector and done() intact', () => {
-  assert.deepEqual(pricing.section, ['business', 'Asking rents', 'Pricing']); assert.equal(pricing.sel, PICKER); assert.equal(pricing.lbl, 'Choose Pricing');
+  assert.deepEqual(pricing.section, ['business', 'New-tenant rents', 'Pricing']); assert.equal(pricing.sel, PICKER); assert.equal(pricing.lbl, 'Choose Pricing');
   // Campaign Unit 4: the Pricing stop moved out of `expand` into its own Beat 5 (`pricing`); the step itself is unchanged.
   const beat = BEATS.find((b) => b.id === 'pricing'); assert.equal(BEATS.indexOf(beat), 4); assert.equal(beat.steps.length, 3);
   assert.equal(BEATS.find((b) => b.id === 'expand').steps.length, 7, 'expand keeps only its build steps plus the Unit 5 build-status step');
   const sim = makeMaple(20260929); sim.s.tut.beat = 4;
-  assert.equal(curBeat(sim).id, 'pricing'); assert.equal(stepState(sim, { tab: 'business', sel: null, sectionChoice: { tab: 'business', label: 'Asking rents' } }).cur, 2);
+  assert.equal(curBeat(sim).id, 'pricing'); assert.equal(stepState(sim, { tab: 'business', sel: null, sectionChoice: { tab: 'business', label: 'New-tenant rents' } }).cur, 2);
   assert.equal(beat.check(sim), false); sim.s.tut.flags.pricingSeen = true; sim.s.tut.flags.pricingAck = true; assert.equal(beat.check(sim), true);
 });
 test('step section values are real menu options in the production Business and Operate panels', () => {
-  for (const [tab, wanted] of [['business', ['Asking rents', 'Collections']], ['operate', ['Hire capacity', 'Overlays', 'Work queue']]]) {
+  for (const [tab, wanted] of [['business', ['New-tenant rents', 'Collections']], ['operate', ['Hire capacity', 'Overlays', 'Work queue']]]) {
     const sim = makeMaple(32); sim.s.tut = { on: false, done: true, flags: {} }; let html = '';
     const ui = Object.create(UI.prototype), box = { querySelector: () => null, querySelectorAll: () => [], firstChild: null };
     Object.defineProperty(box, 'innerHTML', { get: () => html, set: (v) => { html = v; box.firstChild = v ? { classList: { add() {} } } : null; } });

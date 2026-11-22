@@ -206,7 +206,7 @@ test('rendered step text: the wait, then the live account story (stage, amount o
   const sim = at14(); let html = renderCard(sim);
   assert.match(html, /Let time run until a payment comes back/); assert.doesNotMatch(html, /data-a="tutNext"/, 'no Got it before an account exists');
   run1(sim); const L = sim.s.leases[sim.s.tut.flags.act4Account]; html = renderCard(sim);
-  assert.match(html, /<span class="tx">Open <b>Business<\/b> <span class="tut-money" data-qa="tut-act4-account">Unit 1010’s \$119 rent payment came back on Day \d+\. Now <b>Delinquent<\/b>, <b>\$139<\/b> owed, locked out\.<\/span>/);
+  assert.match(html, /<span class="tx">Open <b>Business<\/b> <span class="tut-money" data-qa="tut-act4-account">Unit 1010’s \$119 rent payment came back on Day \d+\. Now <b>Behind on rent<\/b>, <b>\$139<\/b> owed, locked out\.<\/span>/);
   assert.equal(sim.owed(L), 139); assert.doesNotMatch(html, /loan|borrow/i);
   // the same card, re-rendered without force (as every frame does), follows the live account when the tenant pays mid-step
   const { u, box } = renderCard.last; sim.payUp(L); u.renderTut(false);

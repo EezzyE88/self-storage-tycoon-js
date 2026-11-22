@@ -32,7 +32,7 @@ const finishBuilds = (sim) => { for (let i = 0; i < 600 && sim.s.orders.some((o)
 
 test('wording: blurb, briefing, cards and details say Damaged Driveway; no player-facing "apron"', () => {
   const { u, box, sim } = fixture();
-  assert.match(SCENARIOS.comeback.blurb, /two units have a Damaged Driveway\./);
+  assert.match(SCENARIOS.comeback.blurb, /two of them have a Damaged Driveway\./);
   u.renderCedar(true); const h = box.innerHTML;
   assert.match(h, /two units have a Damaged Driveway\./); assert.match(h, /<b>Damaged Driveway:<\/b> two units need a Drive Aisle on the two damaged driveway cells/);
   assert.doesNotMatch(h, /apron/i); assert.doesNotMatch(SCENARIOS.comeback.blurb, /apron/i);
@@ -86,7 +86,7 @@ test('after both repairs complete: access restored, cards return to the unit act
   u.scMin = false; u.renderCedar(true);
   assert.doesNotMatch(box.innerHTML, /Damaged Driveway ·|Review driveway repair ·|data-a="cedarDriveway"/);
   assert.equal((box.innerHTML.match(/data-a="comebackUnit"/g) || []).length, 6);
-  assert.match(box.innerHTML, /Unit 1012<\/b><small>Make-ready 5h · not started/);
+  assert.match(box.innerHTML, /Unit 1012<\/b><small>Prepare unit 5h · not started/);
 });
 test('not offered outside a live Cedar v2 record (unavailable record, other scenarios)', () => {
   const { u, sim } = fixture(); sim.s.scenario.status = 'unavailable'; assert.equal(u.cedarDriveway(1), null);

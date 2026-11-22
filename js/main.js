@@ -69,10 +69,10 @@ const game = {
     const day = this.sim.day, n = this.company ? this.company.props.length : 1;
     const out = [];
     const tier = this.sim.s.coTier || 1;
-    for (const m of ['blank', 'urban', 'rural']) if (m === 'blank' || tier >= 3) out.push({ kind: 'parcel', market: m, name: `Empty parcel · ${MARKETS[m].name}`, desc: 'Raw land with street frontage. Build it from scratch.', price: { blank: 45000, urban: 70000, rural: 25000 }[m] * (1 + 0.1 * (n - 1)) });
+    for (const m of ['blank', 'urban', 'rural']) if (m === 'blank' || tier >= 3) out.push({ kind: 'parcel', market: m, name: `Empty parcel · ${MARKETS[m].name}`, desc: 'Raw land with street access. Build it from scratch.', price: { blank: 45000, urban: 70000, rural: 25000 }[m] * (1 + 0.1 * (n - 1)) });
     const mp = makeMapleSeedPrice(day);
     const fac = FACILITY_NAMES.find((nm) => !(this.company ? this.company.props : []).some((p) => p.name === nm)) || 'Oak Ridge Storage';
-    out.push({ kind: 'facility', market: 'maple', name: 'Operating facility · ' + fac, fac, desc: '23 units, mostly leased, some deferred maintenance. Rent roll comes with it.', price: mp });
+    out.push({ kind: 'facility', market: 'maple', name: 'Operating facility · ' + fac, fac, desc: '23 units, mostly leased, some deferred maintenance. Its signed leases come with it.', price: mp });
     return out.map((o) => ({ ...o, price: Math.round(o.price / 1000) * 1000 + WORKING_FLOAT })); // price includes the new property's opening working cash
   },
   // The operating facility an acquisition from `src` would create. Shared by acquire() and the read-only purchase preview:
