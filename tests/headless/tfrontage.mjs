@@ -13,6 +13,9 @@ import { makeSandbox, modeLabel, sandboxName } from '../../js/scenarios.js';
 import { Sim, fmtTime } from '../../js/sim.js';
 import { G, MARKETS, MIN_PER_DAY, ROLES } from '../../js/data.js';
 import { SYNTH, SYNTH_DESC, makeSynthetic, registerSynthetic } from '../fixtures/frontage/synthetic.mjs';
+import { KIT_SITES, GO_SITE_LAYOUT, SS_SITE_LAYOUT, CN_SITE_LAYOUT } from '../../js/kitsites.js';
+import { makeScenario } from '../../js/scenarios.js';
+import { accessState } from '../../js/mapleaccess.js';
 
 let groups = 0;
 const test = async (name, fn) => { await fn(); console.log('PASS ' + name); groups++; };
@@ -27,8 +30,23 @@ function refused(sim, a, reason) {
   assert.equal(sim.dispatch(a).ok, false); assert.equal(snap(sim), before);
 }
 
-await test('Maple and Cedar Creek ship; both descriptors pass the validator and Maple keeps every master constant', () => {
-  assert.deepEqual(layoutIds(), [MAPLE_PUBLIC, CEDAR_LAYOUT]);
+await test('Maple, Cedar Creek and the three SK-02 kit sites ship; every descriptor passes the validator and Maple keeps every master constant', () => {
+  // Exact shipped inventory: any unplanned registration still fails here.
+  assert.deepEqual(layoutIds(), [MAPLE_PUBLIC, CEDAR_LAYOUT, GO_SITE_LAYOUT, SS_SITE_LAYOUT, CN_SITE_LAYOUT]);
+  // Each kit site: its own id, a valid frozen registered copy, and a scenario start that matches it with full access.
+  for (const [id, layout] of [['grandopening', GO_SITE_LAYOUT], ['stormseason', SS_SITE_LAYOUT], ['chainnextdoor', CN_SITE_LAYOUT]]) {
+    const raw = KIT_SITES[id].frontage, K = frontageOf(layout);
+    assert.equal(raw.id, layout); assert.deepEqual(validateFrontage(raw), []); assert.deepEqual(validateFrontage(K.desc), []);
+    assert.ok(Object.isFrozen(K.desc) && Object.isFrozen(K.desc.gate.lanes) && Object.isFrozen(K.desc.fence));
+    const sim = makeScenario(id, 4401), F = K.desc, office = sim.objs('office'), gate = sim.objs('gate');
+    assert.equal(sim.s.layout, layout); assert.equal(office.length, 1); assert.equal(gate.length, 1);
+    assert.deepEqual({ x: office[0].x, y: office[0].y, w: office[0].w, h: office[0].h, door: office[0].door, staffDoor: office[0].staffDoor },
+      { x: F.office.x, y: F.office.y, w: F.office.w, h: F.office.h, door: F.office.door, staffDoor: F.office.staffDoor });
+    assert.deepEqual([gate[0].x, gate[0].y, gate[0].mapleCompound], [F.gate.x, F.gate.y, true]);
+    for (let y = 0; y < sim.s.H; y++) for (let x = 0; x < sim.s.W; x++) if (K.bay(x, y) >= 0) assert.equal(sim.s.ground[sim.idx(x, y)], G.PARKING);
+    const a = accessState(sim); assert.ok(a.pedestrian && a.parking && a.staff, id + ' opens with full public, parking and staff access');
+    assert.deepEqual(sim.objs('unit').filter((u) => u.blocked || u.cstate !== 'operating').map((u) => u.num), [], id + ' units all open');
+  }
   assert.deepEqual(validateFrontage(CEDAR.desc), []);
   assert.deepEqual(validateFrontage(MAPLE_FRONTAGE.desc), []);
   assert.ok(Object.isFrozen(MAPLE_FRONTAGE.desc) && Object.isFrozen(MAPLE_FRONTAGE.desc.gate.lanes));
