@@ -14,7 +14,8 @@ import { careerDriveOpportunity } from './careeropportunity.js';
 import { careerGoalPresentation } from './careerhud.js';
 import { businessProgressHtml, investmentCheckinHtml } from './investmentprogress.js';
 import { yardInfill } from './yardinfill.js';
-import { isComeback, comebackProgress, targetUnits, targetInService, unitInService } from './comeback.js';
+import { isComeback, comebackProgress, targetUnits, targetInService, targetLeased, unitInService, cedarDemand } from './comeback.js';
+import { CEDAR_TARGETS } from './cedarcreek.js';
 import { climateSuggestionText } from './climateavailability.js';
 import { priceAdviceText, pricingActivityHtml } from './pricingguidance.js';
 import { diagnoseComplaint, diagnoseRequest, complaintKey, reportedTarget, reviewRemedy } from './complaints.js';
@@ -466,6 +467,7 @@ export class UI {
         if (u) { this.scMin = true; this.renderTut(true); this.setTab(null); this.setView(u.f || 0); this.rend.lookAt(u.x + u.w/2, u.y + u.h/2); this.select(u.id); }
         break;
       }
+      case 'cedarDriveway': this.reviewCedarDriveway(+v); break;
       case 'scenMin': this.scMin = !this.scMin; this.renderTut(true); break;
       case 'saveCode': this.showSave(); break;
       case 'saveFile': this.toast('This save uses floor-based unit numbers. Keep your original export for older builds.');this.g.saveFile(); break;
@@ -2720,6 +2722,7 @@ export class UI {
   }
   renderComeback(force = false) {
     if (this.pointerBusy && !force) return;
+    if (this.sim.s.scenario.v === 2) { this.renderCedar(force); return; }
     const box = this.$('tut'), previous = box.querySelector?.('.comeback'), detailOpen = !!previous?.querySelector('.comeback-details')?.open, scroll = previous?.scrollTop || 0;
     const sim = this.sim, s = sim.s, c = s.scenario, p = comebackProgress(sim);
     if (c.status === 'won' && !c.acknowledged) this.scMin = false;
@@ -2755,9 +2758,102 @@ export class UI {
     box.innerHTML = `<div class="tut scen comeback ${this.scMin?'min':''}"><div class="ch"><span>Comeback · ${unavailable?'progress unavailable':won?`rescued · ${readyNow} ready vacancies`: `${p.restored}/6 restored`}</span><button class="mini" data-a="${this.scMin?'scenMin':'comebackClose'}" aria-label="${this.scMin?'Show Comeback goals':'Close Comeback panel'}">${this.scMin?'Show':'Close'}</button></div>${won&&c.acknowledged&&this.scMin?bridge:''}${detail}${won&&!this.scMin?'<button class="btn pri" data-a="comebackClose">Keep operating this property</button>':''}</div>`;
     if (box.firstElementChild) box.firstElementChild.scrollTop = scroll;
   }
+  // Cedar Creek Storage Yard (Comeback record v2): three goals that must hold together.
+  cedarUnitLine(t, k) {
+    const s = this.sim.s, u = targetUnits(s, t)[0], task = u && s.tasks.find(x => x.type === 'makeready' && x.obj === u.id);
+    if (!u) return 'Original space changed';
+    if (u.missing?.length) { const d = this.cedarDriveway(k); return d ? (d.building ? 'Damaged Driveway · repair under way' : 'Damaged Driveway · 2 cells in front of the door') : esc(u.missing[0]); }
+    if (targetLeased(s, t)) { const L = s.leases[u.lease]; return `Leased · ${money(L.rent, true)}/mo (market ${money(this.sim.marketRent(u), true)})`; }
+    if (targetInService(s, t)) return `Ready to rent · asking ${money(this.sim.askFor(u), true)}/mo`;
+    if (task) { const who = task.assigned ? (s.staff.find(st => st.id === task.assigned)?.role === 'owner' ? 'Owner' : 'Porter') : null;
+      return `Make-ready ${this.sim.taskHours(task)}h${task.prog ? ` · ${Math.round(100 * task.prog / task.total)}% done` : ''}${who ? ' · ' + who : ' · not started'}`; }
+    return 'Not in service';
+  }
+  // Cedar Damaged Driveway (the authored apron): the two cells in front of a rear unit's door, while that unit still
+  // lacks frontage. Read-only: the quote comes from the ordinary build planner, so cost and rules stay the planner's.
+  cedarDriveway(k) {
+    const s = this.sim.s, t = s.scenario?.v === 2 ? s.scenario.targets?.[k] : null, cells = CEDAR_TARGETS[k]?.apron;
+    if (!t || !cells?.length || s.scenario.status === 'unavailable') return null;
+    const u = targetUnits(s, t)[0]; if (!u?.missing?.length) return null;
+    const xs = cells.map(c => c[0]), y = cells[0][1], a = { x: Math.min(...xs), y }, b = { x: Math.max(...xs), y };
+    const building = (s.orders || []).some(o => o.st === 'construction' && o.cells?.some(c => (c.f || 0) === 0 && cells.some(([x, yy]) => c.x === x && c.y === yy)));
+    const plan = building ? null : this.sim.plan({ tool: 'aisle', a, b, f: 0 });
+    return { k, a, b, building, cost: plan?.status === 'valid' ? plan.cost : null };
+  }
+  // "Review driveway repair": open the existing Drive Aisle review on exactly those two cells. Nothing is charged or
+  // built until the player taps Confirm in that review; ✕ backs out as with any build.
+  reviewCedarDriveway(k) {
+    const d = this.cedarDriveway(k); if (!d || d.cost == null) return;
+    this.scMin = true; this.renderTut(true); this.select(null); this.setView(0);
+    this.cat = 'roads'; this.setTab('build'); this.pickTool('aisle');
+    if (this.tool !== 'aisle') return;
+    this.placeStart(d.a); this.placeMove(d.b); this.finishPlacement();
+    const R = this.rend, w = d.b.x - d.a.x + 1;
+    R.lookAt?.(d.a.x + (w - 1) / 2, d.a.y); if (R.zoom < 1.2) R.zoomBy?.(1.2 / R.zoom);
+    R.highlightProject?.({ x: d.a.x, y: d.a.y, w, h: 1 });
+    // Once the review card is laid out, centre the two cells in the open map above it.
+    if (typeof document !== 'undefined' && typeof requestAnimationFrame === 'function' && R.project && R.pan) requestAnimationFrame(() => {
+      const args = this.plan?.args; if (this.tool !== 'aisle' || args?.a?.x !== d.a.x || args?.a?.y !== d.a.y) return;
+      const sr = this.safeRect(), box = document.querySelector('#abar')?.getBoundingClientRect?.();
+      const bottom = box && box.height ? Math.min(sr.bottom, box.top) : sr.bottom, p = R.project(d.a.x + w / 2, d.a.y + 0.5, 0);
+      R.pan((sr.left + sr.right) / 2 - p.x, (sr.top + bottom) / 2 - p.y);
+    });
+  }
+  renderCedar(force = false) {
+    const box = this.$('tut'), previous = box.querySelector?.('.comeback'), detailOpen = !!previous?.querySelector('.comeback-details')?.open, scroll = previous?.scrollTop || 0;
+    const sim = this.sim, s = sim.s, c = s.scenario, p = comebackProgress(sim);
+    if (c.status === 'won' && !c.acknowledged) this.scMin = false;
+    if (this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
+    const owner = s.staff.find(st => st.role === 'owner'), left = owner ? sim.workRemaining(owner) : 0;
+    const porter = s.staff.find(st => st.role === 'porter'), pay = ROLES.porter.wage * ROLES.porter.workHours;
+    const D = cedarDemand(sim), won = c.status === 'won', goalCash = p.liquidGoal ?? p.cash0;
+    const lines = c.targets.map((t, k) => this.cedarUnitLine(t, k)), drive = won ? [] : c.targets.map((t, k) => this.cedarDriveway(k));
+    // Financial-recovery stage: restore and lease goals both met, the net-liquid goal not yet. Display only, from the goal's own value.
+    const finishing = !won && p.liquidGoal != null && p.goals[0].met && p.goals[1].met && !p.goals[2].met, nlNow = Math.round(p.cash); // same rounding as the goal row
+    const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p.goals.map(g => [g.met, Math.round(g.cur)]), finishing ? nlNow : null, lines, drive.map(d => d?.cost ?? null), left, !!porter, D, sim.day]);
+    if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
+    const goalValue = (g) => g.k === 'cedarCash' ? (p.liquidGoal != null ? `${money(Math.round(g.cur))} of ${money(goalCash)}` : `${money(Math.round(g.cur))} · start ${money(p.cash0)}`) : `${Math.round(g.cur)}/${g.v}`;
+    const goals = `<ul class="goals">${p.goals.map(g => `<li class="${g.met ? 'met' : ''}"><span class="ck">${g.met ? '&#10003;' : ''}</span><span>${esc(g.label)}</span><b>${goalValue(g)}</b></li>`).join('')}</ul>`;
+    const units = `<div class="cedar-units">${c.targets.map((t, k) => drive[k]?.cost != null
+      ? `<button class="btn sm cedar-unit driveway" data-a="cedarDriveway" data-v="${k}"><b>Unit ${t.num}</b><small>${lines[k]}</small><span class="cedar-act">Review driveway repair · ${money(drive[k].cost)}</span></button>`
+      : `<button class="btn sm cedar-unit" data-a="comebackUnit" data-v="${t.id}" ${targetUnits(s, t).length ? '' : 'disabled'}><b>${targetLeased(s, t) ? '&#10003; ' : ''}Unit ${t.num}</b><small>${lines[k]}</small></button>`).join('')}</div>`;
+    const lostTxt = [D.lost.price && `${D.lost.price} said your rent was too high`, D.lost.competitor && `${D.lost.competitor} chose a cheaper competitor`, D.lost.noReady && `${D.lost.noReady} found nothing ready`, D.lost.service && `${D.lost.service} left unserved at the counter`, D.lost.other && `${D.lost.other} kept shopping`].filter(Boolean);
+    const rivalTxt = D.rival ? ` ${esc(D.rival.name)} is open nearby at about ${Math.round(D.rival.price * 100)}% of market rent; asking more than that loses some shoppers to them.` : D.coming ? ` ${esc(D.coming.name)} opens nearby on Day ${D.coming.opens} at about ${Math.round(D.coming.price * 100)}% of market rent.` : ' No competitor is open nearby yet.';
+    const demand = `<p class="note"><b>10×10 shoppers, last ${D.days} days:</b> ${D.leased} signed${lostTxt.length ? ' · ' + lostTxt.join(' · ') : ''}. Shopper results are kept by unit size, not for each unit.${rivalTxt}</p>`;
+    const briefing = `<p>Cedar Creek has seen better decades. Six units out back need make-ready before anyone will rent them, and two units have a Damaged Driveway. You have ${money(p.cash0)}. Restore the units, lease ${c.leaseGoal} of them, and ${p.liquidGoal != null ? `build net liquid to ${money(p.liquidGoal)}` : 'get net liquid back above what you started with'}.</p>`;
+    let detail;
+    if (won) {
+      const leasedT = c.targets.filter(t => targetLeased(s, t));
+      detail = `<h4>Cedar Creek is back.</h4>
+      <p>Finished on Day ${c.endDay} with all six rear units restored, ${leasedT.length} leased and ${money(Math.round(c.endCash))} net liquid (cash after unpaid bills)${p.liquidGoal != null ? ` against the ${money(p.liquidGoal)} goal. You started with ${money(p.cash0)}` : ` against your ${money(p.cash0)} start`}.</p>
+      <ul class="cedar-results">${c.targets.map((t, k) => `<li>Unit ${t.num}: ${lines[k]}</li>`).join('')}</ul>
+      <p><b>What next:</b> the back pads are yours to develop. The rear pad takes a row facing the service aisle, and the east pad takes units facing the east lane. Build them in your own time.</p>
+      <div class="row wrap">${c.acknowledged ? '<button class="btn" data-a="comebackWork">Review operations</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="rescueLeasing">Review leasing</button>'}</div>`;
+    } else {
+      const recovery = finishing ? `<div class="cedar-recovery"><b>Units done. One goal left: financial recovery.</b>
+        <div class="rec-row"><span>Net liquid</span><b>${money(nlNow)} of ${money(p.liquidGoal)}</b></div>
+        <div class="rec-bar" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, Math.floor(100 * p.cash / p.liquidGoal)))}%"></i></div>
+        <p>${money(Math.ceil(p.liquidGoal - p.cash))} to go. All six units are restored and ${p.leased} are leased. Rent comes in as tenants pay; wages and bills already owed count against net liquid. The yard is yours the moment net liquid reaches ${money(p.liquidGoal)} while the units stay restored and leased.</p></div>` : '';
+      detail = `${sim.day <= 1 && !p.restored ? briefing : ''}${recovery}${goals}
+      <p class="note">All three must be true at the same time. Net liquid is your cash minus bills already owed (wages and operating costs, paid at the weekly settlement) and any credit-line draw. The top bar shows cash before those bills; Business › Bills &amp; reserve shows net liquid. No deadline: the yard is yours the moment all three hold.</p>
+      ${units}
+      <div class="row wrap"><button class="btn" data-a="comebackWork">Review work</button><button class="btn" data-a="comebackHire">Review Porter hire</button></div>
+      <details class="comeback-details" ${detailOpen ? 'open' : ''}><summary>Demand, staffing and the yard</summary>
+        ${demand}
+        <p><b>Owner:</b> no wage · ${left}h of ${ROLES.owner.workHours}h left today. Field work takes you away from the counter, and shoppers who arrive then may leave.</p>
+        <p><b>Porter:</b> ${money(pay)}/employed day. Wages are paid at the weekly settlement but count against net liquid as they build up. Make-ready is picked up automatically. ${porter ? 'A Porter is employed; you can let them go once the wing is done.' : 'Hire to free your hours; let go when the work is done.'}</p>
+        <p><b>Vendor:</b> any make-ready can go to a vendor from Review work for $250, paid from cash when booked. It takes about 10 hours and none of your time.</p>
+        <p><b>Damaged Driveway:</b> two units need a Drive Aisle on the two damaged driveway cells in front of their doors ($45 a cell, paid from cash when you confirm the order). Use Review driveway repair on the unit to see the cells. The through lane stays open for everyone else.</p>
+        ${sim.day > 1 || p.restored ? briefing : ''}
+      </details>`;
+    }
+    const head = won ? 'Cedar Creek · complete' : finishing ? `Cedar Creek · recovery ${money(nlNow)} of ${money(p.liquidGoal)}` : `Cedar Creek · ${p.restored}/6 restored · ${p.leased}/${c.leaseGoal} leased`;
+    box.innerHTML = `<div class="tut scen comeback cedar ${this.scMin ? 'min' : ''}"><div class="ch"><span>${head}</span><button class="mini" data-a="${this.scMin ? 'scenMin' : 'comebackClose'}" aria-label="${this.scMin ? 'Show Cedar Creek goals' : 'Close Cedar Creek panel'}">${this.scMin ? 'Show' : 'Close'}</button></div>${detail}${won && !this.scMin ? '<button class="btn pri" data-a="comebackClose">Keep operating this property</button>' : ''}</div>`;
+    if (box.firstElementChild) box.firstElementChild.scrollTop = scroll;
+  }
   showScenarios() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Scenarios</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
-      <p class="note">Comeback Yard has no deadline; its goals update as you restore the property. Other scenarios use morning checkpoints and the limits shown below.</p>
+      <p class="note">Cedar Creek has no deadline; it completes the moment all its goals hold together. Other scenarios use morning checkpoints and the limits shown below.</p>
       <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map(g => `<li>${esc(g.label)}</li>`).join('')}${id==='comeback'?'<li>No deadline · keep playing after the rescue</li>':`<li>Deadline: day ${S.deadline}</li><li class="f">Fail: cash minus committed bills and credit line below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li>`}</ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
   }
@@ -3062,7 +3158,7 @@ export class UI {
     if (this.g.saveStartup) { this.$('modal').innerHTML = '<div class="title"><h1>Self Storage Tycoon</h1><p role="status">Checking saved progress…</p></div>'; return; }
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
       <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple-public">Maple Street <small>Tutorial · take over a small facility</small></button>
-      <button class="btn" data-a="scenarios">Scenarios <small>Comeback Yard, Turnaround, Go Vertical, Climate Boom</small></button>
+      <button class="btn" data-a="scenarios">Scenarios <small>Cedar Creek, Turnaround, Go Vertical, Climate Boom</small></button>
       <button class="btn" data-a="sandboxSetup">Sandbox <small>Business or Free Build, on your terms</small></button>
       <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>
       <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;

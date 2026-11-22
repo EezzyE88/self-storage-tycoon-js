@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {Sim,fmtTime} from '../../js/sim.js';
-import {makeScenario,makeSandbox,SCENARIOS,modeLabel,sandboxName} from '../../js/scenarios.js';
+import {makeScenario,makeComeback,makeSandbox,SCENARIOS,modeLabel,sandboxName} from '../../js/scenarios.js';
 import {makeMaple} from '../../js/maple.js';
 import {MARKETS,ROLES,MIN_PER_DAY,FLOOR_H,TIERS} from '../../js/data.js';
 import {FINANCIAL_MINUTE} from '../../js/finance.js';
@@ -18,7 +18,7 @@ vm.runInContext(main.slice(main.indexOf('const game = {'),main.indexOf('// initi
 const g=ctx.game;g.attach=function(sim){this.sim=sim;installTutorial(sim)};g.ui={title:false,setMeta(){},renderFeed(){},toast(){}};g.drain=()=>{};
 vm.runInContext(main.slice(main.indexOf('const BG_EVENTS'),main.indexOf('let last = performance.now'))+'globalThis.stepTicks=stepTicks;',ctx);
 let n=0;async function test(name,fn){await fn();n++;console.log('PASS '+name)}
-const fresh=()=>makeScenario('comeback');
+const fresh=()=>makeComeback(4401); // Comeback record v1 (the yard this career test was written for)
 function won(){const sm=fresh();for(const t of sm.s.scenario.targets){const tk=sm.s.tasks.find(x=>x.obj===t.id);sm.finishTask(tk,sm.s.agents.find(a=>a.role==='owner'));sm.poll();}assert.equal(sm.s.scenario.status,'won');return sm;}
 function ordinary(){return makeSandbox({start:'starter',cash:60000});}
 function company(props,active=0){g.company={props:props.map((sim,i)=>({name:'P'+i,sim})),active,feed:[]};g.sim=props[active];}

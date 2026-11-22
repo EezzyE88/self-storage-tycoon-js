@@ -7,6 +7,7 @@ import vm from 'node:vm';
 import * as OLD from '../fixtures/frontage/mapleaccess_7e906d8.mjs';
 import * as NEW from '../../js/mapleaccess.js';
 import { MAPLE_PUBLIC, MAPLE_FRONTAGE, frontageOf, knownLayout, layoutIds, validateFrontage, registerFrontage } from '../../js/frontage.js';
+import { CEDAR, CEDAR_LAYOUT } from '../../js/cedarcreek.js';
 import { makeMaple, makePublicMaple } from '../../js/maple.js';
 import { makeSandbox, modeLabel, sandboxName } from '../../js/scenarios.js';
 import { Sim, fmtTime } from '../../js/sim.js';
@@ -26,8 +27,9 @@ function refused(sim, a, reason) {
   assert.equal(sim.dispatch(a).ok, false); assert.equal(snap(sim), before);
 }
 
-await test('only Maple ships; its descriptor passes the validator and keeps every master constant', () => {
-  assert.deepEqual(layoutIds(), [MAPLE_PUBLIC]);
+await test('Maple and Cedar Creek ship; both descriptors pass the validator and Maple keeps every master constant', () => {
+  assert.deepEqual(layoutIds(), [MAPLE_PUBLIC, CEDAR_LAYOUT]);
+  assert.deepEqual(validateFrontage(CEDAR.desc), []);
   assert.deepEqual(validateFrontage(MAPLE_FRONTAGE.desc), []);
   assert.ok(Object.isFrozen(MAPLE_FRONTAGE.desc) && Object.isFrozen(MAPLE_FRONTAGE.desc.gate.lanes));
   const sim = makePublicMaple(), office = sim.objs('office')[0], gate = sim.objs('gate')[0], F = MAPLE_FRONTAGE.desc;
@@ -87,7 +89,7 @@ await test('accessState and lostMapleAccess equal master for a placement corpus,
 });
 
 await test('no layout identity checks outside the frontage, Maple builder and Maple tutorial content', () => {
-  const allowed = new Set(['frontage.js', 'mapleaccess.js', 'maple.js', 'tutorial.js']);
+  const allowed = new Set(['frontage.js', 'mapleaccess.js', 'maple.js', 'tutorial.js', 'cedarcreek.js']);
   for (const f of readdirSync('js').filter((f) => f.endsWith('.js') && !allowed.has(f))) {
     const src = readFileSync('js/' + f, 'utf8');
     assert.ok(!/MAPLE_PUBLIC|maple-public-office|\.layout\s*[!=]==/.test(src), f + ' must read the frontage descriptor instead of the Maple layout id');

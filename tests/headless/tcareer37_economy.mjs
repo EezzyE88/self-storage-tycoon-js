@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
-import {makeScenario,makeSandbox} from '../../js/scenarios.js';
+import {makeScenario,makeComeback,makeSandbox} from '../../js/scenarios.js';
 import {makeMaple} from '../../js/maple.js';
 import {installTutorial} from '../../js/tutorial.js';
 const base=process.env.SST_BASELINE_36;if(!base)throw new Error('SST_BASELINE_36 must be an immutable Candidate 36 export');
 const old=await import(pathToFileURL(base+'/js/scenarios.js'));const oldMaple=await import(pathToFileURL(base+'/js/maple.js'));const oldTutorial=await import(pathToFileURL(base+'/js/tutorial.js'));
 let ticks=0;for(const kind of ['maple','business','turnaround','vertical','climate']){const pair=kind==='maple'?[oldMaple.makeMaple(91),makeMaple(91)]:kind==='business'?[old.makeSandbox({start:'starter'}),makeSandbox({start:'starter'})]:[old.makeScenario(kind),makeScenario(kind)];oldTutorial.installTutorial(pair[0]);installTutorial(pair[1]);for(let i=0;i<10080;i++){for(const sm of pair)sm.step();assert.deepEqual(pair[1].events,pair[0].events,kind+' events '+i);for(const sm of pair)sm.events.length=0;if(i%60===0||i===10079)assert.deepEqual(pair[1].s,pair[0].s,kind+' full state '+i);ticks++;}console.log('PASS Candidate36 exact state/event/RNG parity: '+kind+' 10080 ticks');}
-const pair=[old.makeScenario('comeback'),makeScenario('comeback')];for(const sm of pair)sm.dispatch({type:'hire',role:'porter'});
+const pair=[old.makeScenario('comeback'),makeComeback()];for(const sm of pair)sm.dispatch({type:'hire',role:'porter'});
 function requests(sm){for(const c of [...sm.s.convos]){const i=c.actions.findIndex(a=>!sm.requestActionDisabled(a)&&!a.action);if(i>=0)sm.dispatch({type:'convo',id:c.id,i});}}
 let first=null,finished=false;const args={tool:'du5x10',a:{x:10,y:3},b:{x:10,y:3},f:0,rot:0};
 for(let i=0;i<90*1440;i++){

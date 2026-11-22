@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {loadRenderer} from '../performance/renderer-fixture.mjs';
 import {makeMaple} from '../../js/maple.js';
-import {makeScenario} from '../../js/scenarios.js';
+import {makeScenario,makeComeback} from '../../js/scenarios.js';
 import {FLOOR_H} from '../../js/data.js';
 import {targetUnits} from '../../js/comeback.js';
 const WALL_H=1.25; // accepted drive-up height; test contract, not an exported rule
@@ -35,13 +35,13 @@ test('shell entry portals preserve door positions and exact save state',()=>{
 const tint=(v,u)=>{const b=[...v.openHouse.batches.values()].find(b=>b.kind==='ohWall'&&b.parts.some(p=>p.o===u)),i=b.parts.findIndex(p=>p.o===u);return [...b.mesh.instanceColor.array.slice(i*3,i*3+3)];};
 const rgb=m=>[m.color.r,m.color.g,m.color.b].map(Math.fround);
 test('six restored target room finishes update individually and leave unrelated rooms alone',()=>{
- const cb=makeScenario('comeback',4401),v=new Renderer(canvas,cb);v.rebuildStatic();const targets=cb.s.scenario.targets,units=targets.flatMap(t=>targetUnits(cb.s,t));assert.equal(units.length,6);
+ const cb=makeComeback(4401),v=new Renderer(canvas,cb);v.rebuildStatic();const targets=cb.s.scenario.targets,units=targets.flatMap(t=>targetUnits(cb.s,t));assert.equal(units.length,6);
  const other=cb.objs('unit').find(u=>!units.includes(u)),unchanged=tint(v,other);for(const u of units)assert.deepEqual(tint(v,u),rgb(v.mat.comebackWorn));
  for(const target of targets){const u=targetUnits(cb.s,target)[0];cb.finishTask(cb.s.tasks.find(t=>t.obj===u.id),cb.s.agents.find(a=>a.role==='owner'),false);cb.poll();const before=JSON.stringify(cb.s);v.openHouse.update();assert.deepEqual(tint(v,u),rgb(v.mat.comebackRestored));assert.deepEqual(tint(v,other),unchanged);assert.equal(JSON.stringify(cb.s),before);}
  assert.equal(v.anim.filter(a=>a.k==='rollup'&&v.doorFinish(a.o)===v.mat.rescueDoorTurn).length,0);
 });
 test('access failure or malformed target cannot invent turnover finish in Open House',()=>{
- const cb=makeScenario('comeback',4401),v=new Renderer(canvas,cb);v.rebuildStatic();const target=cb.s.scenario.targets[0],u=targetUnits(cb.s,target)[0];
+ const cb=makeComeback(4401),v=new Renderer(canvas,cb);v.rebuildStatic();const target=cb.s.scenario.targets[0],u=targetUnits(cb.s,target)[0];
  cb.finishTask(cb.s.tasks.find(t=>t.obj===u.id),cb.s.agents.find(a=>a.role==='owner'),false);cb.poll();u.blocked=true;v.openHouse.update();assert.notDeepEqual(tint(v,u),rgb(v.mat.comebackWorn));
  u.commercial='unready';target.x+=1;const before=JSON.stringify(cb.s);v.openHouse.update();assert.deepEqual(tint(v,u),rgb(u.num%2?v.mat.unitWall:v.mat.unitWall2));assert.notEqual(v.doorFinish(u),v.mat.rescueDoorTurn);assert.equal(JSON.stringify(cb.s),before);
 });

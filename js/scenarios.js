@@ -2,15 +2,17 @@
 // Every scenario shows its goals and fail condition from the first minute.
 import { newState, Sim } from './sim.js';
 import { makeMaple } from './maple.js';
-import { G, WORK } from './data.js';
-import { COMEBACK_GOALS, comebackProgress, isComeback } from './comeback.js';
+import { G, WORK, MARKETS, ROUTINE_VISIT_CHANCE, BILLING_CYCLE_DAYS, NAMES_FIRST, NAMES_LAST } from './data.js';
+import { COMEBACK_GOALS, cedarGoals, comebackProgress, isComeback } from './comeback.js';
 import { ensureCustomerAccounts } from './customeraccounts.js';
+import { nameUnit } from './unitnumbering.js';
+import { CEDAR_LAYOUT, CEDAR_SITE, CEDAR_FRONTAGE, CEDAR_AISLES, CEDAR_CORE, CEDAR_TARGETS, CEDAR_START } from './cedarcreek.js';
 
 export const SCENARIOS = {
   comeback: {
-    name: 'The Comeback Yard',
-    blurb: 'Six drive-up spaces need make-ready. Spend your own work hours, or hire a Porter and preserve time for the office. Restore the wing at your own pace.',
-    goals: COMEBACK_GOALS, deadline: null, fail: null,
+    name: 'Cedar Creek Storage Yard',
+    blurb: 'A tired drive-up yard with its office out front. Six rear units need make-ready and two units have a Damaged Driveway. You start with $1,150 and every choice costs something: your counter hours, a Porter\'s wages, a vendor or the paving order. Restore the wing, lease the units and build net liquid to $2,150.',
+    goals: cedarGoals(CEDAR_START), deadline: null, fail: null,
   },
   turnaround: {
     name: 'Maple Turnaround',
@@ -47,7 +49,7 @@ function prebuild(sim, list) {
 function freshBooks(s) { s.today = { day: 1, rent: 0, other: 0, opex: 0, payroll: 0, capex: 0, leases: 0, moveouts: 0, prospects: 0, lost: 0 }; s.days = []; s.milestones = {}; }
 
 export function makeScenario(id, seed = 4401) {
-  if (id === 'comeback') return makeComeback(seed);
+  if (id === 'comeback') return makeCedarCreek(seed);
   if (id === 'turnaround') {
     const sim = makeMaple(4401); const s = sim.s;
     s.mode = 'scenario'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true;
@@ -130,11 +132,69 @@ export function makeComeback(seed = 4401) {
   }
   s.visits = s.visits.filter(v => !v.tenant || s.tenants[v.tenant]);
   ensureCustomerAccounts(s); // CR-01: same reconciliation as load, so the running and reloaded states match
-  s.scenario = { id: 'comeback', name: SCENARIOS.comeback.name, v: 1, goals: COMEBACK_GOALS.map(g => ({ ...g })),
+  s.scenario = { id: 'comeback', name: 'The Comeback Yard', v: 1, goals: COMEBACK_GOALS.map(g => ({ ...g })),
     targets: targets.map(u => ({ id:u.id, ids:[u.id], num:u.num, x:u.x,y:u.y,w:u.w,h:u.h,f:u.f||0, access:u.access, env:u.env, dir:[...u.dir] })),
     deadline: null, fail: null, status: 'active', ownerDone: [], staffDone: [], earned: [false,false,false], acknowledged: false };
   freshBooks(s); s.ledger = []; s.lastCommit = null;
   sim.markDirty(); sim.rebuild(); return sim;
+}
+
+// Cedar Creek Storage Yard (Comeback record v2): its own frontage, yard and goals.
+// New Comeback starts use it; makeComeback above stays for v1 saves and tests.
+export function makeCedarCreek(seed = 4401) {
+  const s = newState({ mode: 'scenario', seed, market: 'maple' });
+  s.layout = CEDAR_LAYOUT;
+  let r = seed >>> 0; const rnd = () => { r = (r * 1664525 + 1013904223) >>> 0; return r / 4294967296; };
+  const W = s.W, F = CEDAR_FRONTAGE;
+  const paint = (x0, x1, y0, y1, g) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) s.ground[y * W + x] = g; };
+  const put = (o) => { const id = s.nextId++; s.objects[id] = { id, cstate: 'operating', cond: 1, f: 0, ...o }; if (o.type === 'unit') nameUnit(s, s.objects[id]); return s.objects[id]; };
+  // Public frontage: recessed gate lanes, the street pocket, bays, office walk.
+  const L = F.gate.lanes, P = F.pocket;
+  paint(L.x0, L.x1, L.y0, L.y1 + 1, G.ASPHALT);
+  paint(F.gate.serviceX, F.gate.serviceX, L.y0, F.gate.y, G.CONCRETE);
+  paint(P.x0 + 1, F.office.door.x, P.y0, P.y0, G.CONCRETE);
+  for (const b of F.bays) paint(b.x0, b.x1, b.y0, b.y1, G.PARKING);
+  paint(F.office.door.x, F.office.door.x, F.office.door.y, P.y1, G.CONCRETE);
+  paint(F.bays[0].x0, F.bays[F.bays.length - 1].x1, F.bays[0].y1 + 1, P.y1, G.ASPHALT);
+  paint(F.throat.x0, F.throat.x1, P.y1 + 1, P.y1 + 1, G.ASPHALT);
+  // Staff walk from the office's rear door to the main aisle.
+  paint(P.x0, F.office.staffDoor.x, F.gate.yardRow + 1, F.gate.yardRow + 1, G.CONCRETE);
+  paint(F.office.staffDoor.x, F.office.staffDoor.x, F.office.staffDoor.y, F.office.staffDoor.y, G.CONCRETE);
+  // Yard loop, staging pad and the two washed-out door aprons.
+  for (const a of CEDAR_AISLES) paint(a.x0, a.x1, a.y0, a.y1, G.ASPHALT);
+  paint(5, 6, 4, 5, G.CONCRETE);
+  for (const t of CEDAR_TARGETS) for (const [x, y] of t.apron || []) paint(x, x, y, y, G.GRASS);
+  put({ type: 'gate', x: F.gate.x, y: F.gate.y, open: 0, mapleCompound: true });
+  const O = F.office;
+  put({ type: 'office', x: O.x, y: O.y, w: O.w, h: O.h, door: { ...O.door, dir: [...O.door.dir] }, staffDoor: { ...O.staffDoor, dir: [...O.staffDoor.dir] } });
+  for (const [x, y] of [[2, 17], [14, 10], [20, 3], [31, 17]]) put({ type: 'light', x, y });
+  put({ type: 'camera', x: 2, y: 19 });
+  // Operating core: occupied by long-time tenants at their legacy rents.
+  const M = MARKETS.maple;
+  for (const d of CEDAR_CORE) {
+    const u = put({ type: 'unit', access: 'drive', env: 'std', size: d.size, x: d.x, y: d.y, w: d.w, h: d.h, dir: [...d.dir], commercial: 'occupied', lease: null });
+    const tn = { id: s.nextId++, name: `${NAMES_FIRST[Math.floor(rnd() * NAMES_FIRST.length)]} ${NAMES_LAST[Math.floor(rnd() * NAMES_LAST.length)]}`, sat: 0.7 + rnd() * 0.1, lease: null, since: -Math.floor(200 + rnd() * 900) * 1440 };
+    const Ls = { id: s.nextId++, unit: u.id, tenant: tn.id, rent: Math.round(M.rent[d.size] * d.legacy), start: 1 - Math.floor(200 + rnd() * 900), nextBill: 1 + Math.floor(rnd() * BILLING_CYCLE_DAYS), status: 'current', balance: 0, fees: 0 };
+    tn.lease = Ls.id; s.tenants[tn.id] = tn; s.leases[Ls.id] = Ls; u.lease = Ls.id;
+  }
+  // The rear wing: six vacant units waiting for make-ready.
+  const targets = CEDAR_TARGETS.map((t) => put({ type: 'unit', access: 'drive', env: 'std', size: t.size, x: t.x, y: t.y, w: t.w, h: t.h, dir: [...t.dir], commercial: 'unready', lease: null, vacatedAt: s.t - 1440 * 90 }));
+  s.mode = 'scenario'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.lesson = null; s.open = true; s.speed = 0;
+  s.cash = CEDAR_START.cash; s.policies.ownerChores = false;
+  const sim = new Sim(s);
+  s.staff.push({ id: sim.id(), role: 'owner', name: 'You', wage: 0, hired: 0 });
+  sim.spawnStaffAgent(s.staff[0]);
+  targets.forEach((u, k) => sim.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: 'Make-ready ' + u.name, work: CEDAR_TARGETS[k].work }));
+  ensureCustomerAccounts(s);
+  s.scenario = { id: 'comeback', name: SCENARIOS.comeback.name, v: 2, site: CEDAR_SITE, cash0: CEDAR_START.cash, leaseGoal: CEDAR_START.leaseGoal, liquidGoal: CEDAR_START.liquidGoal,
+    goals: cedarGoals(CEDAR_START),
+    targets: targets.map(u => ({ id: u.id, ids: [u.id], num: u.num, x: u.x, y: u.y, w: u.w, h: u.h, f: 0, access: u.access, env: u.env, dir: [...u.dir] })),
+    deadline: null, fail: null, status: 'active', ownerDone: [], staffDone: [], earned: [false, false, false], acknowledged: false };
+  freshBooks(s); s.ledger = []; s.lastCommit = null;
+  sim.markDirty(); sim.rebuild();
+  for (const tn of Object.values(s.tenants)) if (rnd() < ROUTINE_VISIT_CHANCE) sim.schedule({ kind: 'access', tenant: tn.id, unit: s.leases[tn.lease].unit }, sim.randomTime(1, 7.2, 20));
+  sim.events.length = 0; // the two washed-out aprons are the authored starting condition, not news
+  return sim;
 }
 
 // Sandbox with setup options (GDD §45; solidified sandbox v1).
