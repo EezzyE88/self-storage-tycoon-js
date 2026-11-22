@@ -65,8 +65,10 @@ export function scenarioMetric(sim, k) {
       const hrs = d.reduce((a, x) => a + x.elevHrs, 0); if (hrs < 7 * 24) return -1; // a week of service history first (the goal card says 'needs 7 days')
       return d.reduce((a, x) => a + (x.elevUp || 0), 0) / hrs;
     }
+    // Same terms as Sim.opResult(): rent and fees in; operating costs, payroll, services, marketing and interest out.
+    // Miscellaneous 'other' (property transfers, opening working cash), loans, capex and sandbox funds are excluded.
     case 'op30': { const last = s.days.slice(-30); if (last.length < 30) return -1;
-      return last.reduce((a, x) => a + x.rent + (x.anc || 0) + (x.other || 0) - x.opex - x.payroll - (x.service || 0) - (x.marketing || 0) - (x.interest || 0), 0); }
+      return last.reduce((a, x) => a + (x.rent || 0) + (x.anc || 0) - (x.opex || 0) - (x.payroll || 0) - (x.service || 0) - (x.marketing || 0) - (x.interest || 0), 0); }
     default: return undefined;
   }
 }
