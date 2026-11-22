@@ -109,7 +109,10 @@ assert.ok(expectedVertical.includes(oldVertical),'declared vertical.js baseline 
 const verticalAt = sha => execFileSync('git', ['show', sha + ':js/vertical.js'], {encoding:'utf8'});
 const routingCommit = '17eb2a3b292820d67dc6688595b259aaf33a1253';
 assert.equal(verticalAt(routingCommit + '^'), expectedVertical);
-assert.equal(readFileSync('js/vertical.js','utf8'), verticalAt(routingCommit));
+// GV-01 declared hunk: sweep-v1 boarding also records el.lastBoardT for the elevator-wait goal; every other byte stays pinned.
+const gv01Old='el.avgWait=(el.avgWait||0)*.85+a.elevWaited*.15;sim.wear',gv01New='el.avgWait=(el.avgWait||0)*.85+a.elevWaited*.15;el.lastBoardT=s.t;sim.wear';
+const routedVertical=verticalAt(routingCommit);assert.equal(routedVertical.split(gv01Old).length,2,'declared GV-01 vertical.js hunk exists once');
+assert.equal(readFileSync('js/vertical.js','utf8'), routedVertical.replace(gv01Old,gv01New));
 // The exact d84fb59 simulation reconstruction moved to tfloor_context_sim_d84fb59.mjs (historical profile):
 // that commit is not in the repository. Behavior replacing it, on current production simulation:
 // eligible units open automatically in every mode, and the readiness text says "operating", not "commissioned".
