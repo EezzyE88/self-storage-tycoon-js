@@ -113,8 +113,8 @@ export function addUpgrades(sim, a, R, units, retrofit=false) {
     const actual=new Set(covered);
     for(const o of options.filter(o=>o.fixture.type===type&&o.selected))for(const c of o.cells)if(c.v>=threshold)actual.add(`${c.f}:${c.x}:${c.y}`);
     const dark=targets.filter(c=>!actual.has(`${c.f}:${c.x}:${c.y}`));
-    if(!dark.length)notices.push(`${type==='light'?'Lighting':'Camera'} frontage coverage sufficient`);
-    else {notices.push(`${dark.length} frontage cells without ${type==='light'?'lighting':'camera coverage'}`);if(type==='light'&&units.some(u=>u.access==='interior')&&!R.missing.includes('Hallway is dark - add a light'))R.missing.push('Hallway is dark - add a light');}
+    if(!dark.length)notices.push(`${type==='light'?'Lighting':'Camera'} coverage in front of the door is sufficient`);
+    else {notices.push(`${dark.length} cells in front of the door without ${type==='light'?'lighting':'camera coverage'}`);if(type==='light'&&units.some(u=>u.access==='interior')&&!R.missing.includes('Hallway is dark - add a light'))R.missing.push('Hallway is dark - add a light');}
     if(dark.some(c=>pendingCells.has(`${c.f}:${c.x}:${c.y}`)))pending.push(`${type}: coverage awaiting existing installation`);
   }
   const cost=creates.reduce((n,o)=>n+UPGRADE[o.type][retrofit?'retrofit':'build'],0), daily=creates.reduce((n,o)=>n+UPGRADE[o.type].daily,0), minutes=creates.reduce((n,o)=>n+UPGRADE[o.type].minutes,0);

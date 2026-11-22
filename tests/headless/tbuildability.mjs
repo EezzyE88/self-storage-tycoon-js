@@ -22,7 +22,7 @@ for(let rotation=0;rotation<4;rotation++)test(`interior orientation ${rotation} 
  const sim=fresh(),args={tool:'iu5x10',a:{x:10,y:10},b:{x:10,y:10},rotation};
  assert.equal(sim.plan(args).status,'invalid');
  sim.s.objects[sim.s.nextId++]={id:sim.s.nextId-1,type:'shell',x:6,y:6,w:16,h:16,floors:1,f:0,cstate:'operating'};sim.dirty=true;sim.ensure();
- let r=sim.plan(args);assert.equal(r.status,'invalid');assert.ok(r.reasons.some(s=>s.includes('hallway frontage')));
+ let r=sim.plan(args);assert.equal(r.status,'invalid');assert.ok(r.reasons.some(s=>s.includes('must face a hallway')));
  for(const c of sim.unitFront(r.units[0]))if(sim.inb(c.x,c.y))sim.s.hall[0][sim.idx(c.x,c.y)]=1;
  sim.dirty=true;sim.ensure();r=sim.plan(args);assert.notEqual(r.status,'invalid',r.reasons.join(';'));
 });

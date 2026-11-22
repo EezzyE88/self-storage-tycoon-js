@@ -50,12 +50,12 @@ test('Act I is beats 1-5, then the Act I break, then the rest of the tutorial in
   assert.match(w.steps[0].d, /<b>EXT<\/b>/); assert.match(w.steps[0].d, /<b>F1<\/b>/); assert.equal(w.steps.length, 2);
   assert.match(w.steps[1].d, /top left: <b>Pause<\/b>, <b>1x<\/b>, <b>2x<\/b> and <b>4x<\/b>/, 'the clock is named in a step (coach cards show steps, not the body)');
   assert.match(w.steps[1].t, /clock \(top left\) is <b>paused<\/b>/, 'and in the step title, which the compact phone card shows');
-  assert.deepEqual(BEATS.slice(1, 4).map((b) => b.title), ['Turn over Unit 107', 'Rent-ready units can lease', 'Money without a spreadsheet']);
+  assert.deepEqual(BEATS.slice(1, 4).map((b) => b.title), ['Get Unit 107 ready to rent', 'Rent-ready units can lease', 'Money without a spreadsheet']);
   assert.deepEqual(BEATS.slice(1, 4).map((b) => b.steps.length), [4, 3, 2]);
   assert.match(BEATS[1].steps[2].d, /<b>Pause<\/b>/); assert.match(BEATS[1].steps[2].d, /24 real seconds/);
   assert.ok(BEATS.every((b) => b.steps.every((st) => typeof st.t === 'string' && typeof st.d === 'string')), 'step texts stay plain strings');
   // Act I contract is stated on the break card.
-  for (const re of [/make-ready/, /game time/, /Pause/, /leases/, /every month/, /cash alone/, /future/]) assert.match(brk.why, re);
+  for (const re of [/must be prepared/, /game time/, /Pause/, /leases/, /every month/, /cash alone/, /future/]) assert.match(brk.why, re);
 });
 
 test('fail-forward: Unit 107 already rent-ready or leased completes the turnover beat', () => {
@@ -76,14 +76,14 @@ test('fail-forward: Business already open skips Open Business (money and Beat 5)
 test('fail-forward: Pricing opened during the money beat counts (the production UI records it on any beat)', () => {
   const sim = makeMaple(3); sim.s.tut.beat = beatIndex('money'); sim.s.tut.entered = true; tutorialTick(sim);
   const ui = Object.create(UI.prototype); ui.g = { sim, audio: { play() {} } }; ui.tab = 'business'; ui.$ = () => ({ querySelector: () => null });
-  ui.do = (a) => sim.dispatch(a); ui.jumpSection('Asking rents');
-  assert.equal(sim.s.tut.flags.pricingSeen, true); assert.deepEqual(ui.sectionChoice, { tab: 'business', label: 'Asking rents' });
-  ui.jumpSection('Collections'); ui.tab = 'operate'; ui.jumpSection('Asking rents'); // other sections and tabs never count
+  ui.do = (a) => sim.dispatch(a); ui.jumpSection('New-tenant rents');
+  assert.equal(sim.s.tut.flags.pricingSeen, true); assert.deepEqual(ui.sectionChoice, { tab: 'business', label: 'New-tenant rents' });
+  ui.jumpSection('Collections'); ui.tab = 'operate'; ui.jumpSection('New-tenant rents'); // other sections and tabs never count
   sim.s.tut.flags.businessOpened = true; sim.s.tut.flags.moneyAck = true; tutorialTick(sim);
   assert.equal(curBeat(sim).id, 'pricing'); assert.equal(stepState(sim, { tab: null, sel: null }).cur, 2, 'only Got it left'); assert.equal(curBeat(sim).buttonWhen(sim), true);
   // No flag outside an active tutorial.
   const done = makeMaple(4); done.s.tut = { on: false, beat: 99, flags: {}, done: true }; const u2 = Object.create(UI.prototype);
-  u2.g = { sim: done }; u2.tab = 'business'; u2.$ = () => ({ querySelector: () => null }); u2.do = (a) => done.dispatch(a); u2.jumpSection('Asking rents');
+  u2.g = { sim: done }; u2.tab = 'business'; u2.$ = () => ({ querySelector: () => null }); u2.do = (a) => done.dispatch(a); u2.jumpSection('New-tenant rents');
   assert.deepEqual(done.s.tut.flags, {});
 });
 

@@ -26,13 +26,13 @@ export function climateCauseKey(report) {
 }
 export function climateInventoryText(r) {
   const c=r.counts;
-  return `${r.size} climate: ${r.total} total; ${c.occupied} occupied, ${c.reserved} reserved, ${c.makeReady} vacant needing make-ready, ${c.blocked} operating with blocked access, ${c.unfinished} unfinished or waiting on readiness requirements, ${c.eligible} accessible operating rent-ready${c.other?`, ${c.other} other unavailable state`:''}. Counts can overlap.`;
+  return `${r.size} climate: ${r.total} total; ${c.occupied} occupied, ${c.reserved} reserved, ${c.makeReady} vacant needing preparation, ${c.blocked} operating with blocked access, ${c.unfinished} unfinished or waiting on readiness requirements, ${c.eligible} accessible operating rent-ready${c.other?`, ${c.other} other unavailable state`:''}. Counts can overlap.`;
 }
 export function climateRemedy(r) {
   const c=r.counts,parts=[];
   if(!r.total)parts.push('No matching-size climate stock was recorded. Review repeated size-and-climate demand, conversion eligibility and cash before adding stock; check building HVAC before construction finishes.');
-  if(c.occupied||c.reserved)parts.push('For occupied or reserved climate stock, wait for turnover or review Growth Readiness and cash before justified expansion. Cleaning occupied units does not create vacancies.');
-  if(c.makeReady)parts.push('For vacant unready climate units, review their make-ready jobs in Operate, staff shifts, routes and remaining work hours.');
+  if(c.occupied||c.reserved)parts.push('For occupied or reserved climate stock, wait for tenants to move out or review Growth Readiness and cash before justified expansion. Cleaning occupied units does not create vacancies.');
+  if(c.makeReady)parts.push('For vacant climate units that are not yet prepared, review their preparation jobs in Operate, staff shifts, routes and remaining work hours.');
   if(c.blocked)parts.push('For blocked operating units, inspect the recorded doorway, hallway, entrance or freight route. A freight-handover hold can be temporary; check its current status before building more.');
   if(c.unfinished)parts.push('Finish existing construction and its readiness requirements first, including HVAC capacity where listed. Eligible units open automatically.');
   if(c.other)parts.push('Inspect the listed units and their current readiness before spending.');
@@ -50,7 +50,7 @@ export function validClimateSnapshot(r) {
 }
 
 export function climateSuggestion(count) {
-  return `${count} climate-related availability losses were recorded. Check matching-size climate stock and its readiness before expanding. Adding units does not guarantee leases.`;
+  return `${count} climate shoppers were turned away because nothing suitable was free. Check matching-size climate stock and its readiness before expanding. Adding units does not guarantee leases.`;
 }
 // Correct presentation of old saved advice without rewriting historical report data or outcomes.
 export function climateSuggestionText(text) {

@@ -13,19 +13,19 @@ test('cards and completion banners use the same live role number without changin
   const sim = makeMaple();
   sim.s.tut.beat = 1;
   const before = JSON.stringify(sim.s);
-  assert.equal(curBeat(sim).title, 'Turn over Unit 1007');
+  assert.equal(curBeat(sim).title, 'Get Unit 1007 ready to rent');
   // Exercise the production event-handler branch, including its actual game binding.
   const source = readFileSync('js/showcase.js', 'utf8');
   const branch = source.split('\n').find(line => line.includes("case 'tut_done':"));
   const calls = [];
   const context = {game:{sim}, s:sim.s, BEATS, tutorialText, beatDoneLabel, e:{type:'tut_done',beat:1}, celebrate:(...args)=>calls.push(args), officeAt:()=>null};
   vm.runInNewContext(`switch(e.type) { ${branch} }`, context);
-  assert.equal(calls[0][1], 'Turn over Unit 1007');
+  assert.equal(calls[0][1], 'Get Unit 1007 ready to rent');
   assert.equal(JSON.stringify(sim.s), before);
   // A migrated role reference must use its actual number, never a replacement literal.
   const unit = sim.s.objects[sim.s.unitRoles.mapleTurnover];
   unit.num = 1098;
-  assert.equal(curBeat(sim).title, 'Turn over Unit 1098');
+  assert.equal(curBeat(sim).title, 'Get Unit 1098 ready to rent');
   assert.equal(tutorialText(sim, 'Unit 107 and Unit 203'), `Unit 1098 and Unit ${sim.s.objects[sim.s.unitRoles.mapleInteriorMoveout].num}`);
 });
 

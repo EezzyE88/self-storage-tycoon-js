@@ -56,7 +56,7 @@ export function diagnostics(sim) {
     const names = { gate: 'Gate', elevator: 'Elevator', hvac: 'HVAC' };
     add(`${names[x.type]} ${sim.works(x) ? 'unreliable' : 'not working'}`, x.type === 'hvac' ? 'Climate service degraded' : 'Customer access degraded', 'Customer experience suffers; renewals and leasing are at risk', x.unpowered ? 'Check power capacity' : `Repair ${names[x.type].toLowerCase()}`, 'operate', x.id);
   }
-  if (o.unavailable.length) add(`${o.unavailable.length} units unavailable`, `${o.makeReady} await make-ready; ${o.leasedBlocked.length} leased units have access problems`, `${o.askingOffline ? `$${Math.round(o.askingOffline).toLocaleString()}/mo asking-rent capacity offline (not guaranteed revenue). ` : ''}${o.contractedAffected ? `$${Math.round(o.contractedAffected).toLocaleString()}/mo contracted rent affected by access.` : ''}`, 'Restore routes or use Owner, Porter or vendor work');
+  if (o.unavailable.length) add(`${o.unavailable.length} units unavailable`, `${o.makeReady} await preparation; ${o.leasedBlocked.length} leased units have access problems`, `${o.askingOffline ? `$${Math.round(o.askingOffline).toLocaleString()}/mo of new-tenant rent unavailable (not guaranteed revenue). ` : ''}${o.contractedAffected ? `$${Math.round(o.contractedAffected).toLocaleString()}/mo contracted rent affected by access.` : ''}`, 'Restore routes or use Owner, Porter or vendor work');
   const bySize = {};
   const period = rollingShopperPeriod(sim.day);
   for (const x of s.mkt.lostLog) if (x.d >= period.start && x.d <= period.end && ['noSize', 'noReady', 'noClimate'].includes(x.r)) {
@@ -84,7 +84,7 @@ export function staffingEvidence(sim, role) {
   const assignedHours = sum(covered, t => sim.taskHours(t));
   const workload = `${unassignedHours}h unassigned; ${assignedHours}h assigned/queued or in progress (nominal task requirements, not hours saved). ${pending.length ? 'Matching backlog may warrant review.' : 'No matching unassigned task backlog evidenced.'}`;
   const evidence = {
-    porter: `${o.makeReady} units await make-ready. Cleaning, cart and turnover work: ${workload} $${Math.round(o.askingOffline)}/mo asking-rent capacity offline, not promised income.`,
+    porter: `${o.makeReady} units await preparation. Cleaning, cart and unit-preparation work: ${workload} $${Math.round(o.askingOffline)}/mo of new-tenant rent waits on unprepared units; this is not promised income.`,
     tech: `Repair work: ${workload} ${o.equipmentRisk.length} access/climate assets failed or unreliable.`,
     clerk: `${o.officeWaiting} waiting now; ${o.officeServing} being served. Owner office service: ${o.officeHours}h over ${o.workDays.length} measured days. Current waits and historical work do not prove a shortage.`,
     manager: `${o.tasks.filter(t => t.type === 'repair' && !t.assigned && !t.queued).length} repairs await assignment. Automates existing pricing, vendor and cart policies; does not add task-hours or prove Owner capacity relief.`,
@@ -138,8 +138,8 @@ export function investmentEvidence(sim, plan = null) {
 const productLabel = p => `${p.size} ${p.env === 'climate' ? 'climate' : 'standard'}`;
 export function demandEvidenceText(e) {
   const period = periodText(e.period);
-  if (e.scope !== 'selected') return `${e.matchingLosses} availability losses across sizes and standard/climate products in ${period}. Select a unit product to assess matching demand.`;
-  return e.products.map(p => `${productLabel(p)}: ${p.losses} matching availability losses in ${period}; ${p.operatingStock ? Math.round(p.occupancy * 100) + '% contracted' : 'no operating comparables'}; ${p.readyVacancies} suitable ready vacancies. ${p.readyVacancies ? 'Rent suitable existing stock first.' : p.unavailableStock ? `${p.unavailableStock} matching units unavailable; review restoration before expansion.` : p.demandSupported ? 'Observed requests support reviewing this product.' : 'Gather more matching demand and stock evidence.'}`).join(' ') + ' Requests are not guaranteed leases.';
+  if (e.scope !== 'selected') return `${e.matchingLosses} shoppers turned away because nothing suitable was free, across sizes and standard/climate products in ${period}. Select a unit product to assess matching demand.`;
+  return e.products.map(p => `${productLabel(p)}: ${p.losses} matching shoppers turned away because nothing suitable was free in ${period}; ${p.operatingStock ? Math.round(p.occupancy * 100) + '% contracted' : 'no operating comparables'}; ${p.readyVacancies} suitable ready vacancies. ${p.readyVacancies ? 'Rent suitable existing stock first.' : p.unavailableStock ? `${p.unavailableStock} matching units unavailable; review restoration before expansion.` : p.demandSupported ? 'Observed requests support reviewing this product.' : 'Gather more matching demand and stock evidence.'}`).join(' ') + ' Requests are not guaranteed leases.';
 }
 export function investment(sim, plan, { extraStaff = null, completePackage = false, leaseUpMonths = 0, repairAllowance = 0 } = {}) {
   const units = (plan?.creates || []).filter(x => x.type === 'unit');
@@ -200,7 +200,7 @@ export function growthReadiness(sim, plan = null, options = {}) {
   const roleAdvice = options.extraStaff ? ` Proposed ${ROLES[options.extraStaff].name} ($${ROLES[options.extraStaff].wage}/day): ${staffingEvidence(sim, options.extraStaff).evidence} ${I ? 'Wages included in the selected quote.' : 'No construction quote selected; review payroll separately.'} Capacity relief is not proven.` : '';
   const checks = [
     { label: E.scope === 'selected' ? 'Product demand evidence' : 'Demand observations', ok: E.demandSupported, detail: demandEvidenceText(E) },
-    { label: 'Operational stability', ok: !o.equipmentRisk.length && o.makeReady <= 2 && o.oldestUnassigned <= 2, detail: `${o.makeReady} make-readies; ${o.equipmentRisk.length} failed/unreliable access or climate assets; oldest unassigned work ${Math.floor(o.oldestUnassigned)} days.` },
+    { label: 'Operational stability', ok: !o.equipmentRisk.length && o.makeReady <= 2 && o.oldestUnassigned <= 2, detail: `${o.makeReady} units to prepare; ${o.equipmentRisk.length} failed/unreliable access or climate assets; oldest unassigned work ${Math.floor(o.oldestUnassigned)} days.` },
     { label: 'Financial readiness', ok: !!I && P.available >= 0, detail: `${I ? 'After selected construction: ' : 'Before selecting a build: '}$${Math.round(P.available).toLocaleString()} available after bills & reserve. Affordability does not establish demand or payback.` },
     { label: 'Capacity headroom', ok: capacityKnown && o.exhausted < 3, detail: `${o.exhausted} of ${o.workDays.length} measured days exhausted Owner capacity. ${capacityKnown ? 'Check the work mix before hiring.' : 'Measure seven days first.'}${roleAdvice}` },
     { label: 'Investment payback', ok: !!I?.range && (!options.completePackage || I.range[1] <= 18), detail: paybackText(I) + (I?.range && options.completePackage ? ' Complete-package benchmark: 12–18 months.' : '') },

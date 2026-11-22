@@ -29,7 +29,7 @@ test('historical occupied stock stays historical when current stock becomes read
  assert.equal(d.climate.historical.counts.eligible,0);assert.equal(d.climate.current.counts.eligible,1);assert.match(html,/At report time · 1 matching climate units · 0 ready to offer/);assert.match(html,/Current inventory · 1 matching climate units · 1 ready to offer/);assert.match(complaintCopy(th,d).why,/occupied or reserved/);assert.equal(JSON.stringify(th),saved);assert.equal(JSON.stringify(sim.s),before);
 });
 test('make-ready, blocked, unfinished and mixed blockers remain distinct',()=>{
- for(const [state,pattern] of [[{commercial:'unready',lease:null},/make-ready/],[{commercial:'ready',blocked:true},/access-blocked/],[{commercial:'ready',cstate:'built'},/unfinished/],[{commercial:'unready',lease:null,blocked:true},/make-ready; access-blocked/]]){
+ for(const [state,pattern] of [[{commercial:'unready',lease:null},/preparation/],[{commercial:'ready',blocked:true},/access-blocked/],[{commercial:'ready',cstate:'built'},/unfinished/],[{commercial:'unready',lease:null,blocked:true},/preparation; access-blocked/]]){
   const sim=setup(),u=sim.objs('unit')[0];Object.assign(u,{env:'climate'},state);const th=climateLoss(sim,u),d=diagnoseComplaint(sim,th);assert.match(complaintCopy(th,d).why,pattern);assert.equal(d.climate.historical.counts.eligible,0);
  }
 });
@@ -44,7 +44,7 @@ test('legacy and malformed snapshots never fabricate report-time inventory',()=>
  const sim=setup();for(const climateAvailability of [undefined,{v:1,units:null}]){const th={text:'I need climate control.',kind:'bad',requestedSize:'10x10',t:0,climateAvailability};sim.s.thoughts=[th];const d=diagnoseComplaint(sim,th),html=uiFor(sim).feedbackSheet();assert.match(complaintCopy(th,d).why,/older report/);assert.doesNotMatch(html,/<summary>At report time/);assert.match(html,/<summary>Current inventory/);}
 });
 test('standard availability retains full, make-ready, access, construction and size-specific causes',()=>{
- const sim=setup();for(const [availability,pattern] of [['full',/All units were occupied/],['makeReady',/needed make-ready/],['access',/blocked rental access/],['construction',/unfinished/],['sizeFull',/of this size/]]){const th={text:'Nothing ready to rent today.',kind:'bad',availability};assert.match(complaintCopy(th,diagnoseComplaint(sim,th)).why,pattern);}
+ const sim=setup();for(const [availability,pattern] of [['full',/All units were occupied/],['makeReady',/needed preparation/],['access',/blocked rental access/],['construction',/unfinished/],['sizeFull',/of this size/]]){const th={text:'Nothing ready to rent today.',kind:'bad',availability};assert.match(complaintCopy(th,diagnoseComplaint(sim,th)).why,pattern);}
 });
 test('overflow available, absent and unknown remain different observations',()=>{
  const sim=setup();for(const [overflowAvailable,pattern] of [[true,/overflow parking was available/],[false,/no free reachable/],[undefined,/not recorded/]]){const th={text:'Loading bays are full.',kind:'bad',overflowAvailable};assert.match(complaintCopy(th,diagnoseComplaint(sim,th)).why,pattern);}

@@ -96,7 +96,7 @@ function buildMaple(s, seed) {
   sim.s.staff.push({ id: sim.id(), role: 'owner', name: 'You', wage: 0, hired: 0 });
   sim.spawnStaffAgent(sim.s.staff[0]);
   const u107 = sim.s.objects[s.unitRoles.mapleTurnover];
-  sim.addTask({ type: 'makeready', need: 'makeready', obj: u107.id, label: 'Make-ready '+u107.name, work: 150 });
+  sim.addTask({ type: 'makeready', need: 'makeready', obj: u107.id, label: 'Prepare '+u107.name, work: 150 });
   // seed today's visits so the lot feels alive at once
   sim.markDirty(); sim.rebuild();
   const day = 1;

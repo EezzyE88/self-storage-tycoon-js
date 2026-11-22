@@ -146,10 +146,10 @@ await test('#8 held upper units show "Handover test" everywhere, not a fault; ge
   for(let k=0;k<2;k++){const R=sim.verticalPlan(SH);sim.dispatch({type:'verticalUpgrade',...R});o=sim.s.orders.at(-1);if(k===0){for(let i=0;i<60000&&o.st==='construction';i++){sim.step();sim.events.length=0;}assert.ok(o.objs.every(id=>sim.s.objects[id]?.type!=='unit'||sim.s.objects[id].cstate==='operating'));}}
   let held=[];for(let i=0;i<60000&&o.st==='construction';i++){sim.step();sim.events.length=0;held=sim.objs('unit').filter(u=>u.accessHold!=null);if(held.length)break;}
   assert.equal(held.length,14);const {ui}=fixture(sim.s.speed,sim);
-  assert.ok(held.every(u=>unitStatus(u)==='handover'));assert.equal(UNIT_STATUS.handover.label,'Handover test');
+  assert.ok(held.every(u=>unitStatus(u)==='handover'));assert.equal(UNIT_STATUS.handover.label,'Elevator test');
   ui.computePins();assert.equal(ui.pinList.filter(p=>p.k==='blocked').length,0,'no fault pins for held units');
   assert.match(ui.coachHint().text,/Freight handover test: 14 upper units are briefly closed/);assert.doesNotMatch(ui.coachHint().text,/can't be reached/);
-  ui.sel=held[0].id;assert.match(ui.dockSummary('Unit',''),/Handover test/);
+  ui.sel=held[0].id;assert.match(ui.dockSummary('Unit',''),/Elevator test/);
   assert.match(readFileSync('js/render.js','utf8'),/if \(u\.blocked\) k = u\.accessHold != null \? null : 'missing';/);
   for(let i=0;i<60000&&o.st==='construction';i++){sim.step();sim.events.length=0;}sim.ensure();assert.ok(o.objs.every(id=>sim.s.objects[id]?.type!=='unit'||sim.s.objects[id].cstate==='operating'));assert.equal(sim.objs('unit').filter(u=>u.blocked).length,0);
   const u=sim.objs('unit').find(u=>u.f===2&&u.cstate==='operating'),fc=sim.unitFront(u)[0];sim.s.hall[2][sim.idx(fc.x,fc.y)]=0;sim.markDirty();sim.ensure();

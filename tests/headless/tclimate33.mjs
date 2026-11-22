@@ -16,9 +16,9 @@ function setup(seed=33){const sim=makeMaple(seed);sim.s.tut={on:false,done:true,
 function lose(sim,size){const ag={id:900,kind:'cust',size,x:2,y:3,f:0};assert.equal(sim.decideLease({size,climate:true},ag),null);return sim.s.thoughts.at(-1);}
 for(const [name,changes,pattern] of [
  ['absent',null,/No matching-size climate stock/],
- ['occupied',{env:'climate',commercial:'occupied'},/wait for turnover/],
+ ['occupied',{env:'climate',commercial:'occupied'},/wait for tenants to move out/],
  ['reserved',{env:'climate',commercial:'reserved'},/reserved climate stock/],
- ['make-ready',{env:'climate',commercial:'unready',lease:null},/make-ready jobs/],
+ ['make-ready',{env:'climate',commercial:'unready',lease:null},/preparation jobs/],
  ['blocked',{env:'climate',commercial:'ready',blocked:true,missing:['Door needs hallway'],accessHold:72},/freight route/],
  ['unfinished',{env:'climate',commercial:'ready',cstate:'built',missing:['HVAC capacity exceeded for this zone']},/readiness requirements/]])test(name+' records stock and provides cause-specific guidance',()=>{
  const {sim,u}=setup();if(changes)Object.assign(u,changes);const th=lose(sim,u.size),d=diagnoseComplaint(sim,th);
@@ -29,7 +29,7 @@ test('mixed/overlapping states retain every applicable count and remedy',()=>{
  const {sim,u}=setup(),other=sim.objs('unit').find(x=>x.size===u.size&&x.id!==u.id);
  Object.assign(u,{env:'climate',commercial:'unready',lease:null,blocked:true});Object.assign(other,{env:'climate',commercial:'reserved'});
  const th=lose(sim,u.size),r=th.climateAvailability,d=diagnoseComplaint(sim,th);assert.equal(r.counts.makeReady,1);assert.equal(r.counts.blocked,1);assert.equal(r.counts.reserved,1);
- for(const p of [/make-ready/,/blocked/,/reserved/])assert.match(d.remedy,p);
+ for(const p of [/preparation/,/blocked/,/reserved/])assert.match(d.remedy,p);
 });
 test('wrong-size stock and climate noSize keep original outcome category',()=>{
  const {sim,u}=setup();Object.assign(u,{env:'climate',commercial:'ready'});const size='unknown-size',th=lose(sim,size);assert.equal(th.complaint,'noSize');assert.equal(sim.s.lost.noSize,1);assert.equal(th.climateAvailability.total,0);assert.match(diagnoseComplaint(sim,th).remedy,/No matching-size/);
@@ -68,11 +68,11 @@ test('feedback exposes historical and current unit inspection through existing g
 });
 test('monthly climate suggestion describes recorded losses, no promised leases or automatic HVAC purchase',()=>{
  const {sim}=setup();sim.s.t=30*1440;sim.s.days=Array.from({length:30},(_,i)=>({day:i+1,rent:100,opex:1,payroll:1,service:0,marketing:0}));sim.s.mkt.lostLog=[{d:30,r:'noClimate',sz:'5x5',climate:true},{d:30,r:'noClimate',sz:'10x10',climate:true}];sim.monthReport(sim.day);
- const report=sim.s.mkt.reports.at(-1);assert.ok(report);const all=JSON.stringify(report);assert.match(all,/climate-related availability losses/);assert.match(all,/does not guarantee leases/);assert.doesNotMatch(all,/would capture|An HVAC plant/);
+ const report=sim.s.mkt.reports.at(-1);assert.ok(report);const all=JSON.stringify(report);assert.match(all,/climate shoppers were turned away because nothing suitable was free/);assert.match(all,/does not guarantee leases/);assert.doesNotMatch(all,/would capture|An HVAC plant/);
 });
 test('legacy monthly advice is corrected at display time without rewriting saved history',()=>{
  const {sim}=setup();sim.s.t=30*1440;sim.s.days=Array.from({length:30},(_,i)=>({day:i+1,rent:100}));sim.monthReport(sim.day);const r=sim.s.mkt.reports.at(-1);delete r.period;
- r.sug=['27 shoppers needed climate control. An HVAC plant plus climate units would capture them.'];const ui=uiFor(sim),before=JSON.stringify(sim.s),html=ui.reportHtml();assert.match(html,/27 climate-related availability losses/);assert.doesNotMatch(html,/would capture/);assert.equal(JSON.stringify(sim.s),before);
+ r.sug=['27 shoppers needed climate control. An HVAC plant plus climate units would capture them.'];const ui=uiFor(sim),before=JSON.stringify(sim.s),html=ui.reportHtml();assert.match(html,/27 climate shoppers were turned away because nothing suitable was free/);assert.doesNotMatch(html,/would capture/);assert.equal(JSON.stringify(sim.s),before);
 });
 function normalized(s){const copy=JSON.parse(JSON.stringify(s));delete copy.thoughts;for(const a of copy.agents)if(a.complaintKeys)a.complaintKeys=a.complaintKeys.map(k=>{const arr=JSON.parse(k);return JSON.stringify(arr.slice(0,11));});return copy;}
 function pair(seed,changes){const a=setup(seed).sim,b=setup(seed).sim;changes(a);changes(b);b.decideLease=baseline;return [a,b];}

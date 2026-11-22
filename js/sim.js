@@ -559,7 +559,7 @@ export class Sim {
       const fronts = this.unitFront(u);
       if (u.access === 'drive') {
         const ok = fronts.some((c) => { const i = this.idx(c.x, c.y); return D.vehReach[i] && VEH_GROUND.has(s.ground[i]); });
-        if (!ok) miss.push('Door needs drive-aisle frontage connected to the gate');
+        if (!ok) miss.push('Door must face a drive aisle connected to the gate');
         u.conv = 1; u.dist = 0;
       } else {
         const f = u.f || 0;
@@ -604,7 +604,7 @@ export class Sim {
   // Read-only access reason shared by readiness and the purchase preview.
   interiorRouteIssue(u, fc, dAccess = this.D.dAccess) {
     const s = this.s, D = this.D, f = u.f || 0;
-    if (s.hall[f][this.idx(fc.x, fc.y)] !== 1) return 'Unit door needs hallway frontage';
+    if (s.hall[f][this.idx(fc.x, fc.y)] !== 1) return 'Unit door must face a hallway';
     if (dAccess.has(this.node(f, fc.x, fc.y))) return null;
     const sh = D.shellAt[this.idx(u.x, u.y)];
     const els = this.objs('elevator').filter(e => e.cstate === 'operating' && D.shellAt[this.idx(e.x, e.y)] === sh);
@@ -716,7 +716,7 @@ export class Sim {
         const it = { ...c, f: 0, ok: true }; R.items.push(it);
         if (!needParcel(c)) { it.ok = false; continue; }
         const i = this.idx(c.x, c.y), g = this.groundAt(i);
-        if (!(g === G.LOADING || g === G.CONCRETE || g === G.ASPHALT || g === G.PARKING) || !this.cellFree(i)) { it.ok = false; bad('Canopy must cover paved loading/apron cells'); }
+        if (!(g === G.LOADING || g === G.CONCRETE || g === G.ASPHALT || g === G.PARKING) || !this.cellFree(i)) { it.ok = false; bad('Canopy must cover paved loading or walkway cells'); }
         if ((D.at.get(i) || []).some((id) => s.objects[id].type === 'canopy')) { it.ok = false; bad('Already covered'); }
         if (DIRS.some(([dx, dy]) => this.inb(c.x + dx, c.y + dy) && D.shellAt[this.idx(c.x + dx, c.y + dy)])) touches = true;
       }
@@ -802,10 +802,10 @@ export class Sim {
       }
       case 'gate': {
         const p = s.parcel;
-        if (y !== p.y1) { failItem('Gates go on the front fence line (street frontage)'); return R; }
+        if (y !== p.y1) { failItem('Gates go on the front fence line, facing the street'); return R; }
         const noGate = this.frontage()?.desc.gatePlacementBlocked;
         if (noGate && x+1 >= noGate.x0 && x-1 <= noGate.x1) {
-          failItem('A yard gate needs secured street frontage outside the public office and gate approaches.'); return R;
+          failItem('A yard gate needs a secure street-facing spot outside the public office and gate approaches.'); return R;
         }
         if (this.objs('gate').length >= 2) failItem('This property already has two entrance gates');
         if (x - 1 < p.x0 || x + 1 > p.x1) failItem('Too close to the property corner');
@@ -921,7 +921,7 @@ export class Sim {
       }
       case 'corral': {
         const walkable = D.walk[f][i] || (f === 0 && !D.shellAt[i] && PED_GROUND.has(this.groundAt(i)) && this.cellFree(i));
-        if (!walkable) { failItem('Corrals go on a walkway, loading apron or hallway'); return R; }
+        if (!walkable) { failItem('Corrals go on a walkway, loading pad or hallway'); return R; }
         if (atHere.some((o) => o.type === 'corral')) { failItem('Already a corral here'); return R; }
         R.cost = T.cost; R.dur = 60; R.count = 1;
         R.creates.push({ type: 'corral', x, y, f: D.shellAt[i] ? f : 0, target: 3 });
@@ -1008,7 +1008,7 @@ export class Sim {
       }
       const fronts = this.unitFront(u);
       if (T.access === 'interior') {
-        if (!fronts.some((c) => s.hall[f][this.idx(c.x, c.y)])) { ok = false; bad('Unit door needs hallway frontage (build the hallway first)'); }
+        if (!fronts.some((c) => s.hall[f][this.idx(c.x, c.y)])) { ok = false; bad('Unit door must face a hallway (build the hallway first)'); }
       } else if (!fronts.some((c) => VEH_GROUND.has(this.groundAt(this.idx(c.x, c.y))))) inc('Door faces no drive aisle yet');
       u.ok = ok; if (!ok) anyBad = true;
     }
@@ -1218,13 +1218,13 @@ export class Sim {
       u.cstate='operating';u.commercial='ready';targets.push(u);
       this.markDirty();this.rebuild();
     }
-    if(!targets.length){this.emit('refuse');return {ok:false,msg:'Nothing is ready to commission'};}
+    if(!targets.length){this.emit('refuse');return {ok:false,msg:'Nothing is ready to open'};}
     reconcileProject(this);
     this.emit('commissioned', { automatic:!!a.automatic, propertyOpen:!!s.open, n: targets.length, x: targets[0].x, y: targets[0].y, f: targets[0].f || 0 });
     this.milestone('first_expansion');
     if (targets.some((u) => u.env === 'climate')) this.milestone('first_climate');
     if (targets.some((u) => u.f > 0)) this.milestone('first_upper');
-    return { ok: true, msg: `${targets.length} unit${targets.length > 1 ? 's' : ''} commissioned - now rent-ready` };
+    return { ok: true, msg: `${targets.length} unit${targets.length > 1 ? 's' : ''} opened - now rent-ready` };
   }
   act_open() {
     const miss = this.openingIssues();
@@ -1330,7 +1330,7 @@ export class Sim {
         let nv = cur;
         if (occ >= 0.92) nv = Math.min(Math.round(cur * 1.03 / 5) * 5, Math.round(mk * 1.3));
         else if (occ < 0.75) nv = Math.max(Math.round(cur * 0.97 / 5) * 5, Math.round(mk * 0.8));
-        if (nv !== cur) { s.market.ask[k] = nv; this.mgr(`${nv > cur ? 'Raised' : 'Lowered'} ${sz} ${env === 'climate' ? 'climate ' : ''}asking rent to $${nv} (${Math.round(occ * 100)}% occupied)`); }
+        if (nv !== cur) { s.market.ask[k] = nv; this.mgr(`${nv > cur ? 'Raised' : 'Lowered'} ${sz} ${env === 'climate' ? 'climate ' : ''}new-tenant rent to $${nv} (${Math.round(occ * 100)}% occupied)`); }
       }
     }
   }
@@ -1436,7 +1436,7 @@ export class Sim {
     if (d?.status !== 'available') return { ok: false, msg: d?.message || 'Tech unavailable' };
     return this.act_delegateTask({ task: (existing || this.ensureRepairTask(o)).id });
   }
-  act_ownerMakeReady(a) { const t = this.s.tasks.find((x) => x.type === 'makeready' && x.obj === a.unit); if (!t) return { ok: false, msg: 'No make-ready needed' }; return this.act_ownerTask({ task: t.id, forceOwner: a.forceOwner }); }
+  act_ownerMakeReady(a) { const t = this.s.tasks.find((x) => x.type === 'makeready' && x.obj === a.unit); if (!t) return { ok: false, msg: 'No preparation needed' }; return this.act_ownerTask({ task: t.id, forceOwner: a.forceOwner }); }
   // MG-01 Move-Out Turnaround: claim, leave and finish one make-ready job personally (js/moveout.js).
   act_mg01Start(a) { return startMoveOut(this, a); }
   act_mg01Leave(a) { return leaveMoveOut(this, a); }
@@ -1512,7 +1512,7 @@ export class Sim {
     if(a.kind==='split'){const cap=numberCapacity(s,[{type:'unit',f:u.f||0}]);if(!cap.ok)return cap;}
     if (!s.creative) this.money(-op.cost, 'capex', `${op.label} - ${u.name}`);
     s.tasks = s.tasks.filter((t) => !(t.obj === u.id && t.type === 'makeready'));
-    const ready = (o) => { o.commercial = 'unready'; o.vacatedAt = s.t; this.addTask({ type: 'makeready', need: 'makeready', obj: o.id, label: `Make-ready ${o.name}`, work: WORK.makeready }); };
+    const ready = (o) => { o.commercial = 'unready'; o.vacatedAt = s.t; this.addTask({ type: 'makeready', need: 'makeready', obj: o.id, label: `Prepare ${o.name}`, work: WORK.makeready }); };
     if (a.kind === 'climate') { u.env = 'climate'; ready(u); }
     else {
       const dx = u.dir && u.dir[0] !== 0; const parts = dx ? [{ x: u.x, y: u.y, w: 2, h: 1 }, { x: u.x, y: u.y + 1, w: 2, h: 1 }] : [{ x: u.x, y: u.y, w: 1, h: 2 }, { x: u.x + 1, y: u.y, w: 1, h: 2 }];
@@ -1525,7 +1525,7 @@ export class Sim {
       }
     }
     this.markDirty(); this.emit('renovated', { unit: u.id, kind: a.kind });
-    return { ok: true, msg: `${op.label}: done. Make-ready queued.` };
+    return { ok: true, msg: `${op.label}: done. Unit preparation queued.` };
   }
   act_sbFunds(a) { // Business sandbox rescue: recorded as sandbox money, never as income
     const s = this.s, B = s.sb, amt = Math.floor(Number(a.amt) || 0); if (!B || s.mode !== 'sandbox') return { ok: false, msg: 'Only in a sandbox' };
@@ -1718,8 +1718,8 @@ export class Sim {
     sc.badDays = failing ? (sc.badDays || 0) + 1 : 0;
     const allMet = sc.goals.every((g) => this.goalMet(g));
     if (allMet) { sc.status = 'won'; sc.endDay = day; this.emit('scenario_end', { won: true }); this.milestone('scenario_' + sc.id); return; }
-    if (f && f.cashDays && sc.badDays >= f.cashDays) { sc.status = 'lost'; sc.endDay = day; sc.why = `Net liquid position stayed below $${f.cashBelow.toLocaleString()} for ${f.cashDays} days`; this.emit('scenario_end', { won: false }); return; }
-    if (failing && sc.badDays === 1) this.emit('cash_warn', { msg: `Scenario risk: net liquid position below $${f.cashBelow.toLocaleString()} - ${f.cashDays} days of this ends the run` });
+    if (f && f.cashDays && sc.badDays >= f.cashDays) { sc.status = 'lost'; sc.endDay = day; sc.why = `Cash after bills and debt stayed below $${f.cashBelow.toLocaleString()} for ${f.cashDays} days`; this.emit('scenario_end', { won: false }); return; }
+    if (failing && sc.badDays === 1) this.emit('cash_warn', { msg: `Scenario risk: cash after bills and debt below $${f.cashBelow.toLocaleString()} - ${f.cashDays} days of this ends the run` });
   }
   genProspects(day, frac) {
     const s = this.s, M = MARKETS[s.market.id]; const rep = this.reputation();
@@ -1878,7 +1878,7 @@ export class Sim {
       this.emit('drama', { k: 'pricewar', title: `${c.name} cut prices`, sub: `They now charge about ${Math.round((1 - c.price) * 100)}% under market. Your move.` });
       this.convo({ key: 'pw' + c.id, who: 'Market watch', sev: 'attention', ttl: 24 * 60, def: 1, auto: 1, comp: c.id,
         text: `${c.name} just dropped its rents to about ${Math.round((1 - c.price) * 100)}% under market. Price shoppers will notice this week.`,
-        actions: [{ label: 'Match them: cut asking rents 6%', action: { type: 'cv', op: 'pwMatch', comp: c.id } }, { label: 'Hold your prices', action: { type: 'cv', op: 'pwHold', comp: c.id } }, { label: 'Run local search ads ($500)', action: { type: 'cv', op: 'pwAd', comp: c.id } }] });
+        actions: [{ label: 'Match them: cut new-tenant rents 6%', action: { type: 'cv', op: 'pwMatch', comp: c.id } }, { label: 'Hold your prices', action: { type: 'cv', op: 'pwHold', comp: c.id } }, { label: 'Run local search ads ($500)', action: { type: 'cv', op: 'pwAd', comp: c.id } }] });
     }
   }
   syncAd() {
@@ -1923,7 +1923,7 @@ export class Sim {
     if (topSize && topSize[1] >= 3) sug.push({ w: topSize[1] * 3, k: 'build', text: `${topSize[1]} shoppers wanted a ${topSize[0]} and found none available. Build more ${topSize[0]} units or turn vacant ones over faster.` });
     if (lostN('noClimate') >= 2) sug.push({ w: lostN('noClimate') * 3, k: 'climate', text: climateSuggestion(lostN('noClimate')) });
     const cp = this.compPrice();
-    if (lostN('price') + lostN('competitor') >= 3) sug.push({ w: (lostN('price') + lostN('competitor')) * 2.5, k: 'price', text: `${lostN('price') + lostN('competitor')} shoppers left over price${cp ? `; ${this.openComps()[0].name} charges about ${Math.round((1 - cp) * 100)}% under market` : ''}. Trim asking rents in Business, or win on quality.` });
+    if (lostN('price') + lostN('competitor') >= 3) sug.push({ w: (lostN('price') + lostN('competitor')) * 2.5, k: 'price', text: `${lostN('price') + lostN('competitor')} shoppers left over price${cp ? `; ${this.openComps()[0].name} charges about ${Math.round((1 - cp) * 100)}% under market` : ''}. Trim new-tenant rents in Business, or win on quality.` });
     const waiting = s.tasks.filter((t) => !t.assigned).length;
     if (waiting >= 3) sug.push({ w: waiting * 2, k: 'staff', text: `${waiting} jobs are waiting in Operate. Hire a Porter or Tech, or call vendors, before customers notice.` });
     const dims = [['security', 'Security is weak. Add lights or cameras where the Security overlay is dark.'], ['cleanliness', 'Cleanliness is slipping. A Porter keeps loading areas and halls clean.'], ['convenience', 'Interior convenience is low. Check cart stock and elevator waits.'], ['access', 'Access problems (gate, doors). Repair worn equipment.']];
@@ -1955,7 +1955,7 @@ export class Sim {
   // ============================================================ COLLECTIONS (GDD §36)
   // Current -> Past Due -> Delinquent (overlocked) -> Lien eligible -> Lien notice -> Auction / clean-out.
   // The player sets policy and handles exceptions; the ladder runs itself.
-  stageOf(L) { return L.status === 'current' ? 'Current' : { pastdue: 'Past due', plan: 'Payment plan', delinquent: 'Delinquent', lien: 'Lien eligible', notice: 'Lien notice', auction: 'Auction scheduled' }[L.status] || 'Past due'; }
+  stageOf(L) { return L.status === 'current' ? 'Current' : { pastdue: 'Past due', plan: 'Payment plan', delinquent: 'Behind on rent', lien: 'Lien eligible', notice: 'Lien notice', auction: 'Auction scheduled' }[L.status] || 'Past due'; }
   billLease(L, day) {
     const s = this.s, u = s.objects[L.unit]; if (!u) return;
     if (L.status === 'current') {
@@ -1983,7 +1983,7 @@ export class Sim {
       L.status = 'lien'; L.lienDay = day; this.emit('lien_eligible', { unit: u.id });
       if (s.policies.autoNotice || this.hasManager()) { this.startNotice(L); if (this.hasManager()) this.mgr(`Sent a lien notice for Unit ${u.num} (${this.fmtMoney(this.owed(L))} owed)`); }
       else this.convo({ key: 'lien' + L.id, who: 'Collections', sev: 'critical', obj: u.id, ttl: 3 * MIN_PER_DAY, def: 0,
-        text: `Unit ${u.num} is ${late} days past due and owes ${this.fmtMoney(this.owed(L))}. The account is now lien-eligible.`,
+        text: `Unit ${u.num} is ${late} days past due and owes ${this.fmtMoney(this.owed(L))}. The account can now get a lien notice (the legal notice for unpaid rent).`,
         actions: [{ label: 'Send lien notice', action: { type: 'collect', op: 'notice', lease: L.id } }, { label: 'Offer a payment plan', action: { type: 'collect', op: 'plan', lease: L.id } }, { label: 'Waive fees, wait 14 days', action: { type: 'collect', op: 'waive', lease: L.id } }] });
     } else if (L.status === 'lien' && day - (L.lienDay || day) >= 14) this.startNotice(L); // standard procedure if nobody decides
     else if (L.status === 'notice' && day >= L.noticeUntil) this.scheduleAuction(L);
@@ -2056,12 +2056,12 @@ export class Sim {
         if (this.rnd() < 0.72) {
           const half = Math.round(L.balance / 2); this.money(half, 'rent', `Payment plan - Unit ${u.num}`); L.balance -= half; L.fees = 0;
           L.status = 'plan'; L.planDue = this.day + 14; u.overlock = false; if (tn) tn.sat = clamp(tn.sat + 0.05, 0, 1);
-          this.emit('plan_ok', { unit: u.id }); return { ok: true, msg: `${tn ? tn.name : 'Tenant'} paid $${half} now; the rest is due in 14 days. Fees waived, overlock removed.` };
+          this.emit('plan_ok', { unit: u.id }); return { ok: true, msg: `${tn ? tn.name : 'Tenant'} paid $${half} now; the rest is due in 14 days. Fees waived, unit unlocked.` };
         }
         return { ok: false, msg: `${tn ? tn.name : 'The tenant'} didn't respond to the payment-plan offer.` };
       }
       case 'waive': L.fees = 0; L.dueSince += 14; if (L.status === 'lien') L.status = 'delinquent'; return { ok: true, msg: `Fees waived for Unit ${u.num}. Lien clock pushed back 14 days.` };
-      case 'unlock': u.overlock = false; return { ok: true, msg: `Overlock removed from Unit ${u.num}` };
+      case 'unlock': u.overlock = false; return { ok: true, msg: `Unit ${u.num} unlocked` };
       case 'hold': if (L.status !== 'auction') return { ok: false }; L.status = 'notice'; L.noticeUntil = this.day + 14; return { ok: true, msg: `Unit ${u.num} pulled from the auction for 14 days` };
     }
     return { ok: false };
@@ -2084,7 +2084,7 @@ export class Sim {
     const s = this.s, amt = Math.floor(Number(a.amt) || 0), lim = this.loanLimit();
     if (s.mode === 'tutorial' && !s.tut.done) return { ok: false, msg: 'Term loans open after the tutorial' };
     if (amt < 5000) return { ok: false, msg: 'Minimum term loan is $5,000' };
-    if (amt > lim) { this.emit('refuse'); return { ok: false, msg: lim ? `The bank approves up to $${lim.toLocaleString()} at this rent roll` : 'Rent roll is too small to support a term loan' }; }
+    if (amt > lim) { this.emit('refuse'); return { ok: false, msg: lim ? `The bank approves up to $${lim.toLocaleString()} at this monthly lease rent` : 'Monthly lease rent is too small to support a term loan' }; }
     const { rate, months } = this.loanTerms(); const pmt = this.loanPmt(amt, rate, months);
     s.debt.push({ id: this.id(), orig: amt, bal: amt, rate, months, pmt, next: this.day + BILLING_CYCLE_DAYS, start: this.day, paid: 0 });
     this.money(amt, 'loan', `Term loan (${months} mo @ ${(rate * 100).toFixed(1)}%)`);
@@ -2133,7 +2133,7 @@ export class Sim {
       case 'biReport': { const tn = s.tenants[a.tenant]; if (!tn) return { ok: true }; tn.sat = clamp(tn.sat - 0.05, 0, 1);
         if (this.rnd() < 0.35 && !tn.leaving) { const L = s.leases[tn.lease]; if (L) { tn.leaving = true; this.schedule({ kind: 'moveout', tenant: tn.id, unit: L.unit }, this.randomAccessTime(this.day + 3)); } this.postReview(tn, true); return { ok: true, msg: `${tn.name.split(' ')[0]} is moving out after the break-in.` }; }
         return { ok: true, msg: 'Report filed. The tenant is unhappy but staying for now.' }; }
-      case 'pwMatch': { for (const k of Object.keys(s.market.ask)) s.market.ask[k] = Math.round(s.market.ask[k] * 0.94); return { ok: true, msg: 'Asking rents cut 6%. Existing tenants keep their rates.' }; }
+      case 'pwMatch': { for (const k of Object.keys(s.market.ask)) s.market.ask[k] = Math.round(s.market.ask[k] * 0.94); return { ok: true, msg: 'New-tenant rents cut 6%. Existing tenants keep their rates.' }; }
       case 'pwHold': return { ok: true, msg: 'Holding prices. Expect fewer price shoppers; quality has to win them.' };
       case 'pwAd': return this.act_ad({ kind: 'local' });
       case 'rateExplain': { const L = s.leases[a.lease], tn = L && s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.02, 0, 1); return { ok: true, msg: L?.rentNotice ? 'Explained: the proposed rate follows the local market. The notice remains scheduled.' : 'Explained: rates follow the local market. The new rate stands.' }; }
@@ -2320,7 +2320,7 @@ export class Sim {
     delete s.leases[L.id]; if (tn) { delete s.tenants[tn.id]; this.dropConvo('mo' + tn.id); } this.dropConvo('lien' + L.id); this.dropConvo('rate' + L.id);
     u.lease = null; u.commercial = 'unready'; u.vacatedAt = s.t; u.overlock = false;
     { const fc = this.unitFront(u)[0]; if (fc) s.dirt[u.f || 0][this.idx(fc.x, fc.y)] += 0.25; }
-    const mr = this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Make-ready ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) });
+    const mr = this.addTask({ type: 'makeready', need: 'makeready', obj: u.id, label: why === 'auction' ? `Clean out ${u.name}` : `Prepare ${u.name}`, work: WORK.makeready * (why === 'auction' ? 2 : 1) });
     if (why !== 'auction') noteMoveOutJob(this, mr);
     s.today.moveouts++;
     this.emit('moveout', { unit: u.id });
@@ -2611,7 +2611,7 @@ export class Sim {
     if(ready.length)return {text:`${ready.length} ${size} unit${ready.length===1?' is':'s are'} ready to rent.`,availability:'ready'};
     const full = all.length > 0 && all.every(u => u.commercial === 'occupied' || u.commercial === 'reserved');
     const reason = full ? 'full' : units.some(u => !u.lease && u.commercial === 'unready') ? 'makeReady' : units.some(u => u.blocked) ? 'access' : units.some(u => u.cstate !== 'operating') ? 'construction' : 'sizeFull';
-    const text = {full:'All units occupied or reserved.', makeReady:`Vacant ${size} units need make-ready.`, access:`${size} rental access is blocked.`, construction:`New ${size} units are not open yet.`, sizeFull:`No ${size} units ready to rent.`}[reason];
+    const text = {full:'All units occupied or reserved.', makeReady:`Vacant ${size} units need preparation.`, access:`${size} rental access is blocked.`, construction:`New ${size} units are not open yet.`, sizeFull:`No ${size} units ready to rent.`}[reason];
     return {text, availability:reason};
   }
   thought(ag, text, kind = 'bad', extra = {}) {

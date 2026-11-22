@@ -17,8 +17,8 @@ export const cedarGoals = ({ cash, leaseGoal, liquidGoal }) => [
   { k: 'cedarRestored', v: 6, label: 'Restore all six rear units', fmt: 'n' },
   { k: 'cedarLeased', v: leaseGoal, label: `Lease ${leaseGoal} restored units`, fmt: 'n' },
   liquidGoal != null
-    ? { k: 'cedarCash', v: liquidGoal, label: `Reach ${dollars(liquidGoal)} net liquid`, fmt: 'money' }
-    : { k: 'cedarCash', v: cash, label: `Net liquid above your ${dollars(cash)} start`, fmt: 'money' },
+    ? { k: 'cedarCash', v: liquidGoal, label: `Reach ${dollars(liquidGoal)} cash after bills`, fmt: 'money' }
+    : { k: 'cedarCash', v: cash, label: `Cash after bills above your ${dollars(cash)} start`, fmt: 'money' },
 ];
 const cedarGoalsOf = (c) => cedarGoals({ cash: c.cash0, leaseGoal: c.leaseGoal, liquidGoal: c.liquidGoal });
 export const cedarCashMet = (c, cash) => c.liquidGoal != null ? cash >= c.liquidGoal : cash > c.cash0;

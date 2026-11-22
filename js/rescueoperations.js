@@ -20,13 +20,13 @@ export function rescuePricing(sim) {
 }
 export function chooseRescuePricing(sim,a) {
   const q=rescuePricing(sim);
-  if(!q||!['hold','lower'].includes(a.approach)||a.expectedAsk!==q.ask)return {ok:false,msg:'The asking rent or vacancies changed. Review leasing again.'};
+  if(!q||!['hold','lower'].includes(a.approach)||a.expectedAsk!==q.ask)return {ok:false,msg:'The new-tenant rent or vacancies changed. Review leasing again.'};
   if(a.approach==='lower'){
-    if(q.lower>=q.ask)return {ok:false,msg:'The asking rent cannot be lowered further.'};
+    if(q.lower>=q.ask)return {ok:false,msg:'The new-tenant rent cannot be lowered further.'};
     const r=sim.act_setRent({key:'10x10|std',v:q.lower});if(!r.ok)return r;
   }
   sim.s.rescueOperation={v:1,approach:a.approach,started:sim.s.t,product:'10x10|std',previousAsk:q.ask,selectedAsk:a.approach==='lower'?q.lower:q.ask,ids:q.ids,leases:[],acknowledged:false};
-  return {ok:true,msg:a.approach==='lower'?`New 10×10 standard asking rent: $${q.lower}. Existing contracts unchanged.`:'Current asking rent kept. Watching actual use of restored vacancies.'};
+  return {ok:true,msg:a.approach==='lower'?`New 10×10 standard new-tenant rent: $${q.lower}. Existing contracts unchanged.`:'Current new-tenant rent kept. Watching actual use of restored vacancies.'};
 }
 export function recordRescueLease(sim,u,L) {
   const r=sim.s.rescueOperation;

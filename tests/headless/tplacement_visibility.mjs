@@ -34,7 +34,7 @@ function compactReview(u,{peek}){
   assert.match(h,/data-a="recoDetails"/,'Details button offered');
   assert.match(h,/data-a="confirm"/,'Confirm stays in the compact review');
   assert.match(h,/Cash after build:/,'cash after stays in the compact review');
-  assert.match(h,/Committed bills.*reserve.*Available after bills/s,'full financial review still rendered (hidden only by phone CSS)');
+  assert.match(h,/Bills owed.*reserve.*Available after bills/s,'full financial review still rendered (hidden only by phone CSS)');
   if(peek)assert.match(h,/data-a="placementPeek"/,'Peek still offered');
 }
 

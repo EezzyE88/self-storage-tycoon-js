@@ -71,7 +71,7 @@ export function moveOutCheck(sim, t) {
 export function startMoveOut(sim, a) {
   const s = sim.s, t = s.tasks.find((x) => x.id === a.task);
   const c = moveOutCheck(sim, t);
-  if (!c.ok) return { ok: false, msg: c.why === 'hours' ? `Owner has ${c.left}h available today; this needs ${c.need}h.` : 'This make-ready job is not available to clean yourself right now.' };
+  if (!c.ok) return { ok: false, msg: c.why === 'hours' ? `Owner has ${c.left}h available today; this needs ${c.need}h.` : 'This unit-preparation job is not available to do yourself right now.' };
   const owner = ownerOf(s);
   if (!sim.reserveTaskWork(owner, t)) return { ok: false, msg: 'Owner has no work hours left for this today.' };
   const m = state(s), token = ++m.sessions;
@@ -83,7 +83,7 @@ export function leaveMoveOut(sim, a) {
   const t = sim.s.tasks.find((x) => x.mg01Claim && x.mg01Claim.token === a.token);
   if (!t) return { ok: false, msg: 'Nothing to leave' };
   releaseClaim(sim, t);
-  return { ok: true, msg: 'Make-ready returned to the work queue. No Owner hours used.' };
+  return { ok: true, msg: 'Unit preparation returned to the work queue. No Owner hours used.' };
 }
 
 export function finishMoveOut(sim, a) {

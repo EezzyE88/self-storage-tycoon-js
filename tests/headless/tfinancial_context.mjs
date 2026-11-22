@@ -40,7 +40,7 @@ test('acquisition quote is pure and uses authoritative bills, reserve and cents 
   const before=snapshot(f),q=f.ui.acquisitionQuote(kind,market);
   assert.equal(q.ok,true);assert.deepEqual(q.position,f.A.financialPosition({spend:q.offer.price}));assert.equal(q.workingCash,5000);assert.equal(snapshot(f),before);
   f.ui.showAcquisitionReview(kind,market);const h=f.nodes.modal.innerHTML;
-  for(const text of ['Unpaid committed bills','Recommended reserve','Available after bills &amp; reserve','256.31'])assert.ok(h.includes(text),text);
+  for(const text of ['Bills owed, not yet paid','Recommended cash cushion (reserve)','Available after bills &amp; reserve','256.31'])assert.ok(h.includes(text),text);
  }
 });
 test('positive, zero and negative acquisition availability remain advisory; exact-cash purchase is legal',()=>{

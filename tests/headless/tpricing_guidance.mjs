@@ -18,11 +18,11 @@ const uiFor = sim => { const ui = Object.create(UI.prototype); ui.g = { sim }; r
 const units = (sim, size) => Object.values(sim.s.objects).filter(u => u.type === 'unit' && u.cstate === 'operating' && u.size === size);
 
 test('saved advice with a rival is reworded and keeps count, rival and gap', () => {
-  assert.equal(priceAdviceText(OLD_RIVAL), '8 shoppers turned down your asking rent; StorQuik Self Storage charges about 16% under market. Other shoppers may still lease the same units at full rent, so a lower price is not guaranteed to earn more. Compare each size in Business → Asking rents before changing price.');
+  assert.equal(priceAdviceText(OLD_RIVAL), '8 shoppers turned down your new-tenant rent; StorQuik Self Storage charges about 16% under market. Other shoppers may still lease the same units at full rent, so a lower price is not guaranteed to earn more. Compare each size in Business → New-tenant rents before changing price.');
 });
 test('saved advice without a rival is reworded; no cut is recommended', () => {
   const t = priceAdviceText(OLD_PLAIN);
-  assert.match(t, /^3 shoppers turned down your asking rent\. /); assert.doesNotMatch(t, /Trim|cut|lower your/i);
+  assert.match(t, /^3 shoppers turned down your new-tenant rent\. /); assert.doesNotMatch(t, /Trim|cut|lower your/i);
 });
 test('every other advice line and non-string values pass through unchanged', () => {
   for (const t of ['14 shoppers wanted a 10x10 and found none available.', '6 tenants pay well under market. A rent review could add about $210/mo (some may move out).', 'Trim asking rents in Business, or win on quality.', '', null, undefined])
@@ -31,13 +31,13 @@ test('every other advice line and non-string values pass through unchanged', () 
 test('the live monthly report still stores the original advice text (sim.js unchanged)', () => {
   const sim = setup(61); for (let i = 0; i < 4; i++) sim.s.mkt.lostLog.push({ d: 40 + i, r: 'price', sz: '5x10', climate: false });
   sim.monthReport(61); const R = sim.s.mkt.reports.at(-1);
-  assert.ok(R.sug.includes('4 shoppers left over price. Trim asking rents in Business, or win on quality.'), JSON.stringify(R.sug));
+  assert.ok(R.sug.includes('4 shoppers left over price. Trim new-tenant rents in Business, or win on quality.'), JSON.stringify(R.sug));
 });
 test('report shows reworded advice; stored report and whole state byte-identical after render', () => {
   const sim = setup(61); sim.monthReport(61); const R = sim.s.mkt.reports.at(-1); R.sug = [OLD_RIVAL, '14 shoppers wanted a 10x10 and found none available.'];
   const before = JSON.stringify(sim.s), html = uiFor(sim).reportHtml();
-  assert.match(html, /8 shoppers turned down your asking rent; StorQuik Self Storage charges about 16% under market/);
-  assert.doesNotMatch(html, /Trim asking rents/); assert.match(html, /14 shoppers wanted a 10x10/);
+  assert.match(html, /8 shoppers turned down your new-tenant rent; StorQuik Self Storage charges about 16% under market/);
+  assert.doesNotMatch(html, /Trim asking rents|Trim new-tenant rents/); assert.match(html, /14 shoppers wanted a 10x10/);
   assert.equal(JSON.stringify(sim.s), before); assert.equal(R.sug[0], OLD_RIVAL);
 });
 test('activity counts by size only: climate preference is not split; only price and competitor count', () => {

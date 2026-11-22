@@ -62,7 +62,7 @@ test('no covering preset says so plainly; cash-covered and parcel rows carry no 
 test('facility purchase review adds the same facts, career effect and choice line; parcel review is unchanged',()=>{
   const f=fixture(250000);const before=snap(f);click(f,'acquire','facility','maple');const html=f.boxes.modal.innerHTML,pv=f.g.facilityPreview();
   assert.equal(snap(f),before);
-  for(const t of ['What comes with it',`${pv.leased} of ${pv.units}`,'Current contracted rent','Career after purchase','(current rules)',`properties ${pv.career.n} of ${pv.career.next.props}`,'all valid choices','Confirm'])assert.ok(html.includes(t),t);
+  for(const t of ['What comes with it',`${pv.leased} of ${pv.units}`,'Monthly lease rent','Career after purchase','(current rules)',`properties ${pv.career.n} of ${pv.career.next.props}`,'all valid choices','Confirm'])assert.ok(html.includes(t),t);
   assert.ok(f.ui.acquisitionReview.quote.guidance);click(f,'modalClose');
   click(f,'acquire','parcel','blank');const p=f.boxes.modal.innerHTML;assert.doesNotMatch(p,/What comes with it|Career after purchase|all valid choices/);assert.equal(f.ui.acquisitionReview.quote.guidance,undefined);
 });
