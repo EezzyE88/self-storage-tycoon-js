@@ -1085,6 +1085,11 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 #ui .tut.cedar .cedar-unit small { font-weight:400; opacity:.85; line-height:1.25; white-space:normal; }
 #ui .tut.cedar .cedar-unit .cedar-act { margin-top:4px; padding:4px 8px; border-radius:6px; background:var(--amber, #e9b949); color:#1d2a25; font-weight:700; font-size:.92em; line-height:1.2; white-space:normal; }
 #ui .tut.cedar .cedar-unit.driveway { height:auto; padding-top:8px; padding-bottom:8px; }
+#ui .tut.cedar .cedar-recovery { margin:8px 0; padding:8px 10px; border-radius:8px; background:rgba(47,143,91,.16); border:1px solid var(--green, #2f8f5b); font-size:13px; }
+#ui .tut.cedar .cedar-recovery .rec-row { display:flex; justify-content:space-between; gap:8px; margin-top:6px; }
+#ui .tut.cedar .cedar-recovery .rec-bar { height:8px; margin:6px 0; border-radius:4px; background:rgba(255,255,255,.15); overflow:hidden; }
+#ui .tut.cedar .cedar-recovery .rec-bar i { display:block; height:100%; background:var(--green, #2f8f5b); }
+#ui .tut.cedar .cedar-recovery p { margin:0; line-height:1.35; }
 #ui .tut.cedar .cedar-results { margin:6px 0 8px 18px; padding:0; font-size:13px; }
 #ui .tut.comeback.min > :not(.ch) { display:none; }
 #ui.has-sheet .tut.comeback.min { display:none; }

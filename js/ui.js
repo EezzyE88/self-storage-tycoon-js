@@ -2808,7 +2808,9 @@ export class UI {
     const porter = s.staff.find(st => st.role === 'porter'), pay = ROLES.porter.wage * ROLES.porter.workHours;
     const D = cedarDemand(sim), won = c.status === 'won', goalCash = p.liquidGoal ?? p.cash0;
     const lines = c.targets.map((t, k) => this.cedarUnitLine(t, k)), drive = won ? [] : c.targets.map((t, k) => this.cedarDriveway(k));
-    const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p.goals.map(g => [g.met, Math.round(g.cur)]), lines, drive.map(d => d?.cost ?? null), left, !!porter, D, sim.day]);
+    // Financial-recovery stage: restore and lease goals both met, the net-liquid goal not yet. Display only, from the goal's own value.
+    const finishing = !won && p.liquidGoal != null && p.goals[0].met && p.goals[1].met && !p.goals[2].met, nlNow = Math.round(p.cash); // same rounding as the goal row
+    const key = JSON.stringify([c.status, c.acknowledged, this.scMin, p.goals.map(g => [g.met, Math.round(g.cur)]), finishing ? nlNow : null, lines, drive.map(d => d?.cost ?? null), left, !!porter, D, sim.day]);
     if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
     const goalValue = (g) => g.k === 'cedarCash' ? (p.liquidGoal != null ? `${money(Math.round(g.cur))} of ${money(goalCash)}` : `${money(Math.round(g.cur))} · start ${money(p.cash0)}`) : `${Math.round(g.cur)}/${g.v}`;
     const goals = `<ul class="goals">${p.goals.map(g => `<li class="${g.met ? 'met' : ''}"><span class="ck">${g.met ? '&#10003;' : ''}</span><span>${esc(g.label)}</span><b>${goalValue(g)}</b></li>`).join('')}</ul>`;
@@ -2828,7 +2830,11 @@ export class UI {
       <p><b>What next:</b> the back pads are yours to develop. The rear pad takes a row facing the service aisle, and the east pad takes units facing the east lane. Build them in your own time.</p>
       <div class="row wrap">${c.acknowledged ? '<button class="btn" data-a="comebackWork">Review operations</button><button class="btn" data-a="comebackReadiness">Review investment readiness</button><button class="btn" data-a="comebackCareer">View career</button>' : '<button class="btn" data-a="rescueLeasing">Review leasing</button>'}</div>`;
     } else {
-      detail = `${sim.day <= 1 && !p.restored ? briefing : ''}${goals}
+      const recovery = finishing ? `<div class="cedar-recovery"><b>Units done. One goal left: financial recovery.</b>
+        <div class="rec-row"><span>Net liquid</span><b>${money(nlNow)} of ${money(p.liquidGoal)}</b></div>
+        <div class="rec-bar" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, Math.floor(100 * p.cash / p.liquidGoal)))}%"></i></div>
+        <p>${money(Math.ceil(p.liquidGoal - p.cash))} to go. All six units are restored and ${p.leased} are leased. Rent comes in as tenants pay; wages and bills already owed count against net liquid. The yard is yours the moment net liquid reaches ${money(p.liquidGoal)} while the units stay restored and leased.</p></div>` : '';
+      detail = `${sim.day <= 1 && !p.restored ? briefing : ''}${recovery}${goals}
       <p class="note">All three must be true at the same time. Net liquid is your cash minus bills already owed (wages and operating costs, paid at the weekly settlement) and any credit-line draw. The top bar shows cash before those bills; Business › Bills &amp; reserve shows net liquid. No deadline: the yard is yours the moment all three hold.</p>
       ${units}
       <div class="row wrap"><button class="btn" data-a="comebackWork">Review work</button><button class="btn" data-a="comebackHire">Review Porter hire</button></div>
@@ -2841,7 +2847,7 @@ export class UI {
         ${sim.day > 1 || p.restored ? briefing : ''}
       </details>`;
     }
-    const head = won ? 'Cedar Creek · complete' : `Cedar Creek · ${p.restored}/6 restored · ${p.leased}/${c.leaseGoal} leased`;
+    const head = won ? 'Cedar Creek · complete' : finishing ? `Cedar Creek · recovery ${money(nlNow)} of ${money(p.liquidGoal)}` : `Cedar Creek · ${p.restored}/6 restored · ${p.leased}/${c.leaseGoal} leased`;
     box.innerHTML = `<div class="tut scen comeback cedar ${this.scMin ? 'min' : ''}"><div class="ch"><span>${head}</span><button class="mini" data-a="${this.scMin ? 'scenMin' : 'comebackClose'}" aria-label="${this.scMin ? 'Show Cedar Creek goals' : 'Close Cedar Creek panel'}">${this.scMin ? 'Show' : 'Close'}</button></div>${detail}${won && !this.scMin ? '<button class="btn pri" data-a="comebackClose">Keep operating this property</button>' : ''}</div>`;
     if (box.firstElementChild) box.firstElementChild.scrollTop = scroll;
   }

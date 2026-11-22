@@ -349,6 +349,7 @@
         "evidence": "native production methods; GPU/Canvas/DOM may be stubbed; no physical-device claim"
       },
       {"id": "tcedar_driveway", "command": ["@node", "tests/headless/tcedar_driveway.mjs"], "completion": "8\\ Cedar\\ Damaged\\ Driveway\\ checks\\ passed\\ \\(stubbed\\ DOM,\\ not\\ Safari\\)", "minimum_pass_lines": 8, "timeout": 180, "evidence": "native UI methods over a stubbed DOM and renderer; rendered taps are covered by separate Playwright reruns; no physical-device claim"},
+      {"id": "tcedar_recovery", "command": ["@node", "tests/headless/tcedar_recovery.mjs"], "completion": "8\\ Cedar\\ recovery\\ progress\\ checks\\ passed\\ \\(stubbed\\ DOM,\\ not\\ Safari\\)", "minimum_pass_lines": 8, "timeout": 180, "evidence": "native UI methods over a stubbed DOM; display-only recovery progress from financialPosition; rendered layout covered by separate Playwright reruns; no physical-device claim"},
       {
         "id": "tcomplaint_capacity",
         "command": [
