@@ -6,6 +6,7 @@
 import { newState, Sim } from './sim.js';
 import { MARKETS, NAMES_FIRST, NAMES_LAST, BILLING_CYCLE_DAYS, ROUTINE_VISIT_CHANCE, WORK, G } from './data.js';
 import { ensureCustomerAccounts } from './customeraccounts.js';
+import { KIT_SITES, paintSite, fitOutSite } from './kitsites.js';
 import { registerKit, kitState, kitRand, seedRand, runSeed, addMod, applyMods, kitLog, kitMetric, projectDone, modsFor } from './scenariokit.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -13,13 +14,15 @@ const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const pctTxt = (v) => Math.round(v * 100) + '%';
 
 // ---------------------------------------------------------------- shared setup helpers
-function baseSim(market, seed) {
+function baseSim(market, seed, site = null) {
   const s = newState({ mode: 'scenario', seed, market });
+  if (site) paintSite(s, site); // SK-02: the scenario's own public-office site
   s.tut = { on: false, beat: 99, flags: {}, done: true }; s.lesson = null; s.open = false; s.speed = 0;
   const sim = new Sim(s);
   s.staff.push({ id: sim.id(), role: 'owner', name: 'You', wage: 0, hired: 0 });
   sim.spawnStaffAgent?.(s.staff[0]);
   s.mkt.nextComp = 99999; // kit scenarios bring their own rivals (or none)
+  if (site) { sim.rebuild(); fitOutSite(sim, site); for (const u of sim.objs('unit')) if (u.cstate === 'operating' && !u.lease) u.commercial = 'ready'; }
   return sim;
 }
 function prebuild(sim, list) {
@@ -112,8 +115,7 @@ const GO = {
   loan: 184000, demand: 0.1,
 };
 function goMake(seed) {
-  const sim = baseSim('blank', seed), s = sim.s, rnd = seedRand(seed);
-  prebuild(sim, GO_LAYOUT);
+  const sim = baseSim('blank', seed, KIT_SITES.grandopening), s = sim.s, rnd = seedRand(seed);
   s.open = true;
   const { rate, months } = sim.loanTerms(); const pmt = sim.loanPmt(GO.loan, rate, months);
   s.debt.push({ id: sim.id(), orig: GO.loan, bal: GO.loan, rate, months, pmt, next: 31, start: 1, paid: 0, kitConstruction: true });
@@ -250,8 +252,7 @@ const SS = {
 };
 const SS_FIX = { emergency: { per: 420, days: 2 }, contractor: { per: 240, days: 9 } };
 function ssMake(seed) {
-  const sim = baseSim('rural', seed), s = sim.s, rnd = seedRand(seed);
-  prebuild(sim, SS_LAYOUT);
+  const sim = baseSim('rural', seed, KIT_SITES.stormseason), s = sim.s, rnd = seedRand(seed);
   s.open = true;
   const units = sim.objs('unit').slice().sort((a, b) => a.id - b.id);
   const share = 0.88 + rnd() * 0.06;
@@ -427,8 +428,7 @@ const CN = {
   demand: 0.075,
 };
 function cnMake(seed) {
-  const sim = baseSim('urban', seed), s = sim.s, rnd = seedRand(seed);
-  prebuild(sim, CN_LAYOUT);
+  const sim = baseSim('urban', seed, KIT_SITES.chainnextdoor), s = sim.s, rnd = seedRand(seed);
   s.open = true;
   const units = sim.objs('unit').slice().sort((a, b) => a.id - b.id);
   const share = 0.9 + rnd() * 0.05;
