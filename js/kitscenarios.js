@@ -288,7 +288,7 @@ function ssDecision(sim, e) {
       text: `Torn roofing and jammed doors. Tenants in damaged units get less happy every day until it is fixed, and damaged empty units cannot be rented.${cover}`,
       opts: [{ label: 'Emergency crew', sub: `${money(SS_FIX.emergency.per * n)} · fixed in ${SS_FIX.emergency.days} days`, cost: SS_FIX.emergency.per * n }, { label: 'Regular contractor', sub: `${money(SS_FIX.contractor.per * n)} · fixed in ${SS_FIX.contractor.days} days`, cost: SS_FIX.contractor.per * n }, { label: 'Patch it yourself', sub: 'Free · one unit every 2 days, and patches often fail in the next storm' }], def: 2 }; }
   if (e.id.startsWith('claims')) { const c = e.claims;
-    return { title: `${c.n} tenant${c.n > 1 ? 's' : ''} report flooded belongings`, who: 'Office', days: 4,
+    return { title: `${c.n} tenant${c.n > 1 ? 's report' : ' reports'} flooded belongings`, who: 'Office', days: 4,
       text: `Water got into ${c.n} occupied unit${c.n > 1 ? 's' : ''}. The tenants are asking you to cover ${money(c.amt)} of ruined belongings. Your lease does not require it.${k.insurance === 'full' ? ' Full cover repays claims you pay, less the deductible.' : ''}`,
       opts: [{ label: `Pay all claims (${money(c.amt)})`, sub: 'Tenants stay loyal', cost: c.amt }, { label: `Pay half (${money(c.amt / 2)})`, sub: 'Some goodwill', cost: Math.round(c.amt / 2) }, { label: 'Point to the lease', sub: 'No cost; expect angry tenants and bad reviews' }], def: 2 }; }
   return null;
@@ -314,6 +314,7 @@ function ssChoose(sim, id, i, auto) {
     return paid ? `Paid ${money(paid)} in claims` : 'Claims declined'; }
 }
 function ssPremium(sim) { const k = sim.s.scenario.kit; if (!k.insurance) return; const P = INS[k.insurance]; sim.money(-P.prem, 'service', P.name + ' premium'); k.nextPrem = sim.day + 30; k.premPaid = (k.premPaid || 0) + P.prem; }
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 function ssStorm(sim, st) {
   const s = sim.s, k = s.scenario.kit, day = sim.day;
   const prep = st.prep ?? 1, fx = projectDone(s, 'fixtures') ? 0.4 : 1, dr = projectDone(s, 'drainage');
@@ -343,8 +344,8 @@ function ssStorm(sim, st) {
   }
   st.hit = true; st.broken = broken; st.claims = claims.n; st.units = hit.length;
   sim.markDirty(); sim.generateTasks();
-  sim.emit('drama', { k: 'storm', title: st.sev > 1.2 ? 'Severe storm' : 'Storm', sub: `${hit.length} units damaged, ${broken} lights, cameras or gate knocked out${claims.n ? `, ${claims.n} units flooded` : ''}.` });
-  kitLog(sim, `${st.sev > 1.2 ? 'Severe storm' : 'Storm'}: ${hit.length} units damaged, ${broken} equipment out, ${claims.n} flooded${prep < 1 ? ' (prepared)' : ''}`, 'bad');
+  sim.emit('drama', { k: 'storm', title: st.sev > 1.2 ? 'Severe storm' : 'Storm', sub: `${plural(hit.length, 'unit')} damaged, ${broken} ${broken === 1 ? 'light, camera or gate' : 'lights, cameras or gate'} knocked out${claims.n ? `, ${plural(claims.n, 'unit')} flooded` : ''}.` });
+  kitLog(sim, `${st.sev > 1.2 ? 'Severe storm' : 'Storm'}: ${plural(hit.length, 'unit')} damaged, ${broken} equipment out, ${claims.n} flooded${prep < 1 ? ' (prepared)' : ''}`, 'bad');
   if (hit.length) k.events.push({ id: 'repair' + st.n, day, fired: false, choice: null, units: hit.map((u) => u.id) });
   if (claims.n) k.events.push({ id: 'claims' + st.n, day, fired: false, choice: null, claims });
 }
@@ -505,8 +506,8 @@ function cnOnDay(sim, day) {
     const r = askRatio(sim), rep = sim.reputation();
     if (r <= c.price + 0.04 && r < 0.95 && c.price > 0.7) { c.price = Math.round((c.price - 0.04) * 100) / 100; c.strength = Math.min(0.42, Math.round((c.strength + 0.02) * 100) / 100); k.wars++; k.lastCut = day; kitLog(sim, `Vaultline answered your prices: now ${pctTxt(1 - c.price)} under market`, 'bad'); sim.emit('drama', { k: 'pricewar', title: 'Vaultline cut prices again', sub: `Now about ${pctTxt(1 - c.price)} under market.` }); }
     else if (day >= 105 && (k.lastCut == null || day - k.lastCut >= 28) && c.price < 0.92) { c.price = Math.round((c.price + 0.03) * 100) / 100; kitLog(sim, `Vaultline raised prices: now ${pctTxt(1 - c.price)} under market`, 'good'); }
-    if (rep >= 0.84 && c.strength > 0.12) { c.strength = Math.round((c.strength - 0.03) * 100) / 100; kitLog(sim, 'Shoppers prefer your service: Vaultline is pulling fewer of them', 'good'); }
-    else if (rep < 0.74 && c.strength < 0.42) { c.strength = Math.round((c.strength + 0.03) * 100) / 100; kitLog(sim, 'Shoppers are drifting to Vaultline', 'bad'); }
+    if (rep >= 0.84 && c.strength > 0.12) { c.strength = Math.round((c.strength - 0.03) * 100) / 100; if (k.flags.trend !== 'down') kitLog(sim, 'Shoppers prefer your service: Vaultline is pulling fewer of them', 'good'); k.flags.trend = 'down'; }
+    else if (rep < 0.74 && c.strength < 0.42) { c.strength = Math.round((c.strength + 0.03) * 100) / 100; if (k.flags.trend !== 'up') kitLog(sim, 'Shoppers are drifting to Vaultline', 'bad'); k.flags.trend = 'up'; }
   }
 }
 function cnProjectDone(sim, id) {

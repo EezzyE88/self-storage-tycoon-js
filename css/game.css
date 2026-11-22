@@ -1364,3 +1364,9 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .modal.kit-end h3 { font-size: 14px; margin: 10px 0 2px; }
 .modal.kit-end .kit-end-btns .btn { min-height: 44px; }
 .scen-card.kit-card .kit-rec { margin: 0 0 6px; font-size: 12px; color: var(--ink2); }
+/* SK-01 polish: a collapsed scenario card shows only its header; collapsible sections show they open */
+.tut.kit.min > :not(.ch) { display: none; }
+.tut.kit details > summary, .modal.kit-end details > summary { cursor: pointer; list-style: none; }
+.tut.kit details > summary::-webkit-details-marker, .modal.kit-end details > summary::-webkit-details-marker { display: none; }
+.tut.kit details > summary::before, .modal.kit-end details > summary::before { content: '▸'; display: inline-block; width: 1em; }
+.tut.kit details[open] > summary::before, .modal.kit-end details[open] > summary::before { content: '▾'; }
