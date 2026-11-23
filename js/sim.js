@@ -10,6 +10,7 @@ import { normalizeProjects, projectOffers, matchesProject, startProject, reconci
 import { ensureWorkReport, recordWork, recordPayroll } from './workreport.js';
 import { lessonAllowed, lessonById, syncTutBeat, beatOwnsRequest } from './tutorial.js';
 import { normalizeComeback, checkComeback, recordComebackWork, mapComebackReplacements, isComeback } from './comeback.js';
+import { isKit, kitCheck, kitMetric, kitChoose, kitProject } from './scenariokit.js';
 import { climateInventory, climateCauseKey, climateSuggestion } from './climateavailability.js';
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
@@ -1602,6 +1603,8 @@ export class Sim {
     return { ok: false };
   }
   poll() { this.ensure(); if (this.onTick) this.onTick(this); if (this.dirty) this.rebuild(); checkComeback(this); reconcileProject(this); updateYardLoop(this); }
+  act_scnChoice(a) { return kitChoose(this, a); } // SK-01 scenario decision
+  act_scnProject(a) { return kitProject(this, a); } // SK-01 scenario project
   act_comebackAck() {
     const c = this.s.scenario;
     if (!isComeback(this.s) || c.status !== 'won') return { ok: false };
@@ -1754,7 +1757,7 @@ export class Sim {
       case 'contrib30': return last.length < 30 ? -1 : last.reduce((a, d) => a + d.rent - d.opex - d.payroll, 0);
       case 'roll': return this.rentRoll();
       case 'cash': return s.cash;
-      default: { const v = scenarioMetric(this, k); return v === undefined ? 0 : v; }
+      default: return isKit(s) ? kitMetric(this, k) : (scenarioMetric(this, k) ?? 0);
     }
   }
   // GV-01: the elevator-wait goal needs live service. A broken, unpowered or extension-closed cab, a cab nobody has
@@ -1772,6 +1775,7 @@ export class Sim {
   scenarioCheck(day) {
     const s = this.s, sc = s.scenario;
     if (isComeback(s)) { checkComeback(this); return; }
+    if (isKit(s)) { kitCheck(this, day); return; } // SK-01 scenarios: held goals, decisions, checkpoints
     // The deadline day's 7:00 batch is the final eligible goal checkpoint.
     if (day > sc.deadline) { sc.status = 'lost'; sc.endDay = day; sc.why = `Day ${sc.deadline} deadline passed`; this.emit('scenario_end', { won: false }); return; }
     const f = sc.fail; let failing = false;

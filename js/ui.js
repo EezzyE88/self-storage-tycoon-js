@@ -29,6 +29,8 @@ import {unitStatus, UNIT_STATUS, loadingStatus} from './status.js';
 import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonById, offerStands, lessonAllowed, tutBeatIndex, beatHeader, beatGroup, verticalReviewGuide, financingReview } from './tutorial.js';
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { scenarioRulesHtml } from './newscenarioui.js';
+import { isKit } from './scenariokit.js';
+import { kitCardHtml, kitCardKey, kitEndHtml, kitMenuCard, readKitRecords, recordKitResult, kitFmt } from './kitui.js';
 import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
 import { guideFor } from './handbook.js';
@@ -471,6 +473,10 @@ export class UI {
       }
       case 'cedarDriveway': this.reviewCedarDriveway(+v); break;
       case 'scenMin': this.scMin = !this.scMin; this.renderTut(true); break;
+      case 'scnChoice': { const i = v.lastIndexOf(':'); const r = this.do({ type: 'scnChoice', ev: v.slice(0, i), i: +v.slice(i + 1) }); if (r && r.msg) this.toast(r.msg, r.ok ? 'good' : 'bad'); if (r && r.ok) { this.sfx('confirm'); this.scMin = true; } this.renderTut(true); break; }
+      case 'scnProject': { const r = this.do({ type: 'scnProject', id: v }); if (r && r.msg) this.toast(r.msg, r.ok ? 'good' : 'bad'); if (r && r.ok) this.sfx('confirm'); this.renderTut(true); break; }
+      case 'scnResults': this.showKitEnd(); break;
+      case 'scnKeep': this.closeModal(); break;
       case 'saveCode': this.showSave(); break;
       case 'saveFile': this.toast('This save uses floor-based unit numbers. Keep your original export for older builds.');this.g.saveFile(); break;
       case 'loadOpen': this.showLoad(); break;
@@ -2309,7 +2315,11 @@ export class UI {
       case 'power_restored': break;
       case 'sb_goal': this.sfx('milestone'); this.toast(`Goal met: ${e.label}. Keep playing - the facility is still yours.`, 'good'); break;
       case 'comeback_goal': this.toast(e.label + ' · complete', 'good'); this.renderTut(true); break;
-      case 'scenario_end': if (e.comeback || this.sim?.s.scenario?.rules) this.scMin = false; /* rules scenarios open the panel on the outcome */ this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); break;
+      case 'scenario_end': if (e.comeback || this.sim?.s.scenario?.rules) this.scMin = false; this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); if (e.kit && !this.title) this.showKitEnd(); break;
+      case 'scn_decision': this.sfx('attention'); this.toast('Decision: ' + e.title); this.renderTut(true); break;
+      case 'scn_warn': this.toast('Coming up: ' + e.msg); break;
+      case 'scn_check': this.toast(e.ok ? `${e.label}: passed` : `${e.label}: missed. Fix it by Day ${e.cure}`, e.ok ? 'good' : 'bad'); if (!e.ok) this.sfx('attention'); this.renderTut(true); break;
+      case 'scn_project': this.toast('Project finished', 'good'); this.renderTut(true); break;
       case 'rent_review': this.sfx('rent'); break;
       case 'manager': if (!e.request && s.speed <= 2) this.toast(/^(Clerk|Manager) /.test(e.msg) ? e.msg : 'Manager: ' + e.msg); this.renderFeed(true); break;
       case 'pastdue': { const u = s.objects[e.unit]; if (s.speed <= 2) this.toast(`${u ? u.name : 'A unit'} missed its rent payment`); break; }
@@ -2707,10 +2717,11 @@ export class UI {
     g.classList.toggle('below', !!place?.below); g.classList.toggle('nolabel', inCard || !place); g.classList.toggle('passive', !!t.passive);
   }
 
-  fmtGoal(g, v) { return g.fmt === 'pct' ? (g.k === 'elevUptime30' && v === -1 ? 'needs 7 days' : pct(v)) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (g.k === 'elevWait' ? this.sim.elevWaitStatus().note || v.toFixed(1) + ' min' : v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
+  fmtGoal(g, v) { if (g.fmt === 'x' || g.k === 'stormOpen') return kitFmt(g, v); return g.fmt === 'pct' ? (g.k === 'elevUptime30' && v === -1 ? 'needs 7 days' : pct(v)) : g.fmt === 'money' ? (v === -1 ? 'needs 30 days' : money(Math.round(v))) : g.fmt === 'min' ? (g.k === 'elevWait' ? this.sim.elevWaitStatus().note || v.toFixed(1) + ' min' : v >= 99 ? 'no elevator' : v.toFixed(1) + ' min') : String(Math.round(v)); }
   renderScenario(force) {
     const sim = this.sim, s = sim.s, sc = s.scenario, box = this.$('tut');
     if (isComeback(s)) { this.renderComeback(force); return; }
+    if (isKit(s)) { this.renderKit(force); return; }
     if(this.scMin==null) this.scMin=true;
     if(this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
     const prog = scenarioProgress(sim);
@@ -2724,6 +2735,22 @@ export class UI {
       <p class="fail ${sc.badDays ? 'on' : ''}">Fail: cash after bills and debt (cash minus unpaid bills and credit-line balance) below ${money(sc.fail.cashBelow)} for ${sc.fail.cashDays} days${sc.badDays ? ` · ${sc.badDays} so far` : ''}, or the deadline passes. Reserve is advisory.</p>
       ${sc.rules ? scenarioRulesHtml(sim, esc) : ''}
       ${sc.status !== 'active' ? `<p>${sc.status === 'won' ? `Finished on day ${sc.endDay}. Keep playing this property as a sandbox if you like.` : esc(sc.why || '')}</p><div class="row"><button class="btn pri" data-a="scenarios">Scenarios</button></div>` : ''}</div>`;
+  }
+  renderKit(force) { // SK-01 scenarios: a new decision opens the card (time pauses while it is open)
+    const sim = this.sim, s = sim.s, sc = s.scenario, k = sc.kit, box = this.$('tut');
+    if (this.scMin == null) this.scMin = true;
+    const pend = sc.status === 'active' && k.pending ? k.pending.id : null;
+    if (pend && this.kitOpened !== pend) { this.kitOpened = pend; this.scMin = false; }
+    if (this.scMin) this.resumePopup('scenario'); else this.pauseForPopup('scenario');
+    const key = kitCardKey(sim, this.scMin);
+    if (!force && key === this.scKey) return; this.scKey = key; this.rend.setFocus(null);
+    const again = this.scShown === sc.id + sc.status; this.scShown = sc.id + sc.status;
+    box.innerHTML = kitCardHtml(sim, this.scMin, again && box.firstChild);
+  }
+  showKitEnd() {
+    const s = this.sim.s; if (!isKit(s) || !s.scenario.kit.result) return;
+    recordKitResult(s.scenario.kit.result);
+    this.$('modal').innerHTML = kitEndHtml(this.sim); this.pauseForPopup('modal');
   }
   renderComeback(force = false) {
     if (this.pointerBusy && !force) return;
@@ -2859,7 +2886,7 @@ export class UI {
   showScenarios() {
     this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal"><div class="row"><h2 style="flex:1">Scenarios</h2><button class="x" data-a="${this.title ? 'showTitleBack' : 'modalClose'}" aria-label="Close">${I.x}</button></div>
       <p class="note">Cedar Creek has no deadline; it completes the moment all its goals hold together. Other scenarios use morning checkpoints and the limits shown below.</p>
-      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map(g => `<li>${esc(g.label)}</li>`).join('')}${id==='comeback'?'<li>No deadline · keep playing after the rescue</li>':`<li>Deadline: day ${S.deadline}</li><li class="f">Fail: cash after unpaid bills and credit-line balance below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li>`}${(S.extra || []).map(x => `<li${/^Fail/.test(x) ? ' class="f"' : ''}>${esc(x)}</li>`).join('')}${S.perRun ? '<li>Each new start draws its own layout seed and one starting variant</li>' : ''}</ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
+      <div class="menu-list">${Object.entries(SCENARIOS).map(([id, S]) => S.kit ? kitMenuCard(id, S, readKitRecords()[id]) : `<div class="scen-card"><b>${esc(S.name)}</b><p>${esc(S.blurb)}</p><ul>${S.goals.map(g => `<li>${esc(g.label)}</li>`).join('')}${id==='comeback'?'<li>No deadline · keep playing after the rescue</li>':`<li>Deadline: day ${S.deadline}</li><li class="f">Fail: cash after unpaid bills and credit-line balance below ${money(S.fail.cashBelow)} for ${S.fail.cashDays} days</li>`}${(S.extra || []).map(x => `<li${/^Fail/.test(x) ? ' class="f"' : ''}>${esc(x)}</li>`).join('')}${S.perRun ? '<li>Each new start draws its own layout seed and one starting variant</li>' : ''}</ul><button class="btn pri" data-a="new" data-v="sc:${id}">Start ${esc(S.name)}</button></div>`).join('')}</div></div></div>`;
     const x = this.root.querySelector('[data-a="showTitleBack"]'); if (x) x.onclick = () => this.showTitle();
   }
   showSandbox() {
@@ -3163,7 +3190,7 @@ export class UI {
     if (this.g.saveStartup) { this.$('modal').innerHTML = '<div class="title"><h1>Self Storage Tycoon</h1><p role="status">Checking saved progress…</p></div>'; return; }
     this.$('modal').innerHTML = `<div class="title">${I.logo.replace('<svg', '<svg class="logo"')}<h1>Self Storage Tycoon</h1><p>Build, operate and grow a self-storage property. Every unit, cart, door and customer is simulated.</p>
       <div class="choices">${this.contSave ? `<button class="btn go" data-a="continue">Continue <small>${esc(this.contSave.meta.name || 'Saved game')}${this.contSave.meta.mode ? ' · ' + esc(this.contSave.meta.mode) : ''} · Day ${+this.contSave.meta.day || 1} · ${money(+this.contSave.meta.cash || 0)} · ${this.ago(this.contSave.at * 1000)}</small></button>` : ''}${this.keptLabel() ? `<button class="btn" data-a="restoreKept">Restore previous game <small>${this.keptLabel()}</small></button>` : ''}${this.archiveLabel()}<button class="btn ${this.contSave ? '' : 'pri'}" data-a="new" data-v="maple-public">Maple Street <small>Tutorial · take over a small facility</small></button>
-      <button class="btn" data-a="scenarios">Scenarios <small>Cedar Creek, Turnaround, Go Vertical, Climate Boom, Harborview, Ironworks, Campus Crunch</small></button>
+      <button class="btn" data-a="scenarios">Scenarios <small>Cedar Creek, Turnaround, Go Vertical, Climate Boom, Harborview, Ironworks, Campus Crunch, Grand Opening, Storm Season, The Chain Next Door</small></button>
       <button class="btn" data-a="sandboxSetup">Sandbox <small>Business or Free Build, on your terms</small></button>
       <button class="btn" data-a="loadOpen">Load a save <small>Paste code or open file</small></button></div>
       <div class="title-live"><i></i>Live · Maple Street Storage, operating in real time</div><div class="title-build">Build ${esc(this.g.BUILD ? this.g.BUILD.name : 'dev')}</div></div>`;
@@ -3269,7 +3296,7 @@ export class UI {
   showFinances() {
     const sim = this.sim, s = sim.s, rcv = sim.receivables();
     const W = [1, 7, 30].map((d) => [d, this.cashWindow(d)]);
-    const cats = { rent: 'Rent collected', anc: 'Late fees & auctions', opex: 'Operating costs', payroll: 'Payroll', service: 'Vendors / service', marketing: 'Advertising', capex: 'Construction / capital', debt: 'Loan principal', interest: 'Interest', loan: 'Loan proceeds', inject: 'Added funds', subsidy: 'Sandbox funds', other: 'Other', settle_opex: 'Weekly operating bills', settle_payroll: 'Weekly payroll', settle_interest: 'Weekly credit interest' };
+    const cats = { rent: 'Rent collected', anc: 'Late fees & auctions', opex: 'Operating costs', payroll: 'Payroll', service: 'Vendors / service', marketing: 'Advertising', capex: 'Construction / capital', debt: 'Loan principal', interest: 'Interest', loan: 'Loan proceeds', inject: 'Added funds', subsidy: 'Sandbox funds', insurance: 'Insurance recoveries', other: 'Other', settle_opex: 'Weekly operating bills', settle_payroll: 'Weekly payroll', settle_interest: 'Weekly credit interest' };
     const w30 = W[2][1], grouped = w30.categories;
     const groupHtml = Object.entries(grouped).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).map(([k,v]) => '<span>' + esc(cats[k] || k) + '</span><span class="' + (v < 0 ? 'neg' : '') + '">' + (v >= 0 ? '+' : '') + money(v) + '</span>').join('');
     const recent = s.ledger.slice(-16).reverse().map((x) => '<div class="item"><div class="grow"><b>' + esc(x.note || cats[x.cat] || 'Cash movement') + '</b><small>Day ' + dayOf(x.t) + ' · ' + fmtTime(x.t) + ' · ' + esc(x.info ? 'Information only · no cash moved' : cats[x.cat] || x.cat || 'Other') + '</small></div><b class="' + (x.amt < 0 ? 'neg' : '') + '">' + (x.info ? '— info' : (x.amt >= 0 ? '+' : '') + money(x.amt)) + '</b></div>').join('');
