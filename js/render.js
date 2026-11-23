@@ -1045,8 +1045,28 @@ export class Renderer {
     if(F) {
       // Public frontage fence: the same runs the staff routing uses.
       frontGaps.push([...F.frontGap]); frontGaps.sort((a,b)=>a[0]-b[0]);
-      const office = this.sim.objs('office').some(o=>o.staffDoor);
-      for (const f of F.fence) run(...(office && f.office ? f.office : f.run));
+      const office = this.sim.objs('office').find(o=>o.staffDoor);
+      for (const f of F.fence) {
+        if (!office?.generalPlacement) {
+          run(...(office && f.office ? f.office : f.run));
+          continue;
+        }
+        const [x0,y0,x1,y1] = f.run;
+        const vertical = x0 === x1;
+        const fixed = vertical ? x0 : y0;
+        const start = Math.min(vertical ? y0 : x0, vertical ? y1 : x1);
+        const end = Math.max(vertical ? y0 : x0, vertical ? y1 : x1);
+        const across = vertical ? office.x : office.y;
+        const along = vertical ? office.y : office.x;
+        const from = Math.max(start,along);
+        const to = Math.min(end,along+(vertical ? office.h : office.w));
+        if (fixed < across || fixed > across+(vertical ? office.w : office.h) || from >= to) run(...f.run);
+        else {
+          const segment = (a,b) => vertical ? run(fixed,a,fixed,b) : run(a,fixed,b,fixed);
+          if (from > start) segment(start,from);
+          if (to < end) segment(to,end);
+        }
+      }
       if(F.gateLine && !this.sim.objs('gate').some(g=>recessed(s,g))) run(...F.gateLine);
     }
     let frontX = p.x0;

@@ -1088,7 +1088,7 @@ export class UI {
       this.pauseForPopup('sandboxBuild'); this.notePause(0);
     }
     if (!k) this.resumePopup('sandboxBuild');
-    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.recoKey = null; this.flip = false; this.buildRotation = null; this.rend.setPreview(null);
+    this.buildPlacing = false; this.root?.classList.remove('is-placing'); this.tool = k; this.upgradeOptions={lighting:'none',outsideCameras:false,excludedFixtures:[]}; this.plan = null; this.planArgs = null; this.placementPeek = false; this.recoCompact = false; this.recoKey = null; this.flip = false; this.buildRotation = k === 'office' ? 2 : null; this.rend.setPreview(null);
     if (k) { this.sel = null; this.rend.setSelection(null); this.sfx('click'); }
     this.renderSheet(true); this.renderActionBar();
   }
@@ -1109,7 +1109,7 @@ export class UI {
         const axisX=dir ? dir[1] !== 0 : Math.abs(b.x-a.x)>=Math.abs(b.y-a.y);
         const span=SIZES[T.size].w*this.plan.count, sg=Math.sign(axisX?b.x-a.x:b.y-a.y)||1;
         this.planArgs={a:{...a},b:{x:a.x+(this.buildRotation%2?0:sg*(span-1)),y:a.y+(this.buildRotation%2?sg*(span-1):0)}};
-      } else if(office) this.planArgs={a:{x,y},b:{x,y}};
+      } else if(this.tool==='office') this.planArgs={a:{x,y},b:{x,y}};
       else {
         const w=Math.abs(b.x-a.x)+1,h=Math.abs(b.y-a.y)+1;
         this.planArgs={a:{x,y},b:{x:x+(step%2?h:w)-1,y:y+(step%2?w:h)-1}};
