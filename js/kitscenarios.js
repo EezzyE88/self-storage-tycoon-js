@@ -112,7 +112,7 @@ const GO = {
   hold: 14, winFrom: 100, deadline: 210,
   fail: { cashBelow: -6000, cashDays: 14 },
   failText: 'Missing a lender check and not fixing it in 21 days, or cash after bills and debt below -$6,000 for 14 days, ends the run.',
-  loan: 184000, demand: 0.1,
+  loan: 215000, demand: 0.1,
 };
 function goMake(seed) {
   const sim = baseSim('blank', seed, KIT_SITES.grandopening), s = sim.s, rnd = seedRand(seed);
