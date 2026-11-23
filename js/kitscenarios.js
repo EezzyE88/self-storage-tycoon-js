@@ -6,6 +6,7 @@
 import { newState, Sim } from './sim.js';
 import { MARKETS, NAMES_FIRST, NAMES_LAST, BILLING_CYCLE_DAYS, ROUTINE_VISIT_CHANCE, WORK, G } from './data.js';
 import { ensureCustomerAccounts } from './customeraccounts.js';
+import { KIT_SITES, paintSite, fitOutSite } from './kitsites.js';
 import { registerKit, kitState, kitRand, seedRand, runSeed, addMod, applyMods, kitLog, kitMetric, projectDone, modsFor } from './scenariokit.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -13,13 +14,15 @@ const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const pctTxt = (v) => Math.round(v * 100) + '%';
 
 // ---------------------------------------------------------------- shared setup helpers
-function baseSim(market, seed) {
+function baseSim(market, seed, site = null) {
   const s = newState({ mode: 'scenario', seed, market });
+  if (site) paintSite(s, site); // SK-02: the scenario's own public-office site
   s.tut = { on: false, beat: 99, flags: {}, done: true }; s.lesson = null; s.open = false; s.speed = 0;
   const sim = new Sim(s);
   s.staff.push({ id: sim.id(), role: 'owner', name: 'You', wage: 0, hired: 0 });
   sim.spawnStaffAgent?.(s.staff[0]);
   s.mkt.nextComp = 99999; // kit scenarios bring their own rivals (or none)
+  if (site) { sim.rebuild(); fitOutSite(sim, site); for (const u of sim.objs('unit')) if (u.cstate === 'operating' && !u.lease) u.commercial = 'ready'; }
   return sim;
 }
 function prebuild(sim, list) {
@@ -100,7 +103,7 @@ const GO_LAYOUT = [
 ];
 const GO = {
   name: 'Grand Opening',
-  blurb: 'You just finished building a 41-unit facility on borrowed money, and not one unit is rented. The construction lender checks your occupancy on set days and wants the rent to cover its payments by the end. Price low and you fill fast but lock in thin rents for good. Price high and the lender may run out of patience first.',
+  blurb: 'You just finished building a 43-unit facility on borrowed money, and not one unit is rented. The construction lender checks your occupancy on set days and wants the rent to cover its payments by the end. Price low and you fill fast but lock in thin rents for good. Price high and the lender may run out of patience first.',
   goals: [
     { k: 'occ', v: 0.85, label: 'Occupancy at least 85%', fmt: 'pct' },
     { k: 'dscr', v: 1.25, label: 'Operating profit covers loan payments 1.25 times (30 days)', fmt: 'x' },
@@ -109,11 +112,10 @@ const GO = {
   hold: 14, winFrom: 100, deadline: 210,
   fail: { cashBelow: -6000, cashDays: 14 },
   failText: 'Missing a lender check and not fixing it in 21 days, or cash after bills and debt below -$6,000 for 14 days, ends the run.',
-  loan: 184000, demand: 0.1,
+  loan: 215000, demand: 0.1,
 };
 function goMake(seed) {
-  const sim = baseSim('blank', seed), s = sim.s, rnd = seedRand(seed);
-  prebuild(sim, GO_LAYOUT);
+  const sim = baseSim('blank', seed, KIT_SITES.grandopening), s = sim.s, rnd = seedRand(seed);
   s.open = true;
   const { rate, months } = sim.loanTerms(); const pmt = sim.loanPmt(GO.loan, rate, months);
   s.debt.push({ id: sim.id(), orig: GO.loan, bal: GO.loan, rate, months, pmt, next: 31, start: 1, paid: 0, kitConstruction: true });
@@ -250,8 +252,7 @@ const SS = {
 };
 const SS_FIX = { emergency: { per: 420, days: 2 }, contractor: { per: 240, days: 9 } };
 function ssMake(seed) {
-  const sim = baseSim('rural', seed), s = sim.s, rnd = seedRand(seed);
-  prebuild(sim, SS_LAYOUT);
+  const sim = baseSim('rural', seed, KIT_SITES.stormseason), s = sim.s, rnd = seedRand(seed);
   s.open = true;
   const units = sim.objs('unit').slice().sort((a, b) => a.id - b.id);
   const share = 0.88 + rnd() * 0.06;
@@ -414,7 +415,7 @@ const CN_LAYOUT = [
 ];
 const CN = {
   name: 'The Chain Next Door',
-  blurb: 'Your city storage business is nearly full at fair rents. Then Vaultline, a national chain, starts building across the road. It will undercut you, and it answers every price cut you make with a deeper one. Hold on to your tenants and your income: by price, by service, by loyalty, or by a mix of all three.',
+  blurb: 'Your city storage business is nearly full at fair rents. Then Vaultline, a national chain, starts building across the road. It will undercut you, and it answers every price cut you make with a deeper one. Hold on to your tenants and your income: by price, by service, by loyalty, or by a mix of all three. Your climate building\'s HVAC also wears out, and only a Tech or a paid vendor can repair it.',
   goals: [
     { k: 'occ', v: 0.85, label: 'Occupancy at least 85%', fmt: 'pct' },
     { k: 'rollShare', v: 0.92, label: 'Paying rent at least 92% of where you started', fmt: 'pct' },
@@ -427,8 +428,7 @@ const CN = {
   demand: 0.075,
 };
 function cnMake(seed) {
-  const sim = baseSim('urban', seed), s = sim.s, rnd = seedRand(seed);
-  prebuild(sim, CN_LAYOUT);
+  const sim = baseSim('urban', seed, KIT_SITES.chainnextdoor), s = sim.s, rnd = seedRand(seed);
   s.open = true;
   const units = sim.objs('unit').slice().sort((a, b) => a.id - b.id);
   const share = 0.9 + rnd() * 0.05;
@@ -497,8 +497,22 @@ function poachTargets(sim) { // tenants paying above the rival's price (plus a l
   const k = s.scenario.kit, cap = k.poachN || (k.poachN = 5 + Math.floor(kitRand(k) * 3)); // the mailer tempts the least happy of the tenants paying well above Vaultline
   return Object.values(s.tenants).filter((tn) => { const L = s.leases[tn.lease]; if (!L || tn.leaving || L.status !== 'current') return false; const u = s.objects[L.unit]; return u && L.rent / sim.marketRent(u) > cp + 0.05 && tn.sat < 0.9; }).sort((a, b) => a.sat - b.sat || a.id - b.id).slice(0, cap);
 }
+// HVAC feedback (presentation only): reads the same derived capacity the climate rating uses; never rebuilds or changes play.
+function cnClimateShort(sim) { const D = sim.D; if (!D || !D.hvac) return null; for (const e of Object.values(D.hvac)) if (e.load > 0 && e.cap < e.load) return e; return null; }
+const CN_HVAC_FIX = 'Only a Tech or a vendor ($650) can repair it, not you: Operate → Repair HVAC Plant → Call vendor.';
+function cnHvacFeedback(sim) {
+  const k = sim.s.scenario.kit, e = cnClimateShort(sim);
+  if (e && !k.flags.hvacShort) {
+    k.flags.hvacShort = true;
+    const worn = e.plants.some((id) => (sim.s.objects[id]?.cond ?? 1) < 0.45);
+    const why = worn ? `A worn HVAC plant can't keep up. ${CN_HVAC_FIX}` : 'The HVAC can\'t keep up with the climate units it serves.';
+    kitLog(sim, `Climate units are overheating. ${why} Climate tenants rate you down until then.`, 'bad');
+    sim.emit('drama', { k: 'hvac', title: 'Climate units are overheating', sub: `${why} Climate tenants rate you down until then.` });
+  } else if (!e && k.flags.hvacShort) { k.flags.hvacShort = false; kitLog(sim, 'HVAC is keeping up again: climate units are cool', 'good'); }
+}
 function cnOnDay(sim, day) {
   const s = sim.s, k = s.scenario.kit, c = cnRival(sim);
+  cnHvacFeedback(sim);
   const pe = k.events.find((x) => x.id === 'poach'); if (pe && !pe.fired) k.poachCost = poachTargets(sim).length * 0.5 * (s.leases && Object.values(s.leases).reduce((a, L) => a + L.rent, 0) / Math.max(1, Object.keys(s.leases).length));
   if (!c || day < c.opens) return;
   if (day >= k.nextRivalCheck) {
@@ -516,7 +530,7 @@ function cnProjectDone(sim, id) {
   if (id === 'refresh') { for (const d of s.dirt) d.fill(0); s.exp.cleanliness = clamp(s.exp.cleanliness + 0.1, 0, 1); s.exp.comfort = clamp((s.exp.comfort ?? 0.8) + 0.08, 0, 1); for (const tn of Object.values(s.tenants)) tn.sat = clamp(tn.sat + 0.05, 0, 1); }
 }
 function cnMetric(sim, k) { if (k === 'rollShare') { const r0 = sim.s.scenario.kit.start.roll || 1; return sim.rentRollPaying() / r0; } }
-function cnUpcoming(sim) { const c = cnRival(sim), k = sim.s.scenario.kit, day = sim.day; if (!c) return []; if (day < c.opens) return [{ day: c.opens, text: `Day ${c.opens}: Vaultline opens (${pctTxt(1 - c.price)} under market)`, urgent: c.opens - day <= 5 }]; return [{ day: k.nextRivalCheck, text: `Day ${k.nextRivalCheck}: Vaultline reviews its prices (now ${pctTxt(1 - c.price)} under)`, urgent: false }]; }
+function cnUpcoming(sim) { const c = cnRival(sim), k = sim.s.scenario.kit, day = sim.day; const hv = k.flags.hvacShort && cnClimateShort(sim) ? [{ day, text: `Now: climate units overheating. ${CN_HVAC_FIX}`, urgent: true }] : []; if (!c) return hv; if (day < c.opens) return [...hv, { day: c.opens, text: `Day ${c.opens}: Vaultline opens (${pctTxt(1 - c.price)} under market)`, urgent: c.opens - day <= 5 }]; return [...hv, { day: k.nextRivalCheck, text: `Day ${k.nextRivalCheck}: Vaultline reviews its prices (now ${pctTxt(1 - c.price)} under)`, urgent: false }]; }
 function cnScore(sim) {
   const k = sim.s.scenario.kit, share = cnMetric(sim, 'rollShare'), c = cnRival(sim), notes = [];
   let stars = 1; const full = share >= 1.0, calm = k.wars === 0;

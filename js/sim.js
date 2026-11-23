@@ -1859,7 +1859,12 @@ export class Sim {
     amt *= (this.s.opts && this.s.opts.wear != null ? this.s.opts.wear : 1);
     const before = o[key]; o[key] = Math.max(0, o[key] - amt);
     if (before >= 0.2 && o[key] < 0.2) { this.emit('fault', { obj: o.id, x: o.x, y: o.y, f: o.f || 0, sev: o.type === 'elevator' || o.type === 'hvac' ? 'critical' : 'attention' }); this.markDirty(); }
-    else if (before >= 0.45 && o[key] < 0.45) this.emit('degraded', { obj: o.id, x: o.x, y: o.y, f: o.f || 0 });
+    else if (before >= 0.45 && o[key] < 0.45) {
+      this.emit('degraded', { obj: o.id, x: o.x, y: o.y, f: o.f || 0 });
+      // Lights dim and HVAC plants derate below 45%: refresh the derived lighting/HVAC caches now, so play
+      // does not depend on an unrelated rebuild (or on a save/reload, which always rebuilds).
+      if (key === 'cond' && (o.type === 'light' || o.type === 'hvac')) this.markDirty();
+    }
   }
   randomTime(day, h0, h1) { return (day - 1) * MIN_PER_DAY + Math.floor((h0 + this.rnd() * (h1 - h0)) * 60); }
   randomAccessTime(day) { return this.randomTime(day, ACCESS_HOURS[0] + 0.5, ACCESS_HOURS[1] - 1.5); }
