@@ -32,7 +32,8 @@ function play(sim, f, untilDay = 999) { const s = sim.s; while (s.scenario.statu
 const PLANS = {
   grandopening: player({ finance: 1, opening: 0, movers: 0, rival: 1, bulk: 1 }, (sim) => { const s = sim.s; if (!s.mkt.ad) sim.dispatch({ type: 'ad', kind: 'local' }); if (sim.financialPosition().netLiquid < -3000 && s.loan.bal < sim.creditLimit() - 2000) sim.dispatch({ type: 'loan', amt: 2000 }); }),
   stormseason: player({ insure: 1, prep: 1, repair: 0, claims: 1 }),
-  chainnextdoor: player({ retain: 0, poach: 1, sponsor: 0, office: 0 }, (sim) => { const s = sim.s; if (!s.mkt.ad) sim.dispatch({ type: 'ad', kind: 'local' }); if ((sim.day - 1) % 15 === 0) for (const key of Object.keys(s.market.ask)) { const [size, env] = key.split('|'); sim.dispatch({ type: 'setRent', key, v: Math.round(sim.marketRent({ size, env }) * 0.93 / 5) * 5 }); } }),
+  // SK-02: the Chain's climate building has HVAC plants that only a Tech or a paid vendor can repair; the plan books the vendor through the normal action
+  chainnextdoor: player({ retain: 0, poach: 1, sponsor: 0, office: 0 }, (sim) => { const s = sim.s; for (const t of s.tasks.filter((t) => t.type === 'repair' && !t.assigned && !t.vendor && t.need === 'repair_complex' && s.objects[t.obj]?.type === 'hvac')) sim.dispatch({ type: 'callVendor', task: t.id }); if (!s.mkt.ad) sim.dispatch({ type: 'ad', kind: 'local' }); if ((sim.day - 1) % 15 === 0) for (const key of Object.keys(s.market.ask)) { const [size, env] = key.split('|'); sim.dispatch({ type: 'setRent', key, v: Math.round(sim.marketRent({ size, env }) * 0.93 / 5) * 5 }); } }),
 };
 
 await test('the three kit scenarios are listed with goals, holds and fail text, and the older four are unchanged', async () => {

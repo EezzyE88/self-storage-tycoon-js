@@ -103,7 +103,7 @@ const GO_LAYOUT = [
 ];
 const GO = {
   name: 'Grand Opening',
-  blurb: 'You just finished building a 41-unit facility on borrowed money, and not one unit is rented. The construction lender checks your occupancy on set days and wants the rent to cover its payments by the end. Price low and you fill fast but lock in thin rents for good. Price high and the lender may run out of patience first.',
+  blurb: 'You just finished building a 43-unit facility on borrowed money, and not one unit is rented. The construction lender checks your occupancy on set days and wants the rent to cover its payments by the end. Price low and you fill fast but lock in thin rents for good. Price high and the lender may run out of patience first.',
   goals: [
     { k: 'occ', v: 0.85, label: 'Occupancy at least 85%', fmt: 'pct' },
     { k: 'dscr', v: 1.25, label: 'Operating profit covers loan payments 1.25 times (30 days)', fmt: 'x' },
@@ -499,7 +499,7 @@ function poachTargets(sim) { // tenants paying above the rival's price (plus a l
 }
 // HVAC feedback (presentation only): reads the same derived capacity the climate rating uses; never rebuilds or changes play.
 function cnClimateShort(sim) { const D = sim.D; if (!D || !D.hvac) return null; for (const e of Object.values(D.hvac)) if (e.load > 0 && e.cap < e.load) return e; return null; }
-const CN_HVAC_FIX = 'Only a Tech or a vendor ($650) can repair it, not you.';
+const CN_HVAC_FIX = 'Only a Tech or a vendor ($650) can repair it, not you: Operate → Repair HVAC Plant → Call vendor.';
 function cnHvacFeedback(sim) {
   const k = sim.s.scenario.kit, e = cnClimateShort(sim);
   if (e && !k.flags.hvacShort) {

@@ -35,9 +35,9 @@ await test('one warning when climate capacity first falls short, naming the Tech
   const sim = makeScenario('chainnextdoor', SEED);
   let cards = run(sim, 200, (x) => warnLog(x).length > 0);
   assert.equal(cards, 1, 'one drama card'); const w = warnLog(sim); assert.equal(w.length, 1);
-  assert.match(w[0].text, /Tech or a vendor \(\$650\)/); assert.match(w[0].text, /not you/); assert.equal(w[0].tone, 'bad');
+  assert.match(w[0].text, /Tech or a vendor \(\$650\)/); assert.match(w[0].text, /not you/); assert.match(w[0].text, /Operate → Repair HVAC Plant → Call vendor/); assert.equal(w[0].tone, 'bad');
   assert.ok(short(sim), 'warning matches the capacity the climate rating reads');
-  const up = kitView(sim).upcoming; assert.ok(up.some((u) => u.urgent && /^Now: climate units overheating/.test(u.text) && /Tech or a vendor/.test(u.text)), 'Coming up line');
+  const up = kitView(sim).upcoming; assert.ok(up.some((u) => u.urgent && /^Now: climate units overheating/.test(u.text) && /Tech or a vendor/.test(u.text) && /Operate → Repair HVAC Plant → Call vendor/.test(u.text)), 'Coming up line');
   // the morning before, capacity was fine and nothing was said
   const pre = makeScenario('chainnextdoor', SEED); run(pre, w[0].day); assert.equal(warnLog(pre).length, 0); assert.equal(pre.s.scenario.kit.flags.hvacShort, undefined);
   // no repeats while it stays short
@@ -51,9 +51,8 @@ await test('save and reload neither repeats nor loses the warning', async () => 
   assert.ok(kitView(b).upcoming.some((u) => /^Now: climate units overheating/.test(u.text)), 'Coming up line survives reload');
   // reloaded the evening before the warning: it still fires exactly once
   const c = makeScenario('chainnextdoor', SEED); run(c, d0 - 1); let r = await reload(c); const cc = run(r, d0 + 15);
-  // a reload re-derives HVAC capacity from current plant wear, so the warning can come a little earlier than without one;
-  // it still comes once, on the first morning the climate rating's capacity reads short
-  assert.equal(cc, 1); assert.equal(warnLog(r).length, 1); assert.ok(warnLog(r)[0].day >= d0 - 1 && warnLog(r)[0].day <= d0, 'warned by the uninterrupted day');
+  // HVAC capacity is refreshed when a plant derates, so a reload cannot move the warning: same day, exactly once
+  assert.equal(cc, 1); assert.equal(warnLog(r).length, 1); assert.equal(warnLog(r)[0].day, d0, 'same day as without a reload');
 });
 await test('a vendor repair clears it once; a later shortfall warns again, once', async () => {
   const sim = makeScenario('chainnextdoor', SEED); run(sim, 200, (x) => warnLog(x).length > 0); const d0 = warnLog(sim)[0].day;
