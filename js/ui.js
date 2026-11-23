@@ -2315,7 +2315,7 @@ export class UI {
       case 'power_restored': break;
       case 'sb_goal': this.sfx('milestone'); this.toast(`Goal met: ${e.label}. Keep playing - the facility is still yours.`, 'good'); break;
       case 'comeback_goal': this.toast(e.label + ' · complete', 'good'); this.renderTut(true); break;
-      case 'scenario_end': if (e.comeback || this.sim?.s.scenario?.rules) this.scMin = false; this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); this.renderTut(true); if (e.kit && !this.title) this.showKitEnd(); break;
+      case 'scenario_end': if (e.comeback || this.sim?.s.scenario?.rules) this.scMin = false; this.sfx(e.won ? 'milestone' : 'attention'); this.toast(e.won ? 'Scenario complete' : 'Scenario failed', e.won ? 'good' : 'bad'); if (e.kit && !this.title) { this.renderTut(true); this.showKitEnd(); break; } this.renderTut(true); break;
       case 'scn_decision': this.sfx('attention'); this.toast('Decision: ' + e.title); this.renderTut(true); break;
       case 'scn_warn': this.toast('Coming up: ' + e.msg); break;
       case 'scn_check': this.toast(e.ok ? `${e.label}: passed` : `${e.label}: missed. Fix it by Day ${e.cure}`, e.ok ? 'good' : 'bad'); if (!e.ok) this.sfx('attention'); this.renderTut(true); break;
