@@ -102,7 +102,7 @@ export function makeFreightLift(def, seed = 4401) {
   prebuild(sim, [
     { tool: 'gate', a: { x: 18, y: y1 }, b: { x: 18, y: y1 } },
     { tool: 'aisle', a: { x: 17, y: 14 }, b: { x: 19, y: y1 } },
-    { tool: 'parking', a: { x: 17, y: 18 }, b: { x: 17, y: 21 } },
+    { tool: 'parking', a: { x: 17, y: 17 }, b: { x: 17, y: 22 } },
     { tool: 'office', a: { x: 14, y: 19 }, b: { x: 14, y: 19 } },
     { tool: 'aisle', a: { x: 8, y: 13 }, b: { x: 30, y: 14 } },
     { tool: 'walk', a: { x: 8, y: 12 }, b: { x: 30, y: 12 } },
@@ -144,7 +144,7 @@ export function makeCampus(def, seed = 4401) {
     { tool: 'gate', a: { x: 20, y: y1 }, b: { x: 20, y: y1 } },
     { tool: 'aisle', a: { x: 19, y: 5 }, b: { x: 21, y: y1 } },
     { tool: 'aisle', a: { x: 4, y: 8 }, b: { x: 37, y: 9 } },
-    { tool: 'parking', a: { x: 19, y: 23 }, b: { x: 19, y: 26 } },
+    { tool: 'parking', a: { x: 19, y: 23 }, b: { x: 19, y: 27 } },
     { tool: 'office', a: { x: 16, y: 24 }, b: { x: 16, y: 24 } },
     { tool: 'du5x10', a: { x: 4, y: 7 }, b: { x: 17, y: 7 } },
     { tool: 'du5x10', a: { x: 23, y: 7 }, b: { x: 37, y: 7 } },
