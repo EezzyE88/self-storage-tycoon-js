@@ -63,7 +63,7 @@ await test('decisions: one at a time, invalid or unaffordable answers refused, u
   assert.equal(sim.dispatch({ type: 'scnChoice', ev: 'finance', i: 7 }).ok, false);
   const r = sim.dispatch({ type: 'scnChoice', ev: 'finance', i: 1 }); assert.equal(r.ok, true);
   assert.equal(k.flags.io, true); assert.equal(k.checks.find((c) => c.id === 'm2').v, 0.75, 'interest-only raises the Day 120 check');
-  assert.ok(s.debt[0].pmt < 1200, 'interest-only payment');
+  const ld = s.debt.find((x) => x.kitConstruction), io = Math.round(ld.orig * sim.loanTerms().rate / 12 * 100) / 100; assert.ok(ld === s.debt[0] && ld.bal === ld.orig && ld.rate === sim.loanTerms().rate, 'interest-only covers the whole construction loan at the current terms'); assert.equal(ld.pmt, io, 'interest-only payment is the loan times the rate over 12'); assert.ok(ld.pmt < ld.ioPmt, 'interest-only payment is below the standard payment');
   assert.equal(sim.dispatch({ type: 'scnChoice', ev: 'finance', i: 0 }).ok, false, 'answered once');
   play(sim, null, k.events.find((e) => e.id === 'opening').day + 1); assert.equal(k.pending?.id, 'opening');
   s.cash = 100; assert.equal(sim.dispatch({ type: 'scnChoice', ev: 'opening', i: 0 }).ok, false, 'cannot afford the event');
