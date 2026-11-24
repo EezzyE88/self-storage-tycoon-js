@@ -7,6 +7,7 @@ import { COMEBACK_GOALS, cedarGoals, comebackProgress, isComeback } from './come
 import { ensureCustomerAccounts } from './customeraccounts.js';
 import { nameUnit } from './unitnumbering.js';
 import { makeRateReset, makeFreightLift, makeCampus } from './newscenarios.js';
+import { HARBORVIEW_KIT } from './harborview.js';
 import { KIT_SCENARIOS, makeKitScenario } from './kitscenarios.js';
 import { CEDAR_LAYOUT, CEDAR_SITE, CEDAR_FRONTAGE, CEDAR_AISLES, CEDAR_CORE, CEDAR_TARGETS, CEDAR_START } from './cedarcreek.js';
 
@@ -35,13 +36,9 @@ export const SCENARIOS = {
     deadline: 240, fail: { cashBelow: -8000, cashDays: 14 },
   },
   // Nov 22, 2026 prototypes (local, not accepted). perRun: each new start draws its own seed and variant.
-  ratereset: {
-    name: 'Harborview Rate Reset', perRun: true,
-    blurb: 'You just bought Harborview, a full 44-unit drive-up yard whose last owner never raised a rent. Tenants pay well under market, the posted street rates are just as stale, and shoppers are scarce. Raise rents too fast and people leave into a slow market; do nothing and the numbers never work.',
-    goals: [{ k: 'roll', v: 0, label: 'Monthly lease rent 15% above your start', fmt: 'money' }, { k: 'occ', v: 0.92, label: 'Occupancy at least 92%', fmt: 'pct' }],
-    extra: ['All goals must hold together for 14 days in a row'], hold: 14, rollUp: 0.15, cash: 2500,
-    deadline: 100, fail: { cashBelow: -1500, cashDays: 14 }, rules: { kind: 'ratereset' },
-  },
+  // HV-2 (Nov 24, 2026): Harborview is a scenario-kit start on its own Pier Road site (js/harborview.js).
+  ratereset: { name: HARBORVIEW_KIT.name, blurb: HARBORVIEW_KIT.blurb, goals: HARBORVIEW_KIT.goals, deadline: HARBORVIEW_KIT.deadline, fail: HARBORVIEW_KIT.fail, kit: true, perRun: true,
+    hold: HARBORVIEW_KIT.hold, winFrom: HARBORVIEW_KIT.winFrom, failText: HARBORVIEW_KIT.failText, rollUp: HARBORVIEW_KIT.rollUp, cash: HARBORVIEW_KIT.cash },
   freightlift: {
     name: 'Ironworks Lofts', perRun: true,
     blurb: 'A converted two-story brick warehouse with one freight elevator from 1962. The ground floor pays the bills; the upstairs is where the money is, and three upper rows are still empty. If the cab stops, tenants can still take the stairs, but carts can\'t go up and no upstairs unit can be rented until it\'s fixed. Keep it running, fit out the empty rows in any sizes you like, and grow upstairs rent.',
@@ -77,7 +74,7 @@ function freshBooks(s) { s.today = { day: 1, rent: 0, other: 0, opex: 0, payroll
 export function makeScenario(id, seed) { // seed: Cedar Creek defaults to 4401 as before; kit scenarios pick a fresh run seed
   if (KIT_SCENARIOS[id]) return makeKitScenario(id, seed);
   if (id === 'comeback') return makeCedarCreek(seed);
-  if (id === 'ratereset') return makeRateReset(SCENARIOS.ratereset, seed);
+  if (id === 'ratereset') return makeRateReset(HARBORVIEW_KIT, seed);
   if (id === 'freightlift') return makeFreightLift(SCENARIOS.freightlift, seed);
   if (id === 'campus') return makeCampus(SCENARIOS.campus, seed);
   if (id === 'turnaround') {

@@ -30,6 +30,7 @@ import { BEATS, toolUnlocked, unlockBeat, stepState, curBeat, LESSONS, lessonByI
 import { SCENARIOS, scenarioProgress, SB_PRESETS, sbDefaults } from './scenarios.js';
 import { scenarioRulesHtml } from './newscenarioui.js';
 import { isKit } from './scenariokit.js';
+import { harborGroup } from './harborview.js';
 import { kitCardHtml, kitCardKey, kitEndHtml, kitMenuCard, readKitRecords, recordKitResult, kitFmt } from './kitui.js';
 import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
@@ -1616,7 +1617,7 @@ export class UI {
         h += `<div class="kv"><span>Size</span><span>${o.size} (${SIZES[o.size].sqft} sq ft)</span><span>New-tenant rent</span><span>${money(ask)}/mo</span><span>Market rent</span><span>${money(Math.round(sim.marketRent(o)))}/mo</span>`;
         if (o.access === 'interior' && o.cstate === 'operating') h += `<span>Convenience</span><span>${pct(o.conv ?? 1)}</span>`;
         h += `<span>Security</span><span>${pct(sim.unitSecurity(o))}</span></div>`;
-        if (L) h += `<h3>Tenant</h3><div class="kv"><span>Name</span><span>${esc(tn ? tn.name : '—')}</span><span>Rent</span><span>${money(L.rent)}/mo</span><span>Next bill</span><span>Day ${L.nextBill}</span><span>Satisfaction</span><span>${tn ? pct(tn.sat) : '—'}</span>${tn && tn.leaving ? '<span>Status</span><span>Moving out</span>' : ''}${L.status !== 'current' ? `<span>Owes</span><span>${money(sim.owed(L))} · ${sim.day - L.dueSince} days late</span>` : ''}${tn && tn.cramped ? '<span>Note</span><span>Feels cramped in this size</span>' : ''}</div>`;
+        if (L) h += `<h3>Tenant</h3><div class="kv"><span>Name</span><span>${esc(tn ? tn.name : '—')}</span>${harborGroup(s, L) ? `<span>Customer</span><span>${esc(harborGroup(s, L))}</span>` : ''}<span>Rent</span><span>${money(L.rent)}/mo</span><span>Next bill</span><span>Day ${L.nextBill}</span><span>Satisfaction</span><span>${tn ? pct(tn.sat) : '—'}</span>${tn && tn.leaving ? '<span>Status</span><span>Moving out</span>' : ''}${L.status !== 'current' ? `<span>Owes</span><span>${money(sim.owed(L))} · ${sim.day - L.dueSince} days late</span>` : ''}${tn && tn.cramped ? '<span>Note</span><span>Feels cramped in this size</span>' : ''}</div>`;
         if (L && L.status !== 'current') { const b = []; const d = sim.day - L.dueSince;
           if (['pastdue', 'delinquent', 'lien'].includes(L.status) && d >= 30) b.push(this.cmdBtn('Send lien notice', { type: 'collect', op: 'notice', lease: L.id }, 'pri'));
           if (!L.planTried && L.status !== 'auction' && L.status !== 'plan') b.push(this.cmdBtn('Offer payment plan', { type: 'collect', op: 'plan', lease: L.id }));
@@ -2040,7 +2041,7 @@ export class UI {
     if (rentNotices.length) {
       h += `<h3>Pending rent notices · ${rentNotices.length}</h3><div class="list">${rentNotices.slice(0, 12).map(L => {
         const N = L.rentNotice, u = s.objects[L.unit];
-        return `<div class="item"><div class="grow"><b>Unit ${esc(u?.num ?? L.unit)}</b><small>${money(L.rent)} now · ${money(N.rent)} proposed · originally Day ${N.effectiveDay} · expires after Day ${N.expiresDay}${L.status !== 'current' ? ' · suspended (' + esc(sim.stageOf(L)) + ')' : ''}</small></div></div>`;
+        return `<div class="item"><div class="grow"><b>Unit ${esc(u?.num ?? L.unit)}${harborGroup(s, L) ? ' · ' + esc(harborGroup(s, L)) : ''}</b><small>${money(L.rent)} now · ${money(N.rent)} proposed · originally Day ${N.effectiveDay} · expires after Day ${N.expiresDay}${L.status !== 'current' ? ' · suspended (' + esc(sim.stageOf(L)) + ')' : ''}</small></div></div>`;
       }).join('')}</div>${rentNotices.length > 12 ? `<p class="note">${rentNotices.length - 12} additional notices pending.</p>` : ''}`;
     }
     const P = sim.D.power;

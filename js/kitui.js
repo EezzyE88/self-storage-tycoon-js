@@ -48,8 +48,8 @@ export function kitCardHtml(sim, scMin, again) {
 }
 
 // ---------------------------------------------------------------- results screen
-const WIN_TITLE = { grandopening: 'Leased up, and the bank is happy.', stormseason: 'You weathered the season.', chainnextdoor: 'You held your ground against the chain.' };
-const LOSS_TITLE = { grandopening: 'The lease-up ran out of road.', stormseason: 'The storms won this season.', chainnextdoor: 'Vaultline took the neighborhood.' };
+const WIN_TITLE = { grandopening: 'Leased up, and the bank is happy.', stormseason: 'You weathered the season.', chainnextdoor: 'You held your ground against the chain.', ratereset: 'Harborview pays its way again.' };
+const LOSS_TITLE = { grandopening: 'The lease-up ran out of road.', stormseason: 'The storms won this season.', chainnextdoor: 'Vaultline took the neighborhood.', ratereset: 'Harborview never caught up with the market.' };
 export function kitEndHtml(sim) {
   const s = sim.s, sc = s.scenario, k = sc.kit, r = k.result, def = kitDef(s); if (!r) return '';
   const won = r.won, start = k.start || {};

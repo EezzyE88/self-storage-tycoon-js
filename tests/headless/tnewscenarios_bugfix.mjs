@@ -34,7 +34,8 @@ await test('B1: with two elevator cabs, one broken cab is not an outage; both br
 });
 
 await test('B3: negative cash thresholds read -$1,500 on rules scenarios and keep the old format elsewhere', async () => {
-  for (const id of NEW) { const sc = makeScenario(id, 11).s.scenario; assert.equal(cashText(sc, -1500), '-$1,500'); assert.equal(cashText(sc, 2500), '$2,500'); }
+  // HV-2: Harborview is a kit scenario now; its card formats -$1,500 through the kit (tharborview checks it).
+  for (const id of NEW.filter((x) => x !== 'ratereset')) { const sc = makeScenario(id, 11).s.scenario; assert.equal(cashText(sc, -1500), '-$1,500'); assert.equal(cashText(sc, 2500), '$2,500'); }
   for (const id of OLD) { const sim = makeScenario(id, 11), sc = sim.s.scenario; if (!sc) continue; assert.equal(sc.rules, undefined, id + ' has no rules'); assert.equal(cashText(sc, -1500), '$-1,500', id + ' unchanged'); }
   const src = readFileSync('js/sim.js', 'utf8');
   assert.match(src, /stayed below \$\{cashText\(sc, f\.cashBelow\)\}/); assert.match(src, /below \$\{cashText\(sc, f\.cashBelow\)\} - \$\{f\.cashDays\}/);

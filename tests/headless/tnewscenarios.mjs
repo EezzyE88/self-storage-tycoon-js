@@ -31,7 +31,9 @@ await test('the three new scenarios build fully commissioned, deterministic per 
     const a = makeScenario(id, 11), b = makeScenario(id, 11);
     assert.equal(JSON.stringify(a.s), JSON.stringify(b.s), id + ' same seed, same start');
     assert.ok(a.objs('unit').length >= 30 && a.objs('unit').every((u) => u.cstate === 'operating'), id + ' units operating');
-    assert.equal(a.s.scenario.status, 'active'); assert.ok(a.s.scenario.rules); assert.equal(a.s.scenario.seed, 11);
+    assert.equal(a.s.scenario.status, 'active'); assert.equal(a.s.scenario.seed, 11);
+    // HV-2 (Nov 24, 2026): Harborview moved to the scenario kit; Ironworks and Campus keep the rules record.
+    if (id === 'ratereset') assert.ok(a.s.scenario.kit && a.s.scenario.rules === undefined); else assert.ok(a.s.scenario.rules);
     assert.equal(a.s.cash, SCENARIOS[id].cash);
     const vars = new Set([11, 12, 13].map((sd) => makeScenario(id, sd).s.scenario.variant));
     assert.equal(vars.size, 3, id + ' three seeds give three variants');

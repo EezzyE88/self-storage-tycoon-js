@@ -9,6 +9,8 @@ import { MARKETS, NAMES_FIRST, NAMES_LAST, BILLING_CYCLE_DAYS, ROUTINE_VISIT_CHA
 import { ensureCustomerAccounts } from './customeraccounts.js';
 import { paintSite } from './kitsites.js';
 import { HARBORVIEW_SITE } from './harborviewsite.js';
+import { harborviewSetup } from './harborview.js';
+import { applyMods } from './scenariokit.js';
 
 const lcg = (seed) => { let r = (seed >>> 0) || 1; return () => { r = (r * 1664525 + 1013904223) >>> 0; return r / 4294967296; }; };
 const round50 = (v) => Math.round(v / 50) * 50;
@@ -75,8 +77,12 @@ export function makeRateReset(def, seed = 4401) {
   // The last owner's posted street rates are stale too: new tenants sign at the same discount unless you change them.
   for (const k of Object.keys(s.market.ask)) s.market.ask[k] = Math.round(s.market.ask[k] * (V.ask || 0.78));
   const roll0 = sim.rentRoll();
-  const goals = def.goals.map((g) => g.k === 'roll' ? { ...g, v: round50(roll0 * (1 + def.rollUp)), label: `Monthly lease rent at least ${'$' + round50(roll0 * (1 + def.rollUp)).toLocaleString()} (start: ${'$' + Math.round(roll0).toLocaleString()})` } : g);
-  return finish(sim, 'ratereset', { ...def, goals }, rnd, { variant: V.id, variantLabel: V.label, roll0 });
+  // HV-2: Harborview runs on the scenario kit (decisions, projects, held goals, result record). The rent goal counts the
+  // 44 original units only. Saves made before HV-2 keep their own s.scenario.rules record and play on under those rules.
+  finish(sim, 'ratereset', def, rnd, {});
+  s.scenario = harborviewSetup(sim, def, V, roll0, seed >>> 0, rnd);
+  applyMods(sim);
+  return sim;
 }
 
 // ------------------------------------------------------------------ Ironworks Lofts

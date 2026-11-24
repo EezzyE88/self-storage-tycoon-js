@@ -1914,6 +1914,19 @@ export class Sim {
   }
   // ============================================================ STORY EVENTS (Round 14)
   // Rare, readable moments built on existing systems. Each one asks the player for a decision.
+  // One break-in at an occupied unit: the tenant loses satisfaction, security drops, and the tenant asks to have the
+  // deductible covered or a police report filed. Shared by the random break-in in dramaDay and scenario events
+  // (Harborview's theft wave); `story` only changes the wording. Same state changes and RNG draws as before.
+  breakIn(u, day, story = null) {
+    const s = this.s, D = (s.drama ||= { lastBreak: -99, wars: {} }), L = s.leases[u.lease], tn = s.tenants[L.tenant];
+    D.lastBreak = day; tn.sat = clamp(tn.sat - 0.25, 0, 1); s.exp.security = clamp(s.exp.security - 0.05, 0, 1);
+    const loss = Math.round((400 + this.rnd() * 1800) / 50) * 50;
+    this.emit('drama', { k: 'breakin', title: story?.title || `Break-in at Unit ${u.num}`, sub: story?.sub || (s.exp.security < 0.65 ? 'Dark, unwatched corners invite thieves. Lights and cameras deter them.' : 'Even well-run properties get hit sometimes.'), x: u.x, y: u.y, f: u.f || 0 });
+    this.convo({ key: 'bi' + u.id, who: tn.name, obj: u.id, sev: 'attention', overlay: 'security', ttl: 10 * 60, def: 1, auto: 1,
+      text: story?.text ? story.text(loss) : `Someone cut the lock on Unit ${u.num}. About $${loss.toLocaleString()} of my things are gone. What are you going to do about it?`,
+      actions: [{ label: 'Cover their insurance deductible ($250)', action: { type: 'cv', op: 'biCover', tenant: tn.id } }, { label: 'File a police report and apologize', action: { type: 'cv', op: 'biReport', tenant: tn.id } }] });
+    return { tenant: tn, loss };
+  }
   dramaDay(day) {
     const s = this.s; if (!this.pressureOn()) return;
     const D = (s.drama ||= { lastBreak: -99, wars: {} });
@@ -1934,13 +1947,7 @@ export class Sim {
     const warnedOk = !risky || (D.warned != null && day - D.warned >= 3);
     if (occ.length && warnedOk && day - D.lastBreak > 20 && this.rnd() < pBreak) {
       const pool = occ.filter(dark).length ? occ.filter(dark) : occ; // thieves pick the dark, unwatched units: the cause is on the map
-      const u = pool[Math.floor(this.rnd() * pool.length)], L = s.leases[u.lease], tn = s.tenants[L.tenant];
-      D.lastBreak = day; tn.sat = clamp(tn.sat - 0.25, 0, 1); s.exp.security = clamp(s.exp.security - 0.05, 0, 1);
-      const loss = Math.round((400 + this.rnd() * 1800) / 50) * 50;
-      this.emit('drama', { k: 'breakin', title: `Break-in at Unit ${u.num}`, sub: s.exp.security < 0.65 ? 'Dark, unwatched corners invite thieves. Lights and cameras deter them.' : 'Even well-run properties get hit sometimes.', x: u.x, y: u.y, f: u.f || 0 });
-      this.convo({ key: 'bi' + u.id, who: tn.name, obj: u.id, sev: 'attention', overlay: 'security', ttl: 10 * 60, def: 1, auto: 1,
-        text: `Someone cut the lock on Unit ${u.num}. About $${loss.toLocaleString()} of my things are gone. What are you going to do about it?`,
-        actions: [{ label: 'Cover their insurance deductible ($250)', action: { type: 'cv', op: 'biCover', tenant: tn.id } }, { label: 'File a police report and apologize', action: { type: 'cv', op: 'biReport', tenant: tn.id } }] });
+      this.breakIn(pool[Math.floor(this.rnd() * pool.length)], day);
     }
     // price war: a rival that has been open a few weeks cuts its prices once
     for (const c of this.openComps()) {
