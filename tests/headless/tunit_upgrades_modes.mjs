@@ -111,12 +111,15 @@ await test('every mode with a vacant unit offers retrofits: exact charge, rental
   assert.ok(tried >= 11, 'retrofit exercised in ' + tried + ' modes');
 });
 
-await test('occupied and reserved units and empty selections are still refused in Career and scenarios', async () => {
+// SI-1 (owner rule, Nov 24 2026): occupied and reserved units take outside lights/cameras only; interior lights are refused.
+await test('occupied and reserved units get outside equipment only (no interior light); empty selections are still refused in Career and scenarios', async () => {
+  const outsideOnly = (s, u) => { const R = s.plan({ tool: 'unitRetrofit', unit: u.id, ...ARGS }); assert.equal(R.occupied, true); assert.equal(R.upgrades.counts.unitLight, 0); assert.equal(R.upgrades.omit.unitLight, 'occupied');
+    const I = s.plan({ tool: 'unitRetrofit', unit: u.id, lighting: 'interior', outsideCameras: false }); assert.equal(I.status, 'invalid'); assert.match(I.reasons.join(';'), /Interior light needs the unit empty/); };
   for (const mk of [(M) => career(M), (M) => M.makeScenario('ratereset', 11), (M) => M.makeScenario('stormseason', 11)]) {
     const s = mk(LOCAL); s.ensure();
-    const leased = s.objs('unit').find((u) => u.lease); assert.ok(leased); assert.equal(s.plan({ tool: 'unitRetrofit', unit: leased.id, ...ARGS }).status, 'invalid');
+    const leased = s.objs('unit').find((u) => u.lease); assert.ok(leased); outsideOnly(s, leased);
     const u = vacant(s)[0]; assert.ok(u);
-    u.commercial = 'reserved'; assert.equal(s.plan({ tool: 'unitRetrofit', unit: u.id, ...ARGS }).status, 'invalid'); delete u.commercial;
+    u.commercial = 'reserved'; outsideOnly(s, u); delete u.commercial;
     const R = s.plan({ tool: 'unitRetrofit', unit: u.id, lighting: 'none', outsideCameras: false }); assert.equal(R.status, 'invalid', 'nothing selected is refused');
   }
 });

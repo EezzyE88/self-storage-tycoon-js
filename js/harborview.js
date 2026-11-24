@@ -34,7 +34,8 @@ const kitOf = (sim) => sim.s.scenario.kit;
 const crewLeases = (s) => Object.values(s.leases).filter((L) => L.kitTag === 'crew');
 const boatLeases = (s) => Object.values(s.leases).filter((L) => s.objects[L.unit]?.size === '10x20');
 const bayUnits = (sim) => sim.objs('unit').filter((u) => u.size === '10x20' && u.cstate === 'operating');
-function isDark(sim, u) { const f = u.f || 0, i = sim.idx(u.x, u.y); return !(sim.D.lit[f][i] >= 0.5) && !sim.D.cam[f][i]; }
+// SI-1: thieves look at the unit's door frontage (every door cell must be lit or watched), never a footprint corner.
+function isDark(sim, u) { return sim.doorExposed(u); }
 function note(s, L, text, day) { const tn = s.tenants[L.tenant], a = tn && s.customerAccounts?.[tn.accountId]; if (a) customerHistory(a, day, 'scenario', text, L.id); }
 
 // ---------------------------------------------------------------- setup (called by makeRateReset after the yard is let)
@@ -180,9 +181,9 @@ function onDay(sim, day) {
       .sort((a, b) => (b.size === '10x20') - (a.size === '10x20') || s.leases[b.lease].rent - s.leases[a.lease].rent || a.id - b.id);
     if (!pool.length) { kitLog(sim, 'Thieves came down Pier Road but found nothing dark to hit', 'good'); return; }
     const u = pool[Math.floor(kitRand(k) * Math.min(3, pool.length))];
-    sim.breakIn(u, day, { title: `Theft at Unit ${u.num}`, sub: 'Outboard thieves hit dark, unwatched units. Lights and cameras deter them.',
+    sim.breakIn(u, day, { title: `Theft at Unit ${u.num}`, sub: 'Outboard thieves hit units with dark, unwatched doors. Light or watch the whole door front.',
       text: (loss) => `Thieves cut the lock on Unit ${u.num} overnight. ${u.size === '10x20' ? 'The outboard motor and electronics' : 'About ' + money(loss) + ' of my gear'} ${u.size === '10x20' ? 'are' : 'is'} gone. What are you going to do about it?` });
-    k.thefts++; kitLog(sim, `Theft at Unit ${u.num} (${harborGroup(s, s.leases[u.lease]) || 'tenant'}): dark and off camera`, 'bad');
+    k.thefts++; kitLog(sim, `Theft at Unit ${u.num} (${harborGroup(s, s.leases[u.lease]) || 'tenant'}): door dark or not fully covered`, 'bad');
   }
 }
 function projectDone(sim, id) {

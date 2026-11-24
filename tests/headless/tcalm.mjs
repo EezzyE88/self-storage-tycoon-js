@@ -11,7 +11,7 @@ for (const seed of [11, 22, 33]) {
     for (const e of sim.events) {
       if (e.type === 'drama' && e.k === 'breakin') {
         breaks++; const D = s.drama; if (D.warned != null && D.warned <= sim.day - 3) warnedFirst++; gapMin = Math.min(gapMin, sim.day - (D.warned ?? -1e9));
-        const u = sim.objs('unit').find((x) => x.num === +String(e.title).replace(/\D+/g, '')); const dk = (x) => { const f = x.f || 0, j = sim.idx(x.x, x.y); return !(sim.D.lit[f][j] >= 0.5) && !sim.D.cam[f][j]; };
+        const u = sim.objs('unit').find((x) => x.num === +String(e.title).replace(/\D+/g, '')); const dk = (x) => sim.doorExposed(x); // SI-1: a dark unit is one whose door front is not fully lit or watched
         if (sim.objs('unit').some((x) => x.lease && dk(x))) { darkPossible++; if (u && dk(u)) darkHits++; }
       }
     }

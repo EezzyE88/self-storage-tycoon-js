@@ -593,7 +593,8 @@ export class Sim {
       if (u.cstate === 'built' || u.cstate === 'ready') u.cstate = miss.length ? 'built' : 'ready';
       // operating units keep their status, but lose access when their route or frontage breaks
       const wasBlocked = !!u.blocked && !u.accessHold;
-      if(u.retrofitOrder)miss.push('Unit lighting/security installation in progress');
+      // SI-1: outside-only installs on occupied units (tenantSafe) never hold the unit; vacant retrofits keep their rental hold.
+      if(u.retrofitOrder&&!s.orders.find(o=>o.id===u.retrofitOrder)?.tenantSafe)miss.push('Unit lighting/security installation in progress');
       u.missing=miss;
       u.blocked = u.cstate === 'operating' && miss.some((m) => !/dark|HVAC/.test(m));
       const hold = u.blocked && (u.f || 0) > 0 && u.access !== 'drive' && handover.get(D.shellAt[this.idx(u.x, u.y)]);
@@ -621,6 +622,22 @@ export class Sim {
     if (f > 0 && !els.some(e => this.works(e))) return els.some(e => e.unpowered) ? 'Elevator has no power' : 'Elevator is out of service';
     return 'Hallway has no route to a building entrance';
   }
+  // SI-1 (owner rule, Nov 24 2026): a unit's vulnerability is its door, not its walls. Door cells are the cells
+  // directly in front of the door that customers use: open ground for drive-up units, hallway for interior units.
+  doorCells(u) {
+    const f = u.f || 0, fr = this.unitFront(u);
+    return fr.filter((c) => u.access === 'drive' ? !this.D.shellAt[this.idx(c.x, c.y)] : this.s.hall[f]?.[this.idx(c.x, c.y)] === 1);
+  }
+  // Shared by thefts, the Security map and the unit panel. 'full' only when every door cell is lit (>= 0.5) or on camera.
+  doorCover(u) {
+    const f = u.f || 0, cells = this.doorCells(u);
+    let lit = 0, cam = 0, covered = 0;
+    for (const c of cells) { const i = this.idx(c.x, c.y), l = this.D.lit[f][i] >= 0.5, k = !!this.D.cam[f][i]; if (l) lit++; if (k) cam++; if (l || k) covered++; }
+    const state = !cells.length ? 'nodoor' : covered === cells.length ? 'full' : covered ? 'partial' : 'exposed';
+    return { cells, total: cells.length, covered, lit, cam, state };
+  }
+  // A theft target: any door that is not fully lit or watched (partial and no-door units included).
+  doorExposed(u) { return this.doorCover(u).state !== 'full'; }
   unitSecurity(u) {
     const fc = this.unitFront(u)[0]; const f = u.f || 0; const i = fc ? this.idx(fc.x, fc.y) : this.idx(u.x, u.y);
     let sc = 0.35 + (this.D.gate ? 0.15 : 0) + (this.D.cam[f][i] ? 0.3 : 0) + Math.min(1, this.unitLit(u)) * 0.12;
@@ -1539,6 +1556,7 @@ export class Sim {
     if(a.upgradeStamp!==R.upgradeStamp)return {ok:false,msg:'Fixture package changed. Review before confirming.'};
     if(!this.unlimited()&&this.s.cash<R.cost)return {ok:false,msg:'Not enough cash'};
     const u=this.s.objects[a.unit],ord={id:this.id(),label:R.label,tool:'unitRetrofit',cost:R.cost,dur:Math.max(30,R.dur),prog:0,st:'construction',objs:[],tiles:[],cells:[],t0:this.s.t,retrofit:u.id};
+    if(R.occupied)ord.tenantSafe=true; // SI-1: outside only; the lease, tenant and access are untouched
     for(const c of R.creates){const o={...c,mount:{...c.mount},id:this.id(),order:ord.id,cstate:'construction'};this.s.objects[o.id]=o;ord.objs.push(o.id);}
     u.retrofitOrder=ord.id;this.s.orders.push(ord);if(!this.s.creative)this.money(-R.cost,'capex',R.label);this.markDirty();
     if(this.instantOn())this.completeOrder(ord);return {ok:true,order:ord.id,msg:'Upgrade installation confirmed'};
@@ -1932,7 +1950,7 @@ export class Sim {
     const D = (s.drama ||= { lastBreak: -99, wars: {} });
     // break-in: dark, unwatched properties get hit more often
     const occ = this.objs('unit').filter((u) => u.lease && s.leases[u.lease] && s.tenants[s.leases[u.lease].tenant]);
-    const dark = (u) => { const f = u.f || 0, i = this.idx(u.x, u.y); return !(this.D.lit[f][i] >= 0.5) && !this.D.cam[f][i]; };
+    const dark = (u) => this.doorExposed(u); // SI-1: the door frontage, never a footprint cell
     // notice before trouble (concept §9, GDD §2): a low-security property is warned, with the dark spots marked, days before any break-in
     const risky = s.exp.security < 0.65;
     // after the player has acknowledged it twice, only warn again if security gets worse (pre-merge fix 4)

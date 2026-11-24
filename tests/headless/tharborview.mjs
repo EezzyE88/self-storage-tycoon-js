@@ -238,11 +238,11 @@ await test('HV-2 winter thefts: the wave hits dark, off-camera rented units thro
   const run = (sim, fn) => { const s = sim.s, k = s.scenario.kit; while (s.scenario.status === 'active' && sim.day <= 70) { if (k.pending) sim.dispatch({ type: 'scnChoice', ev: k.pending.id, i: fn ? fn(k.pending) : k.pending.def }); sim.step(); sim.events.length = 0; } return k; };
   const a = makeScenario('ratereset', 13), sec0 = a.s.exp.security; const ka = run(a);
   assert.ok(ka.thefts >= 1, 'thefts on a dark yard: ' + ka.thefts);
-  assert.ok(ka.log.some((l) => /Theft at Unit/.test(l.text) && /dark and off camera/.test(l.text)));
+  assert.ok(ka.log.some((l) => /Theft at Unit/.test(l.text) && /door dark or not fully covered/.test(l.text)));
   const b = makeScenario('ratereset', 13); b.s.creative = true;
   for (let x = 4; x <= 40; x += 3) for (const y of [9, 11, 16, 18, 21, 22]) b.dispatch({ type: 'build', tool: 'camera', f: 0, a: { x, y }, b: { x, y } });
   b.dispatch({ type: 'commission', all: true }); b.s.creative = false; b.markDirty(); b.rebuild();
-  const dark = b.objs('unit').filter((u) => u.lease && !(b.D.lit[0][b.idx(u.x, u.y)] >= 0.5) && !b.D.cam[0][b.idx(u.x, u.y)]).length;
+  const dark = b.objs('unit').filter((u) => u.lease && b.doorExposed(u)).length; // SI-1: the door rule thieves use
   const kb = run(b); if (dark === 0) assert.equal(kb.thefts, 0, 'nothing dark, nothing stolen');
   const c = makeScenario('ratereset', 13); const kc = run(c, (p) => p.id === 'watch' ? 0 : p.def);
   assert.ok(kc.flags.patrol && kc.thefts <= ka.thefts, 'patrol never adds thefts');

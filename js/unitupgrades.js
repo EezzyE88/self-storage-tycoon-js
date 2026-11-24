@@ -13,6 +13,13 @@ export function upgradesEnabled(sim) {
 export function retrofitEligible(sim, u) {
   return upgradesEnabled(sim) && u?.type === 'unit' && u.cstate === 'operating' && !u.lease && u.commercial !== 'reserved' && !u.retrofitOrder && !sim.s.agents.some(a => a.unit === u.id);
 }
+// SI-1 (owner rule, Nov 24 2026): occupied units (leased or reserved) may get outside wall lights and cameras.
+// The installation never holds the unit, and the tenant's interior is never entered: no interior light while occupied.
+export function unitOccupied(u) { return !!(u && (u.lease || u.commercial === 'reserved')); }
+export function exteriorRetrofitEligible(sim, u) {
+  return upgradesEnabled(sim) && u?.type === 'unit' && u.cstate === 'operating' && unitOccupied(u) && !u.retrofitOrder;
+}
+export function upgradeEligible(sim, u) { return retrofitEligible(sim, u) || exteriorRetrofitEligible(sim, u); }
 export function mountedOn(sim, id) { return Object.values(sim.s.objects).filter(o => o.mount?.host === id); }
 export function mountFor(sim, u, host, type) {
   const front = sim.unitFront(u).find(c => sim.inb(c.x,c.y) && (u.access === 'drive' ? !sim.D.shellAt[sim.idx(c.x,c.y)] : sim.s.hall[u.f||0]?.[sim.idx(c.x,c.y)] === 1));
@@ -85,9 +92,10 @@ export function addUpgrades(sim, a, R, units, retrofit=false) {
   const proposed=retrofit?[]:units;
   // UL-2 (display only): why a requested fixture type ends up with none in the quote. Never part of state or the review stamp.
   if(['interior','both'].includes(mode)&&retrofit&&units.every(u=>mountedOn(sim,u.id).some(o=>o.type==='unitLight')))omit.unitLight='installed';
+  else if(['interior','both'].includes(mode)&&retrofit&&R.occupied)omit.unitLight='occupied'; // SI-1: never inside a rented unit
   units.forEach((u,k)=>{
     const host=retrofit?u.id:k, existing=retrofit?mountedOn(sim,u.id):[];
-    if(['interior','both'].includes(mode)&&!existing.some(o=>o.type==='unitLight'))creates.push({type:'unitLight',x:u.x,y:u.y,f:u.f||0,cond:1,mount:{host,private:true,x:u.x+u.w/2,y:u.y+u.h/2}});
+    if(['interior','both'].includes(mode)&&!(retrofit&&R.occupied)&&!existing.some(o=>o.type==='unitLight'))creates.push({type:'unitLight',x:u.x,y:u.y,f:u.f||0,cond:1,mount:{host,private:true,x:u.x+u.w/2,y:u.y+u.h/2}});
   });
   for(const type of ['light','camera']){
     if(type==='light'?!['outside','both'].includes(mode):!a.outsideCameras)continue;
@@ -138,10 +146,13 @@ export function addUpgrades(sim, a, R, units, retrofit=false) {
 export function retrofitPlan(sim,a) {
   sim.ensure();const u=sim.s.objects[a.unit];
   const R={tool:'unitRetrofit',status:'valid',reasons:[],missing:[],warn:[],cost:0,dur:0,count:1,opex:0,items:[],creates:[],tiles:[],label:'Unit lighting/security retrofit',units:[]};
-  if(!retrofitEligible(sim,u)){R.status='invalid';R.reasons.push('Select a vacant, unreserved operating unit with no active retrofit or customer');return R;}
+  if(!retrofitEligible(sim,u)){
+    if(!exteriorRetrofitEligible(sim,u)){R.status='invalid';R.reasons.push(u?.retrofitOrder?'An installation is already in progress on this unit':'Select a vacant, unreserved operating unit with no active retrofit or customer');return R;}
+    R.occupied=true;R.label='Unit outside lighting/security';
+  }
   R.units=[u];addUpgrades(sim,a,R,[u],true);
   if(!R.creates.length){R.status='invalid';const A=R.upgrades?.asked||{},why=Object.keys(A).filter(t=>A[t]).map(t=>R.upgrades.omit?.[t]);
-    R.reasons.push(!why.length?'Choose lights or cameras to install':why.every(w=>w==='covered'||w==='installed')?'Already covered: nothing to install':why.every(w=>w==='off')?'All suggested fixtures are turned off':'Nothing can be installed here');}
+    R.reasons.push(!why.length?'Choose lights or cameras to install':why.every(w=>w==='occupied')?'Interior light needs the unit empty. Add it after the tenant moves out.':why.every(w=>w==='covered'||w==='installed'||w==='occupied')?'Already covered: nothing to install':why.every(w=>w==='off')?'All suggested fixtures are turned off':'Nothing can be installed here');}
   return R;
 }
 export function upgradePower(R) { return (R.creates||[]).filter(o=>o.mount).reduce((n,o)=>n+UPGRADE[o.type].kw,0); }

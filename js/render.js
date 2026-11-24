@@ -1503,6 +1503,7 @@ export class Renderer {
       else if (m === '/') { g.beginPath(); g.moveTo(px + a, py + b); g.lineTo(px + b, py + a); g.stroke(); }
       else if (m === '.') { g.beginPath(); g.arc(px + sz / 2, py + sz / 2, sz * 0.14, 0, 7); g.fill(); }
       else if (m === 'v') { g.beginPath(); g.moveTo(px + a, py + sz * 0.52); g.lineTo(px + sz * 0.43, py + b); g.lineTo(px + b, py + a); g.stroke(); }
+      else if (m === 'h') { g.beginPath(); g.arc(px + sz / 2, py + sz / 2, sz * 0.26, 0, 7); g.stroke(); g.beginPath(); g.moveTo(px + sz / 2, py + sz * 0.24); g.arc(px + sz / 2, py + sz / 2, sz * 0.26, -Math.PI / 2, Math.PI / 2, true); g.closePath(); g.fill(); }
       g.restore(); };
     const cellM = (i, c, m) => { cell(i, c); mark((i % W) * C, ((i / W) | 0) * C, m); };
     if (this.overlay === 'security') {
@@ -1510,6 +1511,16 @@ export class Renderer {
         if (!D.walk[f][i] && !(f === 0 && D.solid[i] && !D.shellAt[i])) continue;
         const lit = D.lit[f][i] >= 0.5, cam = D.cam[f][i];
         if (cam && lit) cell(i, 'rgba(64,170,110,0.55)'); else if (cam) cellM(i, 'rgba(70,130,220,0.5)', '.'); else if (lit) cellM(i, 'rgba(240,200,70,0.5)', '/'); else cellM(i, 'rgba(200,60,50,0.5)', 'x');
+      }
+      // SI-1: a bar on each operating unit's door front, by the same door rule thieves use (sim.doorCover). The bar sits on
+      // the half of each door cell that touches the door; the middle door cell carries the mark (check, half, cross).
+      const doorCol = { full: 'rgba(30,140,80,0.95)', partial: 'rgba(225,145,30,0.95)', exposed: 'rgba(200,45,35,0.95)' }, doorMark = { full: 'v', partial: 'h', exposed: 'x' };
+      for (const u of sim.objs('unit')) {
+        if ((u.f || 0) !== f || u.cstate !== 'operating') continue;
+        const dc = sim.doorCover(u); if (!dc.total) continue;
+        const [dx, dy] = u.dir, t = Math.round(C * 0.45); g.fillStyle = doorCol[dc.state];
+        for (const c of dc.cells) { const px = c.x * C, py = c.y * C; if (dx > 0) g.fillRect(px, py, t, C); else if (dx < 0) g.fillRect(px + C - t, py, t, C); else if (dy > 0) g.fillRect(px, py, C, t); else g.fillRect(px, py + C - t, C, t); }
+        const mid = dc.cells[(dc.cells.length - 1) >> 1]; mark(mid.x * C, mid.y * C, doorMark[dc.state]);
       }
     } else if (this.overlay === 'clean') {
       for (let i = 0; i < W * s.H; i++) { if (!D.walk[f][i]) continue; const d = s.dirt[f][i]; if (d > 0.55) cellM(i, 'rgba(200,60,50,0.6)', 'x'); else if (d > 0.25) cellM(i, 'rgba(230,170,50,0.5)', '/'); else cell(i, 'rgba(64,170,110,0.35)'); }

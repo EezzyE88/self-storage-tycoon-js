@@ -57,7 +57,7 @@ function driveUpStatus(sim, unit) {
     const dated = Number.isInteger(lease.start) && lease.start > 0 && lease.start <= sim.day;
     const status = dated ? `Current lease signed Day ${lease.start}` : 'Leased';
     const pending = unit.commercial === 'reserved' ? ' · Move-in pending' : '';
-    return status + pending + (unit.blocked ? unit.accessHold != null ? ' · Temporary access hold' : ' · Access blocked' : '');
+    return status + pending + (unit.blocked ? unit.accessHold != null ? ' · Temporary access hold' : ' · Access blocked' : '') + (unit.retrofitOrder ? ' · Outside lights/cameras installing' : '');
   }
   if (unit.retrofitOrder) return 'Vacant, upgrade in progress';
   const state = unitStatus(unit);
@@ -75,7 +75,8 @@ function groupCondition(sim, all) {
   for (const u of all) {
     if (u.cstate !== 'operating') { counts.unopened++; continue; }
     // A lighting/security retrofit sets blocked while installing; it is planned work, not an access fault.
-    if (u.retrofitOrder) { counts.upgrading++; continue; }
+    // SI-1: an outside-only install on an occupied unit (tenantSafe) holds nothing; the unit still counts as leased.
+    if (u.retrofitOrder && !sim.s.orders.find((o) => o.id === u.retrofitOrder)?.tenantSafe) { counts.upgrading++; continue; }
     const status = unitStatus(u);
     if (status === 'blocked') counts.blocked++;
     else if (status === 'handover') counts.held++;
