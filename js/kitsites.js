@@ -28,7 +28,7 @@ const GO_FRONTAGE = {
 };
 const GO_YARD = {
   aisles: [[3, 38, 15, 17], [3, 38, 3, 4], [3, 4, 3, 17], [37, 38, 3, 17]],
-  pads: [[17, 24, 13, 14, G.LOADING], [21, 21, 18, 19, G.CONCRETE], [29, 29, 7, 9, G.CONCRETE]],
+  pads: [[17, 24, 13, 14, G.LOADING], [21, 21, 18, 19, G.CONCRETE], [29, 29, 7, 14, G.CONCRETE]],
   units: [
     ...row(4, (k) => ({ size: '10x10', x: 5 + k * 2, y: 5, w: 2, h: 2, dir: [0, -1] })),
     ...row(4, (k) => ({ size: '10x10', x: 5 + k * 2, y: 13, w: 2, h: 2, dir: [0, 1] })),
