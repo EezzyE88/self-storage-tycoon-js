@@ -6,8 +6,9 @@ export const UPGRADE = {
   light: { build: 100, retrofit: 150, daily: 0.35, kw: 0.2, minutes: 60 },
   camera: { build: 500, retrofit: 500, daily: 0.35, kw: 0.05, minutes: 120 },
 };
+// Universal SST mechanic (owner rule, Nov 24, 2026): Career, every scenario and Sandbox. Only the guided tutorial and an active lesson keep it closed.
 export function upgradesEnabled(sim) {
-  return sim.s.mode === 'sandbox' && !sim.s.scenario && !sim.s.lesson && !sim.s.tut?.on;
+  return !sim.s.lesson && !sim.s.tut?.on;
 }
 export function retrofitEligible(sim, u) {
   return upgradesEnabled(sim) && u?.type === 'unit' && u.cstate === 'operating' && !u.lease && u.commercial !== 'reserved' && !u.retrofitOrder && !sim.s.agents.some(a => a.unit === u.id);
@@ -76,7 +77,7 @@ export function addUpgrades(sim, a, R, units, retrofit=false) {
   units=units.map((u,k)=>({...R.creates.filter(o=>o.type==='unit')[k],...u}));
   const mode=LIGHTING.includes(a.lighting)?a.lighting:'none';
   if(!upgradesEnabled(sim)) {
-    if(mode!=='none'||a.outsideCameras){R.status='invalid';R.reasons.push('Unit upgrades are available in Sandbox outside lessons and scenarios');}
+    if(mode!=='none'||a.outsideCameras){R.status='invalid';R.reasons.push('Unit lighting and cameras are not available during the tutorial or a lesson');}
     return R;
   }
   const excluded=new Set(a.excludedFixtures||[]), creates=[], options=[], pending=[], notices=[];

@@ -143,7 +143,8 @@ test('construction header and added-cost line show the same complete daily cost'
  if(u.plan.status==='invalid'){u.tool='du5x10';u.plan=s.plan({tool:u.tool,a:{x:13,y:21},b:{x:13,y:21},axis:'y',f:0});u.planArgs=u.plan.args;}
  assert.notEqual(u.plan.status,'invalid');u.renderActionBar();const html=boxes.abar.innerHTML,daily=planDailyCost(s,u.plan);
  assert.ok(daily>u.plan.opex,'complete cost includes per-unit tax and cost index');
- const shown=[...html.matchAll(/\$([\d,.]+)\/day/g)].map(m=>+m[1].replace(/,/g,''));assert.ok(shown.length>=2,html);
+ const shown=[...html.matchAll(/\$([\d,.]+)\/day(?! base)/g)].map(m=>+m[1].replace(/,/g,''));assert.ok(shown.length>=2,html);
+ // The unit lighting & security panel's own "+$x/day base" line (universal since Nov 24, 2026) is a separate fixture figure, not the construction cost.
  for(const v of shown)assert.equal(v,daily);assert.ok(!shown.includes(u.plan.opex));assert.equal(s.s.speed,0);
 });
 const baseline=process.argv[2];

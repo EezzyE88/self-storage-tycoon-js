@@ -72,7 +72,10 @@ console.log('PASS retrofit rental hold, charge-once, save/load, cancel/refund, c
  if(cam){const c=cam.cond;s.newDay(s.day+2);assert.ok(Math.abs(c-cam.cond-.004)<1e-9);}
  assert.equal(s.dailyOpex().lights,Math.round(s.objs('light').filter(o=>o.cstate==='operating').length*.35*s.costIdx()*100)/100);
  const waiter=new ReserveWait(),base={...a,lighting:'outside'};waiter.pending={args:base};assert.ok(waiter.matches(base));assert.ok(!waiter.matches({...base,lighting:'both'}));assert.ok(!waiter.matches({...base,outsideCameras:true}));
- for(const key of ['lesson','scenario']){const t=fixture();t.s[key]={id:'test'};assert.equal(t.plan({...a,lighting:'both'}).status,'invalid');}
+ // Universal mechanic (Nov 24, 2026): an active lesson or the running tutorial still refuses; a scenario no longer does (tunit_upgrades_modes covers every mode).
+ {const t=fixture();t.s.lesson={id:'test'};assert.equal(t.plan({...a,lighting:'both'}).status,'invalid');}
+ {const t=fixture();t.s.tut={...t.s.tut,on:true};assert.equal(t.plan({...a,lighting:'both'}).status,'invalid');}
+ {const t=fixture();t.s.scenario={id:'test'};assert.notEqual(t.plan({...a,lighting:'both'}).status,'invalid');}
  const old=fixture(),cash=old.s.cash;new Sim(JSON.parse(JSON.stringify(old.s))).poll();assert.equal(old.s.cash,cash);assert.ok(!old.objs('unitLight').length);
 }
 console.log('PASS standalone affordability, unchanged camera wear, reserve selection identity and teaching/legacy guards');
