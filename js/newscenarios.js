@@ -7,12 +7,15 @@
 import { newState, Sim } from './sim.js';
 import { MARKETS, NAMES_FIRST, NAMES_LAST, BILLING_CYCLE_DAYS, ROUTINE_VISIT_CHANCE } from './data.js';
 import { ensureCustomerAccounts } from './customeraccounts.js';
+import { paintSite } from './kitsites.js';
+import { HARBORVIEW_SITE } from './harborviewsite.js';
 
 const lcg = (seed) => { let r = (seed >>> 0) || 1; return () => { r = (r * 1664525 + 1013904223) >>> 0; return r / 4294967296; }; };
 const round50 = (v) => Math.round(v / 50) * 50;
 
-function start(market, seed, dims = {}) {
+function start(market, seed, dims = {}, site = null) {
   const s = newState({ mode: 'scenario', seed, market, ...dims });
+  if (site) paintSite(s, site); // a public-office site: painted and placed before the Sim exists
   s.tut = { on: false, beat: 99, flags: {}, done: true }; s.lesson = null; s.speed = 0;
   const sim = new Sim(s);
   s.staff.push({ id: sim.id(), role: 'owner', name: 'You', wage: 0, hired: 0 });
@@ -58,20 +61,9 @@ export const RATE_RESET_VARIANTS = [
   { id: 'cheap', label: 'Deep discounts: legacy rents 58-70% of market, street rates at 72%', demand: 0.36, gate: 0.3, legacy: [0.58, 0.70], ask: 0.72 },
 ];
 export function makeRateReset(def, seed = 4401) {
-  const sim = start('blank', seed), s = sim.s, rnd = lcg(seed ^ 0x5a17), y1 = s.parcel.y1;
+  const sim = start('blank', seed, {}, HARBORVIEW_SITE), s = sim.s, rnd = lcg(seed ^ 0x5a17);
   const V = pickVariant(RATE_RESET_VARIANTS, seed);
-  prebuild(sim, [
-    { tool: 'gate', a: { x: 20, y: y1 }, b: { x: 20, y: y1 } },
-    { tool: 'aisle', a: { x: 19, y: 5 }, b: { x: 21, y: y1 } },
-    { tool: 'aisle', a: { x: 4, y: 8 }, b: { x: 37, y: 9 } },
-    { tool: 'parking', a: { x: 19, y: 23 }, b: { x: 19, y: 26 } },
-    { tool: 'office', a: { x: 16, y: 24 }, b: { x: 16, y: 24 } },
-    { tool: 'du10x10', a: { x: 4, y: 7 }, b: { x: 17, y: 7 } },
-    { tool: 'du5x10', a: { x: 23, y: 7 }, b: { x: 37, y: 7 } },
-    { tool: 'du10x10', a: { x: 4, y: 10 }, b: { x: 17, y: 10 } },
-    { tool: 'du5x10', a: { x: 23, y: 10 }, b: { x: 37, y: 10 } },
-    ...[[6, 12], [12, 12], [26, 12], [33, 12], [20, 14]].map(([x, y]) => ({ tool: 'light', a: { x, y }, b: { x, y } })),
-  ]);
+  sim.markDirty(); sim.rebuild();
   s.open = true; s.cash = def.cash; s.opts = { demand: V.demand };
   const units = sim.objs('unit').sort((a, b) => a.id - b.id);
   const vacant = new Set(); while (vacant.size < 3) vacant.add(units[Math.floor(rnd() * units.length)].id);

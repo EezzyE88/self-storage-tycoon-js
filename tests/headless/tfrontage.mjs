@@ -32,7 +32,7 @@ function refused(sim, a, reason) {
 
 await test('Maple, Cedar Creek and the three SK-02 kit sites ship; every descriptor passes the validator and Maple keeps every master constant', () => {
   // Exact shipped inventory: any unplanned registration still fails here.
-  assert.deepEqual(layoutIds(), [MAPLE_PUBLIC, CEDAR_LAYOUT, GO_SITE_LAYOUT, SS_SITE_LAYOUT, CN_SITE_LAYOUT]);
+  assert.deepEqual(layoutIds(), [MAPLE_PUBLIC, CEDAR_LAYOUT, GO_SITE_LAYOUT, SS_SITE_LAYOUT, CN_SITE_LAYOUT, 'harborview-office-v1']);
   // Each kit site: its own id, a valid frozen registered copy, and a scenario start that matches it with full access.
   for (const [id, layout] of [['grandopening', GO_SITE_LAYOUT], ['stormseason', SS_SITE_LAYOUT], ['chainnextdoor', CN_SITE_LAYOUT]]) {
     const raw = KIT_SITES[id].frontage, K = frontageOf(layout);
