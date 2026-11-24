@@ -64,11 +64,15 @@ try{
 const wf=readFileSync('.github/workflows/pages.yml','utf8');
 assert.match(wf,/node tools\/build-pages-site\.mjs "\$GITHUB_SHA" _site/);assert.match(wf,/branches: \[master\]/);assert.match(wf,/path: _site/);assert.doesNotMatch(wf,/pull_request/);
 pass('workflow deploys master only, stamping $GITHUB_SHA');
-const gate=wf.slice(wf.indexOf('\n  gate:'),wf.indexOf('\n  deploy:')),deploy=wf.slice(wf.indexOf('\n  deploy:'));
-assert.ok(gate.length>20&&deploy.length>20,'gate and deploy jobs present');assert.match(deploy,/\n    needs: gate\n/);
+const at=j=>{const i=wf.indexOf('\n  '+j+':');assert.ok(i>=0,j+' job present');return i;};
+const gate=wf.slice(at('gate'),at('build')),build=wf.slice(at('build'),at('deploy')),deploy=wf.slice(at('deploy'));
+assert.ok(at('gate')<at('build')&&at('build')<at('deploy'),'jobs in order gate, build, deploy');
+assert.match(build,/\n    needs: gate\n/);assert.match(deploy,/\n    needs: build\n/);
+assert.match(build,/build-pages-site/);assert.match(build,/upload-pages-artifact/);assert.doesNotMatch(build,/deploy-pages|id-token/);
+assert.doesNotMatch(deploy,/upload-pages-artifact|build-pages-site/);
 assert.match(gate,/fetch-depth: 0/);assert.match(gate,/run_current_regressions\.py --profile current/);assert.match(gate,/set -o pipefail/);
 assert.doesNotMatch(gate,/continue-on-error|pages: write|deploy-pages/);assert.match(deploy,/deploy-pages/);
 assert.ok(wf.indexOf('run_current_regressions')<wf.indexOf('build-pages-site'),'gate runs before the site is built');
-pass('deploy needs the current gate on full history; gate cannot be skipped or deploy');
+pass('build needs the current gate on full history, deploy needs build; gate cannot be skipped or deploy');
 groups++;
 console.log(`${groups} pages stamp groups passed`);

@@ -38,17 +38,13 @@ jobs:
         if: always()
         run: cat "$RUNNER_TEMP/sst-current-qa/SUMMARY.txt" || true
 
-  deploy:
+  build:
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,5 +59,22 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+
+  # Separate job (GitHub's documented build/deploy pattern): the Pages deploy step
+  # looks the artifact up only after the build job has finished, and
+  # "Re-run failed jobs" re-runs this job alone without uploading a second
+  # "github-pages" artifact into the same run.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
