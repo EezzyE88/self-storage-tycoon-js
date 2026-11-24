@@ -24,6 +24,8 @@ const SCENERY = {
   turnaround: { outer: '#82966c', grass: '#9db87b', leaf: '#52734b', wall: '#d3c3ad', roof: '#725e54', trim: '#82958d' },
   vertical: { outer: '#858b8e', grass: '#9ba786', leaf: '#5c7564', wall: '#9a9da1', roof: '#555e67', trim: '#b5957e' },
   climate: { outer: '#a1b0a1', grass: '#9fbe99', leaf: '#456e61', wall: '#e0e4df', roof: '#546c7c', trim: '#91b0b5' },
+  // HV-3 Harborview: salt-weathered greys, navy trim, rust accents; the working harbor lies behind the yard.
+  ratereset: { outer: '#98a39d', grass: '#a3ad92', leaf: '#5b7466', wall: '#bcc3c4', roof: '#2f4a63', trim: '#a4532e', water: '#3f6f86', deck: '#8b7458', hull: '#26394d', white: '#eef1ef', concrete: '#a7aeae', crane: '#d9a53a' },
 };
 function tex(canvas, repeat = false) {
   const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
@@ -418,6 +420,38 @@ export class Renderer {
       }
       building(p.x1 + 11, rear - 2, 8, 8, 2.7, palette.wall);
       for (let k = 0; k < 3; k++) box(palette.roof, p.x1 + 8.5 + k * 2.4, 1, rear + 2.04, 1.6, 2, .06);
+    } else if (id === 'ratereset') {
+      // Working harbor behind the yard: the quay, a fishing pier with moored trawlers, a marina with sailboat masts,
+      // a fuel dock and a travel-lift crane. Decoration only, outside the parcel; nothing here is a simulation object.
+      box(palette.water, p.x0 + (p.x1 - p.x0) / 2, .005, -16, 120, .02, 30);
+      box(palette.concrete, p.x0 + (p.x1 - p.x0) / 2, .04, -.1, 120, .1, 1.6);
+      // fishing pier and trawlers (west)
+      box(palette.deck, 11, .3, -9.5, 3, .16, 17);
+      for (let k = 0; k < 6; k++) for (const dx of [-1.3, 1.3]) put('cyl', palette.deck, 11 + dx, -.1, -2.5 - k * 3, .25, .9, .25);
+      const trawler = (x, z, hull) => {
+        box(hull, x, .35, z, 2.2, .7, 6); box(palette.white, x, 1.15, z + 1.2, 1.6, 1, 1.8);
+        put('cyl', palette.wall, x, 2.2, z - .8, .14, 2.6, .14); box(palette.trim, x, .72, z, 2.3, .08, 6.1);
+      };
+      trawler(7.6, -6, palette.hull); trawler(14.4, -8.5, palette.trim); trawler(7.6, -14, palette.hull);
+      // marina with sailboats (east)
+      box(palette.deck, 33, .22, -4, 16, .12, 1.4);
+      for (let k = 0; k < 4; k++) box(palette.deck, 26.5 + k * 4.4, .22, -9, 1, .12, 9);
+      for (let k = 0; k < 4; k++) for (const dx of [-1.2, 1.2]) {
+        const x = 26.5 + k * 4.4 + dx, z = -7.5 - (k % 2) * 3;
+        box(palette.white, x, .3, z, .9, .5, 3.2); put('cyl', palette.wall, x, 2.6, z, .08, 4.6, .08);
+      }
+      // fuel dock (far west) and travel-lift crane on the quay (far east)
+      box(palette.deck, -4, .22, -3.5, 4, .12, 3); box(palette.trim, -4.8, .7, -3, .5, .9, .5); box(palette.trim, -3.2, .7, -3, .5, .9, .5);
+      for (const [dx, dz] of [[-1.5, -1.6], [1.5, -1.6], [-1.5, 1.6], [1.5, 1.6]]) put('cyl', palette.crane, p.x1 + 6 + dx, 1.8, -4 + dz, .3, 3.6, .3);
+      box(palette.crane, p.x1 + 6, 3.7, -4, 3.6, .4, 3.8); box(palette.hull, p.x1 + 6, 1.2, -4, 2, .9, 5.5);
+      // wharf sheds and a few salt-bent trees along the side streets
+      for (const x of [p.x0 - 5, p.x1 + 5.5]) for (let k = 0; k < 3; k++) {
+        const z = p.y0 + 4 + k * 8;
+        pad(x, z, 6.5, 7, palette.concrete); building(x, z, 4.4, 5.5, 2.4, k % 2 ? palette.wall : '#9ba5a8');
+        box(palette.trim, x + (x < p.x0 ? 2.25 : -2.25), 1, z, .06, 1.8, 2.2);
+      }
+      for (let k = 0; k < 4; k++) tree(p.x0 - 9, p.y0 + 3 + k * 7, .7 + hash(k + 40) * .2);
+      for (let k = 0; k < 3; k++) put('sph', palette.trim, 20 + k * 3, .25, -20 - k * 2, .5, .5, .5); // mooring buoys
     }
     const matrix = new THREE.Matrix4(), rotation = new THREE.Quaternion();
     for (const { shape, color, placements } of batches.values()) {

@@ -249,4 +249,32 @@ await test('HV-2 winter thefts: the wave hits dark, off-camera rented units thro
   const sc = HARBORVIEW_KIT.score(a); assert.ok(sc.stars >= 1 && sc.stars <= 3 && sc.notes.length === 3);
 });
 
+// ---------------------------------------------------------------- HV-3 harbor scenery (CPU scene construction only)
+await test('HV-3 scenery: Harborview builds its own harbor setting (water, pier, trawlers, marina, crane) outside the parcel and off the entrance; read-only, deterministic, old saves derive it; other settings unchanged', async () => {
+  const { registerHooks } = await import('node:module');
+  registerHooks({ resolve(specifier, context, next) { return specifier === 'three' ? { url: new URL('../../vendor/three.module.min.js', import.meta.url).href, shortCircuit: true } : next(specifier, context); } });
+  const THREE = await import('three'); const { loadRenderer } = await import('../performance/renderer-fixture.mjs'); const Renderer = await loadRenderer();
+  const { createHash } = await import('node:crypto');
+  const digest = (r) => { const o = []; r.envG.traverse((x) => { if (x.isInstancedMesh) o.push([x.geometry.type, x.material.color.getHex(), Array.from(x.instanceMatrix.array)]); }); return createHash('sha256').update(JSON.stringify(o)).digest('hex'); };
+  const sigs = {};
+  for (const [w, h] of [[375, 667], [390, 844]]) {
+    const sim = makeScenario('ratereset', 12), before = JSON.stringify(sim.s), r = new Renderer({ clientWidth: w, clientHeight: h }, sim);
+    r.rebuildStatic(); assert.equal(JSON.stringify(sim.s), before, 'render must not mutate the saved state, cash, clock or Pause');
+    assert.equal(r.envG.children[0].name, 'scenery-ratereset'); assert.equal(r.outer.material.color.getHexString(), '98a39d');
+    let meshes = 0, inst = 0; const colors = new Set();
+    r.envG.traverse((o) => { if (!o.isInstancedMesh) return; meshes++; inst += o.count; colors.add(o.material.color.getHexString()); assert.equal(o.castShadow, false);
+      o.geometry.computeBoundingBox(); const p = sim.s.parcel;
+      for (let i = 0; i < o.count; i++) { const m = new THREE.Matrix4(); o.getMatrixAt(i, m); const b = o.geometry.boundingBox.clone().applyMatrix4(m);
+        assert.ok(b.max.x <= p.x0 - 1.19 || b.min.x >= p.x1 + 1.19 || b.max.z <= p.y0 - 1.19 || b.min.z >= p.y1 + 1.19, 'scenery stays off the parcel and boundary');
+        assert.ok(b.max.z <= p.y1 + .51, 'entrance foreground stays open'); } });
+    assert.ok(meshes <= 20, 'bounded draw batches: ' + meshes); assert.ok(inst >= 60, 'a full harbor, not a token prop: ' + inst);
+    for (const c of ['3f6f86', '26394d', 'eef1ef', 'd9a53a', '8b7458']) assert.ok(colors.has(c), 'harbor element present: ' + c);
+    sigs[w] = digest(r); r.clearGroup(r.envG); r.buildEnvironment(); assert.equal(digest(r), sigs[w], 'deterministic');
+    const old = M.makeScenario('ratereset', 12); r.sim = new Sim(JSON.parse(JSON.stringify(old.s))); r.resizeWorld();
+    assert.equal(r.envG.children[0].name, 'scenery-ratereset', 'a pre-HV save derives the harbor setting from its scenario id');
+  }
+  assert.equal(sigs[375], sigs[390]);
+  for (const id of ['comeback', 'turnaround', 'vertical', 'climate']) { const r = new Renderer({ clientWidth: 390, clientHeight: 844 }, makeScenario(id)); r.rebuildStatic(); assert.equal(r.envG.children[0].name, 'scenery-' + id); }
+});
+
 console.log(`ALL PASS: ${n} Harborview groups; physical Safari NOT TESTED`);
