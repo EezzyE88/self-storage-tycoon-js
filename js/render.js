@@ -9,6 +9,7 @@ import { OpenHousePresentation } from './openhouse.js';
 
 const CELL = 32; // px per cell on ground textures
 const WALL_H = 1.25; // drive-up unit height
+const unitWallH = (u) => u && u.access === 'drive' ? WALL_H : 1.05; // same heights the unit shell uses
 const COL = {
   grass: '#9fcb6a', grass2: '#95c262', asphalt: '#565d70', concrete: '#ded5c4', street: '#67708a', sidewalk: '#e6decd',
   loading: '#4f5257', parking: '#4c4f54', stripe: '#f1efe6', yellow: '#e8b923', hall: '#e4e0d6', shellFloor: '#bdb8ad',
@@ -968,15 +969,18 @@ export class Renderer {
         break;
       }
       case 'unitLight': {
+        // UL-2: a ceiling fixture just below the wall top near the back wall, with a soft pool of light kept inside its own unit.
         const u=S.objects[o.mount?.host];if(!u)break;
-        const head=this.box(.35,.08,.18,this.mat.lamp.clone(),o.mount.x,1.3,o.mount.y,f,{obj:o.id});
-        const cells=[];for(let y=u.y;y<u.y+u.h;y++)for(let x=u.x;x<u.x+u.w;x++)cells.push({x,y});
-        const glow=this.fixtureCoverageMesh(o,cells,0);this.add(glow,f,{inside:u.access==='interior',glow:true});this.anim.push({k:'privateLight',mesh:head,glow,o});break;
+        const H=unitWallH(u),d=u.dir||[0,1],back=(d[0]?u.w:u.h)/2-.22,cx=u.x+u.w/2-d[0]*back,cz=u.y+u.h/2-d[1]*back;
+        const head=this.box(d[0]?.1:.32,.05,d[0]?.32:.1,this.mat.lamp.clone(),cx,H-.07,cz,f,{obj:o.id});
+        const glow=this.softGlow(u.x+u.w/2,u.y+u.h/2,f,Math.max(.6,u.w*.95),Math.max(.6,u.h*.95));this.add(glow,f,{inside:u.access==='interior',glow:true});this.anim.push({k:'privateLight',mesh:head,glow,o});break;
       }
       case 'light': {
         if(o.mount){
-          const d=o.mount.dir,head=this.box(.3,.12,.18,this.mat.lamp.clone(),o.mount.x+d[0]*.08,1.35,o.mount.y+d[1]*.08,f,{obj:o.id});
-          const glow=this.fixtureCoverageMesh(o,attachmentCoverage(this.sim,o),0);this.add(glow,f,{glow:true,inside:o.mount.indoor});this.anim.push({k:'light',mesh:head,glow,o,inside:o.mount.indoor});break;
+          // UL-2: a wall pack above the door opening, lighting a soft pool on the aisle in front of the door.
+          const d=o.mount.dir,host=S.objects[o.mount.host],H=host?unitWallH(host):WALL_H,R=TOOLS.light.radius;
+          const head=this.box(d[0]?.1:.26,.07,d[0]?.26:.1,this.mat.lamp.clone(),o.mount.x+d[0]*.06,H*.86,o.mount.y+d[1]*.06,f,{obj:o.id});
+          const glow=this.softGlow(o.mount.x+d[0]*R*.5,o.mount.y+d[1]*R*.5,f,R*1.45,R*1.45);this.add(glow,f,{glow:true,inside:o.mount.indoor});this.anim.push({k:'light',mesh:head,glow,o,inside:o.mount.indoor});break;
         }
         const cx = o.x + 0.5, cz = o.y + 0.5, inside = !!this.sim.D.shellAt[o.y * S.W + o.x], unitTop = !inside && this.sim.D.unitAt[0][o.y * S.W + o.x];
         if (inConst) { this.scaffold(o, cx, cz, 0.3, 0.3, 1.0, f); break; }
@@ -990,8 +994,8 @@ export class Renderer {
         break;
       }
       case 'camera': {
-        if(o.mount){const d=o.mount.dir,side=[-d[1],d[0]],cx=o.mount.x+d[0]*.1+side[0]*.28,cz=o.mount.y+d[1]*.1+side[1]*.28;
-          const cam=this.box(.14,.14,.30,this.mat.office,cx,1.4,cz,f,{obj:o.id});cam.rotation.y=Math.atan2(d[0],d[1]);this.anim.push({k:'cam',mesh:cam,o});break;}
+        if(o.mount){const d=o.mount.dir,side=[-d[1],d[0]],host=S.objects[o.mount.host],H=host?unitWallH(host):WALL_H,cx=o.mount.x+d[0]*.1+side[0]*.28,cz=o.mount.y+d[1]*.1+side[1]*.28;
+          const cam=this.box(.12,.12,.26,this.mat.office,cx,H-.1,cz,f,{obj:o.id});/* UL-2: upper door corner, below the wall top */cam.rotation.y=Math.atan2(d[0],d[1]);this.anim.push({k:'cam',mesh:cam,o});break;}
         const cx = o.x + 0.5, cz = o.y + 0.5, inside = !!this.sim.D.shellAt[o.y * S.W + o.x];
         if (inConst) { this.scaffold(o, cx, cz, 0.3, 0.3, 1.0, f); break; }
         const h = inside ? 1.55 : 2.3;
@@ -1338,7 +1342,7 @@ export class Renderer {
         case 'elev': { A.mesh.position.y = o.pos * FLOOR_H + 0.63; A.mesh.visible = !(this.view === 0 && o.pos > 0.5); A.mesh.material = !sim.works(o) ? this.mat.cartDmg : this.mat.elevCab; break; }
         case 'privateLight': {
           const u=s.objects[o.mount?.host],active=u&&(this.sel===u.id||this.sel===o.id||this.sim.s.agents.some(a=>a.unit===u.id));
-          const on=o.cstate==='operating'&&!o.unpowered&&!!active;A.mesh.material.emissiveIntensity=on?1.2:0;A.glow.material.opacity=on?.35:0;A.glow.visible=on&&A.mesh.visible&&this.floorVisible(o.f||0);break;
+          const on=o.cstate==='operating'&&!o.unpowered&&!!active;A.mesh.material.emissiveIntensity=on?1.2:0;A.glow.material.opacity=on?.5:0;A.glow.visible=on&&A.mesh.visible&&this.floorVisible(o.f||0);break;
         }
         case 'light': {
           const on = sim.works(o); const flick = o.cond < 0.45 && on ? (Math.sin(this.time * 23 + o.id) > 0.6 ? 0.25 : 1) : 1;
@@ -1410,6 +1414,11 @@ export class Renderer {
   }
 
   // ================================================================ PREVIEW / OVERLAYS / FOCUS
+  // UL-2: soft radial pool (same texture as pole lights) for mounted fixtures; coverage cells stay a planning preview only.
+  softGlow(x,z,f,w,h) {
+    const glow=new THREE.Mesh(this.geo.plane,new THREE.MeshBasicMaterial({map:this.tx.glow,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));
+    glow.scale.set(w,h,1);glow.rotation.x=-Math.PI/2;glow.position.set(x,(f||0)*FLOOR_H+.05,z);glow.renderOrder=4;glow.castShadow=false;return glow;
+  }
   fixtureCoverageMesh(c,cells,opacity=.32) {
     const points=[];for(const p of cells){const x=p.x,y=p.y;points.push(x,0,y,x,0,y+1,x+1,0,y+1,x,0,y,x+1,0,y+1,x+1,0,y);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(points,3));

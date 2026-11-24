@@ -11,14 +11,17 @@ registerHooks({resolve(specifier,context,next){return specifier==='three'?{url:n
 const THREE=await import('three'),{Renderer}=await import('../../js/render.js');
 const s=makeSandbox({start:'starter',cash:100000});s.s.open=false;s.ensure();
 const a={tool:'du5x10',a:{x:10,y:3},b:{x:10,y:3},rotation:2,f:0,lighting:'both',outsideCameras:true},R=s.plan(a);
-const r=Object.create(Renderer.prototype);Object.assign(r,{sim:s,previewG:new THREE.Group(),staticG:new THREE.Group(),geo:{box:new THREE.BoxGeometry(1,1,1),cone:new THREE.ConeGeometry(.5,1,8)},mat:{lamp:new THREE.MeshStandardMaterial(),office:new THREE.MeshStandardMaterial()},ringGeo:{},tx:{plaques:{}},anim:[],view:0,sel:null});
+const r=Object.create(Renderer.prototype);Object.assign(r,{sim:s,previewG:new THREE.Group(),staticG:new THREE.Group(),geo:{box:new THREE.BoxGeometry(1,1,1),plane:new THREE.PlaneGeometry(1,1),cone:new THREE.ConeGeometry(.5,1,8)},mat:{lamp:new THREE.MeshStandardMaterial(),office:new THREE.MeshStandardMaterial()},ringGeo:{},tx:{plaques:{},glow:new THREE.Texture()},anim:[],view:0,sel:null});
 r.setPreview(R);assert.ok(r.previewG.children.length>3);
 for(const option of R.upgrades.options){const mesh=r.fixtureCoverageMesh(option.fixture,option.cells);assert.equal(mesh.geometry.attributes.position.count,option.cells.length*6);assert.ok(option.cells.every(c=>c.y>=4));}
 const cash=s.s.cash,paid=s.dispatch({type:'build',...a,upgradeStamp:R.upgradeStamp});assert.ok(paid.ok);const order=s.s.orders.find(o=>o.id===paid.order);for(let n=0;n<4000&&order.st==='construction';n++)s.step();
 const u=s.s.objects[order.objs[0]],fixtures=mountedOn(s,u.id);for(const fixture of fixtures)r.buildObj(fixture);
 assert.equal(r.anim.filter(a=>a.k==='privateLight').length,1);assert.equal(r.anim.filter(a=>a.k==='light').length,1);assert.equal(r.anim.filter(a=>a.k==='cam').length,1);
 r.updateStatusMarks=()=>{};r.sel=u.id;r.time=1;r.updateAnim(.016,1);const privateLight=r.anim.find(a=>a.k==='privateLight');assert.equal(privateLight.glow.visible,true);r.sel=null;r.updateAnim(.016,1);assert.equal(privateLight.glow.visible,false);
-const lamp=r.anim.find(a=>a.k==='light');assert.equal(lamp.glow.geometry.attributes.position.count,attachmentCoverage(s,lamp.o).length*6);
+// UL-2: mounted fixtures sit on the unit (heads at or below the 1.25 wall top) and light a soft radial pool, not coverage tiles.
+const lamp=r.anim.find(a=>a.k==='light'),cam=r.anim.find(a=>a.k==='cam');assert.equal(lamp.glow.material.map,r.tx.glow);assert.equal(lamp.glow.geometry,r.geo.plane);assert.equal(privateLight.glow.material.map,r.tx.glow);
+for(const m of [lamp.mesh,cam.mesh,privateLight.mesh]){m.geometry.computeBoundingBox();const top=m.position.y+m.scale.y*m.geometry.boundingBox.max.y;assert.ok(top<=1.25+1e-6,'fixture top at or below the wall top: '+top);}
+const d=lamp.o.mount.dir;assert.ok((lamp.glow.position.x-lamp.o.mount.x)*d[0]+(lamp.glow.position.z-lamp.o.mount.y)*d[1]>0,'wall-light pool lies in front of the door');assert.ok(attachmentCoverage(s,lamp.o).length>0);
 console.log('PASS actual Three.js CPU meshes, fixture positions, clipped preview masks and private inspection lighting');
 const source=fs.readFileSync('js/main.js','utf8');const functions=source.slice(source.indexOf('function validState('),source.indexOf('function makeMapleSeedPrice('));
 const ctx=vm.createContext({ROLES,MARKETS,MIN_PER_DAY,Number,Array,Object,Math,Set,Map});vm.runInContext(functions,ctx);

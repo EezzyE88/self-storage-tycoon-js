@@ -1370,3 +1370,19 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 .tut.kit details > summary::-webkit-details-marker, .modal.kit-end details > summary::-webkit-details-marker { display: none; }
 .tut.kit details > summary::before, .modal.kit-end details > summary::before { content: '▸'; display: inline-block; width: 1em; }
 .tut.kit details[open] > summary::before, .modal.kit-end details[open] > summary::before { content: '▾'; }
+/* UL-2: compact unit lighting & security quote. One row per requested type: count, then cost or the reason it is left out. */
+.eq-head h3 { margin: 2px 0 4px; }
+.eq-modes { gap: 4px; }
+.eq-modes .btn.sm { min-height: 44px; padding: 0 10px; }
+.eq-quote { width: 100%; border-collapse: collapse; margin: 6px 0 2px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.eq-quote th { text-align: left; font-weight: 600; padding: 3px 0; }
+.eq-quote td { padding: 3px 0 3px 8px; white-space: nowrap; }
+.eq-quote td:last-child { text-align: right; }
+.eq-quote tr.omit th, .eq-quote tr.omit td { color: var(--muted); font-weight: 500; }
+.eq-quote tr.tot th, .eq-quote tr.tot td { border-top: 1px solid var(--line, rgba(0,0,0,.12)); font-weight: 800; padding-top: 5px; }
+.eq-meta { margin: 0 0 4px; }
+.eq-chips { gap: 4px; margin: 2px 0 4px; }
+.eq-chips .btn.sm { min-height: 44px; }
+/* While the equipment options are open on a phone, give their quote the review space: the general construction
+   authorization note and demand line step aside (cash after build and availability stay). */
+@media (max-width:700px) { #ui .unit-review:has(.unit-options[open]) .build-authorization, #ui .unit-review:has(.unit-options[open]) .placement-demand { display:none; } }

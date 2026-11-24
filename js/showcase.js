@@ -310,9 +310,10 @@ export function installShowcase(game) {
       case 'drama': celebrate(e.k === 'breakin' ? 'Break-in' : e.k === 'pricewar' ? 'Price war' : 'News', e.title, e.sub, e.x != null ? { x: e.x + 0.5, z: e.y + 0.5, f: e.f } : null, 'warn'); break;
       case 'milestone': if (MILESTONES[e.k] && !String(e.k).startsWith('scenario_')) celebrate('Milestone', MILESTONES[e.k], milestoneSub(e.k), officeAt()); break;
       case 'commissioned': if (e.n >= 2) celebrate(
-        e.propertyOpen ? 'Grand opening' : 'Units ready',
+        // UL-2: an expansion of an already-open property is not a grand opening; it adds units to live leasing.
+        e.propertyOpen ? 'New units open' : 'Units ready',
         e.propertyOpen ? `${e.n} new units open` : `${e.n} units ready`,
-        e.propertyOpen ? 'Now visible to shoppers. Leasing starts today.' : "Open the property when you're ready to begin leasing.",
+        e.propertyOpen ? 'Now visible to shoppers.' : "Open the property when you're ready to begin leasing.",
         { x: e.x + 0.5, z: e.y + 0.5, f: e.f }); break;
       case 'scenario_end': if (e.won) celebrate('Scenario complete', s.scenario ? s.scenario.name || 'Goals met' : 'Goals met', `Finished on day ${game.sim.day}`, officeAt()); break;
       case 'tut_done': if (s.tut.done) celebrate('Graduated', 'Maple Street is yours', 'Every tool is unlocked. Maple Street is paused until you pick a speed.', officeAt()); else if (BEATS[e.beat] && BEATS[e.beat + 1] && e.beat > 0) celebrate(beatDoneLabel(e.beat), tutorialText(game.sim, BEATS[e.beat].title).replace(/\.$/, ''), `Next: ${tutorialText(game.sim, BEATS[e.beat + 1].title).replace(/\.$/, '')}`, officeAt()); break;

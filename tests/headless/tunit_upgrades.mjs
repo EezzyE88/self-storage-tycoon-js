@@ -81,7 +81,7 @@ console.log('PASS retrofit rental hold, charge-once, save/load, cancel/refund, c
 console.log('PASS standalone affordability, unchanged camera wear, reserve selection identity and teaching/legacy guards');
 {
  const s=fixture(),ui=Object.create(UI.prototype),els={abar:{innerHTML:''}};ui.g={sim:s,rend:{setPreview(R){this.preview=R;}}};ui.$=id=>els[id];ui.renderTut=()=>{};ui.reserveWait=null;ui.do=a=>s.dispatch(a);
- const u=vacant(s);ui.beginRetrofit(u.id);assert.equal(s.s.speed,0);ui.changeUpgrade('lighting','both');assert.match(els.abar.innerHTML,/Confirm/);assert.match(els.abar.innerHTML,/cannot rent during installation/);assert.match(els.abar.innerHTML,/Include outside cameras/);assert.ok(ui.rend.preview.upgrades);ui.endRetrofit();assert.equal(s.s.speed,0);
+ const u=vacant(s);ui.beginRetrofit(u.id);assert.equal(s.s.speed,0);ui.changeUpgrade('lighting','both');assert.match(els.abar.innerHTML,/Confirm/);assert.match(els.abar.innerHTML,/cannot rent during installation/);assert.match(els.abar.innerHTML,/data-a="upgradeCamera"/);assert.match(els.abar.innerHTML,/class="eq-quote"/);assert.ok(ui.rend.preview.upgrades);ui.endRetrofit();assert.equal(s.s.speed,0);
  const html=ui.upgradeHtml(s.plan({...a,lighting:'both'}),{lighting:'both'});for(const label of ['None','Interior','Outside wall','Both'])assert.ok(html.includes(label));
 }
 console.log('PASS actual UI retrofit review/options/preview and manual Pause preservation');

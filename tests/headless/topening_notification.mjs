@@ -29,12 +29,13 @@ for (const open of [false, true]) for (const speed of [0, 1, 2, 4]) {
   f.sim.s.open = !open;
   f.emit(event);
   if (open) {
-    assert.match(f.el.innerHTML, /Grand opening/); assert.match(f.el.innerHTML, /6 new units open/);
-    assert.match(f.el.innerHTML, /Now visible to shoppers\. Leasing starts today\./);
+    // UL-2: an expansion of an open property is announced as new units, never as a grand opening.
+    assert.match(f.el.innerHTML, /New units open/); assert.match(f.el.innerHTML, /6 new units open/);
+    assert.match(f.el.innerHTML, /Now visible to shoppers\./); assert.doesNotMatch(f.el.innerHTML, /Grand opening|Leasing starts today/);
   } else {
     assert.match(f.el.innerHTML, /Units ready/); assert.match(f.el.innerHTML, /6 units ready/);
     assert.match(f.el.innerHTML, /Open the property when you're ready to begin leasing\./);
-    assert.doesNotMatch(f.el.innerHTML, /Grand opening|units open|Leasing starts today/);
+    assert.doesNotMatch(f.el.innerHTML, /Grand opening|New units open|units open|Leasing starts today/);
   }
   assert.equal(f.sim.s.speed, 0); assert.equal(f.effects.length, 1);
   f.drain(); f.sim.s.open = open;

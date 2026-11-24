@@ -80,9 +80,11 @@ export function addUpgrades(sim, a, R, units, retrofit=false) {
     if(mode!=='none'||a.outsideCameras){R.status='invalid';R.reasons.push('Unit lighting and cameras are not available during the tutorial or a lesson');}
     return R;
   }
-  const excluded=new Set(a.excludedFixtures||[]), creates=[], options=[], pending=[], notices=[];
+  const excluded=new Set(a.excludedFixtures||[]), creates=[], options=[], pending=[], notices=[], omit={};
   const targets=units.flatMap(u=>sim.unitFront(u).filter(c=>sim.inb(c.x,c.y)).map(c=>({...c,f:u.f||0})));
   const proposed=retrofit?[]:units;
+  // UL-2 (display only): why a requested fixture type ends up with none in the quote. Never part of state or the review stamp.
+  if(['interior','both'].includes(mode)&&retrofit&&units.every(u=>mountedOn(sim,u.id).some(o=>o.type==='unitLight')))omit.unitLight='installed';
   units.forEach((u,k)=>{
     const host=retrofit?u.id:k, existing=retrofit?mountedOn(sim,u.id):[];
     if(['interior','both'].includes(mode)&&!existing.some(o=>o.type==='unitLight'))creates.push({type:'unitLight',x:u.x,y:u.y,f:u.f||0,cond:1,mount:{host,private:true,x:u.x+u.w/2,y:u.y+u.h/2}});
@@ -117,10 +119,17 @@ export function addUpgrades(sim, a, R, units, retrofit=false) {
     if(!dark.length)notices.push(`${type==='light'?'Lighting':'Camera'} coverage in front of the door is sufficient`);
     else {notices.push(`${dark.length} cells in front of the door without ${type==='light'?'lighting':'camera coverage'}`);if(type==='light'&&units.some(u=>u.access==='interior')&&!R.missing.includes('Hallway is dark - add a light'))R.missing.push('Hallway is dark - add a light');}
     if(dark.some(c=>pendingCells.has(`${c.f}:${c.x}:${c.y}`)))pending.push(`${type}: coverage awaiting existing installation`);
+    if(!creates.some(o=>o.type===type)){
+      const mine=options.filter(o=>o.fixture.type===type);
+      omit[type]=mine.length&&mine.every(o=>!o.selected)?'off'
+        :retrofit&&units.every(u=>mountedOn(sim,u.id).some(o=>o.type===type))?'installed'
+        :!dark.length?'covered'
+        :dark.every(c=>pendingCells.has(`${c.f}:${c.x}:${c.y}`))?'pending':'nomount';
+    }
   }
   const cost=creates.reduce((n,o)=>n+UPGRADE[o.type][retrofit?'retrofit':'build'],0), daily=creates.reduce((n,o)=>n+UPGRADE[o.type].daily,0), minutes=creates.reduce((n,o)=>n+UPGRADE[o.type].minutes,0);
   R.creates.push(...creates);R.cost+=cost;R.opex+=daily;R.dur+=minutes;
-  R.upgrades={mode,options,pending,notices,cost,daily,minutes,counts:Object.fromEntries(['unitLight','light','camera'].map(t=>[t,creates.filter(o=>o.type===t).length]))};
+  R.upgrades={mode,options,pending,notices,omit,asked:{unitLight:['interior','both'].includes(mode),light:['outside','both'].includes(mode),camera:!!a.outsideCameras},cost,daily,minutes,counts:Object.fromEntries(['unitLight','light','camera'].map(t=>[t,creates.filter(o=>o.type===t).length]))};
   // Planned powered fixtures may resolve the dark warning, but never other prerequisites.
   if(['outside','both'].includes(mode)&&!notices.some(n=>/without lighting/.test(n)))R.missing=R.missing.filter(m=>m!=='Hallway is dark - add a light');
   if(R.status!=='invalid')R.status=R.missing.length?'incomplete':'valid';
@@ -131,7 +140,8 @@ export function retrofitPlan(sim,a) {
   const R={tool:'unitRetrofit',status:'valid',reasons:[],missing:[],warn:[],cost:0,dur:0,count:1,opex:0,items:[],creates:[],tiles:[],label:'Unit lighting/security retrofit',units:[]};
   if(!retrofitEligible(sim,u)){R.status='invalid';R.reasons.push('Select a vacant, unreserved operating unit with no active retrofit or customer');return R;}
   R.units=[u];addUpgrades(sim,a,R,[u],true);
-  if(!R.creates.length){R.status='invalid';R.reasons.push('No additional fixtures selected');}
+  if(!R.creates.length){R.status='invalid';const A=R.upgrades?.asked||{},why=Object.keys(A).filter(t=>A[t]).map(t=>R.upgrades.omit?.[t]);
+    R.reasons.push(!why.length?'Choose lights or cameras to install':why.every(w=>w==='covered'||w==='installed')?'Already covered: nothing to install':why.every(w=>w==='off')?'All suggested fixtures are turned off':'Nothing can be installed here');}
   return R;
 }
 export function upgradePower(R) { return (R.creates||[]).filter(o=>o.mount).reduce((n,o)=>n+UPGRADE[o.type].kw,0); }
