@@ -197,8 +197,8 @@ canvas.chart { width: 100%; height: 120px; display: block; background: #fff; bor
 .title h1 { font-size: clamp(30px, 7vw, 54px); font-weight: 900; letter-spacing: -0.03em; margin: 10px 0 2px; line-height: 1; }
 .title p { margin: 4px 0 18px; color: #cfd6dc; font-size: 15px; max-width: 460px; }
 .title .choices { display: grid; gap: 8px; width: min(420px, 100%); }
-.title .choices .btn { height: 54px; font-size: 16px; justify-content: space-between; padding: 0 16px; }
-.title .choices .btn small { font-weight: 500; font-size: 12px; opacity: 0.8; }
+.title .choices .btn { height: auto; min-height: 54px; font-size: 16px; justify-content: space-between; padding: 6px 16px; }
+.title .choices .btn small { font-weight: 500; font-size: 12px; line-height: 1.25; opacity: 0.8; text-align: right; }
 
 
 @media (max-width: 560px) {
@@ -302,7 +302,7 @@ canvas.chart { width: 100%; height: 120px; display: block; background: #fff; bor
   .title h1 { font-size: 30px; margin: 4px 0 0; }
   .title p { margin: 2px 0 10px; font-size: 13px; }
   .title .choices { grid-template-columns: 1fr 1fr; width: min(680px, 100%); gap: 6px; }
-  .title .choices .btn { height: 46px; font-size: 15px; }
+  .title .choices .btn { min-height: 46px; font-size: 15px; }
 }
 @keyframes sfade { from { opacity: 0; transform: translateX(12px); } }
 /* 320px iPhones (SE 1st gen, zoomed display mode) */
