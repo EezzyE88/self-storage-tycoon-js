@@ -13,7 +13,10 @@ test('D1: tapping a lit unit selects the unit; mounted fixtures stay reachable f
  const s=fresh();build(s,'aisle',22,16,{x:30,y:16});const objs=build(s,'du5x5',25,15,undefined,{rotation:0,lighting:'both'});const u=objs.find(o=>o.type==='unit');
  assert.ok(objs.some(o=>o.type==='unitLight'&&o.mount?.host===u.id),'interior light mounted');
  const f=ui(s);for(const view of ['ext',0]){f.g.rend.view=view;assert.equal(f.ui.pickAt({x:u.x,y:u.y}),u.id,`view ${view}`);}
- f.ui.sel=u.id;const html=f.ui.removalActions();assert.match(html,/Remove unit…/);assert.match(html,/Remove interior light #\d+…/);assert.match(html,/Remove wall light #\d+…/);assert.doesNotMatch(html,/unitLight/);
+ f.ui.sel=u.id;const html=f.ui.removalActions();assert.match(html,/Remove unit…/);assert.doesNotMatch(html,/unitLight/);
+ // UL-3: each mounted fixture's Remove… (same removeObject review) moved onto its row in the unit's equipment list.
+ const sheet=f.ui.objSheet(u,s.objName(u));for(const m of Object.values(s.s.objects).filter(o=>o.mount?.host===u.id)){assert.match(sheet,new RegExp(`data-a="removeObject" data-v="${m.id}" aria-label="Remove (interior|wall) light #${m.id}">Remove…`));assert.doesNotMatch(html,new RegExp(`data-v="${m.id}"`));}
+ assert.doesNotMatch(sheet,/unitLight/);
  const light=build(s,'light',28,18)[0];assert.equal(f.ui.pickAt({x:28,y:18}),light.id,'standalone light still selectable');
 });
 test('D2: each idle cart in a corral is disposable from the corral panel; in-use carts are not offered; no reassignment',()=>{
