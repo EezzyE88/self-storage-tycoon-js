@@ -1,4 +1,5 @@
 import { spendCompanyGoalCredit } from './companygoals.js';
+import { recordUnitBuild, dropUnitBuild, noteUnitRent, noteUnitsRemoved, noteBuildCredit } from './investmentresults.js';
 import { accessState, classicOfficeAccess, classicOfficeParking, classicOfficeWalkingField, lostMapleAccess, publicDrive, recessed, staffLanding } from './mapleaccess.js';
 import { frontageOf, knownLayout } from './frontage.js';
 import { applyRemovalState } from './removal.js';
@@ -1165,6 +1166,7 @@ export class Sim {
     }
     for (const tl of R.tiles) if (tl.k === 'hall') s.hall[tl.f][tl.i] = 2;
     s.orders.push(ord);
+    recordUnitBuild(this, ord, R.creates.some((c) => c.type === 'unit'));
     if (a.projectKey) startProject(this, a.projectKey, ord);
     if (s.lesson) s.lesson.built.push({ tool: a.tool, f: a.f || 0, id: ord.id }); else if (s.tut && s.tut.on) (s.tut.built || (s.tut.built = [])).push({ tool: a.tool, f: a.f || 0, id: ord.id });
     s.lastCommit = { order: ord.id, t: s.t };
@@ -1187,6 +1189,7 @@ export class Sim {
   }
   commitRemoval(q) {
     if(q.cost)this.money(-q.cost,'capex','Demolition: '+q.name);
+    noteUnitsRemoved(this,q.mutation.ids);
     applyRemovalState(this.s,q.mutation);
     this.markDirty();this.emit('demolish',{x:q.target?.x,y:q.target?.y,f:q.target?.f||0});
     return {ok:true,msg:q.closeProperty?`Property closed; ${q.name} removed.`:`${q.name} removed${q.cost?' · '+(Math.round(q.cost*100)/100).toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:q.cost%1?2:0}):''}.`,removed:q.mutation.ids};
@@ -1200,6 +1203,7 @@ export class Sim {
     const undo = ord.t0 != null && s.t - ord.t0 <= 30; // any order placed in the last 30 game-minutes (the build preview promises this), not only the latest
     const refund = undo ? ord.cost : Math.round(ord.cost * (1 - ord.prog) * 0.6);
     if (!s.creative) this.money(refund, 'capex', (undo ? 'Undo: ' : 'Cancelled: ') + ord.label);
+    dropUnitBuild(this, ord);
     this.removeEquipment(new Set(ord.objs));
     if(ord.retrofit && s.objects[ord.retrofit]?.retrofitOrder===ord.id)delete s.objects[ord.retrofit].retrofitOrder;
     if (ord.keypadDoor) { const d = s.objects[ord.keypadDoor]; if (d) { d.keypad = null; } }
@@ -1260,7 +1264,7 @@ export class Sim {
     this.markDirty(); this.rebuild();
     if (ord.tool === 'office') for (const st of s.staff) if (!s.agents.some((a) => a.sid === st.id)) this.spawnStaffAgent(st);
     const units = ord.objs.map((id) => s.objects[id]).filter((o) => o && o.type === 'unit');
-    if (reimburse) spendCompanyGoalCredit(this, 'construction', ord.cost);
+    if (reimburse) { const before = s.companyGoalCredits?.construction || 0; spendCompanyGoalCredit(this, 'construction', ord.cost); noteBuildCredit(this, ord, before); }
     this.emit('complete', { order: ord.id, label: ord.label, cells: ord.cells, ready: units.filter((u) => u.cstate === 'ready').length, units: units.length });
     reconcileProject(this);
     if (ord.tool === 'hall' || ord.tool === 'aisle') { /* infra */ }
@@ -1662,7 +1666,7 @@ export class Sim {
             const unit = s.objects[id];
             if (unit?.type === 'unit') unit.companyBuilt = true;
           }
-          if (ord.objs.some(id => s.objects[id]?.companyBuilt)) spendCompanyGoalCredit(this, 'construction', ord.cost);
+          if (ord.objs.some(id => s.objects[id]?.companyBuilt)) { const before = s.companyGoalCredits?.construction || 0; spendCompanyGoalCredit(this, 'construction', ord.cost); noteBuildCredit(this, ord, before); }
         }
         continue;
       }
@@ -2081,7 +2085,7 @@ export class Sim {
     if (L.status === 'current') {
       if (day < L.nextBill) return;
       L.nextBill += BILLING_CYCLE_DAYS;
-      if (this.rnd() < 0.955) { this.money(L.rent, 'rent', `Rent - Unit ${u.num}`); return; }
+      if (this.rnd() < 0.955) { this.money(L.rent, 'rent', `Rent - Unit ${u.num}`); noteUnitRent(this, u, L.rent); return; }
       L.status = 'pastdue'; L.balance = L.rent; L.fees = 0; L.dueSince = day; L.feeDone = false;
       this.emit('pastdue', { unit: u.id }); return;
     }
@@ -2112,7 +2116,7 @@ export class Sim {
   fmtMoney(v) { return '$' + Math.round(v).toLocaleString(); }
   payUp(L, why) {
     const s = this.s, u = s.objects[L.unit], amt = this.owed(L);
-    if (amt > 0) { this.money(L.balance, 'rent', `${why} - Unit ${u.num}`); if (L.fees) this.money(L.fees, 'anc', `Late fees - Unit ${u.num}`); }
+    if (amt > 0) { this.money(L.balance, 'rent', `${why} - Unit ${u.num}`); noteUnitRent(this, u, L.balance); if (L.fees) this.money(L.fees, 'anc', `Late fees - Unit ${u.num}`); }
     this.dropConvo('lien' + L.id); L.status = 'current'; L.balance = 0; L.fees = 0; L.feeDone = false; L.noticeUntil = null; L.planDue = null; u.overlock = false;
     const tn = s.tenants[L.tenant]; if (tn) tn.sat = clamp(tn.sat - 0.04, 0, 1);
     this.emit('paid_up', { unit: u.id, amt });
@@ -2174,7 +2178,7 @@ export class Sim {
         if (L.planTried) return { ok: false, msg: 'This tenant already had a payment-plan offer' };
         L.planTried = true;
         if (this.rnd() < 0.72) {
-          const half = Math.round(L.balance / 2); this.money(half, 'rent', `Payment plan - Unit ${u.num}`); L.balance -= half; L.fees = 0;
+          const half = Math.round(L.balance / 2); this.money(half, 'rent', `Payment plan - Unit ${u.num}`); noteUnitRent(this, u, half); L.balance -= half; L.fees = 0;
           L.status = 'plan'; L.planDue = this.day + 14; u.overlock = false; if (tn) tn.sat = clamp(tn.sat + 0.05, 0, 1);
           this.emit('plan_ok', { unit: u.id }); return { ok: true, msg: `${tn ? tn.name : 'Tenant'} paid $${half} now; the rest is due in 14 days. Fees waived, unit unlocked.` };
         }
@@ -2487,7 +2491,7 @@ export class Sim {
     customerHistory(account, this.day, 'lease_opened', `Unit ${u.num ?? u.name} leased at $${L.rent}/month`, L.id);
     tn.lease = L.id; s.tenants[tn.id] = tn; s.leases[L.id] = L;
     u.lease = L.id; u.commercial = 'reserved';
-    this.money(L.rent, 'rent', `First month - ${u.name}`);
+    this.money(L.rent, 'rent', `First month - ${u.name}`); noteUnitRent(this, u, L.rent);
     const ad = v && v.ad && this.findAd(v.ad); if (ad) { ad.leases = (ad.leases || 0) + 1; ad.revenue = (ad.revenue || 0) + L.rent; }
     s.today.leases++;
     if (u.vacatedAt != null) this.milestone('first_lease_after_turnover');

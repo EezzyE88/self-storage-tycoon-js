@@ -9,6 +9,8 @@ import { makeScenario, makeSandbox, SCENARIOS } from '../../js/scenarios.js';
 import { makeMaple, makeEmptyLot } from '../../js/maple.js';
 import { UPGRADE, retrofitEligible, mountedOn } from '../../js/unitupgrades.js';
 import { UI } from '../../js/ui.js';
+// PI-01C: s.unitBuilds is the Investment Check-in's observational record; equivalence excludes only that key.
+const simState = (st) => JSON.stringify({ ...st, unitBuilds: undefined });
 
 registerHooks({ resolve(specifier, context, next) { return specifier === 'three' ? { url: new URL('../../vendor/three.module.min.js', import.meta.url).href, shortCircuit: true } : next(specifier, context); } });
 const PARENT = process.argv[2];
@@ -161,7 +163,7 @@ await test('with equipment bought, 10 days of every mode are byte-identical to d
       if (spot) { const R = s.plan({ ...spot, lighting: 'both', outsideCameras: true }); if (R.status !== 'invalid' && (s.unlimited() || s.s.cash >= R.cost)) { const r = s.dispatch({ type: 'build', ...spot, lighting: 'both', outsideCameras: true, upgradeStamp: R.upgradeStamp }); if (r.ok && U === PU) bought++; } }
       const v = s.objs('unit').find((x) => U.retrofitEligible(s, x));
       if (v) { const args = { tool: 'unitRetrofit', unit: v.id, excludedFixtures: [], lighting: 'both', outsideCameras: true }, R = s.plan(args); if (R.creates.length && (s.unlimited() || s.s.cash >= R.cost)) { const r = s.dispatch({ type: 'unitRetrofit', ...args, upgradeStamp: R.upgradeStamp }); if (r.ok && U === PU) bought++; } }
-      days(s, 10); return JSON.stringify(s.s); };
+      days(s, 10); return simState(s.s); };
     assert.equal(run(LOCAL, { retrofitEligible }), run(P, PU), name);
   }
   assert.ok(bought >= 10, 'purchases ' + bought);

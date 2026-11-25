@@ -11,6 +11,8 @@ import { makeScenario, makeSandbox, SCENARIOS, modeLabel, sandboxName } from '..
 import { makeMaple, makeEmptyLot } from '../../js/maple.js';
 import { mountedOn, retrofitEligible, exteriorRetrofitEligible, unitOccupied, attachmentCoverage } from '../../js/unitupgrades.js';
 import { UI } from '../../js/ui.js';
+// PI-01C: s.unitBuilds is the Investment Check-in's observational record; equivalence excludes only that key.
+const simState = (st) => JSON.stringify({ ...st, unitBuilds: undefined });
 
 const PARENT = process.argv[2];
 assert.ok(PARENT, 'usage: node tests/headless/tsecurity_integrity.mjs <export of the parent commit>');
@@ -191,7 +193,7 @@ await test('10 days of every mode, with and without equipment, are byte-identica
     if (name === 'Tutorial') continue;
     const run = (M) => { const s = mk(M); s.ensure(); s.s.speed = 1; let k = 0;
       for (let y = 1; y < s.s.H - 1 && !k; y++) for (let x = 1; x < s.s.W - 1 && !k; x++) { const sp = { tool: 'du5x10', a: { x, y }, b: { x: x + 1, y }, rotation: 2, f: 0, lighting: 'both', outsideCameras: true }; const R = s.plan(sp); if (R.status !== 'invalid' && (s.unlimited() || s.s.cash >= R.cost)) { if (s.dispatch({ type: 'build', ...sp, upgradeStamp: R.upgradeStamp }).ok) k = 1; } }
-      days(s, 10); return JSON.stringify(s.s); };
+      days(s, 10); return simState(s.s); };
     assert.equal(run(LOCAL), run(P), name + ' (equipment)');
   }
 });

@@ -3,6 +3,7 @@
 // (sim.js commit, vertical.js); authored starting units have none. Only operating units count,
 // the same base as HUD occupancy. Contracted monthly rent is not cash collected or profit.
 import { unitStatus } from './status.js';
+import { unitBuildRecord } from './investmentresults.js';
 
 const dollars = (v) => '$' + Math.round(v).toLocaleString('en-US');
 
@@ -158,7 +159,16 @@ export function investmentCheckin(sim) {
     rent: rows.reduce((n, p) => n + p.rent, 0), products: rows,
     period: { from: firstDay, through: lastDay },
     daysObserved, condition, nextAction: checkinNextAction(condition, rows, daysObserved),
+    results: unitBuildRecord(sim, order),
     unitStatus: singleDrive ? { number: unit.num, text: driveUpStatus(sim, unit) } : null };
+}
+
+// PI-01C: two recorded observations for the group. Gross receipts only; never netted against cost.
+function resultsHtml(R) {
+  if (!R) return '<p><b>Recorded results:</b> construction cost and collected rent are not on record for this group.</p>';
+  const removed = R.removed ? ` Both figures include ${R.removed} unit${R.removed === 1 ? '' : 's'} since removed.` : '';
+  const credit = R.credit ? ` A ${dollars(R.credit)} Company Goal credit was booked separately.` : '';
+  return `<p><b>Recorded results:</b> construction cost ${dollars(R.cost)} · rent collected from these units ${dollars(R.rent)} since Day ${R.day}.${removed}${credit}</p>`;
 }
 
 export function investmentCheckinHtml(sim) {
@@ -168,5 +178,6 @@ export function investmentCheckinHtml(sim) {
   const rows = C.products.map(p => `<div class="item"><div class="grow"><b>${label(p)} · ${p.leased}/${p.total} leased</b><small>${dollars(p.rent)}/mo signed-lease rent · ${p.losses} matching unmet request${p.losses === 1 ? '' : 's'} recorded (Days ${C.period.from}–${C.period.through})</small></div></div>`).join('');
   const closed = C.notOpen ? ` ${C.notOpen} more unit${C.notOpen === 1 ? '' : 's'} from this build ${C.notOpen === 1 ? 'is' : 'are'} not open yet.` : '';
   const unitStatus = C.unitStatus ? `<p><b>Unit ${C.unitStatus.number}</b> · ${C.unitStatus.text}</p>` : '';
-  return `<h3>Investment Check-in</h3><div class="note invest-progress"><p><b>Latest completed rental-unit group:</b> ${C.leased} of ${C.total} operating units leased · ${dollars(C.rent)}/mo contracted rent.${closed}</p>${unitStatus}<p><b>Current condition:</b> ${C.condition.description}.</p><p><b>Next:</b> ${C.nextAction}</p></div><div class="list">${rows}</div><p class="note">Recent recorded unmet requests are not total demand; zero recorded losses does not prove zero demand. Contracted monthly rent is not cash collected or profit.${C.daysObserved < 14 ? ' Demand observation history is limited.' : ''}</p>`;
+  const results = resultsHtml(C.results);
+  return `<h3>Investment Check-in</h3><div class="note invest-progress"><p><b>Latest completed rental-unit group:</b> ${C.leased} of ${C.total} operating units leased · ${dollars(C.rent)}/mo contracted rent.${closed}</p>${results}${unitStatus}<p><b>Current condition:</b> ${C.condition.description}.</p><p><b>Next:</b> ${C.nextAction}</p></div><div class="list">${rows}</div><p class="note">Recent recorded unmet requests are not total demand; zero recorded losses does not prove zero demand. Contracted monthly rent is not cash collected or profit.${C.results ? ' Collected rent is gross cash received, not profit or return on investment, and excludes late fees, auction proceeds, loans and goal rewards.' : ''}${C.daysObserved < 14 ? ' Demand observation history is limited.' : ''}</p>`;
 }

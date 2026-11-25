@@ -8,6 +8,7 @@ import { verticalDone, verticalLayout, shaftHallState, upRouteQuote } from './bl
 import { investmentEvidence, demandEvidenceText } from './economics.js';
 import { creditNeeded, creditProjection, outlook, cents } from './finance.js';
 import { actIIProgress, investmentText, gradProgress } from './investmentprogress.js';
+import { noteUnitRent } from './investmentresults.js';
 
 const unitByRole = (sim, role) => tutorialUnit(sim, role);
 const createdSince = (sim, type, t) => sim.objs(type).some((o) => o.cstate === 'operating' && o.id > (ctx(sim).idMark || 0));
@@ -169,7 +170,7 @@ export function authorAct4Account(sim) {
   const s = sim.s, f = s.tut.flags; if (f.act4Account != null) return { ok: false, dup: true };
   const pick = act4Eligible(sim)[0]; if (!pick) return { ok: false, none: true }; // wait for a genuine account; never fabricate one
   const { L, u, bill } = pick, late = sim.day - bill, pol = s.policies;
-  sim.money(-L.rent, 'rent', RETURNED + u.num);
+  sim.money(-L.rent, 'rent', RETURNED + u.num); noteUnitRent(sim, u, -L.rent);
   L.status = 'pastdue'; L.balance = L.rent; L.fees = 0; L.dueSince = bill; L.feeDone = false; // as billLease on a missed bill
   if (late >= 5 && pol.lateFee > 0) { L.feeDone = true; L.fees = pol.lateFee; } // the fee billLease adds at 5 days
   if (late >= 15) { L.status = 'delinquent'; if (pol.overlock) { u.overlock = true; sim.emit('overlock', { unit: u.id, x: u.x, y: u.y, f: u.f || 0 }); } }

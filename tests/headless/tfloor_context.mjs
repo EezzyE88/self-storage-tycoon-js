@@ -112,7 +112,13 @@ assert.equal(verticalAt(routingCommit + '^'), expectedVertical);
 // GV-01 declared hunk: sweep-v1 boarding also records el.lastBoardT for the elevator-wait goal; every other byte stays pinned.
 const gv01Old='el.avgWait=(el.avgWait||0)*.85+a.elevWaited*.15;sim.wear',gv01New='el.avgWait=(el.avgWait||0)*.85+a.elevWaited*.15;el.lastBoardT=s.t;sim.wear';
 const routedVertical=verticalAt(routingCommit);assert.equal(routedVertical.split(gv01Old).length,2,'declared GV-01 vertical.js hunk exists once');
-assert.equal(readFileSync('js/vertical.js','utf8'), routedVertical.replace(gv01Old,gv01New));
+// PI-01C declared hunks: observational build records beside the existing commit charge and cancellation; every other byte stays pinned.
+const pi01c=[["import { numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';\n","import { numberCapacity, reserveNumbers, nameUnit } from './unitnumbering.js';\nimport { recordUnitBuild, dropUnitBuild } from './investmentresults.js';\n"],
+ ["sim.money(-R.cost,'capex',ord.label);s.orders.push(ord);s.lastCommit","sim.money(-R.cost,'capex',ord.label);s.orders.push(ord);recordUnitBuild(sim,ord,R.unitCreates.length>0);s.lastCommit"],
+ ["ord.st='cancelled';ord.prog=1;sim.markDirty();return{ok:true,refund,","ord.st='cancelled';ord.prog=1;dropUnitBuild(sim,ord);sim.markDirty();return{ok:true,refund,"]];
+let pinnedVertical=routedVertical.replace(gv01Old,gv01New);
+for(const [a,b] of pi01c){assert.equal(pinnedVertical.split(a).length,2,'declared PI-01C vertical.js hunk exists once');pinnedVertical=pinnedVertical.replace(a,b);}
+assert.equal(readFileSync('js/vertical.js','utf8'), pinnedVertical);
 // The exact d84fb59 simulation reconstruction moved to tfloor_context_sim_d84fb59.mjs (historical profile):
 // that commit is not in the repository. Behavior replacing it, on current production simulation:
 // eligible units open automatically in every mode, and the readiness text says "operating", not "commissioned".
