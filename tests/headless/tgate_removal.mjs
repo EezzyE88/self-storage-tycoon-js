@@ -78,7 +78,7 @@ await test('production fence geometry fills removed crossing and keeps surviving
 });
 await test('inspector exposes direct review; cancel, manual Pause, duplicate Confirm and property switch are safe',()=>{
  const f=fixture(),ui=Object.create(UI.prototype),modal={innerHTML:''};ui.g={sim:f.sim,rend:{view:'ext'}};ui.title=false;ui.sel=f.g2.id;ui.$=()=>modal;ui.toast=()=>{};ui.renderTut=()=>{};ui.select=()=>{};
- ui.root={querySelectorAll:()=>[]};ui.sheetTall=false;ui.taskActions=()=>'';assert.match(ui.inspector(),/dock-actions[\s\S]*data-a="gateRemove"/);
+ ui.root={querySelectorAll:()=>[]};ui.sheetTall=false;ui.taskActions=()=>'';assert.doesNotMatch(ui.inspector(),/data-a="gateRemove"/,'MP-1: gate removal is not shown until More is opened');ui.moreOpen=true;assert.match(ui.inspector(),/class="more-menu"[\s\S]*data-a="gateRemove" data-v="\d+">Remove gate…<small class="more-target">Entrance gate #\d+/);assert.doesNotMatch(ui.inspector(),/dock-actions[^]*?gateRemove[^]*?<div class="body">/);ui.moreOpen=false;
  ui.showGateRemoval(f.g2.id);assert.match(modal.innerHTML,/Confirm removal/);assert.ok(ui.gateRemovalReview);const before=snap(f.sim);ui.closeModal();assert.equal(snap(f.sim),before);assert.equal(ui.gateRemovalReview,null);
  f.sim.s.speed=4;ui.showGateRemoval(f.g2.id);assert.equal(f.sim.s.speed,0);ui.notePause(0);ui.confirmGateRemoval();assert.equal(f.sim.s.speed,0);const done=snap(f.sim);ui.confirmGateRemoval();assert.equal(snap(f.sim),done);
  const n=fixture();ui.g.sim=n.sim;ui.showGateRemoval(n.g2.id);ui.g.sim=fixture().sim;const other=snap(ui.sim);ui.confirmGateRemoval();assert.equal(snap(ui.sim),other);

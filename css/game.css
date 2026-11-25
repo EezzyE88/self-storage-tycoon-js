@@ -1416,3 +1416,22 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
 /* While equipment options are open on a phone, the bills/reserve/daily detail line folds; cash after build and the
    available figure stay beside Confirm. */
 @media (max-width:700px) { #ui .unit-review:has(.unit-options[open]) .spend-more .fin-sub { display:none; } }
+
+/* MP-1 (mobile panels): compact, action-first panels. Removals sit behind a labelled More menu; Details keeps the map in view. */
+#ui .panel-more { flex:none; min-height:44px; min-width:56px; border-radius:7px; background:#e5ebe5; color:#29434d; font-size:14px; font-weight:700; padding:0 10px; }
+#ui .panel-more[aria-expanded="true"] { background:#29434d; color:#fff8e8; }
+#ui .more-menu { flex-shrink:0; display:grid; gap:6px; padding:8px 10px; background:#fbf3ec; border-bottom:1px solid var(--line); }
+#ui .more-menu > small { color:var(--muted); font-size:12px; line-height:1.35; }
+#ui .more-menu .removal-actions { display:grid; gap:6px; padding:0; }
+#ui .more-menu .btn { display:flex; flex-direction:column; align-items:flex-start; text-align:left; width:100%; min-height:48px; background:#fffdf7; border:1px solid #e2c9b8; color:#7a2e1c; }
+#ui .more-menu .btn.danger { background:#fff4ef; color:#a3301a; }
+#ui .more-menu .more-target { display:block; font-size:12px; font-weight:500; color:var(--muted); overflow-wrap:anywhere; }
+@media (max-width:600px) and (orientation:portrait) {
+ #ui .sheet .dock-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #ui .sheet .dock-actions > :last-child:nth-child(odd) { grid-column:1 / -1; }
+ #ui .sheet .dock-actions .btn { white-space:normal; line-height:1.25; }
+ #ui .sheet:has(.dock-actions) { max-height:min(44dvh, 400px); }
+ #ui .sheet.tall, #ui .sheet.tall:has(.dock-actions) { max-height:min(60dvh, calc(100dvh - 178px - var(--safe-t) - var(--safe-b))); }
+ #ui .sheet.office-panel.compact .office-row small { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+ #ui .sheet.office-panel.compact .office-row small + small { display:none; }
+}

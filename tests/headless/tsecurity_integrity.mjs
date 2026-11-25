@@ -118,7 +118,7 @@ await test('occupied unit: outside wall light and camera install without a hold;
   assert.equal(sim.doorCover(u).state, 'full');
   // UI: occupied wording, interior refused with a reason, Pause kept
   const { sim: b, u: bu } = occupiedPick(), { ui, els } = uiFor(b); b.s.speed = 0;
-  const sheet = ui.objSheet(bu, b.objName(bu)); assert.match(sheet, /Add outside lights or cameras/); assert.match(sheet, /Occupied: outside equipment only/); assert.match(sheet, /<span>Door<\/span><span class="door-/);
+  const sheet = ui.objSheet(bu, b.objName(bu)); assert.match(sheet, /data-a="upgradeRetrofit" data-v="\d+">Outside lights &amp; cameras…</, "MP-1 label"); assert.match(sheet, /Occupied: outside equipment only/); assert.match(sheet, /<span>Door<\/span><span class="door-/);
   ui.beginRetrofit(bu.id); ui.changeUpgrade('lighting', 'interior'); assert.match(els.abar.innerHTML, /Occupied unit · outside only/); assert.match(els.abar.innerHTML, /Needs the unit empty/); assert.match(els.abar.innerHTML, /Interior light needs the unit empty/);
   ui.changeUpgrade('lighting', 'outside'); ui.changeUpgrade('outsideCameras', true); assert.match(els.abar.innerHTML, /The tenant keeps normal access during installation/); assert.doesNotMatch(els.abar.innerHTML, /cannot rent during installation/);
   assert.equal(b.s.speed, 0); ui.endRetrofit();

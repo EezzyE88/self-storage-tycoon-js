@@ -55,15 +55,15 @@ await test('construction review: choices before quote, no footnote; financial fi
   assert.match(css, /#ui \.actionbar\.unit-review:not\(\.placing\):not\(\.idle-strip\):has\(\.unit-options\[open\]\),\n #ui \.actionbar\.retrofit-review:not\(\.placing\):not\(\.idle-strip\) \{ max-height:min\(72dvh/);
 });
 
-await test('unit panel: fixtures listed with state and their own Remove…; Remove unit… stays the only removal in the top row', async () => {
+await test('unit panel: fixtures listed with state; MP-1: Remove unit… and each fixture Remove… are in the More menu, not the list', async () => {
   const s = rowSandbox(), V = vacants(s), u = V[Math.floor(V.length / 2)];
   const Q = s.plan({ tool: 'unitRetrofit', unit: u.id, excludedFixtures: [], lighting: 'both', outsideCameras: true }); const r = s.dispatch({ type: 'unitRetrofit', tool: 'unitRetrofit', unit: u.id, excludedFixtures: [], lighting: 'both', outsideCameras: true, upgradeStamp: Q.upgradeStamp }); assert.ok(r.ok);
   const { ui } = uiFor(s); ui.sel = u.id;
-  let sheet = ui.objSheet(u, s.objName(u)); assert.match(sheet, /<small>Installing · /, 'pending fixtures show Installing'); for (const f of mountedOn(s, u.id)) assert.match(sheet, new RegExp(`data-a="removeObject" data-v="${f.id}"`), 'pending fixtures keep their Remove…');
+  let sheet = ui.objSheet(u, s.objName(u)); assert.match(sheet, /<small>Installing · /, 'pending fixtures show Installing'); for (const f of mountedOn(s, u.id)) { assert.doesNotMatch(sheet, new RegExp(`data-a="removeObject" data-v="${f.id}"`)); assert.match(ui.removalActions(), new RegExp(`data-a="removeObject" data-v="${f.id}"`), 'pending fixtures keep their Remove… (More menu)'); }
   finish(s, r.order); sheet = ui.objSheet(u, s.objName(u));
-  const top = ui.removalActions(); assert.match(top, /data-a="removeObject" data-v="\d+">Remove unit…/); assert.equal((top.match(/data-a="removeObject"/g) || []).length, 1);
+  const top = ui.removalActions(); assert.match(top, /data-a="removeObject" data-v="\d+">Remove unit…/); assert.equal((top.match(/data-a="removeObject"/g) || []).length, 4, 'MP-1: unit plus its three fixtures');
   const fx = mountedOn(s, u.id); assert.equal(fx.length, 3);
-  for (const f of fx) assert.match(sheet, new RegExp(`data-a="unitAttachment" data-v="${f.id}"><b>[^<]+</b><small>Installed · [^<]+</small></button><button class="btn sm eq-remove" data-a="removeObject" data-v="${f.id}"`));
+  for (const f of fx) assert.match(sheet, new RegExp(`data-a="unitAttachment" data-v="${f.id}"><b>[^<]+</b><small>Installed · [^<]+</small></button></div>`));
   assert.ok(sheet.indexOf('<h3>Unit equipment</h3>') < sheet.indexOf('class="eq-list"'));
 });
 

@@ -114,11 +114,11 @@ await test('panel: one quote row per requested type with cost or a short reason,
   const W = uiFor(t); W.ui.beginRetrofit(v.id); W.ui.changeUpgrade('outsideCameras', true);
   assert.match(W.els.abar.innerHTML, /Already covered: nothing to install/); assert.doesNotMatch(W.els.abar.innerHTML, /cannot rent during installation|No additional fixtures selected/);
   assert.match(W.els.abar.innerHTML, /<th>Outside camera<\/th><td>0<\/td><td>Already covered<\/td>/); W.ui.endRetrofit();
-  // Unit sheet lists the equipment the unit actually has (UL-3: one row per fixture with state and its own Remove…).
-  const sheet = W.ui.objSheet(u, 'Unit'), names = [...sheet.matchAll(/<div class="eq-item"><button class="eq-open" data-a="unitAttachment" data-v="(\d+)"><b>([^<]+)<\/b><small>Installed · [^<]+<\/small><\/button><button class="btn sm eq-remove" data-a="removeObject" data-v="(\d+)"/g)];
-  assert.deepEqual(names.map((m) => m[2]), ['Interior light', 'Wall light', 'Outside camera']); assert.ok(names.every((m) => m[1] === m[3]), 'each Remove… targets its own fixture');
+  // Unit sheet lists the equipment the unit actually has (UL-3 rows; MP-1: each fixture's Remove… is in the More menu).
+  const sheet = W.ui.objSheet(u, 'Unit'), names = [...sheet.matchAll(/<div class="eq-item"><button class="eq-open" data-a="unitAttachment" data-v="(\d+)"><b>([^<]+)<\/b><small>Installed · [^<]+<\/small><\/button><\/div>/g)];
+  assert.deepEqual(names.map((m) => m[2]), ['Interior light', 'Wall light', 'Outside camera']); W.ui.sel = u.id; const more = W.ui.removalActions(); assert.ok(names.every((m) => more.includes(`data-a="removeObject" data-v="${m[1]}"`)), 'each fixture has its own Remove… in More');
   assert.doesNotMatch(sheet, /data-a="upgradeRetrofit"/, 'nothing left to add: no upgrade button');
-  const bare = W.ui.objSheet(v, 'Unit'); assert.match(bare, /No lights or cameras on this unit\./); assert.match(bare, /data-a="upgradeRetrofit" data-v="\d+">Review unit upgrades</);
+  const bare = W.ui.objSheet(v, 'Unit'); assert.match(bare, /No lights or cameras on this unit\./); assert.match(bare, /data-a="upgradeRetrofit" data-v="\d+">Lights &amp; cameras…</);
 });
 
 await test('rendered fixtures: heads at or below the wall top on drive-up and interior units, soft radial pools, coverage cells only in previews', async () => {

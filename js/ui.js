@@ -368,6 +368,7 @@ export class UI {
       case 'viewMore': { const ctl = el.closest('.viewctl'); const open = !ctl.classList.contains('open'); ctl.classList.toggle('open', open); el.setAttribute('aria-expanded', String(open)); this.renderCoach(); this.sfx('click'); break; }
       case 'coach': this.runCoach(); break;
       case 'pin': { const k = el.dataset.k; const sel = k === 'cart' ? { kind: 'cart', id: +el.dataset.id } : k === 'dirt' ? { kind: 'dirt', f: +el.dataset.f, x: +el.dataset.x, y: +el.dataset.y } : +el.dataset.id; if (this.tool) this.pickTool(null); this.sfx('click'); this.select(sel); break; }
+      case 'sheetMore': this.moreOpen = !this.moreOpen; this.renderSheet(true); this.sfx('click'); break;
       case 'sheetGrow': if (performance.now() - (this.swipedAt || 0) < 350) break; this.sheetTall = !this.sheetTall; this.applySheetSize(); break;
       case 'overlay': { this.rend.setOverlay(this.rend.overlay === v ? null : v); this.renderSheet(true); this.sfx('click'); const L = { security: 'Security map: cross = dark and unwatched, stripe = lit only, dot = camera only, no mark = lit and on camera.', clean: 'Cleanliness map: cross = dirty, stripe = getting dirty.', carts: 'Cart map: cross = empty corral, stripe = running low, check = stocked.', hvac: 'HVAC map: cross = overloaded, stripe = no HVAC.', power: 'Power map: cross = shut off, over electrical capacity.' }; if (this.rend.overlay && !this.tab && L[v]) this.toast(L[v]); break; }
       case 'feedback': this.select(null); this.feedbackFocus=null; this.feedbackRequest=null; this.sheetKey=null; this.setTab('feedback',true); break;
@@ -527,6 +528,7 @@ export class UI {
 
   // ------------------------------------------------------------ tabs / sheets
   setTab(t, expanded = t === 'growth') {
+    this.moreOpen = false;
     if(this.retrofitReview)this.endRetrofit();
     this.reserveWait?.interrupt('Navigation paused waiting.');
     this.sectionMenuKey = null; this.sectionChoice = null;
@@ -574,7 +576,7 @@ export class UI {
     if (this.rend.setOverlay) this.rend.setOverlay(null);
     if (this.rend.setPreview) this.rend.setPreview(null);
     this.verticalReview = null; this.verticalQuote = null; this.verticalPreviousView = null; this.verticalPreviewing = false;
-    this.requestPanel = false; this.sheetTall = false; this.pendingImport = null;
+    this.requestPanel = false; this.sheetTall = false; this.pendingImport = null; this.moreOpen = false;
     const ctl = this.root.querySelector && this.root.querySelector('.viewctl.open'); if (ctl) { ctl.classList.remove('open'); const m = ctl.querySelector('[data-a="viewMore"]'); if (m) m.setAttribute('aria-expanded', 'false'); }
     this.hFloorKey = null; this.setView(this.validView(view ?? 'ext'));
   }
@@ -596,6 +598,7 @@ export class UI {
     return (o.f || 0) === f;
   }
   select(id, keepTab = false) {
+    this.moreOpen = false;
     if(this.retrofitReview)this.endRetrofit();
     if (!this.selectionOnActiveFloor(id)) id = null;
     this.reserveWait?.interrupt('Inspection paused waiting.');
@@ -617,7 +620,7 @@ export class UI {
     if (this.sectionMenuKey && this.sectionMenuKey !== this.tab) this.sectionMenuKey = null;
     if (this.tool) { box.innerHTML = ''; this.resumePopup('panel'); return; }
     let html = '';
-    if (this.sel != null) { html = this.inspector(); if(html) html = html.replace('<div class="body">', this.removalActions()+'<div class="body">'); }
+    if (this.sel != null) html = this.inspector(); // MP-1: removals live in the header More menu (sheet()), not ahead of the panel
     else if (this.tab === 'build') html = this.buildSheet();
     else if (this.tab === 'feedback') html = this.feedbackSheet();
     else if (this.tab === 'operate') html = this.operateSheet();
@@ -678,15 +681,26 @@ export class UI {
     if(title==='Growth')body=body.replace(/<button\b[^>]*data-a="previewFirstGate"[^>]*>[\s\S]*?<\/button>/g,button=>{actions.push(button);return '';});
     if (this.sel != null && !office) body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/g, button => {
       const cmd = button.match(/data-cmd='([^']*)'/);
-      if (!cmd) { if (/data-a="(?:staffHelp|verticalReview|gateRemove)"/.test(button)) { actions.push(button); return ''; } return button; }
+      if (!cmd) { if (/data-a="(?:staffHelp|verticalReview|upgradeRetrofit|inspectElevator)"/.test(button)) { actions.push(button); return ''; } return button; }
       let type; try { type = JSON.parse(cmd[1]).type; } catch { return button; }
-      if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor'].includes(type)) return button; // construction cancel is kept apart from routine actions
+      if (!['commission', 'ownerMakeReady', 'ownerTask', 'ownerTaskFor', 'ownerClean', 'ownerRoom', 'delegateTask', 'delegateTaskFor', 'callVendor', 'collect'].includes(type)) return button; // construction cancel is kept apart from routine actions
       actions.push(button); return '';
     });
     const actionRail = actions.length ? `<div class="dock-actions" aria-label="Task actions">${actions.join('')}</div>` : '';
-    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}${office?' office-panel':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused · return to map when ready':esc(sub||'')}</span></h2><button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${extra}${actionRail}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
+    // MP-1: destructive actions for the selected object sit behind a labelled More menu; each still opens its own paused review.
+    const moreItems = this.sel != null ? this.removalActions() : '';
+    const moreBtn = moreItems ? `<button class="panel-more" data-a="sheetMore" aria-expanded="${!!this.moreOpen}" aria-controls="sheet-more">More</button>` : '';
+    const moreMenu = moreItems && this.moreOpen ? `<div id="sheet-more" class="more-menu" role="group" aria-label="More actions for ${esc(title)}"><small>Removal opens a paused review with the exact charge before anything changes.</small>${moreItems}</div>` : '';
+    return `<div class="sheet${this.sheetTall ? ' tall' : ' compact'}${build?' build-dock':''}${office?' office-panel':''}"><header><h2>${esc(title)}<span class="sub">${this.sheetTall?'Paused':esc(sub||'')}</span></h2>${moreBtn}<button class="panel-size" data-a="sheetGrow" aria-expanded="${!!this.sheetTall}">${this.sheetTall?'Back to map':'Details'}</button><button class="x" data-a="close" aria-label="Close panel">${I.x}</button></header>${moreMenu}${extra}${actionRail}<div class="body"><div class="dock-summary">${this.dockSummary(title,sub)}</div><div class="detail-content">${body}</div></div></div>`;
   }
 
+  // MP-1: one-line state of a unit's optional lights/cameras for the compact panel (display only).
+  unitEquipmentSummary(o) {
+    const s=this.sim.s;if(o.retrofitOrder&&s.orders.some(q=>q.id===o.retrofitOrder))return 'Installing';
+    const att=mountedOn(this.sim,o.id),lights=att.filter(f=>f.type!=='camera').length,cams=att.filter(f=>f.type==='camera').length;
+    if(!lights&&!cams)return 'None';
+    return [lights?`${lights} light${lights>1?'s':''}`:'',cams?`${cams} camera${cams>1?'s':''}`:''].filter(Boolean).join(' · ');
+  }
   dockSummary(title,sub) {
     const sim=this.sim,s=sim.s;
     if(title==='Build') return '';
@@ -695,7 +709,8 @@ export class UI {
     else if(title==='Business') {const o=sim.occupancy();pairs=[['Cash',money(s.cash)],['Occupied',`${o.occ}/${o.n}`],['Vacant ready',sim.objs('unit').filter(u=>u.cstate==='operating'&&u.commercial==='ready'&&!u.blocked).length]];}
     else if(title==='Growth') pairs=[['Reputation',pct(sim.reputation())],['Properties',this.g.company?.props.length||1]];
     else if(title==='Customer feedback') pairs=[['Recent reports',s.thoughts.filter(t=>t.kind==='bad').length],['Requests',s.convos.filter(c=>!this.sim.reviewHeld(c)).length]];
-    else {const o=typeof this.sel==='number'&&s.objects[this.sel];const status=o?.cstate==='built'?'Built · not ready':o?.cstate==='ready'?'Opening automatically':o?.type==='unit'?UNIT_STATUS[unitStatus(o)].label:null;pairs=o?.type==='unit'?[['Status',status],['Size',o.access==='drive'?o.size:`${o.size} · ${floorName(o.f)}`]]:[['Selected',sub||title]];}
+    else {const o=typeof this.sel==='number'&&s.objects[this.sel];const status=o?.cstate==='built'?'Built · not ready':o?.cstate==='ready'?'Opening automatically':o?.type==='unit'?UNIT_STATUS[unitStatus(o)].label:null;pairs=o?.type==='unit'?[['Status',status],['Size',o.access==='drive'?o.size:`${o.size} · ${floorName(o.f)}`]]:[['Selected',sub||title]];
+      if(o?.type==='unit'&&o.cstate==='operating'&&upgradesEnabled(sim))pairs.push(['Lights & cameras',this.unitEquipmentSummary(o)]);}
     return `<div class="dock-metrics">${pairs.map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(String(v))}</b></div>`).join('')}</div>`;
   }
   // ------------------------------------------------------------ BUILD
@@ -1659,9 +1674,9 @@ export class UI {
         const attachments=mountedOn(sim,o.id),eqName=f=>f.type==='unitLight'?'Interior light':f.type==='light'?'Wall light':'Outside camera';
         const eqRole={unitLight:'Lights this unit',light:'Lights the door front',camera:'Watches the door front'};
         const occ=unitOccupied(o),canAdd=upgradeEligible(sim,o),addable=occ?['light','camera']:['unitLight','light','camera'];
-        if(attachments.length||canAdd)h+=`<h3>Unit equipment</h3>${attachments.length?`<div class="eq-list">${attachments.map(f=>`<div class="eq-item"><button class="eq-open" data-a="unitAttachment" data-v="${f.id}"><b>${eqName(f)}</b><small>${f.cstate==='construction'?'Installing':f.unpowered?'No power':'Installed'} · ${eqRole[f.type]}</small></button><button class="btn sm eq-remove" data-a="removeObject" data-v="${f.id}" aria-label="Remove ${eqName(f).toLowerCase()} #${f.id}">Remove…</button></div>`).join('')}</div>`:'<p class="note">No lights or cameras on this unit.</p>'}`;
+        if(attachments.length||canAdd)h+=`<h3>Unit equipment</h3>${attachments.length?`<div class="eq-list">${attachments.map(f=>`<div class="eq-item"><button class="eq-open" data-a="unitAttachment" data-v="${f.id}"><b>${eqName(f)}</b><small>${f.cstate==='construction'?'Installing':f.unpowered?'No power':'Installed'} · ${eqRole[f.type]}</small></button></div>`).join('')}</div>`:'<p class="note">No lights or cameras on this unit.</p>'}`;
         if(o.retrofitOrder){const ord=s.orders.find(q=>q.id===o.retrofitOrder);h+=ord?.tenantSafe?'<p class="note">Outside lights/cameras installing. The tenant keeps normal access.</p>':'<p class="note">Lighting/security installation: temporarily unavailable for rental.</p>';if(ord)acts.push(this.cmdBtn('Cancel installation…',{type:'cancelOrder',id:ord.id}));}
-        if(canAdd&&addable.some(t=>!attachments.some(f=>f.type===t)))h+=`<button class="btn eq-upgrade" data-a="upgradeRetrofit" data-v="${o.id}">${occ?'Add outside lights or cameras':attachments.length?'Add lights or cameras':'Review unit upgrades'}</button>`+(occ?'<p class="note">Occupied: outside equipment only. The tenant keeps access; interior lights wait until the unit is empty.</p>':'');
+        if(canAdd&&addable.some(t=>!attachments.some(f=>f.type===t)))h+=`<button class="btn eq-upgrade" data-a="upgradeRetrofit" data-v="${o.id}">${occ?'Outside lights &amp; cameras…':'Lights &amp; cameras…'}</button>`+(occ?'<p class="note">Occupied: outside equipment only. The tenant keeps access; interior lights wait until the unit is empty.</p>':'');
         if (o.cstate === 'ready') h += '<p class="note">Construction is complete. This unit becomes rent-ready automatically when time advances.</p>';
         const mr = s.tasks.find((t) => t.type === 'makeready' && t.obj === o.id);
         if (mr && !mr.assigned) { h += this.delegationHtml(mr); const row = sim.staffForTask(mr); if (row && sim.taskDelegation(mr)?.status !== 'available') h += this.cmdBtn('Queue Porter', { type: 'ownerTask', task: mr.id }, 'pri'); }
@@ -1677,7 +1692,7 @@ export class UI {
       }
       case 'gate': {
         const q = sim.gateQueue(o.id).length;
-        return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class="kv"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}<button class="btn danger" data-a="gateRemove" data-v="${o.id}">Remove gate…</button>`);
+        return this.sheet('Entrance Gate', 'Keypad access', `${this.condBar(o.cond)}<div class="kv"><span>Vehicles in line</span><span>${q}</span><span>Access hours</span><span>6 AM - 10 PM</span></div>${this.taskActions(o)}`);
       }
       case 'door': {
         const ord = o.keypad === 'pending' && s.orders.find(q => q.id === o.keypadOrder && q.keypadDoor === o.id && q.st === 'construction');
@@ -3283,13 +3298,22 @@ export class UI {
       <details class="explanation"><summary>Forecast assumptions &amp; payment risk</summary><p class="note">${F.averageBill ? `If one average tenant misses a scheduled payment: ${money(F.downside)} scheduled cash in minus out, ${money(F.averageBill)} less cushion.` : 'No current-tenant bills scheduled; there is no payment cushion to model.'} Current leases only. New rentals, overdue collections and optional future spending excluded; existing staffing/assets held constant. Scheduled payments are not guaranteed collections.</p></details>`;
   }
   cashWindow(days) { return this.sim.cashWindow(days); }
+  // MP-1: every removal for the selected object, rendered only inside the header More menu. Each button names the exact
+  // object or fixture (with its host) and opens the existing paused review; nothing here changes state by itself.
   removalActions() {
-    const o=typeof this.sel==='number'&&this.sim.s.objects[this.sel];
-    if(o&&o.type!=='gate'&&o.cstate!=='construction')return `<div class="row wrap removal-actions"><button class="btn danger" data-a="removeObject" data-v="${o.id}">Remove ${esc(o.type==='unit'?'unit':assetTypeName(o).toLowerCase())}…</button>${Object.values(this.sim.s.objects).filter(f=>f.mount?.host===o.id&&o.type!=='unit').map(f=>`<button class="btn" data-a="removeObject" data-v="${f.id}">Remove ${esc(assetTypeName(f).toLowerCase())} #${f.id}…</button>`).join('')}${o.type==='corral'?idleCorralCarts(this.sim.s,o.id).map(c=>`<button class="btn" data-a="removeCart" data-v="${c.id}">Dispose of idle cart #${c.id}…</button>`).join(''):''}${o.type==='door'&&o.keypad?`<button class="btn" data-a="removeKeypad" data-v="${o.id}">Remove keypad…</button>`:''}${o.type==='shell'&&o.floors>1?`<button class="btn" data-a="removeFloor" data-v="${o.id}">Remove top Floor ${o.floors}…</button>`:''}</div>`;
-    if(this.sel?.kind==='cart')return `<button class="btn danger" data-a="removeCart" data-v="${this.sel.id}">Dispose of cart…</button>`;
+    const sim=this.sim,o=typeof this.sel==='number'&&sim.s.objects[this.sel];
+    const btn=(a,v,text,target,cls='btn')=>`<button class="${cls}" data-a="${a}" data-v="${v}">${text}<small class="more-target">${esc(target)}</small></button>`;
+    if(o&&o.type==='gate')return `<div class="removal-actions">${btn('gateRemove',o.id,'Remove gate…',`Entrance gate #${o.id}`,'btn danger')}</div>`;
+    if(o&&o.cstate!=='construction'){
+      const name=sim.objName(o)||assetTypeName(o),fx=Object.values(sim.s.objects).filter(f=>f.mount?.host===o.id);
+      const where=f=>o.type==='unit'?(f.type==='unitLight'?`Inside ${name}`:`${name} door front`):`On ${name}`;
+      return `<div class="removal-actions">${btn('removeObject',o.id,`Remove ${esc(o.type==='unit'?'unit':assetTypeName(o).toLowerCase())}…`,name,'btn danger')}${fx.map(f=>btn('removeObject',f.id,`Remove ${esc(assetTypeName(f).toLowerCase())} #${f.id}…`,where(f))).join('')}${o.type==='corral'?idleCorralCarts(sim.s,o.id).map(c=>btn('removeCart',c.id,`Dispose of idle cart #${c.id}…`,`Parked at ${name}`)).join(''):''}${o.type==='door'&&o.keypad?btn('removeKeypad',o.id,'Remove keypad…',`Keypad on ${name}`):''}${o.type==='shell'&&o.floors>1?btn('removeFloor',o.id,`Remove top Floor ${o.floors}…`,`${name}, Floor ${o.floors} only`):''}</div>`;
+    }
+    if(this.sel?.kind==='cart')return `<div class="removal-actions">${btn('removeCart',this.sel.id,'Dispose of cart…',`Cart #${this.sel.id}`,'btn danger')}</div>`;
     return '';
   }
   showRemoval(target, notice='') {
+    this.moreOpen=false;
     this.pauseForPopup('modal');
     const q=this.sim.placeableRemoval(target);
     this.removalReview={sim:this.sim,target:q.descriptor,stamp:q.stamp};
@@ -3306,6 +3330,7 @@ export class UI {
     this.closeModal();this.select(back??null);this.rend.view=this.validView(this.rend.view);this.syncFloorUi();this.toast(result.msg,'good',true);
   }
   showGateRemoval(id, notice = '') {
+    this.moreOpen = false;
     const o = this.sim.s.objects[id];
     if (!o || o.type !== 'gate') { this.closeModal(); this.toast('That gate no longer exists. Select a gate again.', 'bad'); return; }
     this.pauseForPopup('modal');
