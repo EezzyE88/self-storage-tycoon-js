@@ -1,3 +1,4 @@
+import { spendCompanyGoalCredit } from './companygoals.js';
 import { accessState, classicOfficeAccess, classicOfficeParking, classicOfficeWalkingField, lostMapleAccess, publicDrive, recessed, staffLanding } from './mapleaccess.js';
 import { frontageOf, knownLayout } from './frontage.js';
 import { applyRemovalState } from './removal.js';
@@ -604,7 +605,10 @@ export class Sim {
     if (this.repairWatch && !this.previewing) { // transient (never saved): report units a completed repair genuinely reconnected
       for (const w of this.repairWatch) {
         const back = w.units.map((id) => s.objects[id]).filter((u) => u && u.type === 'unit' && u.cstate === 'operating' && !u.blocked);
-        if (back.length) this.emit('access_restored', { n: back.length, obj: w.obj, equip: w.name, unit: back[0].id, name: back[0].name });
+        if (back.length) {
+          if (w.companyBreakdown && this.works(s.objects[w.obj])) s.companyRestoredAccess = true;
+          this.emit('access_restored', { n: back.length, obj: w.obj, equip: w.name, unit: back[0].id, name: back[0].name });
+        }
       }
       this.repairWatch = null;
     }
@@ -1237,6 +1241,7 @@ export class Sim {
   completeOrder(ord) {
     const s = this.s;
     if(ord.vertical)return;
+    const reimburse = ord.st === 'construction' && !s.creative && ord.objs.some(id => ['unit','shell'].includes(s.objects[id]?.type));
     ord.st = 'done'; ord.prog = 1;
     if(ord.retrofit && s.objects[ord.retrofit]?.retrofitOrder===ord.id)delete s.objects[ord.retrofit].retrofitOrder;
     for (const tl of ord.tiles) {
@@ -1245,13 +1250,17 @@ export class Sim {
     }
     for (const id of ord.objs) {
       const o = s.objects[id]; if (!o) continue;
-      if (o.type === 'unit') o.cstate = 'built';
+      if (o.type === 'unit') {
+        o.cstate = 'built';
+        if (s.companyGoalTracking) o.companyBuilt = true;
+      }
       else o.cstate = 'operating';
     }
     if (ord.keypadDoor) { const d = s.objects[ord.keypadDoor]; if (d) { d.keypad = 'operating'; d.kcond = 1; } }
     this.markDirty(); this.rebuild();
     if (ord.tool === 'office') for (const st of s.staff) if (!s.agents.some((a) => a.sid === st.id)) this.spawnStaffAgent(st);
     const units = ord.objs.map((id) => s.objects[id]).filter((o) => o && o.type === 'unit');
+    if (reimburse) spendCompanyGoalCredit(this, 'construction', ord.cost);
     this.emit('complete', { order: ord.id, label: ord.label, cells: ord.cells, ready: units.filter((u) => u.cstate === 'ready').length, units: units.length });
     reconcileProject(this);
     if (ord.tool === 'hall' || ord.tool === 'aisle') { /* infra */ }
@@ -1516,7 +1525,10 @@ export class Sim {
     if (!this.unlimited() && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     for (const ag of s.agents) { if (ag.task === t.id) { if (ag.cart) this.dropCart(ag); ag.task = null; ag.st = 'idle'; } if (ag.queue) ag.queue = ag.queue.filter((x) => x !== t.id); }
     if (t.workBooked) { const st = s.staff.find((x) => x.id === t.workBooked); this.refundTaskWork(st, t); }
-    if (!s.creative) this.money(-cost, 'service', 'Vendor service: ' + t.label);
+    if (!s.creative) {
+      this.money(-cost, 'service', 'Vendor service: ' + t.label);
+      if (t.type === 'repair' || t.type === 'pm') spendCompanyGoalCredit(this, 'service', cost);
+    }
     const pri = (s.coTier || 1) >= 2; t.vendor = s.t + (pri ? 300 : 600); t.assigned = 'vendor'; this.emit('task_assigned');
     return { ok: true, msg: `Vendor booked (~${pri ? 5 : 10} hours) - $${cost}` };
   }
@@ -1643,7 +1655,17 @@ export class Sim {
     if (mod % 5 === 0) { this.cr01RestoreCard(); this.convoTick(); }
     // construction
     for (const ord of s.orders) if (ord.st === 'construction') {
-      if(ord.vertical){tickVertical(this,ord);continue;}
+      if (ord.vertical) {
+        tickVertical(this, ord);
+        if (s.companyGoalTracking && ord.st === 'done') {
+          for (const id of ord.objs) {
+            const unit = s.objects[id];
+            if (unit?.type === 'unit') unit.companyBuilt = true;
+          }
+          if (ord.objs.some(id => s.objects[id]?.companyBuilt)) spendCompanyGoalCredit(this, 'construction', ord.cost);
+        }
+        continue;
+      }
       if (ord.waitShell && !s.objects[ord.waitShell]) { this.act_cancelOrder({ id: ord.id, cascade: true }); continue; }
       if ((ord.waitShell && s.objects[ord.waitShell] && s.objects[ord.waitShell].cstate === 'construction') || this.groundPredecessor(ord)) { ord.waiting = true; continue; }
       ord.waiting = false;
@@ -2000,6 +2022,7 @@ export class Sim {
     if (!this.unlimited() && s.cash < cost) return { ok: false, msg: 'Not enough cash' };
     const label = kind === 'size' ? `${target} vacancy campaign` : 'Local search campaign';
     this.money(-cost, 'marketing', 'Advertising - ' + label);
+    spendCompanyGoalCredit(this, 'marketing', cost);
     m.ad = { id: this.id(), kind, target, label, start: this.day, until: this.day + 29, cost, inquiries: 0, leases: 0, revenue: 0 };
     this.emit('ad_start', { kind, target, until: m.ad.until });
     return { ok: true, msg: `${label} running for 30 days` };
@@ -3576,7 +3599,14 @@ export class Sim {
       // choice, not chore: the Owner's quick fix is free but wears out sooner; a Tech or vendor restores it fully
       const quick = t.type === 'repair' && ag && ag.role === 'owner' && this.pressureOn();
       // remember which units had no customer access, so the next access check can report how many this repair actually restored
-      (this.repairWatch ||= []).push({ obj: o.id, name: this.objName(o), units: this.objs('unit').filter((u) => u.blocked && u.accessHold == null).map((u) => u.id) });
+      const track = s.companyGoalTracking && pending && t.type === 'repair';
+      if (track) {
+        const repaired = s.companyRepaired ??= [];
+        if (repaired.length < 10 && !repaired.includes(o.id)) repaired.push(o.id);
+      }
+      const companyBreakdown = track && ['gate','door','elevator'].includes(o.type) &&
+        (o.cond < 0.2 || (o.kcond ?? 1) < 0.2);
+      (this.repairWatch ||= []).push({ obj: o.id, name: this.objName(o), companyBreakdown, units: this.objs('unit').filter((u) => u.blocked && u.accessHold == null).map((u) => u.id) });
       o.cond = quick ? Math.max(o.cond, 0.72) : 1; o.quickFix = quick; if (o.type === 'door' && o.keypad) o.kcond = quick ? 0.72 : 1; this.markDirty();
       this.milestone('first_repair'); this.emit('repaired', { obj: o.id, x: o.x, y: o.y, f: o.f || 0 });
       s.convos = s.convos.filter((c) => c.obj !== o.id);
