@@ -3,7 +3,7 @@
 // (sim.js commit, vertical.js); authored starting units have none. Only operating units count,
 // the same base as HUD occupancy. Contracted monthly rent is not cash collected or profit.
 import { unitStatus } from './status.js';
-import { unitBuildRecord } from './investmentresults.js';
+import { unitBuildRecord, latestCompletedGroup } from './investmentresults.js';
 
 const dollars = (v) => '$' + Math.round(v).toLocaleString('en-US');
 
@@ -120,17 +120,11 @@ function checkinNextAction(condition, products, daysObserved) {
 // Completed rental-unit orders retain object.order even after their order record is pruned.
 // Recent availability losses are observations, NOT all customer demand or caused leases.
 export function investmentCheckin(sim) {
-  const units = Object.values(sim.s.objects).filter(u => u.type === 'unit' && Number.isInteger(u.order));
-  const byOrder = new Map();
-  for (const u of units) {
-    if (!byOrder.has(u.order)) byOrder.set(u.order, []);
-    byOrder.get(u.order).push(u);
-  }
   // Newest finished order with at least one operating unit; units of it that never opened are counted, not hidden.
-  const groups = [...byOrder].filter(([id, members]) => members.some(u => u.cstate === 'operating') &&
-    !sim.s.orders.some(o => o.id === id && o.st === 'construction'));
-  if (!groups.length) return null;
-  const [order, all] = groups.sort((a, b) => b[0] - a[0])[0];
+  // PI-01C: the selection is shared with record pruning (investmentresults.js), so the shown group keeps its record.
+  const latest = latestCompletedGroup(sim.s);
+  if (!latest) return null;
+  const [order, all] = latest;
   const members = all.filter(u => u.cstate === 'operating');
   const products = new Map();
   for (const u of members) {

@@ -8,7 +8,7 @@ import { makeMaple } from '../../js/maple.js';
 import { Sim } from '../../js/sim.js';
 import { installTutorial, curBeat, tutorialTick, upstairsReady, authorAct4Account } from '../../js/tutorial.js';
 import { investmentCheckin, investmentCheckinHtml } from '../../js/investmentprogress.js';
-import { unitBuildRecord } from '../../js/investmentresults.js';
+import { unitBuildRecord, latestCompletedGroup } from '../../js/investmentresults.js';
 
 globalThis.innerWidth = 390; globalThis.innerHeight = 844;
 let passed = 0;
@@ -199,6 +199,66 @@ test('source guard: every rent-category cash call is attributed beside it', () =
       if (/money\([^)]*,\s*'rent'/.test(line)) assert.match(line, /noteUnitRent\(/, `${f}: ${line.trim().slice(0, 90)}`);
     }
   }
+});
+
+// ---- Record retention (corrective successor of 6f0478b): bounded storage never loses a record the Check-in can need.
+// Real commits of single 5x5 drive-up units at free cells; cash raised for the fixture only.
+// Cells on seed-9 Maple where a single 5x5 drive-up opens (found by building each alone through the real Sim).
+const OPENING = [[10,3],[11,3],[12,3],[13,14],[13,18],[14,14],[14,18],[15,14],[15,18],[16,14],[16,18],[17,14],[17,18],[18,14],[18,18],[19,14],[19,18],[20,14],[20,18],[21,14],[21,18],[22,14],[22,18],[23,14],[23,18],[24,14],[24,18],[25,14],[25,18],[26,18],[27,14],[27,18]];
+function singles(sim, n) {
+  const out = [];
+  for (const [x, y] of OPENING) { if (out.length >= n) break; const r = sim.dispatch({ type: 'build', tool: 'du5x5', a: { x, y }, b: { x, y }, f: 0 }); if (r.ok) out.push(r.order); }
+  assert.equal(out.length, n, 'fixture found enough free cells'); return out;
+}
+const book = (sim) => Object.keys(sim.s.unitBuilds || {}).map(Number);
+const pendingN = (sim) => sim.s.orders.filter((o) => o.st === 'construction').length;
+const finish = (sim) => until(sim, () => !pendingN(sim) && sim.objs('unit').every((u) => u.order == null || u.cstate === 'operating' || u.cstate === 'built'), 1440 * 6);
+
+test('retention: 29 newer pending orders, all cancelled, leave the latest completed group recorded', () => {
+  const sim = property(); sim.s.cash = 1e7; const g = built(sim, { tool: 'du10x10', a: { x: 10, y: 3 }, b: { x: 11, y: 3 }, f: 0 });
+  const pend = singles(sim, 29);
+  for (const id of pend) assert.ok(sim.s.unitBuilds[id], 'every pending order keeps its record');
+  assert.deepEqual(rec(sim, g.order), { day: 1, cost: g.cost, rent: 0, removed: 0, credit: 0 }, 'completed group kept while newer work is pending');
+  for (const id of [...pend].reverse()) assert.equal(sim.dispatch({ type: 'cancelOrder', id }).ok, true);
+  assert.equal(investmentCheckin(sim).order, g.order); assert.equal(investmentCheckin(sim).results.cost, g.cost);
+  assert.equal(book(sim).length, 1, 'cancelled records are gone');
+});
+
+test('retention: pending orders that complete become the recorded latest group; storage stays bounded', () => {
+  const sim = property(); sim.s.cash = 1e7; const pend = singles(sim, 30); finish(sim);
+  const C = investmentCheckin(sim); assert.equal(C.order, Math.max(...pend)); assert.ok(C.results, 'latest completed group recorded');
+  singles(sim, 1); // a new commit prunes
+  assert.ok(book(sim).length <= 24 + pendingN(sim), 'bounded: ' + book(sim).length);
+  assert.ok(sim.s.unitBuilds[C.order], 'the shown group survives pruning');
+  const kept = book(sim).filter((id) => !sim.s.orders.some((o) => o.id === id && o.st === 'construction')).sort((a, b) => b - a);
+  assert.deepEqual(kept, [...pend].sort((a, b) => b - a).slice(0, 24), 'newest completed groups kept, oldest dropped');
+});
+
+test('retention: removing the newest group falls back to an older recorded group; records with no units left are dropped first', () => {
+  const sim = property(); sim.s.cash = 1e7; const pend = singles(sim, 25); finish(sim);
+  const newest = Math.max(...pend), u = members(sim, newest)[0], q = sim.placeableRemoval(u.id);
+  assert.equal(sim.dispatch({ type: 'remove', target: u.id, stamp: q.stamp }).ok, true);
+  const C = investmentCheckin(sim); assert.equal(C.order, [...pend].sort((a, b) => b - a)[1]); assert.ok(C.results, 'fallback group recorded');
+  singles(sim, 1); assert.equal(sim.s.unitBuilds[newest], undefined, 'the emptied order is dropped at the next commit');
+  assert.ok(sim.s.unitBuilds[C.order]);
+});
+
+test('retention: the Check-in group is protected even behind 24+ newer completed groups that have not opened', () => {
+  const sim = property(); sim.s.cash = 1e7; const g = built(sim, { tool: 'du10x10', a: { x: 10, y: 3 }, b: { x: 11, y: 3 }, f: 0 });
+  const later = singles(sim, 26); finish(sim);
+  // Test setup only: hold the newer groups' units at 'built' (not open), so the shown group is the older one.
+  for (const id of later) for (const x of members(sim, id)) x.cstate = 'built';
+  assert.equal(investmentCheckin(sim).order, g.order);
+  singles(sim, 1); assert.ok(sim.s.unitBuilds[g.order], 'shown group kept although 26 newer completed groups exist');
+  assert.equal(investmentCheckin(sim).results.cost, g.cost);
+});
+
+test('retention: pruning is observational and the shared selector matches the Check-in', () => {
+  const a = property(); a.s.cash = 1e7; singles(a, 26); finish(a);
+  assert.equal(latestCompletedGroup(a.s)[0], investmentCheckin(a).order);
+  const b = new Sim(JSON.parse(JSON.stringify(a.s))); delete b.s.unitBuilds; // same world with no records at all
+  for (const sim of [a, b]) { singles(sim, 2); if (sim === a) assert.ok(book(a).length <= 24 + pendingN(a), 'bounded at commit'); steps(sim, 1440 * 3); }
+  assert.equal(JSON.stringify({ ...a.s, unitBuilds: undefined }), JSON.stringify({ ...b.s, unitBuilds: undefined }), 'records and pruning never change play');
 });
 
 // Current-build production save path (main.js saveCode/loadCode via the existing save-name fixture), two properties.

@@ -7,7 +7,7 @@
 //   x?: units of the order removed later, g?: Company Goal construction credit booked separately }
 // Orders committed before this record existed, and creative/scenario layouts that charge nothing,
 // have no record: the Check-in says so instead of reconstructing history.
-const KEEP = 24; // the Check-in only reads the newest completed group; older records are pruned
+const KEEP = 24; // completed groups kept; pending orders and the Check-in's current group are always kept
 const cents = (v) => Math.round(v * 100) / 100;
 
 export function recordUnitBuild(sim, ord, createsUnits) {
@@ -15,8 +15,49 @@ export function recordUnitBuild(sim, ord, createsUnits) {
   if (s.creative || !createsUnits || !Number.isInteger(ord.id)) return;
   const book = (s.unitBuilds ||= {});
   book[ord.id] = { d: sim.day, c: cents(ord.cost), r: 0 };
-  const ids = Object.keys(book).map(Number).sort((a, b) => b - a);
-  for (const id of ids.slice(KEEP)) delete book[id];
+  pruneUnitBuilds(s);
+}
+
+const pendingIds = (s) => new Set(s.orders.filter((o) => o.st === 'construction').map((o) => o.id));
+function unitGroups(s) {
+  const groups = new Map();
+  for (const u of Object.values(s.objects)) {
+    if (u.type !== 'unit' || !Number.isInteger(u.order)) continue;
+    if (!groups.has(u.order)) groups.set(u.order, []);
+    groups.get(u.order).push(u);
+  }
+  return groups;
+}
+
+// The group the Investment Check-in shows: the newest order with at least one operating unit that is not
+// still under construction. Shared with investmentprogress.js so pruning protects exactly that record.
+export function latestCompletedGroup(s) {
+  const pending = pendingIds(s);
+  let best = null;
+  for (const [id, members] of unitGroups(s)) {
+    if (pending.has(id) || !members.some((u) => u.cstate === 'operating')) continue;
+    if (best == null || id > best[0]) best = [id, members];
+  }
+  return best;
+}
+
+// Bounded storage without losing a record the Check-in can still need:
+// - a pending order's record is always kept (its fate is decided by completion or cancellation);
+// - the Check-in's current group is always kept;
+// - otherwise the newest KEEP completed groups that still have units are kept, so cancelling or removing
+//   newer work falls back to a recorded group; records whose order has no units left are dropped first.
+function pruneUnitBuilds(s) {
+  const book = s.unitBuilds; if (!book) return;
+  const pending = pendingIds(s), groups = unitGroups(s), current = latestCompletedGroup(s)?.[0];
+  const live = [];
+  for (const key of Object.keys(book)) {
+    const id = Number(key);
+    if (pending.has(id) || id === current) continue;
+    if (groups.has(id)) live.push(id); else delete book[key];
+  }
+  live.sort((a, b) => b - a);
+  const room = Math.max(0, KEEP - (current != null && book[current] ? 1 : 0));
+  for (const id of live.slice(room)) delete book[id];
 }
 
 // A cancelled order never becomes a completed group; its charge and refund stay in the ledger only.
