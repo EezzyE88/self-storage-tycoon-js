@@ -1,3 +1,4 @@
+import { claimCompanyGoal, toggleCompanyGoalPin } from './companygoals.js';
 import { hvacRepairOutlook, hvacRepairOutlookText } from './hvacdecision.js';
 import { officePanelState } from './officepanel.js';
 import { suppliesSummary } from './supplies.js';
@@ -112,11 +113,11 @@ function facilityGuidance(sim, pv, price, careerOk) {
   return { pv, price, short: cash < price, loan, rate, months, pmt: loan ? sim.loanPmt(loan, rate, months) : 0, firstDay: sim.day + BILLING_CYCLE_DAYS,
     cashAfter: pos ? pos.cash : null, available: pos ? pos.available : null, debt, career: careerOk && pv.career.next ? pv.career : null };
 }
-function facilityGuidanceHtml(fg) {
+function facilityGuidanceHtml(fg, serviced = false) {
   if (!fg) return '';
   const p = fg.pv, c = fg.career, opex = Math.round(p.opexDay * 100) / 100;
   let h = `<div class="kv facility-guidance"><span>Units leased</span><b>${p.leased} of ${p.units}</b><span>Monthly lease rent</span><b>${money(p.roll)}/mo</b><span>Operating costs today</span><b>${money(opex, true)}/day (~${money(Math.round(opex * 30))} per 30 days)</b><span>Staff included</span><b>${p.staff.length === 1 && p.staff[0] === 'owner' ? 'Owner only' : p.staff.map(esc).join(', ')}</b></div>`;
-  h += `<p class="note">Contracted rent is not guaranteed: tenants can move out or pay late. Costs shown are before repairs, staff and loan payments. Some equipment needs maintenance.</p>`;
+  h += `<p class="note">Contracted rent is not guaranteed: tenants can move out or pay late. Costs shown are before repairs, staff and loan payments. ${serviced ? 'The gate and lights were serviced before listing.' : 'Some equipment needs maintenance.'}</p>`;
   if (fg.short) h += fg.loan ? `<p class="note facility-loan"><b>If you borrow:</b> a ${money(fg.loan)} expansion loan from Financing would cost ${money(fg.pmt, true)}/mo for ${fg.months} months at ${(fg.rate * 100).toFixed(1)}%, first payment Day ${fg.firstDay}. After borrowing and buying: cash ${money(fg.cashAfter, true)} here · available after bills &amp; reserve <span class="${fg.available < 0 ? 'neg' : ''}">${money(fg.available, true)}</span>. The 14-day reserve does not include the first loan payment.</p>` : `<p class="note facility-loan">No current loan option covers this price.</p>`;
   else if (fg.debt) h += `<p class="note facility-loan">Term-loan payments ${money(fg.debt.monthly, true)}/mo · next payment Day ${fg.debt.next}.</p>`;
   if (c) { const met = c.roll >= c.next.roll && c.n >= c.next.props;
@@ -320,7 +321,25 @@ export class UI {
       case 'removeConfirm': this.confirmRemoval(); break;
       case 'gateRemove': this.showGateRemoval(Number(v)); break;
       case 'gateRemoveConfirm': this.confirmGateRemoval(); break;
+      case 'goalPin':
+        if (!toggleCompanyGoalPin(this.g.company, v)) this.toast('Unpin a goal first. You can track up to three.', 'bad');
+        else this.g.autosavePaused?.();
+        this.showCompanyGoals();
+        break;
+      case 'goalClaim':
+        if (claimCompanyGoal(this.g.company, v, el.dataset.reward)) {
+          this.g.autosavePaused?.(); this.toast('Credit added to the property.', 'good');
+        }
+        this.showCompanyGoals();
+        break;
+      case 'goalCareer':
+        this.closeModal(); this.select(null); this.setTab('growth', true); this.jumpSection('Operator career');
+        break;
+      case 'goalAcquisitions':
+        this.closeModal(); this.select(null); this.setTab('growth', true); this.jumpSection('Acquisitions');
+        break;
       case 'careerGoal':
+        if (!this.title && this.g.refreshCompanyGoals?.()) { this.showCompanyGoals(); break; }
         if (!this.title && careerEligibility(this.sim.s).eligible && this.g.tierInfo?.().cur) {
           this.select(null); this.setTab('growth', true); this.jumpSection('Operator career'); this.sfx('click');
         }
@@ -925,7 +944,7 @@ export class UI {
     if(!offer)return {ok:false,msg:'Offer not available'};
     if(this.sim.s.cash<offer.price)return {ok:false,msg:'Not enough cash at this property'};
     const position=this.sim.financialPosition({spend:offer.price});
-    const guidance=kind==='facility'&&this.g.facilityPreview?facilityGuidance(this.sim,this.g.facilityPreview(),offer.price,careerEligibility(this.sim.s).eligible):null;
+    const guidance=kind==='facility'&&this.g.facilityPreview?facilityGuidance(this.sim,this.g.facilityPreview(market),offer.price,careerEligibility(this.sim.s).eligible):null;
     return {ok:true,offer,workingCash:ACQUISITION_OPENING_CASH,sourceName:C.props[C.active].name,cashAfter:position.cash,position,...(guidance?{guidance}:{})};
   }
   showAcquisitionReview(kind, market) {
@@ -933,7 +952,7 @@ export class UI {
     this.creditReview=null;this.termLoanReview=null;this.transferReview=null;
     this.acquisitionReview=q.ok?{sim:this.sim,company:C,source:C.props[C.active],kind,market,quote:q}:null;
     this.requestPanel=false;this.pauseForPopup('modal');
-    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="acquisition-title"><h2 id="acquisition-title">Review property purchase</h2>${q.ok?`<h3>${esc(q.offer.name)}</h3><p>${esc(q.offer.desc)}</p><div class="kv"><span>Purchasing property</span><b>${esc(q.sourceName)}</b><span>Total price</span><b>${money(q.offer.price)}</b><span>Included opening working cash</span><b>${money(q.workingCash)}</b><span>Purchasing property's cash after purchase</span><b>${money(q.cashAfter,true)}</b></div>${q.guidance?`<h3>What comes with it</h3>${facilityGuidanceHtml(q.guidance)}`:''}${this.financialContextHtml(q.position,q.sourceName,'purchase')}<p class="note">Opening working cash is included in the total price and goes into the new property's account. The remaining cash shown stays at ${esc(q.sourceName)}. Future rent is not guaranteed.</p>`:`<p class="note">${esc(q.msg)}. Return to Acquisitions to review current offers.</p>`}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="acquisitionConfirm">Confirm ${money(q.offer.price)} purchase</button>`:''}</div></div></div>`;
+    this.$('modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="acquisition-title"><h2 id="acquisition-title">Review property purchase</h2>${q.ok?`<h3>${esc(q.offer.name)}</h3><p>${esc(q.offer.desc)}</p><div class="kv"><span>Purchasing property</span><b>${esc(q.sourceName)}</b><span>Total price</span><b>${money(q.offer.price)}</b><span>Included opening working cash</span><b>${money(q.workingCash)}</b><span>Purchasing property's cash after purchase</span><b>${money(q.cashAfter,true)}</b></div>${q.guidance?`<h3>What comes with it</h3>${facilityGuidanceHtml(q.guidance, market === 'partner')}`:''}${this.financialContextHtml(q.position,q.sourceName,'purchase')}<p class="note">Opening working cash is included in the total price and goes into the new property's account. The remaining cash shown stays at ${esc(q.sourceName)}. Future rent is not guaranteed.</p>`:`<p class="note">${esc(q.msg)}. Return to Acquisitions to review current offers.</p>`}<div class="row wrap"><button class="btn" data-a="modalClose">Back</button>${q.ok?`<button class="btn pri" data-a="acquisitionConfirm">Confirm ${money(q.offer.price)} purchase</button>`:''}</div></div></div>`;
   }
   confirmAcquisitionReview() {
     const r=this.acquisitionReview,C=this.g.company;
@@ -2982,7 +3001,7 @@ export class UI {
     if (!this.sim.s.creative && (this.sim.s.mode !== 'tutorial' || this.sim.s.tut.done)) {
       const offers = this.g.offers();
       const fg = this.g.facilityPreview && offers.some((of) => of.kind === 'facility') ? facilityGuidance(this.sim, this.g.facilityPreview(), offers.find((of) => of.kind === 'facility').price, careerEligibility(this.sim.s).eligible) : null;
-      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item${of.kind === 'facility' && fg ? ' acq-facility' : ''}" data-acquisition-offer="${of.kind}:${of.market}"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small>${this.sim.s.cash < of.price ? `<p class="note acquisition-shortfall">Need <strong>${money(of.price-this.sim.s.cash,true)}</strong> more at this property.</p><button class="btn sm" data-a="acquisitionFinancing" aria-label="View Financing for ${esc(of.name)}">View Financing</button>` : ''}</div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Review ${money(of.price)}</button>${of.kind === 'facility' && fg ? `<details class="explanation facility-details"><summary>What comes with it</summary>${facilityGuidanceHtml(fg)}</details>` : ''}</div>`).join('')}</div>
+      h += `<h3>Acquisitions</h3><div class="list">${offers.map((of) => `<div class="item${of.kind === 'facility' && of.market === 'maple' && fg ? ' acq-facility' : ''}" data-acquisition-offer="${of.kind}:${of.market}"><div class="grow"><b>${esc(of.name)}</b><small>${esc(of.desc)}</small>${this.sim.s.cash < of.price ? `<p class="note acquisition-shortfall">Need <strong>${money(of.price-this.sim.s.cash,true)}</strong> more at this property.</p><button class="btn sm" data-a="acquisitionFinancing" aria-label="View Financing for ${esc(of.name)}">View Financing</button>` : ''}</div><button class="btn sm ${this.sim.s.cash >= of.price ? 'pri' : ''}" data-a="acquire" data-v="${of.kind}" data-m="${of.market}" ${this.sim.s.cash >= of.price ? '' : 'disabled'}>Review ${money(of.price)}</button>${of.kind === 'facility' && of.market === 'maple' && fg ? `<details class="explanation facility-details"><summary>What comes with it</summary>${facilityGuidanceHtml(fg)}</details>` : ''}</div>`).join('')}</div>
         <p class="note">Paid from this property's cash. Prices include ${money(ACQUISITION_OPENING_CASH)} of opening working cash for the new property; send more from here to fund construction.</p>`;
     } else if (this.sim.s.mode === 'tutorial' && !this.sim.s.tut.done) h += `<p class="note">Finish the tutorial to unlock acquisitions and a multi-property company.</p>`;
     return h;
@@ -2992,12 +3011,61 @@ export class UI {
   careerGoalKeydown(e) {
     if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
   }
+  companyGoalProgress(row) {
+    if (row.id === 'regional') return row.earned == null ? 'Reach Regional operator' : 'Regional operator reached';
+    if (row.current == null) return 'Waiting for 30 completed days';
+    const format = row.money ? value => money(Math.round(value)) : value => value.toLocaleString();
+    return `${format(row.current)} / ${format(row.target)}`;
+  }
+  showCompanyGoals() {
+    const view = this.g.refreshCompanyGoals?.();
+    if (!view) return;
+    const modal = this.$('modal');
+    const scroll = modal.querySelector('.company-goals-modal')?.scrollTop || 0;
+    const expanded = new Set([...modal.querySelectorAll('details[data-ladder][open]')].map(el => el.dataset.ladder));
+    this.pauseForPopup('modal');
+    const { rows, state } = view;
+    const credit = this.sim.s.companyGoalCredits ?? {};
+    const credits = Object.entries(credit).filter(([,amount]) => amount > 0)
+      .map(([kind,amount]) => `${esc(kind)} ${money(amount)}`).join(' · ');
+    const render = row => {
+      const key = /^(built|leased)-[0-9]+$/.test(row.id) ? row.id.split('-')[0] : row.id;
+      const pinned = state.pins.includes(key);
+      const reward = row.rewards.length ? `<p class="note">Reward: ${row.rewards.map(r => esc(r.label)).join(' or ')}${row.claimed ? ' · claimed' : ' · credited to ' + esc(row.id.includes(':') ? row.scope : this.g.company.props[this.g.company.active].name)}</p>` : '';
+      const claims = row.earned != null && !row.claimed ? row.rewards.map(r => `<button class="btn sm" data-a="goalClaim" data-v="${row.id}" data-reward="${r.kind}">Claim ${esc(r.label)}</button>`).join('') : '';
+      return `<div class="company-goal-row"><div><b>${esc(row.label)}${row.earned != null ? ' ✓' : ''}</b><small>${esc(row.scope)} · ${esc(this.companyGoalProgress(row))}${row.earned != null ? ' · Earned Day ' + row.earned : ''}</small></div>
+        <button class="btn sm" data-a="goalPin" data-v="${key}" aria-pressed="${pinned}" aria-label="${pinned ? 'Unpin' : 'Pin'} ${esc(row.label)}">${pinned ? 'Unpin' : 'Pin'}</button>${reward}<div class="company-goal-claims">${claims}</div></div>`;
+    };
+    const ladder = prefix => rows.filter(row => new RegExp('^' + prefix + '-[0-9]+$').test(row.id)).map(render).join('');
+    const other = rows.filter(row => !/^(built|leased)-[0-9]+$/.test(row.id));
+    const local = other.filter(row => row.id.includes(':') && row.id.endsWith(':' + this.g.company.active));
+    modal.innerHTML = `<div class="modal-bg"><div class="modal company-goals-modal" role="dialog" aria-modal="true" aria-labelledby="company-goals-title">
+      <div class="row"><h2 id="company-goals-title" class="grow">Company goals</h2><button class="x" data-a="modalClose" aria-label="Close company goals">${I.x}</button></div>
+      <p class="note">${state.pins.length} / 3 pinned · Company debt ${money(view.debt)}. Construction goals count completed units built since graduation that you still own.</p>
+      ${credits ? `<p class="note">Credits at this property: ${credits}. Pay the full price up front. Credits reimburse eligible work.</p>` : ''}
+      <h3>This property</h3>${local.map(render).join('')}
+      <h3>Company milestones</h3>${other.filter(row => !row.id.includes(':')).map(render).join('')}
+      <details data-ladder="built" ${expanded.has('built') ? 'open' : ''}><summary>Construction ladder · 150 to 750</summary>${ladder('built')}</details>
+      <details data-ladder="leased" ${expanded.has('leased') ? 'open' : ''}><summary>Active lease ladder · 150 to 750</summary>${ladder('leased')}</details>
+      <p class="note">Regional operator unlocks a chance to buy Juniper Storage, an operating facility with serviced equipment.</p>
+      <div class="row wrap"><button class="btn sm" data-a="goalCareer">Operator career</button>${view.opportunity ? '<button class="btn sm" data-a="goalAcquisitions">View acquisitions</button>' : ''}</div>
+      </div></div>`;
+    modal.querySelector('.company-goals-modal').scrollTop = scroll;
+  }
   renderCareerGoal() {
     const eligible = this.g.tierInfo && !this.title && careerEligibility(this.sim.s).eligible;
     const goal = eligible ? careerGoalPresentation(this.g.tierInfo()) : null;
     const bar = this.$('goalbar'), button = this.$('careerGoal');
     bar.hidden = !goal || goal.progress == null;
     button.hidden = !goal;
+    const goals = !this.title && this.g.refreshCompanyGoals?.();
+    if (goals) {
+      button.hidden = false;
+      this.$('careerGoalTitle').textContent = 'Company goals →';
+      this.$('careerGoalDetail').textContent = goals.pins.map(row => row.label + ' ' + this.companyGoalProgress(row)).join(' · ');
+      if (goal?.progress != null) bar.firstChild.style.width = Math.round(goal.progress * 100) + '%';
+      return;
+    }
     if (!goal) return;
     if (goal.progress != null) bar.firstChild.style.width = Math.round(goal.progress * 100) + '%';
     // The decorative bar is explained by a separate native button, never a nested Finance action.

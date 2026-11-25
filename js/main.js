@@ -1,3 +1,4 @@
+import { companyGoals, companyGoalLevelOffer } from './companygoals.js';
 import { portfolioCareer } from './career.js';
 // Boot, fixed-step simulation loop, input, save/load, test hooks.
 import { FINANCIAL_MINUTE } from './finance.js';
@@ -75,16 +76,22 @@ const game = {
     const mp = makeMapleSeedPrice(day);
     const fac = FACILITY_NAMES.find((nm) => !(this.company ? this.company.props : []).some((p) => p.name === nm)) || 'Oak Ridge Storage';
     out.push({ kind: 'facility', market: 'maple', name: 'Operating facility · ' + fac, fac, desc: '23 units, mostly leased, some deferred maintenance. Its signed leases come with it.', price: mp });
+    const partner = this.goalOffer?.();
+    if (partner) out.push(partner);
     return out.map((o) => ({ ...o, price: Math.round(o.price / 1000) * 1000 + WORKING_FLOAT })); // price includes the new property's opening working cash
   },
   // The operating facility an acquisition from `src` would create. Shared by acquire() and the read-only purchase preview:
   // it only reads src.s.t, src.day and the property list, and returns a new Sim. It never charges, adds or saves anything.
-  buildFacility(src, props) {
+  buildFacility(src, props, partner = false) {
     const k = props.filter((p) => p.sim.s.mirror != null || FACILITY_NAMES.includes(p.name)).length;
     const sim = makeMaple(1000 + props.length * 77, { mirror: k % 2 === 0 }); const s = sim.s; s.mode = 'sandbox'; s.tut = { on: false, beat: 99, flags: {}, done: true }; s.open = true; s.cash = 0;
     if (!s.mirror) s.mirror = false;
     for (const g of sim.objs('gate')) g.cond = 0.55 + ((props.length * 13) % 20) / 100;
     for (const o of sim.objs('light')) o.cond = 0.5 + ((o.id * 37) % 40) / 100;
+    if (partner) {
+      s.companyGoalPartner = true;
+      for (const asset of [...sim.objs('gate'), ...sim.objs('light')]) asset.cond = 1;
+    }
     return this.alignAcquired(sim, src);
   },
   alignAcquired(sim, src) { // align a newly created property to the company clock
@@ -98,10 +105,10 @@ const game = {
     s.milestones = {}; s.speed = 0; sim.markDirty(); sim.rebuild();
     return sim;
   },
-  facilityPreview() { // read-only: what the operating-facility offer would add, from the same constructor acquire() uses
+  facilityPreview(market = 'maple') { // read-only: what the operating-facility offer would add, from the same constructor acquire() uses
     const C = this.company; if (!C || C.props.length >= 5) return null;
-    const of = this.offers().find((o) => o.kind === 'facility'); if (!of) return null;
-    const sim = this.buildFacility(this.sim, C.props), o = sim.occupancy();
+    const of = this.offers().find((o) => o.kind === 'facility' && o.market === market); if (!of) return null;
+    const sim = this.buildFacility(this.sim, C.props, market === 'partner'), o = sim.occupancy();
     const career = portfolioCareer([...C.props, { name: of.fac, sim }]);
     return { name: of.fac, price: of.price, units: o.n, leased: o.occ, roll: sim.rentRoll(), opexDay: sim.dailyOpex().total,
       payroll: sim.s.staff.reduce((a, st) => a + st.wage, 0), staff: sim.s.staff.map((st) => st.role),
@@ -114,7 +121,7 @@ const game = {
     if (src.s.cash < of.price) return { ok: false, msg: 'Not enough cash at this property' };
     let sim, name;
     if (kind === 'parcel') { sim = this.alignAcquired(makeSandbox({ market, cash: 0, plain: true }), src); name = { blank: 'Suburban Lot', urban: 'Urban Lot', rural: 'Highway Lot' }[market] + ' ' + (C.props.length + 1); }
-    else { sim = this.buildFacility(src, C.props); name = of.fac; }
+    else { sim = this.buildFacility(src, C.props, market === 'partner'); name = of.fac; }
     src.money(-of.price, 'capex', 'Acquisition: ' + name);
     sim.money(WORKING_FLOAT, 'other', 'Opening working cash from ' + C.props[C.active].name);
     C.props.push({ name, sim }); if (this.ui) this.ui.setMeta(this.metaName(), modeLabel(src.s));
@@ -157,6 +164,7 @@ const game = {
   drain() {
     const events = this.sim.events;
     if (!events.length) return;
+    if (!this.ui?.title) this.refreshCompanyGoals?.();
     this.sim.events = [];
     if (this.sim === this.demo && this.ui && this.ui.title) return; // the living title screen stays quiet
     for (const event of events) this.ui.onEvent(event);
@@ -394,6 +402,8 @@ function makeMapleSeedPrice(day) { return 95000 + (day % 7) * 1500; }
 game.rend = createStartupRenderer(() => new Renderer(canvas, game.sim));
 // Failed graphics startup stops before UI, autosave, animation, or input setup.
 if (game.rend) {
+game.refreshCompanyGoals = () => companyGoals(game.company);
+game.goalOffer = () => companyGoalLevelOffer(game.company);
 game.ui = new UI(game);
 game.attach(game.sim, 'maple');
 installShowcase(game);
@@ -415,14 +425,17 @@ function stepTicks(n) {
     const eventStart=sim.events.length;
     sim.step(); const minuteEvents=sim.events.slice(eventStart);
     if (sim.events.length > 400) game.drain();
+    let goalsChanged = minuteEvents.some(e => ['lease','complete','access_restored','repaired'].includes(e.type));
     for (const { p, k } of others) {
       p.sim.step();
       if(game.ui.reserveWait?.active&&p.sim.s.convos.some(c=>!c.staffHandling))game.ui.reserveWait.interrupt('Another property has an owner decision.');
       if(game.ui.reserveWait?.active&&p.sim.events.some(e=>['access_lost','power_shed'].includes(e.type)||e.type==='fault'&&e.sev==='critical'))game.ui.reserveWait.interrupt('Another property needs attention.');
       for (const e of p.sim.events) { const f = BG_EVENTS[e.type]; const msg = f && f(e, p.sim); if (msg) { game.note(k, msg); if (e.type !== 'lease' && e.type !== 'moveout') game.ui.toast(`${p.name}: ${msg}`, 'bad'); } }
+      goalsChanged ||= p.sim.events.some(e => ['lease','complete','access_restored','repaired'].includes(e.type));
       p.sim.events.length = 0;
     }
-    if (sim.s.t % 60 === 0) game.syncTier();
+    if (sim.s.t % 60 === 0) { game.syncTier(); goalsChanged = true; }
+    if (goalsChanged && !game.ui.title) game.refreshCompanyGoals?.();
     if (!game.ui.title && sim.s.convos.length) game.ui.renderFeed();
     game.ui.reserveWait?.check(sim,minuteEvents);
     if (!game.ui.title && sim.s.speed === 0) break;

@@ -1435,3 +1435,19 @@ body.photo-mode #ui > :not(#modal), body.photo-mode #bubbles { opacity: 0; point
  #ui .sheet.office-panel.compact .office-row small { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
  #ui .sheet.office-panel.compact .office-row small + small { display:none; }
 }
+
+.company-goals-modal .company-goal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid currentColor;
+  border-color: #788b903d;
+}
+.company-goal-row small { display: block; }
+.company-goal-row > .note, .company-goal-claims { grid-column: 1 / -1; margin: 0; }
+.company-goal-claims:empty { display: none; }
+.company-goal-claims { display: flex; flex-wrap: wrap; gap: 6px; }
+.company-goals-modal button { min-height: 44px; }
+.company-goals-modal > details > summary { padding: 10px 0; cursor: pointer; }
