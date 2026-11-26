@@ -1,5 +1,6 @@
 import { spendCompanyGoalCredit } from './companygoals.js';
 import { recordUnitBuild, dropUnitBuild, noteUnitRent, noteUnitsRemoved, noteBuildCredit } from './investmentresults.js';
+import { explainOfficeRefusal } from './openingguide.js';
 import { accessState, classicOfficeAccess, classicOfficeParking, classicOfficeWalkingField, lostMapleAccess, publicDrive, recessed, staffLanding } from './mapleaccess.js';
 import { frontageOf, knownLayout } from './frontage.js';
 import { applyRemovalState } from './removal.js';
@@ -659,6 +660,7 @@ export class Sim {
   }
   plan(a) { // Validate the whole footprint before quoting utility capacity.
     const R = a.tool==='unitRetrofit' ? retrofitPlan(this,a) : this.planCore(a);
+    if (a.tool === 'office') explainOfficeRefusal(this, R);
     if (!R || R.status === 'invalid') return R;
     const solids = [];
     for (const object of R.creates || []) {

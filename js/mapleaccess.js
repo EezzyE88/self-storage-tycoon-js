@@ -124,18 +124,28 @@ export function classicOfficeAccess(sim, office, solids = new Set()) {
     (!D.pendingGround.has(i) || types.has(D.pendingGround.get(i)));
   const walks = classicOfficeWalkingField(sim, office, usable);
   if (!walks) return 'Office entrance needs a clear outdoor pedestrian landing.';
-  const starts = Array.from({ length: s.W }, (_, x) => sim.idx(x, s.parcel.y1 + 2));
-  const gates = sim.routeGateIds().filter(id => sim.works(sim.obj(id)));
+  const gates = classicOfficeGates(sim);
   if (!gates.length) return 'Connect an operating secured gate to the street before building the office.';
-  let parking = false;
+  const bays = classicGateParking(sim, gates, usable);
+  if (bays.some(i => walks.has(i))) return null;
+  return bays.length ? 'Connect the office entrance to parking with an outdoor pedestrian route.' :
+    'Provide a parking bay reachable by vehicles through the secured gate.';
+}
+
+// The operating, street-connected gates the classic office rule accepts.
+export const classicOfficeGates = sim => sim.routeGateIds().filter(id => sim.works(sim.obj(id)));
+
+// Finished parking cells that vehicles reach from the street through one of
+// the given gates. Shared by office validation and the opening guide (SB-1).
+export function classicGateParking(sim, gates, usable = (i, types) =>
+  !sim.D.pendingGround.has(i) || types.has(sim.D.pendingGround.get(i))) {
+  const { s, D } = sim, out = new Set();
+  const starts = Array.from({ length: s.W }, (_, x) => sim.idx(x, s.parcel.y1 + 2));
   for (const id of gates) {
     const reach = sim.distField(starts, i => sim.vehNbr(i, id).filter(j => usable(j, VEH_GROUND)));
     for (const i of reach.keys()) {
-      if (s.ground[i] !== G.PARKING || (D.pendingGround.get(i) ?? G.PARKING) !== G.PARKING) continue;
-      parking = true;
-      if (walks.has(i)) return null;
+      if (s.ground[i] === G.PARKING && (D.pendingGround.get(i) ?? G.PARKING) === G.PARKING) out.add(i);
     }
   }
-  return parking ? 'Connect the office entrance to parking with an outdoor pedestrian route.' :
-    'Provide a parking bay reachable by vehicles through the secured gate.';
+  return [...out];
 }
