@@ -22,7 +22,7 @@ await test('second gate preview is valid, pure and reuses established gate price
 
 await test('frontage, corner, overlap and third-gate rules reject without state changes',()=>{
  const sim=fixture(),p=sim.s.parcel,g1=sim.objs('gate')[0];
- for(const [x,y,reason] of [[34,p.y1-1,/front fence/i],[p.x0,p.y1,/corner/i],[g1.x,p.y1,/overlaps/i]]){
+ for(const [x,y,reason] of [[34,p.y1-1,/one security line/i],[p.x0,p.y1,/corner/i],[g1.x,p.y1,/overlaps/i]]){
   const before=state(sim),rng=sim.s.rngS,q=sim.plan(action(x,y));assert.equal(q.status,'invalid');assert.match(q.reasons.join(' '),reason);assert.equal(state(sim),before);assert.equal(sim.s.rngS,rng);
  }
  const built=buildSecond(sim);assert.equal(sim.objs('gate').length,2);

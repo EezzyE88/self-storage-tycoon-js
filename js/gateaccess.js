@@ -1,4 +1,5 @@
 import { recessed } from './mapleaccess.js';
+import { fenceRow } from './securityline.js';
 // Stage 2A: saved single-gate identity/connection and traffic ownership foundation.
 // This module intentionally does not select alternate gates or enable multi-gate play.
 const asId = (v) => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null; };
@@ -9,13 +10,15 @@ const activeAgentIds = (s) => new Set((s.agents || []).map((a) => a.id));
 function connectionFor(s, gate, previous) {
   if (recessed(s,gate)) return { gateId:gate.id, kind:'maple-yard', boundary:'yard', x:gate.x, y:gate.y, outside:{x:gate.x,y:gate.y+1} };
   if (previous && previous.kind === 'front-street') return { ...previous, gateId: gate.id, x: gate.x, y: gate.y };
-  const front = gate.y === s.parcel?.y1;
+  // SL-1 §4.3: the front boundary is the security line (s.secLine when set, else the parcel front row).
+  const lineY = s.parcel ? fenceRow(s) : undefined;
+  const front = gate.y === lineY;
   return {
     gateId: gate.id,
     kind: front ? 'front-street' : 'unconnected',
     boundary: front ? 'front' : null,
     x: gate.x, y: gate.y,
-    outside: front ? { x: gate.x, y: (s.parcel?.y1 ?? gate.y) + 1 } : null,
+    outside: front ? { x: gate.x, y: (lineY ?? gate.y) + 1 } : null,
   };
 }
 

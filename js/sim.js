@@ -1,7 +1,7 @@
 import { spendCompanyGoalCredit } from './companygoals.js';
 import { recordUnitBuild, dropUnitBuild, noteUnitRent, noteUnitsRemoved, noteBuildCredit } from './investmentresults.js';
 import { explainOfficeRefusal } from './openingguide.js';
-import { accessState, classicOfficeAccess, classicOfficeParking, classicOfficeWalkingField, lostMapleAccess, publicDrive, recessed, staffLanding } from './mapleaccess.js';
+import { accessState, classicOfficeAccess, classicOfficeParking, classicOfficeWalkingField, lostMapleAccess, publicDrive, recessed, staffLanding, publicOfficeAccess, publicOfficeBays } from './mapleaccess.js';
 import { frontageOf, knownLayout } from './frontage.js';
 import { applyRemovalState } from './removal.js';
 import { SAVE_GENERATION } from './savegeneration.js';
@@ -18,6 +18,7 @@ import { climateInventory, climateCauseKey, climateSuggestion } from './climatea
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
 import { analyzePlaceableRemoval } from './placeableops.js';
+import { lineRow, fenceRow, publicRows, linePolyline, lineState, splitAt, hasPublicLot, apronCells, secureSide, sideFor, classicVehicleEdge, classicPedEdge, gateColumns, isPublicOffice, yardLanding, storageOnPublicSide, officeDoorEnclosed } from './securityline.js';
 import { normalizeGateAccess, registerGateAccess, unregisterGateAccess, primaryGateId, gateQueue, gateServing, enqueueGate, shiftGate, setGateServing, removeGateAgent, gateConnection, gateStatus } from './gateaccess.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
 // Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.
@@ -164,6 +165,26 @@ export class Sim {
   // Public-office frontage descriptor for this property, or null for a classic layout.
   frontage() { const l = this.s.layout; if (l !== this._fl) { this._fK = frontageOf(l); this._fl = l; } return this._fK; }
   static knownLayout(layout) { return knownLayout(layout); }
+  // SL-1 boundary reads (js/securityline.js owns the geometry).
+  lineState() { return lineState(this); }
+  securityLine() { return this.frontage() ? null : lineRow(this.s); }
+  // Drawing reads (render.js): line polyline [[x0,z],[x1,z]] and public-lot rows {y0,y1} for the current or a proposed line row.
+  lineGeometry(L = lineRow(this.s)) { return this.frontage() ? null : linePolyline(this.s, L); }
+  publicLotRows(L = lineRow(this.s)) { return this.frontage() ? null : publicRows(this.s, L); }
+  hasPublicLot() { return hasPublicLot(this); }
+  apronCells() { return apronCells(this); }
+  secureSide(x, y) { return secureSide(this, x, y); }
+  yardLanding(office) { return yardLanding(this, office); }
+  // Classic office whose door landing is in the public lot (customers never enter the yard).
+  publicOffice() { if (this.frontage()) return null; const o = this.objs('office')[0]; return o && o.cstate === 'operating' && o.generalPlacement && isPublicOffice(this, o) ? o : null; }
+  // Opening issues for a classic general-placement office (SL-1 §5 items 3 and 4).
+  classicOfficeIssues(office, solids) {
+    const side = isPublicOffice(this, office) ? 'public' : secureSide(this, office.door.x, office.door.y);
+    if (side === 'public') return publicOfficeAccess(this, office, solids);
+    if (side == null) return [];
+    const issue = classicOfficeAccess(this, office, solids); // OFF-11 legacy yard office (D2), unchanged
+    return issue ? [issue] : [];
+  }
   placeableRemoval(targetId) { return analyzePlaceableRemoval(this, targetId); }
   gateQueue(id = primaryGateId(this.s)) { return gateQueue(this.s, id); }
   gateServing(id = primaryGateId(this.s)) { return gateServing(this.s, id); }
@@ -172,7 +193,7 @@ export class Sim {
   connectedGate(g,c) {
     return recessed(this.s,g) ? c?.kind==='maple-yard' : c?.kind==='front-street' && c.boundary==='front';
   }
-  gateApproach(g) { return this.idx(g.x, recessed(this.s,g) ? g.y+1 : this.s.parcel.y1+1); }
+  gateApproach(g) { return this.idx(g.x, recessed(this.s,g) ? g.y+1 : (this.frontage() ? this.s.parcel.y1 : fenceRow(this.s))+1); }
   routeGateIds() {
     const s = this.s, ids = s.gateAccess?.gateIds || [];
     const connected = ids.filter((id) => {
@@ -205,6 +226,7 @@ export class Sim {
     }
     if (visit.kind === 'prospect') {
       if (this.frontage()) return !!accessState(this).parking;
+      if (this.publicOffice()) return true; // SL-1 C1: prospects use the public lot, not a gate
       const office = this.objs('office')[0]; if (!office) return false;
       if (office.generalPlacement) return classicOfficeParking(this, reach, classicOfficeWalkingField(this, office)).length > 0;
       const d = this.distField([this.idx(office.door.x, office.door.y)], (n) => this.pedNbr(n));
@@ -293,6 +315,7 @@ export class Sim {
       lit: layers(Float32Array), cam: layers(Uint8Array),
       hvac: {}, vehReach: new Uint8Array(WH), pendingGround: new Map(),
       stairAt: new Int32Array(WH), roomAt: layers(Int32Array), water: new Set(), power: null,
+      lineL: this.frontage() ? null : lineRow(s),
     };
     this.D = D;
     for (const o of Object.values(s.objects)) {
@@ -360,6 +383,26 @@ export class Sim {
         }
         while (x !== rear.x) link(x + Math.sign(rear.x-x),y);
         while (y !== rear.y) link(x,y + Math.sign(rear.y-y));
+      }
+    } else if (splitAt(s, D.lineL)) {
+      // SL-1 §4.2 P2: staff cross the line only at operating gate columns or through a
+      // public office backed onto the line (door landing in the public lot, rear landing in the yard).
+      D.gateCols = gateColumns(this);
+      const office = this.objs('office').find(o => o.cstate === 'operating' && o.generalPlacement && isPublicOffice(this, o, D.lineL));
+      const rear = office && yardLanding(this, office, D.lineL);
+      if (rear) {
+        D.staffPassage = new Map(); D.classicPassage = { office: office.id, rear };
+        let { x, y } = office.door;
+        const link = (nx, ny) => {
+          const a = this.idx(x, y), b = this.idx(nx, ny);
+          for (const [from, to] of [[a, b], [b, a]]) { if (!D.staffPassage.has(from)) D.staffPassage.set(from, []); D.staffPassage.get(from).push(to); }
+          x = nx; y = ny;
+        };
+        link(x - office.door.dir[0], y - office.door.dir[1]);
+        const ix = rear.x - rear.dir[0], iy = rear.y - rear.dir[1];
+        while (x !== ix) link(x + Math.sign(ix - x), y);
+        while (y !== iy) link(x, y + Math.sign(iy - y));
+        link(rear.x, rear.y);
       }
     }
     // lighting + camera coverage
@@ -472,13 +515,10 @@ export class Sim {
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy; if (!this.inb(nx, ny)) continue;
       const j = this.idx(nx, ny);
-      if (!VEH_GROUND.has(s.ground[j]) || D.solid[j]) continue;
       if (K) {
+        if (!VEH_GROUND.has(s.ground[j]) || D.solid[j]) continue;
         if (!K.vehicleEdge(this,x,y,nx,ny,gateId)) continue;
-      } else if ((y === p.y1 && ny === p.y1 + 1) || (y === p.y1 + 1 && ny === p.y1)) {
-        const ids = gateId == null ? this.routeGateIds() : [gateId];
-        if (!ids.some((id) => { const g = s.objects[id]; return g && Math.abs(nx - g.x) <= 1; })) continue;
-      }
+      } else if (!classicVehicleEdge(this, x, y, nx, ny, gateId, publicDrive, () => this.routeGateIds())) continue; // SL-1 §4.1
       if (ny <= p.y1 && (nx < p.x0 || nx > p.x1)) continue;
       out.push(j);
     }
@@ -488,7 +528,7 @@ export class Sim {
   pedNbr(n, actor = null) {
     const s = this.s, W = s.W, WH = W * s.H, D = this.D, out = [];
     const f = (n / WH) | 0, i = n % WH, x = i % W, y = (i / W) | 0;
-    const K = this.frontage(), staff = f === 0 && !!K && actor?.kind === 'staff';
+    const K = this.frontage(), staff = f === 0 && actor?.kind === 'staff' && (!!K || !!D.classicPassage);
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy; if (!this.inb(nx, ny)) continue;
       const j = this.idx(nx, ny);
@@ -498,7 +538,7 @@ export class Sim {
       if (!D.walk[f][j] || (staff && D.solid[i] && D.staffPassage?.has(i))) continue;
       if (K && f===0) {
         if (!K.pedestrianEdge(x,y,nx,ny,staff ? !!D.staffGate : null)) continue;
-      } else if (ny > s.parcel.y1 || y > s.parcel.y1) continue; // fence
+      } else if (f === 0 ? !classicPedEdge(this, x, y, nx, ny, actor?.kind === 'staff') : (ny > s.parcel.y1 || y > s.parcel.y1)) continue; // fence / security line (SL-1 §4.2)
       const sa = D.shellAt[i], sb = D.shellAt[j];
       if (sa !== sb) { if (f > 0) continue; if (!D.doorEdge.has(Math.min(i, j) + ',' + Math.max(i, j))) continue; }
       out.push(f * WH + j);
@@ -730,7 +770,8 @@ export class Sim {
       R.count = n; R.cost = n * T.costPerCell; R.dur = 60 + n * 6;
       if (n === 0 && R.status !== 'invalid') bad('Nothing to change here');
       if (a.tool === 'aisle' && R.status !== 'invalid') {
-        const touches = R.tiles.some((t) => { const x = t.i % s.W, y = (t.i / s.W) | 0; return DIRS.some(([dx, dy]) => { const j = this.idx(x + dx, y + dy); return D.vehReach[j] || (D.pendingGround.get(j) === G.ASPHALT); }); });
+        // AIS-3: a public-lot aisle on the front row meets the street through a driveway (SL-1 V2).
+        const touches = R.tiles.some((t) => { const x = t.i % s.W, y = (t.i / s.W) | 0; return (y === s.parcel.y1 && hasPublicLot(this)) || DIRS.some(([dx, dy]) => { const j = this.idx(x + dx, y + dy); return D.vehReach[j] || (D.pendingGround.get(j) === G.ASPHALT); }); });
         if (!touches) inc(this.objs('gate').length ? 'Not connected to an existing drive aisle' : 'Not connected yet - add an Entrance Gate where this aisle meets the street');
       }
       if (R.status !== 'invalid' && R.tiles.length && (a.tool === 'walk' || a.tool === 'loading' || a.tool === 'parking')) {
@@ -767,6 +808,7 @@ export class Sim {
         const i = this.idx(c.x, c.y), g = this.groundAt(i);
         if (!this.cellFree(i) || (D.at.get(i) || []).length) { it.ok = false; bad('Blocked: overlaps another structure'); continue; }
         if (g !== G.GRASS && g !== G.CONCRETE) { it.ok = false; bad('Blocked: would sit on a drive aisle'); }
+        if (secureSide(this, c.x, c.y) === 'public') { it.ok = false; bad('Storage buildings go inside the secured yard.'); } // SHL-5
       }
       R.count = w * h; R.cost = R.count * T.costPerCell; R.dur = 600 + R.count * 14 * T.floors;
       R.creates.push({ type: 'shell', x: x0, y: y0, w, h, floors: T.floors, f: 0 });
@@ -837,13 +879,22 @@ export class Sim {
           bad('Wait for people and vehicles to clear the office footprint.'); return R;
         }
         let reason = 'Office entrance needs a clear outdoor pedestrian landing on the selected side.';
-        for (const door of doors) {
-          office.door = door;
-          if (!K) {
-            reason = classicOfficeAccess(this,office,footprint);
-            if (!reason) break;
-            continue;
+        if (!K) {
+          // SL-1 §3.2: parking and staff access are opening requirements (OFF-9/10/11), not placement rules.
+          // OFF-8: with a security line, the door landing must be in the public lot. Authored scenario
+          // prebuilds (s.creative while building a scenario) are scripted content and keep their accepted
+          // yard offices. Player properties never get this exemption, including legacy Creative Lot saves.
+          const scripted = !!s.creative && s.mode === 'scenario';
+          const L = lineRow(s), cands = L != null && !scripted ? doors.filter(d => sideFor(s, L, d.x, d.y) === 'public') : doors;
+          if (doors.length && !cands.length) reason = 'Face the office door into the public lot, in front of the security line.';
+          else if (cands.length) {
+            // Cat 3 preference only: the first landing that already meets its opening access check.
+            office.door = cands.find(d => { office.door = d; return !this.classicOfficeIssues(office, footprint).length; }) || cands[0];
+            reason = null;
           }
+        }
+        for (const door of K ? doors : []) {
+          office.door = door;
           reason = 'Connect the office entrance to the public sidewalk.';
           if (!K.pocket(door.x,door.y)) continue;
           const rears = landings(sides).filter(c => !K.pocket(c.x,c.y) && !K.approach(c.x,c.y));
@@ -871,8 +922,27 @@ export class Sim {
         return R;
       }
       case 'gate': {
-        const p = s.parcel;
-        if (y !== p.y1) { failItem('Gates go on the front fence line, facing the street'); return R; }
+        const p = s.parcel, classicLot = !this.frontage();
+        let lineMove = null;
+        if (!classicLot) { if (y !== p.y1) { failItem('Gates go on the front fence line, facing the street'); return R; } }
+        else {
+          // SL-1 §3.1: a gate may sit on any row; the first gate's row sets the security line.
+          const L = lineRow(s), gates = this.objs('gate');
+          if (!this.inParcel(x, y)) { failItem('Outside the property line'); return R; }
+          if (gates.length) {
+            if (y !== L) { failItem(`For now all gates sit on one security line. Place this gate on row ${p.y1 - L + 1}, or remove every gate to move the line.`); return R; }
+          } else {
+            R.proposedLine = y; // preview ghost (SL-1 §7 F4)
+            if (y < p.y0 + 1) { failItem('For now a gate needs at least one yard row behind it.'); return R; }
+            if (L != null && y !== L && (s.vehicles.some(v => this.inParcel(Math.floor(v.x), Math.floor(v.y))) || s.agents.some(a => !a.hidden && this.inParcel(Math.floor(a.x), Math.floor(a.y))))) {
+              failItem('For now the line can only move while the lot is empty of vehicles and people.'); return R;
+            }
+            if (storageOnPublicSide(this, y)) { failItem('Storage must stay inside the secured yard. Choose a row in front of your storage.'); return R; }
+            if (officeDoorEnclosed(this, y, L)) { failItem('This line would put the office door inside the secured yard.'); return R; }
+            lineMove = { to: y, from: L };
+            if (y === p.y1) (R.warn ||= []).push('A gate on the front row leaves no public lot for the office and customer Parking.');
+          }
+        }
         const noGate = this.frontage()?.desc.gatePlacementBlocked;
         if (noGate && x+1 >= noGate.x0 && x-1 <= noGate.x1) {
           failItem('A yard gate needs a secure street-facing spot outside the public office and gate approaches.'); return R;
@@ -880,9 +950,20 @@ export class Sim {
         if (this.objs('gate').length >= 2) failItem('This property already has two entrance gates');
         if (x - 1 < p.x0 || x + 1 > p.x1) failItem('Too close to the property corner');
         R.items = [-1, 0, 1].map((k) => ({ x: x + k, y, f: 0, ok: R.status !== 'invalid' }));
-        for (let k = -1; k <= 1; k++) { const j = this.idx(x + k, y); if (!this.cellFree(j) || (D.at.get(j) || []).length) { bad('Blocked: gate lane overlaps a structure'); } R.tiles.push({ k: 'ground', i: j, v: G.ASPHALT }, { k: 'ground', i: this.idx(x + k, y + 1), v: G.ASPHALT }); }
+        for (let k = -1; k <= 1; k++) {
+          const j = this.idx(x + k, y), a = this.idx(x + k, y + 1);
+          if (!this.cellFree(j) || (D.at.get(j) || []).length) { bad('Blocked: gate lane overlaps a structure'); }
+          if (y < p.y1 && classicLot) {
+            // Approach inside the public lot: keep existing driving surfaces (Parking, Loading).
+            if (!this.cellFree(a) || (D.at.get(a) || []).length) bad('Blocked: gate lane overlaps a structure');
+            R.tiles.push({ k: 'ground', i: j, v: G.ASPHALT });
+            if (!VEH_GROUND.has(this.groundAt(a))) R.tiles.push({ k: 'ground', i: a, v: G.ASPHALT });
+          } else R.tiles.push({ k: 'ground', i: j, v: G.ASPHALT }, { k: 'ground', i: a, v: G.ASPHALT });
+        }
         const inside = [-1, 0, 1].some((k) => { const j = this.idx(x + k, y - 1); return this.groundAt(j) === G.ASPHALT; });
         if (!inside) inc('Gate has no drive aisle behind it yet');
+        if (classicLot && y < p.y1 && R.status !== 'invalid' && !this.streetDriveTo(x, y, R.tiles)) inc('No drive from the street to this gate yet.');
+        if (lineMove && R.status !== 'invalid') R.lineMove = lineMove;
         R.cost = T.cost; R.dur = 480; R.count = 1;
         R.creates.push({ type: 'gate', x, y, f: 0, cond: 1 });
         return R;
@@ -898,6 +979,7 @@ export class Sim {
         let dir = outs.find((d) => a.dir && d[0] === a.dir[0] && d[1] === a.dir[1]) || outs.find(([dx, dy]) => PED_GROUND.has(this.groundAt(this.idx(x + dx, y + dy)))) || outs[0];
         if (this.objs('door').some((d) => d.x === x && d.y === y && d.dir[0] === dir[0] && d.dir[1] === dir[1])) { failItem('A door is already here'); return R; }
         const oi = this.idx(x + dir[0], y + dir[1]);
+        if (secureSide(this, x + dir[0], y + dir[1]) === 'public') { failItem('Storage doors must open into the secured yard.'); return R; } // DOR-6
         if (!PED_GROUND.has(this.groundAt(oi)) || !this.cellFree(oi)) inc('Door opens onto grass - pave a walkway or loading zone');
         R.cost = T.cost; R.dur = 240; R.count = 1;
         R.creates.push({ type: 'door', kind: T.doorKind, x, y, f: 0, dir, cond: 1 });
@@ -1016,6 +1098,19 @@ export class Sim {
 
     return R;
   }
+  // GAT-11: a driving route from the street, through the public lot, to the approach of a gate at (gx, row).
+  streetDriveTo(gx, row, tiles = []) {
+    const s = this.s, D = this.D, p = s.parcel, planned = new Map(tiles.filter(t => t.k === 'ground').map(t => [t.i, t.v]));
+    const drive = (x, y) => { if (x < p.x0 || x > p.x1 || y <= row || y > p.y1) return false; const i = this.idx(x, y); return !D.solid[i] && VEH_GROUND.has(planned.get(i) ?? D.pendingGround.get(i) ?? s.ground[i]); };
+    const seen = new Set(), q = [];
+    for (let x = p.x0; x <= p.x1; x++) if (drive(x, p.y1)) { seen.add(this.idx(x, p.y1)); q.push([x, p.y1]); }
+    for (let k = 0; k < q.length; k++) {
+      const [x, y] = q[k];
+      if (y === row + 1 && Math.abs(x - gx) <= 1) return true;
+      for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy, j = this.idx(nx, ny); if (!seen.has(j) && drive(nx, ny)) { seen.add(j); q.push([nx, ny]); } }
+    }
+    return false;
+  }
   planUnits(a, R, bad, inc) {
     const s = this.s, D = this.D, T = TOOLS[a.tool], f = T.access === 'drive' ? 0 : (a.f || 0);
     const sz = SIZES[T.size]; const dx = a.b.x - a.a.x, dy = a.b.y - a.a.y;
@@ -1077,6 +1172,10 @@ export class Sim {
         }
       }
       const fronts = this.unitFront(u);
+      // UNT-7 (SL-1 §3.3): storage only inside the secured yard.
+      const pub = (c) => secureSide(this, c.x, c.y) === 'public';
+      const cells = []; for (let yy = u.y; yy < u.y + u.h; yy++) for (let xx = u.x; xx < u.x + u.w; xx++) cells.push({ x: xx, y: yy });
+      if (cells.some(pub) || fronts.some(pub)) { ok = false; bad('Storage units go inside the secured yard.'); }
       if (T.access === 'interior') {
         if (!fronts.some((c) => s.hall[f][this.idx(c.x, c.y)])) { ok = false; bad('Unit door must face a hallway (build the hallway first)'); }
       } else if (!fronts.some((c) => VEH_GROUND.has(this.groundAt(this.idx(c.x, c.y))))) inc('Door faces no drive aisle yet');
@@ -1151,6 +1250,12 @@ export class Sim {
     const ord = { id: this.id(), label: R.label, tool: a.tool, cost: R.cost, dur: Math.max(30, Math.round(R.dur)), prog: 0, st: 'construction', objs: [], tiles: R.tiles, t0: s.t, cells: R.items.filter((it) => !it.skip).map((it) => ({ x: it.x, y: it.y, f: it.f })) };
     if (!s.creative) this.money(-R.cost, 'capex', R.label);
     if (R.waitShell) ord.waitShell = R.waitShell;
+    if (R.lineMove) {
+      // SL-1 §2: confirming the first gate sets (or moves) the security line. A front-row line on a
+      // lot that never had one stays implicit, exactly as before SL-1 (gates alone define L = y1).
+      const { to, from } = R.lineMove;
+      if (!(s.secLine == null && from == null && to === s.parcel.y1)) { ord.prevSecLine = from ?? null; s.secLine = to; }
+    }
     const hostIds=[];
     for (const c of R.creates) {
       if (c.type === 'keypadUpgrade') { const d = s.objects[c.door]; d.keypad = 'pending'; d.keypadOrder = ord.id; ord.keypadDoor = d.id; continue; }
@@ -1192,7 +1297,10 @@ export class Sim {
   commitRemoval(q) {
     if(q.cost)this.money(-q.cost,'capex','Demolition: '+q.name);
     noteUnitsRemoved(this,q.mutation.ids);
+    const hadGate = !this.frontage() && Object.values(this.s.objects).some(o => o.type === 'gate'), keepLine = lineRow(this.s);
     applyRemovalState(this.s,q.mutation);
+    // SL-1 §2: removing gates never moves the line (a legacy front line becomes explicit).
+    if (hadGate && !Object.values(this.s.objects).some(o => o.type === 'gate') && !Number.isInteger(this.s.secLine)) this.s.secLine = keepLine;
     this.markDirty();this.emit('demolish',{x:q.target?.x,y:q.target?.y,f:q.target?.f||0});
     return {ok:true,msg:q.closeProperty?`Property closed; ${q.name} removed.`:`${q.name} removed${q.cost?' · '+(Math.round(q.cost*100)/100).toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:q.cost%1?2:0}):''}.`,removed:q.mutation.ids};
   }
@@ -1207,6 +1315,12 @@ export class Sim {
     if (!s.creative) this.money(refund, 'capex', (undo ? 'Undo: ' : 'Cancelled: ') + ord.label);
     dropUnitBuild(this, ord);
     this.removeEquipment(new Set(ord.objs));
+    // SL-1 §2: cancelling the order that set the line restores the previous line once no gate remains.
+    // Kept as is when restoring would expose storage or enclose an office door built since.
+    if (Object.prototype.hasOwnProperty.call(ord, 'prevSecLine') && !Object.values(s.objects).some(o => o.type === 'gate')) {
+      const prev = ord.prevSecLine ?? null;
+      if (!storageOnPublicSide(this, prev) && !officeDoorEnclosed(this, prev, s.secLine ?? null)) { if (prev == null) delete s.secLine; else s.secLine = prev; }
+    }
     if(ord.retrofit && s.objects[ord.retrofit]?.retrofitOrder===ord.id)delete s.objects[ord.retrofit].retrofitOrder;
     if (ord.keypadDoor) { const d = s.objects[ord.keypadDoor]; if (d) { d.keypad = null; } }
     for (const tl of ord.tiles) if (tl.k === 'hall' && s.hall[tl.f][tl.i] === 2) s.hall[tl.f][tl.i] = 0;
@@ -1311,7 +1425,7 @@ export class Sim {
   }
   openingIssues() {
     this.ensure(); const s = this.s, D = this.D, out = [];
-    if (!D.gate) out.push('Main gate is not connected to the street');
+    if (!D.gate || (hasPublicLot(this) && !this.routeGateIds().some(id => D.vehReach[this.gateApproach(this.obj(id))]))) out.push('Main gate is not connected to the street');
     const office = this.objs('office')[0];
     if (!office || office.cstate !== 'operating') out.push('No operating office');
     else if (this.frontage()) {
@@ -1319,8 +1433,7 @@ export class Sim {
       if(!access.staff) out.push('Office needs a secured staff passage into the yard.');
       if(!access.pedestrian || !access.parking) out.push('Office needs a public walk and driveable public parking.');
     } else if (office.generalPlacement) {
-      const issue = classicOfficeAccess(this,office);
-      if (issue) out.push(issue);
+      out.push(...this.classicOfficeIssues(office));
     } else { const di = this.idx(office.door.x, office.door.y); if (!D.vehReach[di] && !(D.dAccess && D.dAccess.has(di))) out.push('Office door has no customer route - pave a walkway or parking in front of it'); }
     if (!this.objs('unit').some((u) => u.cstate === 'operating')) out.push('No operating rent-ready units');
     return out;
@@ -2567,7 +2680,7 @@ export class Sim {
     }
     const mod = this.mod;
     if (mod < ACCESS_HOURS[0] * 60 || mod > ACCESS_HOURS[1] * 60 - 30) { this.schedule(v, this.randomAccessTime(this.day + 1)); return; }
-    const K=this.frontage(), publicVisit=!!K && v.kind==='prospect';
+    const K=this.frontage(), publicOffice=!K && v.kind==='prospect' && this.publicOffice(), publicVisit=(!!K || !!publicOffice) && v.kind==='prospect';
     if (!publicVisit && !this.routeGateIds().length) { this.schedule(v, s.t + 240); return; }
     if (v.unit && !s.objects[v.unit]) return;
     if (s.agents.filter((a) => a.kind === 'cust').length > 60) {
@@ -2582,7 +2695,12 @@ export class Sim {
     const sx = fromEast ? s.W - 1 : 0, sy = fromEast ? p.y1 + 2 : p.y1 + 3;
     const gateId = publicVisit ? null : this.selectGateForTrip(this.idx(sx, sy), v);
     let publicDest;
-    if (publicVisit) {
+    if (publicOffice) {
+      // SL-1 C1: park on the free public bay nearest the door by walking distance.
+      const taken=new Set(s.vehicles.filter(car=>car.dest!=null).map(car=>car.dest));
+      publicDest=publicOfficeBays(this,publicOffice).bays.find(i=>!taken.has(i));
+      if (publicDest==null) { this.schedule(v,s.t+5); return; }
+    } else if (publicVisit) {
       const taken=new Set(s.vehicles.filter(car=>car.dest!=null).map(car=>K.bay(car.dest%s.W, Math.floor(car.dest/s.W))));
       publicDest=(accessState(this,null,false).bays || []).find(i=>!taken.has(K.bay(i%s.W,Math.floor(i/s.W))));
       if (publicDest==null) { this.schedule(v,s.t+5); return; }
@@ -2599,7 +2717,7 @@ export class Sim {
     if(publicVisit){ ag.publicVisit=true; ag.st='drive'; veh.dest=publicDest; veh.moving=true; }
     const goal = publicVisit ? publicDest : this.gateApproach(s.objects[gateId]);
     const path = this.bfs([this.idx(sx, sy)], n=>n===goal, n=>this.vehNbr(n,publicVisit ? publicDrive : gateId));
-    if (!path && K) {
+    if (!path && (K || publicOffice)) {
       s.vehicles.pop(); s.agents.pop(); this.schedule(v,s.t+5); return;
     }
     this.setVehPath(veh, path);
@@ -2823,7 +2941,7 @@ export class Sim {
         if (qi >= 0 && this.reassignFailedQueuedGate(ag, veh, gate)) break;
         if (qi < 0) { enqueueGate(s, gate.id, ag.id); qi = q.indexOf(ag.id); }
         // queue position on the street behind the apron
-        if (qi > 0) { const tx = gate.x + 0.5 + (veh.hx < 0 ? 0 : 0), ty = p.y1 + 1.5 + Math.min(qi, 1) * 1.0; veh.x += (tx + (qi > 1 ? (qi - 1) * 2.4 * (veh.hx < 0 ? 1 : -1) : 0) - veh.x) * 0.2; veh.y += (ty - veh.y) * 0.2; if (qi >= 2 && ag.exp.gate === 20) this.thought(ag, 'Gate line is backing up.', 'bad'); break; }
+        if (qi > 0) { const tx = gate.x + 0.5 + (veh.hx < 0 ? 0 : 0), ty = (this.frontage() ? p.y1 : fenceRow(s)) + 1.5 + Math.min(qi, 1) * 1.0; veh.x += (tx + (qi > 1 ? (qi - 1) * 2.4 * (veh.hx < 0 ? 1 : -1) : 0) - veh.x) * 0.2; veh.y += (ty - veh.y) * 0.2; if (qi >= 2 && ag.exp.gate === 20) this.thought(ag, 'Gate line is backing up.', 'bad'); break; }
         if (!gateServing(s, gate.id)) { setGateServing(s, gate.id, ag.id); ag.gateT = this.keypadServiceTime(gate); ag.gateFail = gate.cond < 0.2 || !!gate.unpowered; this.emit('keypad', { x: gate.x, y: gate.y }); }
         if (gateServing(s, gate.id) !== ag.id) break;
         ag.gateT--;

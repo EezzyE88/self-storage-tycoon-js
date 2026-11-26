@@ -221,6 +221,7 @@ export class Renderer {
     this.contextG = new THREE.Group(); this.scene.add(this.contextG);
     this.dynG = new THREE.Group(); this.scene.add(this.dynG);
     this.previewG = new THREE.Group(); this.scene.add(this.previewG);
+    this.lineZoneG = new THREE.Group(); this.lineZoneG.visible = false; this.scene.add(this.lineZoneG); this.buildMode = false;
     this.envG = new THREE.Group(); this.scene.add(this.envG);
     this.buildEnvironment();
     this.customerFree = [];
@@ -648,6 +649,8 @@ export class Renderer {
     }
     // curb line where street meets sidewalk
     g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, (p.y1 + 2) * C - 2, W * C, 2); g.fillRect(0, (p.y1 + 4) * C, W * C, 2);
+    // SL-1 §7 F3: driveway aprons where a public-lot aisle meets the street.
+    if (!K) for (const a of sim.apronCells()) { g.fillStyle = COL.asphalt; g.fillRect(a.x * C, a.y * C, C, C); g.fillStyle = 'rgba(226,217,190,.35)'; g.fillRect(a.x * C, a.y * C, 1.5, C); g.fillRect(a.x * C + C - 1.5, a.y * C, 1.5, C); }
     // pending ground (under construction)
     for (const [i, v] of D.pendingGround) { const x = i % W, y = (i / W) | 0; this.hatch(g, x * C, y * C, C, 'rgba(232,185,35,0.55)', 'rgba(60,60,60,0.25)'); }
     // building floors + halls on floor 1
@@ -749,6 +752,7 @@ export class Renderer {
     this.buildArchitectureDetail();
     this.openHouse = new OpenHousePresentation(this);
     this.buildFence();
+    this.buildLineZone();
     this.buildBuildingContext();
     this.applyView();
   }
@@ -1107,13 +1111,18 @@ export class Renderer {
       }
       if(F.gateLine && !this.sim.objs('gate').some(g=>recessed(s,g))) run(...F.gateLine);
     }
+    // SL-1 §7 F1: on a classic lot with a public lot, the front run moves onto the security line,
+    // with gaps at gates and where an office wall sits on the line. Otherwise abaf108 exactly.
+    const split = !F && this.sim.hasPublicLot(), fz = split ? this.sim.lineGeometry()[0][1] : p.y1 + 1;
+    if (split) for (const o of this.sim.objs('office')) if (o.y <= fz && o.y + o.h >= fz) frontGaps.push([o.x, o.x + o.w]);
+    frontGaps.sort((a, b) => a[0] - b[0]);
     let frontX = p.x0;
     for (const [gap0, gap1] of frontGaps) {
       const x0 = Math.max(p.x0, gap0), x1 = Math.min(p.x1 + 1, gap1);
-      if (x0 > frontX) run(frontX, p.y1 + 1, x0, p.y1 + 1);
+      if (x0 > frontX) run(frontX, fz, x0, fz);
       frontX = Math.max(frontX, x1);
     }
-    if (frontX < p.x1 + 1) run(frontX, p.y1 + 1, p.x1 + 1, p.y1 + 1);
+    if (frontX < p.x1 + 1) run(frontX, fz, p.x1 + 1, fz);
     const H = 1.2;
     for (const [x0, z0, x1, z1] of segs) {
       const len = Math.hypot(x1 - x0, z1 - z0); if (len < 0.1) continue;
@@ -1437,6 +1446,13 @@ export class Renderer {
       m.position.set(it.x + 0.5, (it.f || 0) * FLOOR_H + 0.06, it.y + 0.5); m.renderOrder = 30; this.previewG.add(m);
     }
     const ghost = new THREE.MeshStandardMaterial({ color: col, transparent: true, opacity: 0.35, depthWrite: false });
+    if (Number.isInteger(R.proposedLine) && !this.sim.frontage()) {
+      // SL-1 §7 F4: ghost fence across the lot at the proposed row, public lot tinted in front of it.
+      const p = this.sim.s.parcel, [[x0, z], [x1]] = this.sim.lineGeometry(R.proposedLine), r = this.sim.publicLotRows(R.proposedLine);
+      const fence = new THREE.Mesh(this.geo.box, new THREE.MeshBasicMaterial({ color: R.status === 'invalid' ? 0xd2452f : 0xfff0c8, transparent: true, opacity: 0.7, depthWrite: false }));
+      fence.scale.set(x1 - x0, 1.1, 0.08); fence.position.set((x0 + x1) / 2, 0.55, z); fence.renderOrder = 31; this.previewG.add(fence);
+      if (r) this.previewG.add(this.zoneMesh(p.x0, r.y0, p.x1 + 1, r.y1 + 1, 0x4fa3d9, 'Public lot'));
+    }
     const drivePreview = TOOLS[R.tool] && TOOLS[R.tool].access === 'drive';
     const frontageMat = new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false });
     for (const u of R.units || []) {
@@ -1490,7 +1506,36 @@ export class Renderer {
       }
     }
   }
-  setOverlay(kind) { this.overlay = kind; this.ovPlane.visible = !!kind; this.lastOv = -1; }
+  // SL-1 §7 F2: public-lot tint and label, shown in build mode and the security overlay only.
+  lotLabel(text) {
+    const c = mkCanvas(512, 96), g = c.getContext('2d');
+    g.fillStyle = 'rgba(20,40,60,.55)'; g.fillRect(0, 18, 512, 60);
+    g.fillStyle = '#fff6d8'; g.font = 'bold 44px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 49);
+    return tex(c);
+  }
+  zoneMesh(x0, z0, x1, z1, color, label) {
+    const out = new THREE.Group();
+    const tint = new THREE.Mesh(this.geo.plane, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.22, depthWrite: false }));
+    tint.rotation.x = -Math.PI / 2; tint.scale.set(x1 - x0, z1 - z0, 1); tint.position.set((x0 + x1) / 2, 0.05, (z0 + z1) / 2); tint.renderOrder = 6; out.add(tint);
+    if (label) {
+      const w = Math.min(8, x1 - x0), h = w * 96 / 512;
+      const m = new THREE.Mesh(this.geo.plane, new THREE.MeshBasicMaterial({ map: this.lotLabel(label), transparent: true, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2; m.scale.set(w, h, 1); m.position.set((x0 + x1) / 2, 0.07, Math.min(z1 - h / 2 - 0.1, (z0 + z1) / 2)); m.renderOrder = 7; out.add(m);
+    }
+    return out;
+  }
+  buildLineZone() {
+    this.clearGroup(this.lineZoneG);
+    const s = this.sim.s, p = s.parcel;
+    if (this.sim.frontage()) return;
+    const r = this.sim.publicLotRows();
+    if (!r) return;
+    this.lineZoneG.add(this.zoneMesh(p.x0, r.y0, p.x1 + 1, r.y1 + 1, 0x4fa3d9, 'Public lot'));
+    this.updateLineZone();
+  }
+  updateLineZone() { this.lineZoneG.visible = !!this.buildMode || this.overlay === 'security'; }
+  setBuildMode(on) { if (this.buildMode === !!on) return; this.buildMode = !!on; this.updateLineZone(); }
+  setOverlay(kind) { this.overlay = kind; this.ovPlane.visible = !!kind; this.lastOv = -1; this.updateLineZone?.(); }
   drawOverlay() {
     const sim = this.sim, s = sim.s, D = sim.D, g = this.ovCanvas.getContext('2d'), C = 16, W = s.W, f = Number.isInteger(this.view)?this.view:0;
     g.clearRect(0, 0, this.ovCanvas.width, this.ovCanvas.height);
@@ -1522,6 +1567,9 @@ export class Renderer {
         for (const c of dc.cells) { const px = c.x * C, py = c.y * C; if (dx > 0) g.fillRect(px, py, t, C); else if (dx < 0) g.fillRect(px + C - t, py, t, C); else if (dy > 0) g.fillRect(px, py, C, t); else g.fillRect(px, py + C - t, C, t); }
         const mid = dc.cells[(dc.cells.length - 1) >> 1]; mark(mid.x * C, mid.y * C, doorMark[dc.state]);
       }
+      // SL-1 §7 F5: the security line, bold.
+      const ln = f === 0 ? sim.lineGeometry() : null;
+      if (ln) { const [[x0, z], [x1]] = ln; g.fillStyle = 'rgba(20,24,30,0.9)'; g.fillRect(x0 * C, z * C - 3, (x1 - x0) * C, 6); g.fillStyle = 'rgba(255,240,200,0.95)'; g.fillRect(x0 * C, z * C - 1, (x1 - x0) * C, 2); }
     } else if (this.overlay === 'clean') {
       for (let i = 0; i < W * s.H; i++) { if (!D.walk[f][i]) continue; const d = s.dirt[f][i]; if (d > 0.55) cellM(i, 'rgba(200,60,50,0.6)', 'x'); else if (d > 0.25) cellM(i, 'rgba(230,170,50,0.5)', '/'); else cell(i, 'rgba(64,170,110,0.35)'); }
     } else if (this.overlay === 'hvac') {

@@ -23,7 +23,8 @@ for(let rotation=0;rotation<4;rotation++) {
  const x=6+rotation*6,y=8;
  assert.ok(sm.dispatch({type:'build',tool:'du5x10',a:{x,y},b:{x,y},rotation}).ok);
 }
-const gate={x:7,y:sm.s.parcel.y1};
+// SL-1 (OFF-8): the rotated office must face the public lot, so the gate (security line) sits behind it at row 17.
+const gate={x:7,y:17};
 assert.ok(sm.dispatch({type:'build',tool:'gate',a:gate,b:gate}).ok);
 sm.completeOrder(sm.s.orders.at(-1));
 for(let y=18;y<=gate.y;y++)sm.s.ground[sm.idx(7,y)]=G.ASPHALT;

@@ -70,15 +70,17 @@ function compactReview(u,{peek}){
   ok(`Comeback Yard opportunity (${c.size}): compact review, one framing request, Cancel clears, save untouched`);
 }
 
-// 3. First gate on an acquired plain parcel.
+// 3. First gate on an acquired plain parcel. SL-1 / FCPR D4 retired the suggested front-row gate preview
+// (changed from abaf108, reason: it suggested a layout with no public lot). No recommendation review opens and
+// nothing is framed; the ordinary gate tool stays a normal (non-compact) placement.
 {
   const root=makeMaple();root.s.tut={on:false,beat:99,flags:{},done:true};root.ensure();
   const parcel=makeSandbox({market:'blank',cash:60000,plain:true});parcel.s.speed=0;
   const company={props:[{name:'Maple Street Storage',sim:root},{name:'Suburban Lot 2',sim:parcel}],active:1};
-  const {u,frames}=uiFor(parcel,company);assert.ok(u.firstGateGuidance()?.args,'gate guidance available');
-  const before=JSON.stringify(parcel.s);tap(u,'previewFirstGate');assert.equal(u.tool,'gate');assert.equal(u.recoCompact,true);assert.equal(frames(),1);
-  compactReview(u,{peek:false});tap(u,'cancelTool');assert.equal(JSON.stringify(parcel.s),before);
-  ok('first gate: compact review, one framing request, Cancel clears, save untouched');
+  const {u,frames}=uiFor(parcel,company);assert.equal(typeof u.firstGateGuidance,'undefined');
+  const before=JSON.stringify(parcel.s);tap(u,'previewFirstGate');assert.notEqual(u.tool,'gate');assert.equal(frames(),0);assert.equal(JSON.stringify(parcel.s),before);
+  u.pickTool('gate');assert.equal(u.recoCompact,false);assert.equal(frames(),0);tap(u,'cancelTool');assert.equal(JSON.stringify(parcel.s),before);
+  ok('first gate: suggested preview retired, no framing, ordinary gate tool is not compact, save untouched');
 }
 
 // 4. Two-floor lesson: Use suggested placement opens compact and refits; other suggested placements are unchanged.

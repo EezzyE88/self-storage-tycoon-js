@@ -322,7 +322,9 @@ await test('east-side classic prospect completes the office visit via the only g
   const bay = sim.idx(8,14);
   s.ground[bay] = G.PARKING;
   sim.markDirty();
-  complete(sim,{...build('office',14,10),rotation:2});
+  // SL-1: a new yard office is refused by OFF-8; this models a legacy (pre-SL-1) yard office through the scripted-content
+  // path (scenario prebuild), so its unchanged routing (OFF-11, D2) can be checked.
+  { const cre = s.creative, mode = s.mode; s.creative = true; s.mode = 'scenario'; complete(sim,{...build('office',14,10),rotation:2}); s.creative = cre; s.mode = mode; }
   const [west,east] = sim.objs('gate');
   s.open=true; s.t=10*60; s.visits=[];
   const visit = {kind:'prospect',size:'5x10',keen:true};

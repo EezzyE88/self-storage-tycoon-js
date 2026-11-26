@@ -12,7 +12,7 @@ function build(s,a){const r=s.dispatch({type:'build',...a});assert.ok(r.ok,`${a.
 function office(s){
  build(s,args('aisle',27,9,{x:27,y:29}));
  build(s,args('aisle',28,9));
- build(s,args('gate',27,29));
+ build(s,args('gate',27,8)); // SL-1 (OFF-8): the line sits behind the office so its door faces the public lot
  build(s,args('parking',28,9));
  return build(s,args('office',28,10,undefined,{rotation:0}))[0];
 }

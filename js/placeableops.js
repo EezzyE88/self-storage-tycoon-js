@@ -1,5 +1,6 @@
 import { recessed, publicDrive } from './mapleaccess.js';
 import { analyzeRemoval } from './removal.js';
+import { fenceRow } from './securityline.js';
 import { gateQueue, gateServing, unregisterGateAccess } from './gateaccess.js';
 
 // Review identity is transient, never saved; identical properties must not share a quote.
@@ -20,7 +21,7 @@ function gateRemovalAccess(sim, gate) {
   const after = new sim.constructor(state);
   const alternatives = (state.gateAccess?.gateIds || []).filter(id => {
     const g = state.objects[id], c = after.gateConnection(id), p = state.parcel;
-    return after.gateStatus(id) === 'operating' && after.connectedGate(g,c) && (recessed(state,g) || g.y === p.y1) && g.x-1 >= p.x0 && g.x+1 <= p.x1 && !!after.vehicleReachForGate(id)[after.idx(g.x,g.y)];
+    return after.gateStatus(id) === 'operating' && after.connectedGate(g,c) && (recessed(state,g) || g.y === (fenceRow(state))) && g.x-1 >= p.x0 && g.x+1 <= p.x1 && !!after.vehicleReachForGate(id)[after.idx(g.x,g.y)];
   });
   const customers = s.agents.filter(a => a.kind === 'cust');
   const obligations = s.open || Object.keys(s.leases).length > 0 || customers.length > 0 || s.visits.length > 0 || s.orders.some(order => order.st === 'construction') || Object.values(s.objects).some(o => o.type === 'unit' && (o.lease || ['occupied','reserved'].includes(o.commercial)));

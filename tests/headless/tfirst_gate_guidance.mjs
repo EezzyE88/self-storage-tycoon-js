@@ -1,4 +1,7 @@
-// Acquisition offer guidance against actual game offers, handlers and purchase engine. DOM is stubbed; rendered checks are separate.
+// SL-1 / FCPR Rev 1 D4: the acquired-parcel "Preview suggested gate" (GAT-13, a front-row gate with no public lot)
+// is retired on classic lots. Acquired parcels instead show the SL-1 "still needed to open" list, and the
+// ordinary gate tool places the first gate on any row. Actual acquisition, handlers and purchase engine; DOM stubbed.
+// Changed from the abaf108 version (reason): the old groups asserted the retired front-row suggestion (D4).
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
@@ -45,36 +48,42 @@ function acquired(market='blank'){
  Object.assign(f.g.rend,{setView(v){this.view=v;},setPreview(p){this.preview=p;},lookAt(x,y){this.target={x,y};}});
  f.ui.renderActionBar=UI.prototype.renderActionBar;f.ui.root.querySelector=()=>null;f.ui.root.classList={remove(){},add(){},toggle(){}};return f;
 }
-const press=(f,a)=>click(f,a);
-test('all acquired parcel markets use actual frontage validation with truthful drive-aisle warning and unchanged quote',()=>{
+const press=(f,a,v)=>click(f,a,v);
+const growth=f=>{f.ui.cat='site';f.ui.dockSummary=()=>'';return f.ui.growthSheet();};
+// Rendering may fill display-only defaults (staff work counters, lessonsDone); the built world must not change.
+const world=f=>{const s=f.sim.s;return JSON.stringify([s.objects,s.orders,s.ground,s.cash,s.t,s.speed,s.secLine,s.ledger]);};
+const gate=(f,x,y)=>({type:'build',tool:'gate',f:0,a:{x,y},b:{x,y}});
+test('retired: no suggested-gate methods or preview action remain in the UI',()=>{
+ for(const m of ['firstGateGuidance','firstGateHtml','previewFirstGate'])assert.equal(typeof UI.prototype[m],'undefined',m);
+ const f=acquired(),before=JSON.stringify(f.sim.s);press(f,'previewFirstGate');assert.equal(JSON.stringify(f.sim.s),before);assert.notEqual(f.ui.tool,'gate');assert.equal(f.ui.plan??null,null);
+});
+test('all acquired parcel markets list the security line first with an ordinary Place a gate button, and no suggested preview',()=>{
  for(const market of ['blank','urban','rural']){
-  const f=acquired(market),before=JSON.stringify(f.sim.s),g=f.ui.firstGateGuidance();assert.equal(JSON.stringify(f.sim.s),before);assert.ok(g.args);assert.equal(g.args.a.y,f.sim.s.parcel.y1);assert.notEqual(g.plan.status,'invalid');assert.deepEqual(g.plan,f.sim.plan(g.args));assert.equal(g.plan.cost,TOOLS.gate.cost);assert.equal(g.plan.cost,4500);assert.equal(g.plan.status,'incomplete');assert.ok(g.plan.missing.includes('Gate has no drive aisle behind it yet'));
+  const f=acquired(market),before=world(f),html=growth(f);assert.equal(world(f),before);
+  assert.doesNotMatch(html,/previewFirstGate/);assert.match(html,/Still needed to open/);assert.match(html,/data-need="line"[^]*?Choose your security line: place an Entrance Gate[^]*?data-a="goTool" data-v="gate"/);
  }
 });
-test('preview and cancel use production UI methods without spending, building, changing time or releasing manual Pause',()=>{
- const f=acquired(),before=JSON.stringify(f.sim.s);press(f,'previewFirstGate');assert.equal(JSON.stringify(f.sim.s),before);assert.equal(f.ui.tool,'gate');assert.equal(f.g.rend.view,'ext');assert.equal(f.ui.plan.status,'incomplete');assert.equal(f.ui.plan.args.a.y,f.sim.s.parcel.y1);assert.match(f.boxes.abar.innerHTML,/Gate has no drive aisle behind it yet/);assert.match(f.boxes.abar.innerHTML,/\$4,500/);assert.match(f.boxes.abar.innerHTML,/Cash after build/);press(f,'cancelTool');assert.equal(JSON.stringify(f.sim.s),before);assert.equal(f.ui.plan,null);
+test('the ordinary gate tool shows no suggestion and quotes any row of the parcel without changing state',()=>{
+ const f=acquired(),s=f.sim.s,p=s.parcel,before=JSON.stringify(s);f.ui.pickTool('gate');assert.doesNotMatch(f.boxes.abar.innerHTML,/Preview \$4,500 gate/);assert.equal(f.ui.plan??null,null);
+ for(const y of [p.y0+1,p.y0+8,Math.round((p.y0+p.y1)/2),p.y1-3,p.y1]){const q=f.sim.plan(gate(f,20,y));assert.notEqual(q.status,'invalid',`row ${y}: ${q.reasons}`);assert.equal(q.cost,4500);}
+ assert.equal(JSON.stringify(s),before);
 });
-test('ordinary Confirm charges once, existing gate blocks repeat guidance, save/load retains the construction and Pause',()=>{
- const f=acquired(),cash=f.sim.s.cash,t=f.sim.s.t;press(f,'previewFirstGate');press(f,'confirm');assert.equal(f.sim.s.cash,cash-4500);assert.equal(f.sim.s.t,t);assert.equal(f.sim.s.speed,0);assert.equal(f.sim.objs('gate').length,1);assert.equal(f.ui.firstGateGuidance(),null);const after=JSON.stringify(f.sim.s);press(f,'confirm');assert.equal(JSON.stringify(f.sim.s),after);assert.equal(f.ui.previewFirstGate(),false);assert.equal(JSON.stringify(f.sim.s),after);f.g.sim=new Sim(JSON.parse(after));f.g.company.props[1].sim=f.g.sim;assert.equal(f.ui.firstGateGuidance(),null);assert.equal(f.g.sim.s.speed,0);
+test('an ordinary gate charges $4,500 once, sets the line, keeps manual Pause, and survives save/load',()=>{
+ const f=acquired(),s=f.sim.s,cash=s.cash,t=s.t,L=s.parcel.y1-7;assert.ok(f.sim.dispatch(gate(f,20,L)).ok);assert.equal(s.cash,cash-4500);assert.equal(s.t,t);assert.equal(s.speed,0);assert.equal(f.sim.objs('gate').length,1);assert.equal(s.secLine,L);
+ const after=JSON.stringify(s),re=new Sim(JSON.parse(after));re.ensure();assert.equal(re.s.secLine,L);assert.equal(re.s.speed,0);assert.equal(JSON.stringify(re.s),after);
 });
-test('guidance requotes current blockers and prefers already connected drive-aisle frontage',()=>{
- const f=acquired(),s=f.sim.s,g=f.ui.firstGateGuidance(),x=g.args.a.x,y=s.parcel.y1;
- // Controlled structure fixture blocks the center; the production planner must choose elsewhere.
- const id=f.sim.id();s.objects[id]={id,type:'shell',x:x-1,y,w:3,h:1,floors:1,f:0,cstate:'operating'};f.sim.markDirty();const moved=f.ui.firstGateGuidance();assert.ok(moved.args);assert.notEqual(moved.args.a.x,x);assert.notEqual(f.sim.plan(moved.args).status,'invalid');
- delete s.objects[id];const ax=s.parcel.x0+2;s.ground[f.sim.idx(ax,y-1)]=G.ASPHALT;f.sim.markDirty();const linked=f.ui.firstGateGuidance();assert.equal(linked.plan.status,'valid');assert.ok(Math.abs(linked.args.a.x-ax)<=1);
- s.objects[id]={id,type:'shell',x:s.parcel.x0,y,w:s.parcel.x1-s.parcel.x0+1,h:1,floors:1,f:0,cstate:'operating'};f.sim.markDirty();const blocked=f.ui.firstGateGuidance();assert.equal(blocked.args,null);const before=JSON.stringify(s);assert.equal(f.ui.previewFirstGate(),false);assert.equal(JSON.stringify(s),before);assert.doesNotMatch(f.ui.firstGateHtml(blocked),/data-a="previewFirstGate"/);
+test('an unaffordable gate is refused by the existing cash rule and never builds',()=>{
+ const f=acquired();f.sim.s.cash=4499.99;const before=JSON.stringify(f.sim.s),r=f.sim.dispatch(gate(f,20,22));assert.equal(r.ok,false);assert.match(r.msg,/cash/i);assert.equal(JSON.stringify(f.sim.s),before);
 });
-test('unaffordable preview retains the existing hard cash requirement and never builds',()=>{
- const f=acquired();f.sim.s.cash=4499.99;const before=JSON.stringify(f.sim.s);press(f,'previewFirstGate');assert.equal(JSON.stringify(f.sim.s),before);assert.match(f.boxes.abar.innerHTML,/data-a="confirm" disabled/);press(f,'confirm');assert.equal(JSON.stringify(f.sim.s),before);
+test('after the first gate the line item clears and the drive item appears with an aisle button',()=>{
+ const f=acquired();assert.ok(f.sim.dispatch(gate(f,20,22)).ok);const html=growth(f);assert.doesNotMatch(html,/data-need="line"/);assert.match(html,/data-need="gateDrive"[^]*?data-v="aisle"/);
 });
-test('ordinary sandbox, Free Build, tutorial, scenarios, lessons, source property and operating acquisitions stay outside scope',()=>{
- for(const mutate of [f=>f.g.company.active=0,f=>f.sim.s.sb={},f=>f.sim.s.creative=true,f=>f.sim.s.scenario={},f=>f.sim.s.lesson={},f=>f.sim.s.tut.on=true,f=>f.sim.s.mirror=false]){const f=acquired();mutate(f);assert.equal(f.ui.firstGateGuidance(),null);}
- const f=fixture();assert.ok(f.g.acquire('facility','maple').ok);f.g.company.active=1;f.g.sim=f.g.company.props[1].sim;assert.equal(f.ui.firstGateGuidance(),null);
+test('a front-row first gate stays allowed with the advisory, and the list explains the missing public lot',()=>{
+ const f=acquired(),y=f.sim.s.parcel.y1,q=f.sim.plan(gate(f,20,y));assert.notEqual(q.status,'invalid');assert.ok((q.warn||[]).some(w=>/front row leaves no public lot/.test(w)));assert.ok(f.sim.dispatch(gate(f,20,y)).ok);
+ assert.match(growth(f),/data-need="frontRow"[^]*?remove the gate and place it further back/);
 });
-test('compact Growth retains one fixed preview action; normal gate tool retains an explicit suggestion',()=>{
- const f=acquired();f.ui.cat='site';f.ui.dockSummary=()=>'';const guide=f.ui.firstGateHtml(f.ui.firstGateGuidance());const html=f.ui.sheet('Growth','',guide);assert.match(html,/dock-actions[\s\S]*data-a="previewFirstGate"/);assert.equal((html.match(/data-a="previewFirstGate"/g)||[]).length,1);f.ui.pickTool('gate');assert.match(f.boxes.abar.innerHTML,/Preview \$4,500 gate/);assert.equal(f.ui.plan,null);
-});
-test('guided preview clears carried Rush and unit options so its advertised normal quote remains exact',()=>{
- const f=acquired();f.sim.s.coTier=3;f.ui.rush=true;f.ui.flip=true;f.ui.climate=true;const cash=f.sim.s.cash;assert.equal(f.ui.firstGateGuidance().plan.cost,4500);press(f,'previewFirstGate');assert.equal(f.ui.rush,false);assert.equal(f.ui.flip,false);assert.equal(f.ui.climate,false);assert.equal(f.ui.plan.args.rush,false);assert.equal(f.ui.plan.cost,4500);press(f,'confirm');assert.equal(f.sim.s.cash,cash-4500);assert.equal(f.sim.s.speed,0);
+test('frontage (Maple) acquisitions and the source property are unaffected',()=>{
+ const f=fixture();assert.ok(f.g.acquire('facility','maple').ok);f.g.company.active=1;f.g.sim=f.g.company.props[1].sim;f.sim=f.g.sim;assert.doesNotMatch(growth(f),/data-need=/);
+ const g=fixture();assert.doesNotMatch(growth(g),/data-need=/);
 });
 console.log(`${n} first-gate guidance groups passed`);

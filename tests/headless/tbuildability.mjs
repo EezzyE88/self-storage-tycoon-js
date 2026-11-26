@@ -41,10 +41,12 @@ for(let rotation=0;rotation<4;rotation++)test(`office ${rotation} footprint and 
  const [dx,dy]=[[0,-1],[1,0],[0,1],[-1,0]][rotation], w=rotation%2?4:5,h=rotation%2?5:4;
  const x=dx ? (dx>0?10+w:9) : 10, y=dy ? (dy>0?10+h:9) : 10;
  assert.equal(sim.plan(args).status,'invalid');
- const gate={x:20,y:sim.s.parcel.y1};
+ // SL-1: the gate row sets the security line; row 8 puts this office and its door in the public lot
+ // (changed from abaf108's front-row gate, which OFF-8 now refuses for a new office inside the yard).
+ const gate={x:20,y:8};
  assert.ok(sim.dispatch({type:'build',tool:'gate',a:gate,b:gate}).ok);
  if (sim.s.orders.at(-1).st === "construction") sim.completeOrder(sim.s.orders.at(-1));
- for(let yy=8;yy<=gate.y;yy++)sim.s.ground[sim.idx(20,yy)]=G.ASPHALT;
+ for(let yy=8;yy<=sim.s.parcel.y1;yy++)sim.s.ground[sim.idx(20,yy)]=G.ASPHALT;
  for(let xx=x;xx<20;xx++)sim.s.ground[sim.idx(xx,y)]=G.CONCRETE;
  if(dx<0){ // Go around the building rather than through the proposed footprint.
    for(let yy=8;yy<=y;yy++)sim.s.ground[sim.idx(x,yy)]=G.CONCRETE;

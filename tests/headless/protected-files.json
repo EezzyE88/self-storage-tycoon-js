@@ -22,7 +22,7 @@
       "protects": "loans, credit and financial calculations"
     },
     "js/data.js": {
-      "sha256": "68cab9bccbb9612a06b2b47bcf8041aa9d281ddcb88485fbc8b89e277e63d64a",
+      "sha256": "7bf69577a0424ffe22b5f584834f6f82fd63f4f491616fbd7bf96a0203a561c2",
       "protects": "economy numbers: prices, rents, costs, wages"
     }
   }

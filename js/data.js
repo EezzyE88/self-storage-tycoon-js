@@ -84,7 +84,7 @@ export const TOOLS = {
   canopy:  { cat: 'roads', name: 'Covered Canopy', shape: 'rect', costPerCell: 140, desc: 'Weather-protected loading. Must touch a building.' },
 
   office:  { cat: 'site', name: 'Office', shape: 'tap', cost: 9000, fw: 5, fd: 4, desc: 'Reception, leasing and customer service. Required to open.' },
-  gate:    { cat: 'site', name: 'Entrance Gate', shape: 'tap', cost: 4500, desc: 'Street-connected vehicle gate with keypad. Place on the front fence line.' },
+  gate:    { cat: 'site', name: 'Entrance Gate', shape: 'tap', cost: 4500, desc: 'Street-connected vehicle gate with keypad. Its row sets your security fence.' },
 
   shell1:  { cat: 'buildings', name: 'Building Shell (1 floor)', shape: 'rect', costPerCell: 32, floors: 1, desc: 'Enclosed interior space. Earns nothing until fit out.' },
   shell2:  { cat: 'buildings', name: 'Building Shell (2 floors)', shape: 'rect', costPerCell: 58, floors: 2, desc: 'Two-floor shell. Floor 2 needs an elevator.' },

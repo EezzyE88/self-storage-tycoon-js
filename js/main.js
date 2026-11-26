@@ -344,6 +344,9 @@ function validState(st) {
   for (const o of Object.values(st.objects)) { if (!o || typeof o !== 'object' || typeof o.type !== 'string' || !isInt(o.x) || !isInt(o.y) || o.x < -2 || o.y < -2 || o.x > W + 2 || o.y > H + 2) return false; }
   for(const o of Object.values(st.objects)){if(o.f!=null&&(!isInt(o.f)||o.f<0||o.f>=(st.hall?.length||2)))return false;if(o.type==='shell'&&(!isInt(o.floors)||o.floors<1||o.floors>5||o.floors>(st.hall?.length||2)))return false;if(o.servedFloors&&(!Array.isArray(o.servedFloors)||!o.servedFloors.every(f=>isInt(f)&&f>=0&&f<(st.hall?.length||2))||new Set(o.servedFloors).size!==o.servedFloors.length))return false;if(o.type==='elevator'&&o.servedFloors&&(o.q?.length!==o.servedFloors.length||!Number.isFinite(o.pos)||o.pos<0||o.pos>Math.max(...o.servedFloors)))return false;}
   for (const k of ['orders', 'carts', 'vehicles', 'agents', 'staff', 'tasks', 'ledger', 'days']) if (st[k] != null && !Array.isArray(st[k])) return false;
+  // SL-1 §10: the security line row is optional; when present it lies inside the parcel with a yard row behind it.
+  if (st.secLine != null && (!isInt(st.secLine) || !st.parcel || st.secLine < st.parcel.y0 + 1 || st.secLine > st.parcel.y1)) return false;
+  for (const o of st.orders || []) if (o && o.prevSecLine != null && (!isInt(o.prevSecLine) || !st.parcel || o.prevSecLine < st.parcel.y0 + 1 || o.prevSecLine > st.parcel.y1)) return false;
   if(st.floorModelVersion===1){
     const N=st.hall.length, agents=new Map((st.agents||[]).map(a=>[a.id,a])), seen=new Set();
     if(agents.size!==(st.agents||[]).length)return false;

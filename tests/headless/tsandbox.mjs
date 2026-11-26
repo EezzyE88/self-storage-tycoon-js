@@ -3,14 +3,15 @@ import { makeSandbox, SB_PRESETS, modeLabel as modeLabelFor } from '../../js/sce
 import { Sim } from '../../js/sim.js';
 let fails = 0; const ok = (c, m, d = '') => { console.log((c ? 'PASS ' : 'FAIL ') + m + (d ? '  [' + d + ']' : '')); if (!c) fails++; };
 const run = (sim, days, each) => { for (let i = 0; i < days * 1440; i++) { sim.step(); sim.events.length = 0; if (each && i % 60 === 0) each(sim, i); } };
+// SL-1 (consolidated spec §6): the starter layout puts the gate on row 22, so the office and customer
+// Parking sit in the public lot in front of the line. Changed from abaf108 (reason): the old layout built a
+// new office inside the gate on the front row, which OFF-8 now refuses (R0: customers stay out of the yard).
 const layout = (sim) => { const B = (tool, a, b, x = {}) => sim.dispatch({ type: 'build', tool, a, b: b || a, f: 0, ...x });
-  const infrastructure = [B('aisle', { x: 20, y: 29 }, { x: 20, y: 8 }), B('aisle', { x: 21, y: 29 }, { x: 21, y: 8 }), B('gate', { x: 20, y: 29 }), B('parking', { x: 20, y: 25 }), B('walk', { x: 19, y: 25 })];
-  for (const result of infrastructure) {
-    const order=sim.s.orders.find(o=>o.id===result.order);
-    if (order?.st==='construction') sim.completeOrder(order);
-  }
-  return [...infrastructure, B('office', { x: 16, y: 26 }),
-    B('du10x10', { x: 22, y: 10 }, { x: 22, y: 26 }), B('du10x10', { x: 18, y: 10 }, { x: 18, y: 22 }), B('light', { x: 19, y: 12 }), B('light', { x: 22, y: 8 }), B('camera', { x: 19, y: 16 })]; };
+  const done = (result) => { const order = sim.s.orders.find(o => o.id === result.order); if (order?.st === 'construction') sim.completeOrder(order); return result; };
+  const infrastructure = [B('gate', { x: 21, y: 22 }), B('aisle', { x: 20, y: 29 }, { x: 22, y: 23 }), B('aisle', { x: 20, y: 21 }, { x: 22, y: 8 }), B('aisle', { x: 4, y: 29 }, { x: 19, y: 29 })].map(done);
+  infrastructure.push(...[B('parking', { x: 4, y: 29 }, { x: 9, y: 29 }), B('walk', { x: 4, y: 27 }, { x: 8, y: 28 }), B('walk', { x: 9, y: 28 }, { x: 19, y: 28 }), B('walk', { x: 4, y: 22 }, { x: 19, y: 22 })].map(done));
+  return [...infrastructure, B('office', { x: 4, y: 23 }, undefined, { rotation: 2 }),
+    B('du10x10', { x: 23, y: 9 }, { x: 23, y: 21 }), B('du10x10', { x: 19, y: 9 }, { x: 19, y: 21 }), B('light', { x: 18, y: 12 }), B('light', { x: 23, y: 8 }), B('camera', { x: 18, y: 16 })]; };
 const flows = (sim) => sim.s.days.concat([sim.s.today]).reduce((a, d) => a + d.rent + (d.anc || 0) + d.other - d.opex - d.payroll - (d.service || 0) - d.capex - (d.debt || 0) - (d.interest || 0) + (d.fin || 0) + (d.inject || 0), 0);
 const dayCount = (sim) => sim.s.days.length + 1;
 
@@ -26,8 +27,9 @@ const dayCount = (sim) => sim.s.days.length + 1;
 { // 2. Free Build: unlimited funds, instant, everything recorded
   const sim = makeSandbox({ kind: 'free' }); const s = sim.s; const c0 = s.cash; let minCash = Infinity;
   layout(sim); ok(s.orders.every((o) => o.st === 'done'), 'Free Build: instant construction completes valid builds at once');
-  const extra = [sim.dispatch({ type: 'build', tool: 'aisle', a: { x: 28, y: 29 }, b: { x: 28, y: 4 }, f: 0 }), sim.dispatch({ type: 'build', tool: 'aisle', a: { x: 22, y: 8 }, b: { x: 28, y: 8 }, f: 0 }),
-    sim.dispatch({ type: 'build', tool: 'du10x20', a: { x: 29, y: 9 }, b: { x: 29, y: 28 }, f: 0 }), sim.dispatch({ type: 'build', tool: 'du10x20', a: { x: 26, y: 9 }, b: { x: 26, y: 28 }, f: 0 }), sim.dispatch({ type: 'build', tool: 'du10x20', a: { x: 34, y: 4 }, b: { x: 34, y: 28 }, f: 0 })];
+  const extra = [sim.dispatch({ type: 'build', tool: 'aisle', a: { x: 28, y: 21 }, b: { x: 28, y: 4 }, f: 0 }), sim.dispatch({ type: 'build', tool: 'aisle', a: { x: 24, y: 7 }, b: { x: 27, y: 7 }, f: 0 }),
+    sim.dispatch({ type: 'build', tool: 'du10x20', a: { x: 29, y: 9 }, b: { x: 29, y: 21 }, f: 0 }), sim.dispatch({ type: 'build', tool: 'du10x20', a: { x: 26, y: 9 }, b: { x: 26, y: 21 }, f: 0 }), sim.dispatch({ type: 'build', tool: 'du10x20', a: { x: 34, y: 4 }, b: { x: 34, y: 21 }, f: 0 }),
+    sim.dispatch({ type: 'build', tool: 'du10x20', a: { x: 38, y: 4 }, b: { x: 38, y: 21 }, f: 0 }), sim.dispatch({ type: 'build', tool: 'du10x10', a: { x: 12, y: 4 }, b: { x: 12, y: 20 }, f: 0 })]; // SL-1: kept inside the yard (rows 3..21)
   console.log('  extra builds:', extra.map((r) => r.ok ? 'ok' : r.msg).join(' | '));
   const capex = s.today.capex; minCash = Math.min(minCash, s.cash);
   run(sim, 30, (m) => { minCash = Math.min(minCash, m.s.cash); });

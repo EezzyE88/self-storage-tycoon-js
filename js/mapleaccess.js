@@ -149,3 +149,46 @@ export function classicGateParking(sim, gates, usable = (i, types) =>
   }
   return [...out];
 }
+
+// ---- SL-1 public offices on classic lots (consolidated SL-1 spec §5, FCPR OFF-9/OFF-10).
+// Public bays: finished Parking in the public lot that cars reach from the street without
+// a gate (V2 + V3), with a customer walk to the door. Sorted nearest-first by that walk.
+export function publicOfficeBays(sim, office, usable = (i, types) =>
+  !sim.D.pendingGround.has(i) || types.has(sim.D.pendingGround.get(i))) {
+  const { s, D } = sim;
+  const walks = classicOfficeWalkingField(sim, office, usable);
+  if (!walks) return { walks: null, bays: [] };
+  const starts = Array.from({ length: s.W }, (_, x) => sim.idx(x, s.parcel.y1 + 2));
+  const reach = sim.distField(starts, i => sim.vehNbr(i, publicDrive).filter(j => usable(j, VEH_GROUND)));
+  const bays = [];
+  for (const i of reach.keys()) {
+    if (s.ground[i] === G.PARKING && (D.pendingGround.get(i) ?? G.PARKING) === G.PARKING && walks.has(i) &&
+      sim.secureSide(i % s.W, Math.floor(i / s.W)) === 'public') bays.push(i);
+  }
+  bays.sort((a, b) => walks.get(a) - walks.get(b) || a - b);
+  return { walks, bays };
+}
+// Staff reach the yard through a yard-side landing beside the office, or on foot to a gate crossing.
+export function publicOfficeStaffRoute(sim, office, usable = () => true) {
+  const { s, D } = sim;
+  if (sim.yardLanding(office)) return true;
+  const door = sim.idx(office.door.x, office.door.y);
+  if (!D.walk[0][door]) return false;
+  const staff = { kind: 'staff' }, WH = s.W * s.H;
+  const field = sim.distField([door], n => sim.pedNbr(n, staff).filter(j => j < WH && !D.shellAt[j] && usable(j, PED_GROUND)));
+  for (const i of field.keys()) if (sim.secureSide(i % s.W, Math.floor(i / s.W)) === 'yard') return true;
+  return false;
+}
+export const OFFICE_PUBLIC_PARKING = 'Office needs customer Parking in the public lot, reachable from the street, with a walk to the door.';
+export const OFFICE_STAFF_ROUTE = 'Office needs a staff route into the yard: back it onto the security line or connect it to the gate.';
+// Opening issues for a public office (empty when it can open).
+export function publicOfficeAccess(sim, office, solids = new Set()) {
+  const { D } = sim;
+  const usable = (i, types) => !solids.has(i) && (!D.pendingGround.has(i) || types.has(D.pendingGround.get(i)));
+  const { walks, bays } = publicOfficeBays(sim, office, usable);
+  if (!walks) return ['Office entrance needs a clear outdoor pedestrian landing.'];
+  const out = [];
+  if (!bays.length) out.push(OFFICE_PUBLIC_PARKING);
+  if (!publicOfficeStaffRoute(sim, office, usable)) out.push(OFFICE_STAFF_ROUTE);
+  return out;
+}
