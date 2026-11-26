@@ -18,7 +18,7 @@ import { climateInventory, climateCauseKey, climateSuggestion } from './climatea
 import {floorCount,ensureFloors,served,verticalPlan,beginVertical,tickVertical,cancelVertical,sweepElevator,verticalRefund,freightPath} from './vertical.js';
 import { complaintContext, complaintKey } from './complaints.js';
 import { analyzePlaceableRemoval } from './placeableops.js';
-import { lineRow, fenceRow, publicRows, linePolyline, lineState, splitAt, hasPublicLot, apronCells, secureSide, sideFor, classicVehicleEdge, classicPedEdge, gateColumns, isPublicOffice, yardLanding, storageOnPublicSide, officeDoorEnclosed } from './securityline.js';
+import { lineRow, fenceRow, publicRows, linePolyline, lineState, splitAt, hasPublicLot, apronCells, secureSide, sideFor, classicVehicleEdge, classicPedEdge, gateColumns, isPublicOffice, yardLanding, storageOnPublicSide, officeDoorEnclosed, cancelLineOutcome, cancelLineNotice } from './securityline.js';
 import { normalizeGateAccess, registerGateAccess, unregisterGateAccess, primaryGateId, gateQueue, gateServing, enqueueGate, shiftGate, setGateServing, removeGateAgent, gateConnection, gateStatus } from './gateaccess.js';
 // AUTHORITATIVE SIMULATION (GDD §51). No DOM, no rendering, no audio.
 // Presentation reads `sim.s` (state) + `sim.D` (derived caches) and consumes `sim.events`.
@@ -1315,12 +1315,10 @@ export class Sim {
     if (!s.creative) this.money(refund, 'capex', (undo ? 'Undo: ' : 'Cancelled: ') + ord.label);
     dropUnitBuild(this, ord);
     this.removeEquipment(new Set(ord.objs));
-    // SL-1 §2: cancelling the order that set the line restores the previous line once no gate remains.
-    // Kept as is when restoring would expose storage or enclose an office door built since.
-    if (Object.prototype.hasOwnProperty.call(ord, 'prevSecLine') && !Object.values(s.objects).some(o => o.type === 'gate')) {
-      const prev = ord.prevSecLine ?? null;
-      if (!storageOnPublicSide(this, prev) && !officeDoorEnclosed(this, prev, s.secLine ?? null)) { if (prev == null) delete s.secLine; else s.secLine = prev; }
-    }
+    // SL-1 §2 (GAT-10c): cancelling the order that set the line restores the previous line once no gate
+    // remains, unless that would expose storage or enclose an office door built since; then the line stays.
+    const lineOut = cancelLineOutcome(this, ord);
+    if (lineOut?.action === 'restore') { if (lineOut.to == null) delete s.secLine; else s.secLine = lineOut.to; }
     if(ord.retrofit && s.objects[ord.retrofit]?.retrofitOrder===ord.id)delete s.objects[ord.retrofit].retrofitOrder;
     if (ord.keypadDoor) { const d = s.objects[ord.keypadDoor]; if (d) { d.keypad = null; } }
     for (const tl of ord.tiles) if (tl.k === 'hall' && s.hall[tl.f][tl.i] === 2) s.hall[tl.f][tl.i] = 0;
@@ -1333,7 +1331,8 @@ export class Sim {
     }
     this.markDirty(); this.emit('cancel');
     const total = refund + extra;
-    return { ok: true, refund, msg: `${undo ? 'Undone' : 'Cancelled'}${nDep ? ` (+${nDep} dependent order${nDep > 1 ? 's' : ''})` : ''} - refunded $${total.toLocaleString()}` };
+    const notice = cancelLineNotice(lineOut, 'after');
+    return { ok: true, refund, ...(notice ? { lineKept: lineOut.row } : {}), msg: `${undo ? 'Undone' : 'Cancelled'}${nDep ? ` (+${nDep} dependent order${nDep > 1 ? 's' : ''})` : ''} - refunded $${total.toLocaleString()}${notice ? '. ' + notice : ''}` };
   }
   cancelRefund(ord) {
     if(ord.vertical)return verticalRefund(this,ord);

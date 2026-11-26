@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { emptyLot, build, idle, slLayout, runDays } from './sl1_fixtures.mjs';
 import { publicDrive, publicOfficeBays } from '../../js/mapleaccess.js';
-import { storageOnPublicSide, lineState, lineEdge } from '../../js/securityline.js';
+import { storageOnPublicSide, lineState, lineEdge, cancelLineOutcome, cancelLineNotice } from '../../js/securityline.js';
 import { Sim } from '../../js/sim.js';
 import { G } from '../../js/data.js';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -189,6 +189,63 @@ ok(`I1-I5 hold on all ${cells} matrix layouts (depths 2/5/10, gate left/center/r
   // Office-first deep in the lot (line unset): no line may later enclose its door, including the legacy front row.
   refused(s2, 'gate', { x: 22, y: s2.s.parcel.y1 }, 'This line would put the office door inside the secured yard.');
   ok('Legacy yard-office exceptions are not available to new offices (front-row gate, legacy Creative Lot save, office-first then gate)');
+}
+// ---------- GAT-10c: cancelling a line-moving gate (promoted from the Q14 cancellation probe) ----------
+{
+  const mk = () => { const sim = emptyLot(); sim.s.speed = 0; return sim; };
+  const removeGate = (sim) => { const g = sim.objs('gate')[0]; const q = plan(sim, 'demolish', { x: g.x, y: g.y }); assert.equal(q.status, 'valid', q.reasons.join(';')); build(sim, 'demolish', { x: g.x, y: g.y }, undefined, { quoteStamp: q.operation?.stamp }); };
+  const relocate = (sim, from, to) => {
+    build(sim, 'gate', { x: 22, y: from }); idle(sim); removeGate(sim); assert.equal(sim.s.secLine, from);
+    build(sim, 'gate', { x: 22, y: to }); const o = sim.s.orders.find((q) => q.tool === 'gate' && q.st === 'construction');
+    assert.equal(o.prevSecLine, from); assert.equal(sim.s.secLine, to); return o;
+  };
+  const cancel = (sim, o) => {
+    const before = cancelLineOutcome(sim, o), c0 = sim.s.cash, t = sim.s.t, sp = sim.s.speed, r = sim.dispatch({ type: 'cancelOrder', id: o.id });
+    return { ...r, before, cashBack: sim.s.cash - c0, cost: o.cost, pauseHeld: sim.s.speed === sp && sim.s.t === t, line: sim.s.secLine ?? null, gates: sim.objs('gate').length };
+  };
+  const gateReason = (sim, y) => plan(sim, 'gate', { x: 22, y }).reasons[0] || null;
+  const fr = (sim, L) => sim.s.parcel.y1 - L + 1;
+  const plain = /^Undone - refunded \$[\d,]+$/;
+  // Restores (behavior unchanged): first gate on a fresh lot; a move with nothing built since; an office public under both lines.
+  { const sim = mk(); build(sim, 'gate', { x: 22, y: 22 }); const o = sim.s.orders.find((q) => q.tool === 'gate'); build(sim, 'du10x10', { x: 10, y: 8 }, undefined, { rotation: 1 });
+    const r = cancel(sim, o); assert.deepEqual(r.before, { action: 'restore', to: null }); assert.ok(r.ok && r.line === null && r.gates === 0 && plain.test(r.msg) && r.lineKept === undefined, JSON.stringify(r)); }
+  { const sim = mk(); const o = relocate(sim, 15, 25); const r = cancel(sim, o); assert.deepEqual(r.before, { action: 'restore', to: 15 }); assert.ok(r.line === 15 && plain.test(r.msg), JSON.stringify(r)); }
+  { const sim = mk(); build(sim, 'walk', { x: 4, y: 27 }, { x: 8, y: 27 }); idle(sim); const o = relocate(sim, 25, 15);
+    build(sim, 'office', { x: 4, y: 23 }, undefined, { rotation: 2 }); const r = cancel(sim, o); assert.ok(r.line === 25 && plain.test(r.msg), JSON.stringify(r)); }
+  { const sim = mk(); build(sim, 'gate', { x: 22, y: 22 }); build(sim, 'gate', { x: 32, y: 22 }); const o = sim.s.orders.find((q) => q.tool === 'gate' && 'prevSecLine' in q);
+    const r = cancel(sim, o); assert.deepEqual(r.before, { action: 'none' }); assert.ok(r.line === 22 && r.gates === 1 && plain.test(r.msg), JSON.stringify(r)); }
+  ok('GAT-10c: cancel restores the previous line when nothing conflicts (first gate, empty move, office public under both, another gate remains); message unchanged');
+  // Storage built since: the line stays, the player is told before and after; refund and Pause unchanged.
+  { const sim = mk(); const o = relocate(sim, 15, 25); build(sim, 'du10x10', { x: 10, y: 18 }, undefined, { rotation: 1 });
+    const u = sim.objs('unit')[0]; assert.equal(u.cstate, 'construction');
+    const pre = cancelLineOutcome(sim, o); assert.deepEqual(pre, { action: 'keep', row: fr(sim, 25), prevRow: fr(sim, 15), reasons: ['storage'] });
+    assert.equal(cancelLineNotice(pre, 'before'), `The security line will stay on row ${fr(sim, 25)}. Moving it back to row ${fr(sim, 15)} would leave storage outside the secured yard.`);
+    const r = cancel(sim, o);
+    assert.ok(r.ok && r.line === 25 && r.gates === 0 && sim.secureSide(u.x, u.y) === 'yard', JSON.stringify(r));
+    assert.equal(r.msg, `Undone - refunded $${r.cost.toLocaleString()}. Security line stays on row ${fr(sim, 25)}.`); assert.equal(r.lineKept, fr(sim, 25));
+    assert.ok(r.cashBack === r.cost && r.refund === r.cost && r.pauseHeld, JSON.stringify(r));
+    assert.match(gateReason(sim, 15), /^Storage must stay inside the secured yard/); assert.notEqual(plan(sim, 'gate', { x: 22, y: 25 }).status, 'invalid');
+    const rt = new Sim(JSON.parse(JSON.stringify(sim.s))); rt.ensure(); assert.equal(JSON.stringify(rt.s), JSON.stringify(sim.s)); assert.equal(rt.s.secLine, 25);
+    const uo = sim.s.orders.find((q) => q.st === 'construction'); assert.ok(sim.dispatch({ type: 'cancelOrder', id: uo.id }).ok); assert.equal(sim.s.secLine, 25);
+    assert.notEqual(plan(sim, 'gate', { x: 22, y: 15 }).status, 'invalid'); }
+  ok('GAT-10c storage: line kept, notice before (dialog) and after (result), full refund, Pause held, GAT-10a still guards, save round trip, no deferred restore');
+  // Office door built since: the line stays with the office notice.
+  { const sim = mk(); build(sim, 'walk', { x: 4, y: 20 }, { x: 8, y: 20 }); idle(sim); const o = relocate(sim, 25, 15);
+    build(sim, 'office', { x: 4, y: 16 }, undefined, { rotation: 2 }); const d = sim.objs('office')[0].door;
+    const pre = cancelLineOutcome(sim, o); assert.deepEqual(pre.reasons, ['office']);
+    assert.equal(cancelLineNotice(pre, 'before'), `The security line will stay on row ${fr(sim, 15)}. Moving it back to row ${fr(sim, 25)} would put the office door inside the secured yard.`);
+    const r = cancel(sim, o); assert.ok(r.line === 15 && sim.secureSide(d.x, d.y) === 'public' && r.msg.endsWith(`Security line stays on row ${fr(sim, 15)}.`), JSON.stringify(r));
+    assert.equal(gateReason(sim, 25), 'This line would put the office door inside the secured yard.'); }
+  ok('GAT-10c office: line kept with the office-door notice; GAT-10b still guards');
+  // Storage conflicts need a deeper new line, office conflicts a shallower one, so one cancel never has both; the copy still covers it.
+  { const sim = mk(); build(sim, 'walk', { x: 4, y: 22 }, { x: 8, y: 22 }); idle(sim); const o = relocate(sim, 24, 12);
+    build(sim, 'office', { x: 4, y: 18 }, undefined, { rotation: 2 }); const pre = cancelLineOutcome(sim, o); assert.deepEqual(pre.reasons, ['office']);
+    assert.equal(cancelLineNotice({ ...pre, reasons: ['storage', 'office'] }, 'before'), `The security line will stay on row ${pre.row}. Moving it back to row ${pre.prevRow} would leave storage outside the secured yard and put the office door inside it.`);
+    assert.equal(cancelLineNotice({ action: 'restore', to: 3 }, 'before'), ''); assert.equal(cancelLineNotice(null, 'after'), ''); }
+  ok('GAT-10c copy: combined wording; no notice unless the line is kept');
+  // A non-gate order and a gate order that never set the line have no outcome.
+  { const sim = mk(); build(sim, 'aisle', { x: 4, y: 29 }, { x: 8, y: 29 }); assert.equal(cancelLineOutcome(sim, sim.s.orders.at(-1)), null); }
+  ok('GAT-10c applies only to the order that set or moved the line');
 }
 // ---------- boundary centralization (FO-1 readiness, spec §2) ----------
 {

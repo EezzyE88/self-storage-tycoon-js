@@ -100,5 +100,8 @@ for (const [id, msg] of [['GAT-1', 'For now a gate needs at least one yard row b
 }
 for (const id of ['GAT-1', 'GAT-8', 'GAT-9']) assert.equal(REGULATIONS.find((r) => r.id === id).cat, 5, id);
 for (const id of ['GAT-10a', 'GAT-10b', 'OFF-8', 'UNT-7', 'SHL-5', 'DOR-6']) assert.equal(REGULATIONS.find((r) => r.id === id).cat, 1, id);
-ok('Q11: every SL-1 refusal maps to its register ID and category; Category 5 ones use "For now" limitation wording');
+// GAT-10c is a notice (before and after cancelling a line-moving gate), never a plan refusal.
+for (const msg of ['The security line will stay on row 5. Moving it back to row 15 would leave storage outside the secured yard.', 'The security line will stay on row 15. Moving it back to row 5 would put the office door inside the secured yard.', 'Security line stays on row 5.']) assert.equal(regulationFor(msg)?.id, 'GAT-10c', msg);
+assert.equal(REGULATIONS.find((r) => r.id === 'GAT-10c').cat, 1);
+ok('Q11: every SL-1 refusal maps to its register ID and category; Category 5 ones use "For now" limitation wording; GAT-10c cancel notices map to their entry');
 console.log(`${n} regulations register checks passed`);

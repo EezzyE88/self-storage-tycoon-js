@@ -147,6 +147,33 @@ export function storageOnPublicSide(sim, L) {
   for (let f = 0; f < s.hall.length; f++) for (let i = 0; i < s.hall[f].length; i++) if (s.hall[f][i] && pub(i % s.W, (i / s.W) | 0)) return true;
   return false;
 }
+// SL-1 §2 (GAT-10c): what cancelling a line-setting gate order does to the line. One decision for the
+// cancel itself and for the confirm dialog shown before it. Works before or after the order's own
+// objects are removed (they are excluded). Returns null when the order never set the line.
+//   { action: 'none' }                        another gate remains, so the line stays as it is
+//   { action: 'restore', to }                 the previous line (null = unset) comes back
+//   { action: 'keep', row, prevRow, reasons } restoring would break GAT-10a ('storage') or GAT-10b ('office')
+// Rows in the result count from the front (row 1 = front), as in GAT-8.
+export function cancelLineOutcome(sim, ord) {
+  if (!ord || !Object.prototype.hasOwnProperty.call(ord, 'prevSecLine')) return null;
+  const s = sim.s, own = new Set(ord.objs || []);
+  if (Object.values(s.objects).some((o) => o.type === 'gate' && !own.has(o.id))) return { action: 'none' };
+  const prev = ord.prevSecLine ?? null, cur = s.secLine ?? null, reasons = [];
+  if (storageOnPublicSide(sim, prev)) reasons.push('storage');
+  if (officeDoorEnclosed(sim, prev, cur)) reasons.push('office');
+  if (!reasons.length) return { action: 'restore', to: prev };
+  const front = (L) => s.parcel.y1 - L + 1;
+  return { action: 'keep', row: front(cur), prevRow: front(prev), reasons };
+}
+// Player copy for a kept line: 'before' in the cancel confirm dialog, 'after' appended to the result.
+export function cancelLineNotice(out, when) {
+  if (!out || out.action !== 'keep') return '';
+  if (when === 'after') return `Security line stays on row ${out.row}.`;
+  const why = out.reasons.length === 2 ? 'would leave storage outside the secured yard and put the office door inside it'
+    : out.reasons[0] === 'storage' ? 'would leave storage outside the secured yard' : 'would put the office door inside the secured yard';
+  return `The security line will stay on row ${out.row}. Moving it back to row ${out.prevRow} ${why}.`;
+}
+
 // Offices whose door a line at row L would move from public (or unset) into the yard (GAT-10b).
 export function officeDoorEnclosed(sim, L, prevL) {
   return sim.objs('office').some((o) => o.door && sideFor(sim.s, L, o.door.x, o.door.y) === 'yard' && sideFor(sim.s, prevL, o.door.x, o.door.y) !== 'yard');

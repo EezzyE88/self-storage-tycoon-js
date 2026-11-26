@@ -67,6 +67,7 @@ export const REGULATIONS = Object.freeze([
   R('GAT-9', 5, ['For now the line can only move while the lot is empty of vehicles and people.'], 'Mid-trip rerouting not modeled', 'tsecurity_line', 'SL-1'),
   R('GAT-10a', 1, ['Storage must stay inside the secured yard.'], 'Owner: storage only inside the secured yard', 'tsecurity_line', 'SL-1'),
   R('GAT-10b', 1, ['This line would put the office door inside the secured yard.'], 'R0 security', 'tsecurity_line', 'SL-1'),
+  R('GAT-10c', 1, ['The security line will stay on row', 'Security line stays on row'], 'Cancelling a line-setting gate keeps the current line when restoring it would break GAT-10a or GAT-10b (least restrictive compliant cancellation, owner-approved Nov 26, 2026). A notice before and after cancelling, never a refusal', 'tsecurity_line', 'SL-1 (cancel notice)'),
   R('GAT-11', 3, ['No drive from the street to this gate yet.'], 'Efficiency (Cat 2 at opening as GAT-12)', 'tsecurity_line', 'SL-1'),
   R('GAT-12', 2, ['Main gate is not connected to the street'], 'Tenant access', 'tsecurity_line', 'Keep (classic: through the public lot)'),
   R('GAT-13', 0, [], 'Retired on classic lots (D4); code removed, no frontage use', 'tfirst_gate_guidance', 'SL-1 (retired)'),

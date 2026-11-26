@@ -37,6 +37,7 @@ import { financialTime } from './finance.js';
 import { rollingShopperPeriod, monthlyReportPeriods, periodText } from './reporting.js';
 import { guideFor } from './handbook.js';
 import { officeSiteStep, openingSteps, openingStepsNote, openNeeds } from './openingguide.js';
+import { cancelLineOutcome, cancelLineNotice } from './securityline.js';
 import { verticalLayout, verticalDone, verticalCheck, authoredPlacement } from './blueprint.js';
 import { expansionEvidence, cancellationBreakdown, served } from './vertical.js';
 import { moveOutCheck } from './moveout.js';
@@ -540,7 +541,8 @@ export class UI {
   do(action, feedback = false) {
     const r = this.sim.dispatch(action) || {};
     if (r.ok) this.g.autosavePaused?.();
-    if (feedback && r.msg) this.toast(r.msg, r.ok ? 'good' : 'bad');
+    // SL-1 GAT-10c: a kept security line is confirmed as a held notice, so the phone's one-toast feed cannot replace it (e.g. with 'Progress saved').
+    if (feedback && r.msg) { if (r.ok && r.lineKept) this.holdNotice(r.msg, 'good'); else this.toast(r.msg, r.ok ? 'good' : 'bad'); }
     if (feedback) this.sfx(r.ok ? 'click' : 'refuse');
     return r;
   }
@@ -2215,13 +2217,14 @@ export class UI {
     const r = this.sim.cancelRefund(ord);
     if (r.locked) { this.toast('Structure is complete; this package must finish.', 'bad'); return; }
     this.pauseForPopup('modal');
+    const lineNote = cancelLineNotice(cancelLineOutcome(this.sim, ord), 'before'); // SL-1 GAT-10c: say before confirming that the line stays
     const row = (k, v, cls = '') => `<span>${k}</span><b class="${cls}">${v}</b>`;
     let detail;
     if (ord.vertical) {
       const B = cancellationBreakdown(this.sim, ord), names = { reinforce: 'Reinforcement', structure: 'Structure', fitout: 'Fit-out', shaft: 'Freight extension', test: 'Service test' };
       detail = `<div class="kv cancel-kv">${row('Original package charge', money(B.original))}${B.completed.map((t) => row(`Completed: ${names[t.kind]}${B.retained.some((x) => x.kind === t.kind) ? ' (retained)' : ''}`, money(t.cost))).join('')}${B.inProgressBuilt > 0 ? row(`Work in progress: ${names[B.inProgressKind]}`, money(B.inProgressBuilt)) : ''}${row('Unbuilt work', money(B.unbuilt))}${row(B.undo ? 'Cancellation penalty' : 'Non-refundable share of unbuilt work (40%)', money(B.penalty))}${row('Exact refund', money(B.refund), 'good')}${row('Non-refundable in total', money(B.nonRefundable))}${row('Cash after cancelling', money(B.cashAfter))}</div><p class="note">${esc(B.requote)}</p>`;
     } else detail = `<div class="kv cancel-kv">${row('Original charge', money(ord.cost))}${row('Exact refund', money(r.refund), 'good')}${row('Non-refundable', money(ord.cost - r.refund))}${row('Cash after cancelling', money(this.sim.s.cash + (this.sim.s.creative ? 0 : r.refund)))}</div>`;
-    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal confirm-cancel" role="alertdialog" aria-labelledby="cc-title"><h2 id="cc-title">Cancel this construction?</h2><p><b>${esc(ord.label)}</b> will be cancelled and its unfinished work removed. ${r.undo ? 'This is a full undo within the grace period.' : ''} This cannot be reversed.</p>${detail}
+    this.$('modal').innerHTML = `<div class="modal-bg"><div class="modal confirm-cancel" role="alertdialog" aria-labelledby="cc-title"><h2 id="cc-title">Cancel this construction?</h2><p><b>${esc(ord.label)}</b> will be cancelled and its unfinished work removed. ${r.undo ? 'This is a full undo within the grace period.' : ''} This cannot be reversed.</p>${detail}${lineNote ? `<p class="note cc-line" data-qa="cc-line">${esc(lineNote)}</p>` : ''}
       <div class="row wrap cc-acts" style="margin-top:10px"><button class="btn pri" data-a="modalClose" data-qa="cc-keep">Keep building</button><span class="cc-gap"></span><button class="btn danger" data-qa="cc-confirm" data-a="cmd" data-confirmed="1" data-cmd='${JSON.stringify({ type: 'cancelOrder', id })}'>Cancel construction · ${money(r.refund)} back</button></div></div></div>`;
   }
 
